@@ -1,39 +1,39 @@
-name: Nook
+name: Pelmet
 options:
   bundleIdPrefix: app.fif7y
   deploymentTarget:
     macOS: "27.0"
   createIntermediateGroups: true
 packages:
-  NookCore:
-    path: Packages/NookCore
-  NookEngine:
-    path: Packages/NookEngine
+  PelmetCore:
+    path: Packages/PelmetCore
+  PelmetEngine:
+    path: Packages/PelmetEngine
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     from: 2.9.0
 schemes:
-  Nook:
+  Pelmet:
     build:
       targets:
-        Nook: all
+        Pelmet: all
     test:
       targets:
-        - NookTests
+        - PelmetTests
 targets:
-  Nook:
+  Pelmet:
     type: application
     platform: macOS
     sources:
-      - Nook
+      - Pelmet
     dependencies:
-      - package: NookCore
-      - package: NookEngine
-        product: NookEngine
+      - package: PelmetCore
+      - package: PelmetEngine
+        product: PelmetEngine
       - package: Sparkle
         product: Sparkle
     info:
-      path: Nook/Info.plist
+      path: Pelmet/Info.plist
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -48,10 +48,10 @@ targets:
         SUAutomaticallyUpdate: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.fif7y.Nook
+        PRODUCT_BUNDLE_IDENTIFIER: app.fif7y.Pelmet
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "0.1.5"
-        CURRENT_PROJECT_VERSION: "6"
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "7"
         SWIFT_VERSION: "6.0"
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         SWIFT_APPROACHABLE_CONCURRENCY: "YES"
@@ -59,13 +59,13 @@ targets:
         ENABLE_APP_SANDBOX: "NO"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: YW9UY68SQ7
-  NookTests:
+  PelmetTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - NookTests
+      - PelmetTests
     dependencies:
-      - target: Nook
+      - target: Pelmet
     settings:
       base:
         GENERATE_INFOPLIST_FILE: "YES"
