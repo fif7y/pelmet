@@ -42,7 +42,7 @@ targets:
         LSApplicationCategoryType: public.app-category.utilities
         NSPrincipalClass: NSApplication
         NSHumanReadableCopyright: "© 2026 Gabriel Faucon"
-        SUFeedURL: https://fif7y.github.io/nook/appcast.xml
+        SUFeedURL: https://fif7y.github.io/pelmet/appcast.xml
         SUPublicEDKey: HyfGTw9yRC/C2CUxxamEhzxZuK+WWuG7WPI6F+BUOgE=
         SUEnableAutomaticChecks: true
         SUAutomaticallyUpdate: false
@@ -50,8 +50,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.fif7y.Nook
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "0.1.4"
-        CURRENT_PROJECT_VERSION: "5"
+        MARKETING_VERSION: "0.1.5"
+        CURRENT_PROJECT_VERSION: "6"
         SWIFT_VERSION: "6.0"
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         SWIFT_APPROACHABLE_CONCURRENCY: "YES"
