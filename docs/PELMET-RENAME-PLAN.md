@@ -82,6 +82,50 @@ lead with the rename announcement.
   bar for macOS.*
 - New screenshots showing "Pelmet" in menus/About.
 
+## Execution runbook — remaining manual steps (2026-08-29)
+
+Code side is DONE (bridge commit `d55f924`, rename commit `a044f8c`, all tests
+green). These GitHub-side steps need Gab (blocked for Claude by the permission
+classifier):
+
+```bash
+# 1. Rename the repo (git/web URLs redirect; Pages URL moves)
+gh repo rename pelmet -R fif7y/nook --yes
+cd ~/Projects/Nook && git remote set-url origin https://github.com/fif7y/pelmet.git
+
+# 2. Stub repo to keep the legacy feed URL alive
+gh repo create fif7y/nook --public --description "Renamed to Pelmet → github.com/fif7y/pelmet"
+cd "$(mktemp -d)" && git init -q -b gh-pages
+git -C ~/Projects/Nook show origin/gh-pages:appcast.xml > appcast.xml
+touch .nojekyll
+printf '<meta http-equiv="refresh" content="0;url=https://github.com/fif7y/pelmet">' > index.html
+git add -A && git commit -qm "Legacy appcast stub (app renamed to Pelmet)"
+git remote add origin https://github.com/fif7y/nook.git && git push -u origin gh-pages
+gh api -X POST repos/fif7y/nook/pages -f 'source[branch]=gh-pages' -f 'source[path]=/'
+
+# 3. Verify both feeds (Pages deploys take a few minutes)
+curl -sI https://fif7y.github.io/pelmet/appcast.xml | head -1   # renamed repo's Pages
+curl -sI https://fif7y.github.io/nook/appcast.xml | head -1     # stub
+
+# 4. Bridge release v0.1.5 (nook code + new feed URL)
+cd ~/Projects/Nook && git checkout d55f924 && scripts/release.sh
+# → gh release create v0.1.5 with build/releases/Nook-0.1.5.dmg,
+#   push appcast.xml to BOTH gh-pages (pelmet repo + nook stub)
+
+# 5. Pelmet release v0.2.0
+git checkout main && scripts/release.sh
+# → gh release create v0.2.0 with build/releases/Pelmet-0.2.0.dmg,
+#   push appcast.xml to both feeds again
+
+# 6. Homebrew tap: in fif7y/homebrew-tap, add Casks/pelmet.rb (copy of nook.rb
+#    with name/url/app updated), and mark Casks/nook.rb deprecated:
+#      deprecate! date: "2026-08-29", because: :repo_renamed  # → pelmet
+```
+
+Also pending: site (`~/Projects/fif7y` — `#pelmet` anchor + pelmet opening
+line), new wordmark SVGs (hero.svg + logo SVGs still draw "nook" as outline
+paths — needs design, not sed), README screenshots.
+
 ## Verification (from handoff + repo-specific)
 
 1. Clean `xcodebuild` — no residual `Nook` symbols.
