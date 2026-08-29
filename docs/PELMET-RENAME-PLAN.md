@@ -91,12 +91,12 @@ classifier):
 ```bash
 # 1. Rename the repo (git/web URLs redirect; Pages URL moves)
 gh repo rename pelmet -R fif7y/nook --yes
-cd ~/Projects/Nook && git remote set-url origin https://github.com/fif7y/pelmet.git
+cd ~/Projects/Pelmet && git remote set-url origin https://github.com/fif7y/pelmet.git
 
 # 2. Stub repo to keep the legacy feed URL alive
 gh repo create fif7y/nook --public --description "Renamed to Pelmet → github.com/fif7y/pelmet"
 cd "$(mktemp -d)" && git init -q -b gh-pages
-git -C ~/Projects/Nook show origin/gh-pages:appcast.xml > appcast.xml
+git -C ~/Projects/Pelmet show origin/gh-pages:appcast.xml > appcast.xml
 touch .nojekyll
 printf '<meta http-equiv="refresh" content="0;url=https://github.com/fif7y/pelmet">' > index.html
 git add -A && git commit -qm "Legacy appcast stub (app renamed to Pelmet)"
@@ -108,7 +108,7 @@ curl -sI https://fif7y.github.io/pelmet/appcast.xml | head -1   # renamed repo's
 curl -sI https://fif7y.github.io/nook/appcast.xml | head -1     # stub
 
 # 4. Bridge release v0.1.5 (nook code + new feed URL)
-cd ~/Projects/Nook && git checkout d55f924 && scripts/release.sh
+cd ~/Projects/Pelmet && git checkout d55f924 && scripts/release.sh
 # → gh release create v0.1.5 with build/releases/Nook-0.1.5.dmg,
 #   push appcast.xml to BOTH gh-pages (pelmet repo + nook stub)
 
