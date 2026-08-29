@@ -36,20 +36,25 @@ Everything below the one-time setup is: bump version → run script → publish.
    somewhere safe (it is the only thing that can sign updates; losing it
    strands existing installs).
 
-4. **Appcast hosting** — `SUFeedURL` is `https://fif7y.github.io/nook/appcast.xml`:
+4. **Appcast hosting** — `SUFeedURL` is `https://fif7y.github.io/pelmet/appcast.xml`:
    enable GitHub Pages on the repo (branch `gh-pages`, root). The appcast file
    gets pushed there each release; DMGs are attached to GitHub Releases (the
-   appcast’s enclosure URLs point at `github.com/fif7y/nook/releases/download/…`).
+   appcast’s enclosure URLs point at `github.com/fif7y/pelmet/releases/download/…`).
 
 ## Per-release
 
 1. Bump `MARKETING_VERSION` (and `CURRENT_PROJECT_VERSION` — Sparkle compares
    `CFBundleVersion`, so it must strictly increase) in `project.yml`.
 2. `scripts/release.sh` — archives, exports with Developer ID, notarizes +
-   staples app and DMG, writes `build/releases/Nook-<v>.dmg` + `appcast.xml`.
+   staples app and DMG, writes `build/releases/Pelmet-<v>.dmg` + `appcast.xml`.
 3. Tag and publish: create GitHub release `v<version>` with the DMG attached.
 4. Push `appcast.xml` (and `*.delta` files if any) to `gh-pages`.
-5. Sanity: install the previous DMG, let Sparkle offer the new version, update.
+5. **Legacy feed mirror** — nook-era installs (≤ 0.1.4) poll
+   `https://fif7y.github.io/nook/appcast.xml`, served by the stub repo
+   `fif7y/nook` (GitHub Pages paths don't redirect on repo rename). Push the
+   same `appcast.xml` to that stub's `gh-pages` too, until that feed's traffic
+   dies off.
+6. Sanity: install the previous DMG, let Sparkle offer the new version, update.
 
 `SKIP_NOTARIZE=1 scripts/release.sh` smoke-tests the archive/export/DMG half
 without credentials.
