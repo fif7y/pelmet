@@ -16,23 +16,29 @@
     @keyframes t0{0%{transform:none;opacity:1}8%{transform:translateX(110px) scale(.5);opacity:0}46.5%{transform:translateX(110px) scale(.5);opacity:0}54.5%{transform:none;opacity:1}100%{transform:none;opacity:1}}
     @keyframes t1{0%{transform:none;opacity:1}8%{transform:translateX(62px) scale(.5);opacity:0}46.5%{transform:translateX(62px) scale(.5);opacity:0}54.5%{transform:none;opacity:1}100%{transform:none;opacity:1}}
     @keyframes t2{0%{transform:none;opacity:1}8%{transform:translateX(22px) scale(.5);opacity:0}46.5%{transform:translateX(22px) scale(.5);opacity:0}54.5%{transform:none;opacity:1}100%{transform:none;opacity:1}}
-    @media (prefers-reduced-motion: reduce){.h0,.h1,.h2{animation:none}}
+    .d1,.d2{transform-box:fill-box;transform-origin:50% 50%}
+    .d1{animation:dk1 5.7s cubic-bezier(.4,0,.2,1) 1.25s infinite both}
+    .d2{animation:dk2 5.7s cubic-bezier(.4,0,.2,1) 1.30s infinite both}
+    @keyframes dk1{0%{transform:none;opacity:.5}8%{transform:translateX(77px);opacity:0}46.5%{transform:translateX(77px);opacity:0}54.5%{transform:none;opacity:.5}100%{transform:none;opacity:.5}}
+    @keyframes dk2{0%{transform:none;opacity:.15}8%{transform:translateX(157px);opacity:0}46.5%{transform:translateX(157px);opacity:0}54.5%{transform:none;opacity:.15}100%{transform:none;opacity:.15}}
+    @media (prefers-reduced-motion: reduce){.h0,.h1,.h2,.d1,.d2{animation:none}}
 </style>
 
   <rect width="1280" height="400" rx="24" fill="#6841ED"/>
 
-  <!-- wordmark + tagline (brand vectors) -->
-  <g transform="translate(196.45 -111.99) scale(0.62)">
-    <path opacity="0.5" d="M659.934 497.159C617.558 497.159 591.422 469.754 591.422 431.946C591.422 394.137 618.319 366.225 659.934 366.225C701.803 366.225 728.7 394.137 728.7 431.946C728.7 469.754 702.564 497.159 659.934 497.159ZM659.934 464.679C682.264 464.679 691.653 448.439 691.653 431.946C691.653 416.213 682.01 398.958 659.934 398.958C638.112 398.958 628.469 416.213 628.469 431.946C628.469 447.678 637.858 464.679 659.934 464.679Z" fill="white"/>
-    <path d="M770.95 497.159C728.574 497.159 702.438 469.754 702.438 431.946C702.438 394.137 729.335 366.225 770.95 366.225C812.818 366.225 839.716 394.137 839.716 431.946C839.716 469.754 813.579 497.159 770.95 497.159ZM770.95 464.679C793.28 464.679 802.668 448.439 802.668 431.946C802.668 416.213 793.026 398.958 770.95 398.958C749.127 398.958 739.485 416.213 739.485 431.946C739.485 447.678 748.874 464.679 770.95 464.679Z" fill="white"/>
-    <path d="M849.887 317H886.427V418.246L923.474 369.272H966.611V371.556L920.683 428.142L973.716 491.579V494.37H929.818L886.427 439.307V494.37H849.887V317Z" fill="white"/>
-    <path d="M467 476.395C467 476.395 467.128 444.429 467.128 433.998C467.128 404.538 491.859 383.354 516.756 383.354C541.557 383.354 566.385 405.761 566.385 433.998C566.385 443.227 566.385 476.395 566.385 476.395" stroke="white" stroke-width="35.9477" stroke-linecap="square" stroke-linejoin="round"/>
+  <!-- mark + wordmark lockup (mark from Pelmet-icon.svg; ghost dots tuck in sync with the bar) -->
+  <g transform="translate(347.8 -30.9) scale(0.30)">
+    <path d="M547.735 309C657.283 309 711.751 379.992 711.751 462.612C711.751 548.292 656.671 615 547.735 616.224H441.247V697.4H345.775V528.708H441.247H547.735C593.635 528.708 616.279 498.72 616.279 464.448C616.279 430.176 593.023 399.576 547.735 399.576H441.247H345.775V309C414.319 309 479.803 309 547.735 309Z" fill="white"/>
+    <g class="d2"><path d="M394.582 504.973C371.617 504.972 353 486.356 353 463.391C353 440.425 371.617 421.809 394.582 421.809C406.459 421.809 417.173 426.788 424.75 434.773C417.676 442.228 413.334 452.302 413.334 463.391C413.334 474.479 417.675 484.554 424.75 492.009C417.173 499.994 406.459 504.973 394.582 504.973Z" fill="white"/></g>
+    <g class="d1"><path d="M474.007 504.973C451.042 504.973 432.425 486.356 432.425 463.391C432.425 440.425 451.042 421.809 474.007 421.809C485.464 421.809 495.838 426.443 503.359 433.938C495.805 441.467 491.129 451.883 491.129 463.391C491.129 474.899 495.805 485.315 503.359 492.844C495.838 500.339 485.464 504.973 474.007 504.973Z" fill="white"/></g>
+    <ellipse cx="551.502" cy="463.492" rx="41.5" ry="41.5" transform="rotate(-180 551.502 463.492)" fill="white"/>
   </g>
-  <!-- tagline as real text (outlines baked "MacOS"; casing fix 2026-08-22) -->
+  <text x="587.3" y="147" font-family="-apple-system, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', system-ui, sans-serif"
+        font-size="78" font-weight="700" letter-spacing="-1" fill="white">Pelmet</text>
+
   <text x="640" y="235.2" text-anchor="middle"
         font-family="-apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif"
         font-size="23" font-weight="600" letter-spacing="0.4" fill="white">A calm menu bar for macOS</text>
-
 
   <!-- menu bar strip -->
   <g filter="url(#soft)">
