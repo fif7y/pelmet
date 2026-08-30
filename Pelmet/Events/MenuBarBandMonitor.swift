@@ -136,26 +136,7 @@ final class MenuBarBandMonitor {
             // hover reveal mid-drag injects a reveal/conceal cycle under the
             // running drag (frames shift mid-measurement; seen live during
             // the first overflow rescue). Not a hover.
-            if appState.settings.revealTriggers.hoverEnabled, !appState.isRevealed,
-               !appState.syntheticDragInFlight {
-                // Floor: otherwise the bar flaps open on the way to a hot corner.
-                let delay = max(appState.settings.revealTriggers.hoverDelay, AppTiming.hoverDelayFloor)
-                hoverTimer?.invalidate()
-                hoverTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { _ in
-                    Task { @MainActor [weak self] in
-                        guard let self, let appState = self.appState, self.pointerInBand else { return }
-                        // Re-verify against the LIVE pointer, not just the
-                        // tracked flag — the flag lags by one event-delivery
-                        // latency, which is exactly a fast swipe-through. A
-                        // graze must not open the bar.
-                        let location = NSEvent.mouseLocation
-                        guard let screen = NSScreen.containing(location),
-                              self.isInMenuBarBand(location, of: screen),
-                              !appState.syntheticDragInFlight else { return }
-                        appState.reveal([.hidden], reason: .hover)
-                    }
-                }
-            }
+            scheduleHoverReveal()
         } else if !inBand, pointerInBand {
             pointerInBand = false
             hoverTimer?.invalidate()
@@ -214,6 +195,43 @@ final class MenuBarBandMonitor {
     /// Pointer state for the settle catch-up: a reveal that outlives its hover
     /// re-arms on the short clock.
     var pointerCurrentlyInBand: Bool { pointerInBand }
+
+    private func scheduleHoverReveal() {
+        guard let appState,
+              appState.settings.revealTriggers.hoverEnabled, !appState.isRevealed,
+              !appState.syntheticDragInFlight else { return }
+        // Floor: otherwise the bar flaps open on the way to a hot corner.
+        let delay = max(appState.settings.revealTriggers.hoverDelay, AppTiming.hoverDelayFloor)
+        hoverTimer?.invalidate()
+        hoverTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { _ in
+            Task { @MainActor [weak self] in
+                guard let self, let appState = self.appState, self.pointerInBand else { return }
+                // Re-verify against the LIVE pointer, not just the
+                // tracked flag — the flag lags by one event-delivery
+                // latency, which is exactly a fast swipe-through. A
+                // graze must not open the bar.
+                let location = NSEvent.mouseLocation
+                guard let screen = NSScreen.containing(location),
+                      self.isInMenuBarBand(location, of: screen),
+                      !appState.syntheticDragInFlight else { return }
+                appState.reveal([.hidden], reason: .hover)
+            }
+        }
+    }
+
+    /// Conceal-settle self-heal (mirror of the reveal-side one): a rapid
+    /// hover out-in can put the pointer back in the band while a conceal is
+    /// mid-flight — the entry edge is already spent, so without this the bar
+    /// stays shut under a hovering pointer until it leaves and re-enters.
+    func rearmHoverAfterConceal() {
+        guard pointerInBand,
+              let appState,
+              appState.settings.behavior(
+                forDisplayUUID: NSScreen.containing(NSEvent.mouseLocation)?.displayUUIDString
+              ) == .collapse
+        else { return }
+        scheduleHoverReveal()
+    }
 
     private func clicked(_ event: NSEvent) {
         guard let appState else { return }

@@ -96,6 +96,12 @@ final class AppState {
             // The bar just de-crowded — items trapped in the native
             // overflow now have real frames. Walk any queued rescues.
             placement.flushPendingRescues()
+            // Rapid hover out-in: if the pointer is back in the band by the
+            // time this conceal lands, its entry edge is spent — re-arm the
+            // hover reveal so the bar doesn't stay shut under the pointer.
+            if case .concealed = rehide.state {
+                bandMonitor?.rearmHoverAfterConceal()
+            }
         }
     }
 

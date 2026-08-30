@@ -118,12 +118,24 @@ final class ConcealGhostOverlay {
     /// other bars mirror the same items against their own trailing edge, so
     /// the rect translates right-anchored (the notch only eats the leading
     /// side). Empty result → callers run uncovered, never blocked.
+    /// One request per launch: without Screen Recording every hide/reveal
+    /// runs uncovered (icons pop instead of fading), and nothing else in the
+    /// app ever triggers the system prompt — nook-era grants also died with
+    /// the bundle-ID change. Contextual: fires the first time a cover is
+    /// actually wanted. The OS shows its dialog at most once per app.
+    private static var requestedAccess = false
+
     static func snapshotSet(of rect: CGRect?) async -> [BarSnapshot] {
-        guard
-            let rect, rect.width > 8,
-            CGPreflightScreenCaptureAccess(),
-            let primary = NSScreen.screens.first
-        else { return [] }
+        guard let rect, rect.width > 8 else { return [] }
+        guard CGPreflightScreenCaptureAccess() else {
+            if !requestedAccess {
+                requestedAccess = true
+                CGRequestScreenCaptureAccess()
+                PelmetLog.log("ghost: no screen-recording access — prompted (grant needs a relaunch)")
+            }
+            return []
+        }
+        guard let primary = NSScreen.screens.first else { return [] }
 
         var shots: [BarSnapshot] = []
         for screen in NSScreen.screens {
