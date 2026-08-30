@@ -21,20 +21,22 @@ struct AnimatedAppIcon: View {
                 KeyframeAnimator(initialValue: DotPhases()) { phases in
                     icon(phases)
                 } keyframes: { _ in
-                    // Hero timing: tuck over 8% of the cycle, hold to 46.5%,
-                    // return by 54.5%, rest to 100%. d2 trails d1 by 0.05s.
+                    // Expanded is the true icon; the collapse is a brief accent.
+                    // Rest expanded, quick tuck, short beat, re-expand, rest.
+                    // 5.7s total keeps the brand cycle; d2 trails d1 by 0.05s.
                     KeyframeTrack(\.d1) {
-                        CubicKeyframe(1, duration: 0.456)
-                        CubicKeyframe(1, duration: 2.1945)
-                        CubicKeyframe(0, duration: 0.456)
-                        CubicKeyframe(0, duration: 2.5935)
+                        CubicKeyframe(0, duration: 3.4)
+                        CubicKeyframe(1, duration: 0.45)
+                        CubicKeyframe(1, duration: 0.4)
+                        CubicKeyframe(0, duration: 0.45)
+                        CubicKeyframe(0, duration: 1.0)
                     }
                     KeyframeTrack(\.d2) {
-                        CubicKeyframe(0, duration: 0.05)
-                        CubicKeyframe(1, duration: 0.456)
-                        CubicKeyframe(1, duration: 2.1945)
-                        CubicKeyframe(0, duration: 0.456)
-                        CubicKeyframe(0, duration: 2.5435)
+                        CubicKeyframe(0, duration: 3.45)
+                        CubicKeyframe(1, duration: 0.45)
+                        CubicKeyframe(1, duration: 0.4)
+                        CubicKeyframe(0, duration: 0.45)
+                        CubicKeyframe(0, duration: 0.95)
                     }
                 }
             }
