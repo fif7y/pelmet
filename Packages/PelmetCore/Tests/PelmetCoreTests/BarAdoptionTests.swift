@@ -14,14 +14,25 @@ struct BarAdoptionTests {
     let figma = ItemID(rawValue: "status:com.figma.Desktop::Item-0")
     let anchor = ItemID(rawValue: "status:com.example.Anchor::Item-0")
 
-    @Test func missingChevronMeansNoReconciliation() {
+    @Test func missingChevronSkipsZoneAdoptionButStillFoldsOrder() {
+        // The user can hide Pelmet's status item — no boundary, so zones
+        // must not move, but a bar ⌘-drag still reorders within a section.
+        var model = SectionModel()
+        model.assignments[velja.sectionKey] = .hidden
+        model.assignments[figma.sectionKey] = .hidden
+        model.order[.hidden] = [velja.sectionKey, figma.sectionKey]
         let result = BarAdoption.reconcile(
-            items: [(id: velja, minX: 500)],
-            model: SectionModel(),
-            previousZones: [:],
+            items: [
+                (id: velja, minX: 500),
+                (id: figma, minX: 400),
+            ],
+            model: model,
+            previousZones: [velja.rawValue: .hidden, figma.rawValue: .hidden],
             pelmetBundleID: pelmet
         )
-        #expect(result == nil)
+        #expect(result?.model.order[.hidden] == [figma.sectionKey, velja.sectionKey])
+        #expect(result?.model.assignments[velja.sectionKey] == .hidden)
+        #expect(result?.zones == [velja.rawValue: .hidden, figma.rawValue: .hidden])
     }
 
     @Test func firstPassBaselinesZonesWithoutAdopting() {

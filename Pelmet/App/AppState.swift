@@ -727,7 +727,8 @@ final class AppState {
     }
 
     private func adopt(from snap: EngineSnapshot) {
-        guard settings.showStatusItem else { return }
+        // No showStatusItem guard: with the Pelmet icon hidden reconcile just
+        // skips zone adoption (no boundary) — order fold-in must still run.
         // adoptSectionsFromBar defers while transitioning/settling; this is
         // the last line of defense if called on a stale path.
         guard !isTransitioning else { return }
