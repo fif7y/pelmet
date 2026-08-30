@@ -13,6 +13,10 @@ enum AppTiming {
     /// Precaptured reveal-cover freshness: an appearance/wallpaper change
     /// while idle would flash a stale background.
     static let revealCoverFreshness: TimeInterval = 900
+    /// Precaptured conceal-ghost freshness: unlike the empty reveal cover
+    /// this freezes LIVE icons, and a stale glyph (badge flip, clock tick)
+    /// showing through the fade reads as a glitch — keep the window tight.
+    static let concealGhostFreshness: TimeInterval = 20
     /// Tidy waits for the full reveal to land before rebuilding.
     static let tidyRevealWait: Duration = .seconds(1.2)
     /// Newly toggled-on extras become hostable before placing.

@@ -82,6 +82,7 @@ final class TransitionCoordinator {
             }
             PelmetLog.log("effect reveal settled")
             onRevealSettled?()
+            scheduleConcealGhostPrecapture()
         }
     }
 
@@ -92,11 +93,25 @@ final class TransitionCoordinator {
             // concealed items with no animation, so the overlay is
             // the hide animation. Fades once the swap has landed.
             // Instant style skips the cover — the pop IS the look.
-            let strip = await concealStripFrames()
-            lastConcealedStripRect = strip
-            let ghost = appState.settings.revealAnimation == .instant
-                ? nil
-                : await ConcealGhostOverlay.begin(over: strip, safety: AppTiming.transitionCoverSafety)
+            // Pre-captured while the bar idled revealed (mirror of the
+            // reveal cover): a live AX walk + SCK capture here delayed
+            // every exit by ~70ms before the swap could start.
+            let ghost: ConcealGhostOverlay.GhostSet?
+            if appState.settings.revealAnimation == .instant {
+                lastConcealedStripRect = await concealStripFrames()
+                ghost = nil
+            } else if let first = concealGhostSnapshot.first,
+                      let rect = concealGhostStripRect,
+                      Date().timeIntervalSince(first.takenAt) < AppTiming.concealGhostFreshness {
+                lastConcealedStripRect = rect
+                ghost = ConcealGhostOverlay.begin(from: concealGhostSnapshot, safety: AppTiming.transitionCoverSafety)
+            } else {
+                let strip = await concealStripFrames()
+                lastConcealedStripRect = strip
+                ghost = await ConcealGhostOverlay.begin(over: strip, safety: AppTiming.transitionCoverSafety)
+            }
+            concealGhostSnapshot = []
+            concealGhostStripRect = nil
             PelmetLog.log("effect conceal → engine")
             await engine.conceal()
             appState.updateSnapshot(await engine.snapshot())
@@ -118,6 +133,45 @@ final class TransitionCoordinator {
     }
 
     private var precaptureTask: Task<Void, Never>?
+    private var concealPrecaptureTask: Task<Void, Never>?
+
+    /// The concealable strip captured while the bar idles revealed, so
+    /// `performConceal` floats it synchronously. Short freshness window
+    /// (unlike the empty reveal cover, this freezes live icons).
+    private var concealGhostSnapshot: [ConcealGhostOverlay.BarSnapshot] = []
+    private var concealGhostStripRect: CGRect?
+
+    /// The bar changed under the cached strip (item added/removed, external
+    /// reorder) — a cover floated at the old frames would read as a glitch.
+    /// Recapture if still revealed.
+    func invalidateConcealPrecapture() {
+        concealGhostSnapshot = []
+        concealGhostStripRect = nil
+        if appState?.currentRevealedSections.isEmpty == false {
+            scheduleConcealGhostPrecapture()
+        }
+    }
+
+    /// Mirror of `scheduleRevealCoverPrecapture` for the exit: once the bar
+    /// is swap-quiet after a reveal, the concealable frames are exactly the
+    /// strip the next conceal wants covered — capture now, hide instantly.
+    private func scheduleConcealGhostPrecapture() {
+        guard appState?.settings.revealAnimation != .instant else { return }
+        concealPrecaptureTask?.cancel()
+        concealPrecaptureTask = Task { @MainActor in
+            guard let appState else { return }
+            await appState.waitUntilQuiesced(interval: 0.5, deadline: 3, poll: .milliseconds(200))
+            // Any reveal cover's fade must not bake into the snapshot.
+            try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
+            guard !Task.isCancelled,
+                  !appState.currentRevealedSections.isEmpty, !ConcealGhostOverlay.stripActive
+            else { return }
+            let strip = await concealStripFrames()
+            guard !Task.isCancelled else { return }
+            concealGhostStripRect = strip
+            concealGhostSnapshot = await ConcealGhostOverlay.snapshotSet(of: strip)
+        }
+    }
 
     /// Once the bar has gone swap-quiet after a conceal and the ghost is off
     /// screen, the strip region shows exactly the "empty bar" the next reveal
