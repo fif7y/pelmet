@@ -438,10 +438,7 @@ private struct AboutPane: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            Image(nsImage: NSApp.applicationIconImage)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 96, height: 96)
+            AnimatedAppIcon(size: 96)
                 .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
             Text("Pelmet")
                 .font(.system(size: 30, weight: .semibold))
