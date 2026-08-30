@@ -778,6 +778,7 @@ final class AppState {
     }
 
     private func handle(engineEvent: EngineEvent) {
+        transitions.invalidateConcealPrecapture()
         switch engineEvent {
         case .externalOrderChange:
             adoptSectionsFromBar()
