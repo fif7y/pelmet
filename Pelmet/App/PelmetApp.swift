@@ -17,16 +17,20 @@ struct PelmetApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState: AppState
+    private let relaunching: Bool
 
-    // Defaults migration must land before AppState's property initializers
-    // call SettingsStore.load().
+    // Order matters: bundle relocation before any TCC-relevant work, then
+    // defaults migration before AppState's property initializers call
+    // SettingsStore.load().
     override init() {
+        relaunching = BundleRelocation.relocateIfNeeded()
         NookMigration.runIfNeeded()
         appState = AppState()
         super.init()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !relaunching else { return }
         appState.start()
     }
 

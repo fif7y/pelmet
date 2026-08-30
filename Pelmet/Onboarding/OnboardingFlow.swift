@@ -203,6 +203,15 @@ private struct AccessStep: View {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 18)
 
+            if NookMigration.didMigrate, !appState.accessibilityGranted {
+                Spacer().frame(height: 12)
+                Text("Updating from Nook? A leftover Nook row may appear in the list — it no longer works. Remove it with −, then grant the new Pelmet entry.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Ink.textDim)
+                    .frame(maxWidth: 420, alignment: .leading)
+                    .opacity(appeared ? 1 : 0)
+            }
+
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -221,7 +230,11 @@ private struct AccessStep: View {
         // floating onboarding window.
         OnboardingController.shared.lowerForSystemPrompt()
         let alreadyPrompted = UserDefaults.standard.bool(forKey: "pelmet.axPromptShown")
-        if !alreadyPrompted {
+        // Migrated nook installs always re-fire the prompt API: it registers
+        // the row for the NEW bundle identity — the old Nook row in the list
+        // is dead (TCC keys grants to the old bundle ID) and toggling it
+        // does nothing.
+        if !alreadyPrompted || NookMigration.didMigrate {
             UserDefaults.standard.set(true, forKey: "pelmet.axPromptShown")
             AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
         } else {
