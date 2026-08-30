@@ -61,3 +61,11 @@ check manually in Settings → About.
 **How do I open Settings if I turned the Pelmet icon off?**
 Any of: the global shortcut (⌥⌘, by default), right-click a Pelmet separator,
 right-click empty menu bar space, or launch Pelmet again from Finder/Spotlight.
+
+**I'm developing an app in Xcode and its menu bar icon disappears while Pelmet runs.**
+A macOS limitation, not a setting: the system's menu-bar hiding mechanism
+matches apps by their LaunchServices registration, and apps running out of
+Xcode's DerivedData never match — so they get hidden no matter which section
+they're in. Run your development build from /Applications (copy it there, or
+archive-export), or quit Pelmet while iterating. Everything behaves normally
+for the same app once it runs from a stable location.
