@@ -20,8 +20,11 @@ public enum BarAdoption {
 
     /// Reconcile the observed bar against the model. `items` is every
     /// observed item with its frame's minX (nil when concealed/unmeasured),
-    /// in snapshot order. Returns nil when Pelmet's chevron has no measurable
-    /// frame — there is no boundary to reason against.
+    /// in snapshot order. Without a measurable chevron (the user can hide
+    /// Pelmet's status item entirely) there is no visible/hidden boundary, so
+    /// zone adoption is skipped — but the within-section order fold-in needs
+    /// only live frames and still runs, or a bar ⌘-drag would never reach
+    /// the editor.
     ///
     /// Anything sitting LEFT of the chevron (smaller AX x) is adopted into
     /// Hidden; right of it back to Visible. Always-Hidden has no physical
@@ -38,18 +41,18 @@ public enum BarAdoption {
         previousZones: [String: Section],
         pelmetBundleID: String
     ) -> Result? {
-        guard let chevronX = items.first(where: {
+        let chevronX = items.first(where: {
             $0.id.bundleID == pelmetBundleID
                 && !MenuBarPolicy.isPelmetExtraID($0.id)
                 && !$0.id.rawValue.contains("Separator")
-        })?.minX else { return nil }
+        })?.minX
 
         var log: [String] = []
         var zones = previousZones
         var model = startModel
         var changed = false
         let isFirstPass = previousZones.isEmpty
-        log.append("adopt: chevronX=\(chevronX) firstPass=\(isFirstPass) trackedZones=\(previousZones.count)")
+        log.append("adopt: chevronX=\(chevronX.map { "\($0)" } ?? "none") firstPass=\(isFirstPass) trackedZones=\(previousZones.count)")
         // Cluster edges from the PRE-adoption model: the always-hidden and
         // hidden members' live frames (only present during a full reveal).
         // Self-excluded per item below so an item never bounds itself.
@@ -60,6 +63,7 @@ public enum BarAdoption {
             return ($0.id, x, section)
         }
         for item in items {
+            guard let chevronX else { break }
             guard let bundle = item.id.bundleID,
                   bundle != pelmetBundleID || MenuBarPolicy.isPelmetExtraID(item.id),
                   !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
