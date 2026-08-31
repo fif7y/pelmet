@@ -141,6 +141,35 @@ public actor EngineGoldenGate: MenuBarEngine {
         Date().timeIntervalSince(lastSwapAt) > interval
     }
 
+    /// Fresh registrations under ANY active assertion park offscreen and
+    /// never enter the agent's AX tree (verified at boot — it's why start()
+    /// waits for own-item adoption; re-verified live 2026-08-31: a relaunched
+    /// Bitwarden stayed parked 4+ minutes). The swap choreography is
+    /// deliberately gapless, so no adoption window ever occurs on its own.
+    /// This opens one: drop the assertion, poll the walk until the bundle's
+    /// item lands (parked items land instantly once no assertion holds),
+    /// then re-converge. Cost: concealed items flash for the window's
+    /// duration — callers keep it rare (app relaunch) and skip it when the
+    /// bundle is already observable.
+    public func openAdoptionWindow(for bundleID: String) async -> Bool {
+        guard assertion != nil else { return true }
+        PelmetLog.log("adoptWindow: dropping assertion for \(bundleID)")
+        invalidateAssertion()
+        var adopted = false
+        let deadline = Date().addingTimeInterval(EngineTiming.adoptionWindowDeadline)
+        while Date() < deadline {
+            let snap = await refreshSnapshot()
+            if snap.items.contains(where: { $0.id.bundleID == bundleID }) {
+                adopted = true
+                break
+            }
+            try? await Task.sleep(for: EngineTiming.adoptionWindowPoll)
+        }
+        PelmetLog.log("adoptWindow: \(bundleID) \(adopted ? "adopted" : "not seen") — re-asserting")
+        await converge()
+        return adopted
+    }
+
     /// Desired left-to-right tag order: model order per section, sections
     /// laid out as [alwaysHidden][hidden][visible] (hidden sections collapse
     /// toward the left of the status area, matching the classic layout).

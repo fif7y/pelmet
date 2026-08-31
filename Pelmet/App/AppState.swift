@@ -162,6 +162,60 @@ final class AppState {
         hotkey.register(settings.hotkey)
         registeredHotkey = settings.hotkey
         self.hotkey = hotkey
+
+        // A relaunched app's status item is a FRESH registration — the agent
+        // parks it wherever it likes, not at the model slot (plist seeds are
+        // unreliable: Bitwarden relaunched into the middle of the always-hidden
+        // cluster, 2026-08-31), and the misplaced live frame then poisons
+        // neighbor targeting for every later placement near it. Queue its
+        // items for a re-slot; the flush places them at the next reveal
+        // settle (or right away for the visible section).
+        relaunchObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didLaunchApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  let bundle = app.bundleIdentifier else { return }
+            MainActor.assumeIsolated { self?.queueRelaunchedBundlePlacement(bundle) }
+        }
+    }
+
+    private var relaunchObserver: NSObjectProtocol?
+
+    private func queueRelaunchedBundlePlacement(_ bundle: String) {
+        guard bundle != PelmetBundle.mainID,
+              !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
+              settings.sectionModel.knownBundles.contains(bundle) else { return }
+        let keys = settings.sectionModel.assignments.keys.filter { $0.bundleID == bundle }
+        guard !keys.isEmpty else { return }
+        placement.pendingPlacements.formUnion(keys)
+        PelmetLog.log("place: \(bundle) relaunched — queued \(keys.count) item(s) for re-slot")
+        // The relaunched item registers UNDER an active assertion and parks
+        // offscreen — it never enters the bar or the AX tree on its own (so
+        // no itemsChanged fires, and the editor can't see it either). Open
+        // an explicit adoption window once the app has had time to build its
+        // item; retry once for slow bootstraps (Electron vault apps take
+        // ~20s). Skipped when the item is already observable.
+        Task { [weak self] in
+            for delay in [AppTiming.relaunchAdoptionDelay, AppTiming.relaunchAdoptionRetry] {
+                try? await Task.sleep(for: delay)
+                guard let self else { return }
+                // LIVE AX presence only — the engine's carried concealed set
+                // still lists the OLD registration (a concealed item's quit
+                // fires no AX event, so nothing pruned it) and would mask the
+                // parked NEW one. A relaunched item is parked, never
+                // genuinely concealed, until an assertion-free gap adopts it.
+                let observable = await self.engine.snapshot().items.contains { $0.id.bundleID == bundle }
+                if observable { return }
+                if await self.engine.openAdoptionWindow(for: bundle) {
+                    self.updateSnapshot(await self.engine.snapshot())
+                    self.placement.flushPendingPlacements()
+                    return
+                }
+            }
+            PelmetLog.log("adoptWindow: \(bundle) never registered — giving up")
+        }
     }
 
     private func startEngineEventPump() {
@@ -442,17 +496,22 @@ final class AppState {
         }
     }
 
-    /// Places the icon at its exact slot: between its new neighbors in the
-    /// section's order (midpoint of their real frames), falling back to the
-    /// section zone edge when it has no neighbors. Waits for the bar to settle
-    /// first — measuring mid-reflow grabs stale coordinates, and a synthetic
-    /// ⌘-drag released in the wrong place can fire system gestures.
     /// Dynamic extras (camera/mic indicator) re-enter layout when their
-    /// hardware activates, parked wherever the agent decides — walk them back
-    /// to their model slot. Own-process drags freeze the bar (raw-frame
-    /// mode), and the placement chain no-ops when already in position.
-    func placeDynamicExtra(_ id: ItemID) async {
-        await placement.physicallyPlace(id, in: settings.sectionModel.section(of: id))
+    /// hardware activates, parked wherever the agent decides. QUEUE the walk
+    /// back to the model slot instead of dragging right away: the activation
+    /// is app-driven (another app opened the camera), and an uninitiated
+    /// synthetic ⌘-drag warps the pointer mid-task — same rule as the «
+    /// expansion. The next reveal settle places it, riding motion the user
+    /// started. Editor drops still place immediately via moveItem.
+    func queueDynamicExtraPlacement(_ id: ItemID) {
+        placement.pendingPlacements.insert(id)
+    }
+
+    /// Deactivation edge: a queued-but-never-placed indicator left in the
+    /// queue would retry (and log) a frameless placement on every reveal
+    /// settle after it left layout.
+    func cancelDynamicExtraPlacement(_ id: ItemID) {
+        placement.pendingPlacements.remove(id)
     }
 
     /// Overflow rescue shims (PlacementController → SeparatorManager): expand
