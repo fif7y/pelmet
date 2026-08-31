@@ -28,7 +28,13 @@ enum EditorItemsBuilder {
         for item in snapshotItems {
             byID[item.id] = item
         }
+        // The engine's concealed set is "as of the last converge" — an app that
+        // quits while concealed (or while a reveal keeps converge quiet) stays
+        // in it, and without the running check its stand-in tile outlived the
+        // app in the editor (Bitwarden quit, 2026-08-31). Same guard as the
+        // stored path below; nil-bundle IDs stay (system modules filter later).
         for id in concealed where byID[id] == nil {
+            if let bundle = id.bundleID, bundle != pelmetBundleID, !isRunning(bundle) { continue }
             byID[id] = ObservedItem(id: id, frame: nil, appName: id.bundleID.flatMap(appName))
         }
         // Pelmet's extras are section-manageable (visibility-based hiding); when
@@ -53,7 +59,11 @@ enum EditorItemsBuilder {
         let stored = Set(
             model.assignments.filter { $0.value == section }.map(\.key)
         ).union(model.order[section] ?? [])
-        for id in stored where byID[id] == nil {
+        // A canonical identity already represented (live item or concealed
+        // stand-in under a title-variant id) must not gain a sectionKey twin —
+        // the collapse below would pick a dictionary-order winner.
+        let representedKeys = Set(byID.keys.map(\.sectionKey))
+        for id in stored where byID[id] == nil && !representedKeys.contains(id.sectionKey) {
             guard let bundle = id.bundleID,
                   bundle != pelmetBundleID,
                   !MenuBarPolicy.isUnmanagedAppleBundle(bundle),

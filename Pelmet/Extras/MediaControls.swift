@@ -56,6 +56,8 @@ final class ExtrasManager {
     private var lastAudioOutputActive = false
     /// Edge tracking for the camera/mic indicator's placement walk.
     private var lastCameraIndicatorVisible = false
+    /// Debounces the activation edge before queuing the placement walk.
+    private var cameraPlacementDebounce: Task<Void, Never>?
 
     init(appState: AppState) {
         self.appState = appState
@@ -128,12 +130,24 @@ final class ExtrasManager {
                 visible = active && !systemCameraPillVisible
                 updateCameraSymbol(item, monitor: cameraMicMonitor)
                 // Re-entering layout (isVisible flip) parks the item wherever
-                // the agent decides, not at its model slot — walk it back on
-                // the ACTIVATION edge only (a no-op when already in place;
-                // reveals must not trigger drags).
+                // the agent decides, not at its model slot. Never drag here:
+                // the activation is app-driven (Sconce opening the camera,
+                // 2026-08-31) and the synthetic ⌘-drag hijacked the pointer
+                // mid-task. Debounce the edge — the system pill takes over
+                // within ~50ms and hides us again — then queue the walk for
+                // the next reveal settle.
+                let itemID = Self.itemID(for: spec)
                 if visible, !lastCameraIndicatorVisible {
-                    let itemID = Self.itemID(for: spec)
-                    Task { await appState?.placeDynamicExtra(itemID) }
+                    cameraPlacementDebounce?.cancel()
+                    cameraPlacementDebounce = Task { [weak self] in
+                        try? await Task.sleep(for: AppTiming.cameraIndicatorPlaceDebounce)
+                        guard let self, !Task.isCancelled,
+                              self.lastCameraIndicatorVisible else { return }
+                        self.appState?.queueDynamicExtraPlacement(itemID)
+                    }
+                } else if !visible, lastCameraIndicatorVisible {
+                    cameraPlacementDebounce?.cancel()
+                    appState?.cancelDynamicExtraPlacement(itemID)
                 }
                 lastCameraIndicatorVisible = visible
             case .mediaControls:

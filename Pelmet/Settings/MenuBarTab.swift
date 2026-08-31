@@ -109,6 +109,30 @@ private struct EditorSectionView: View {
     }
 
     @State private var rowTargeted = false
+    /// Tiles are nested drop destinations, so the ROW's isTargeted flips
+    /// false over every tile and true in the 6pt gaps — driving the trailing
+    /// slot and row highlight straight off it made both pop per tile
+    /// crossing, reflowing the whole row each time. `dragEngaged` is the
+    /// stable union (row OR any tile targeted) with a short clear delay to
+    /// ride out the one-frame gap between a tile untargeting and the row
+    /// targeting.
+    @State private var tileTargets = 0
+    @State private var dragEngaged = false
+    @State private var dragDisengage: Task<Void, Never>?
+
+    private func updateDragEngaged() {
+        let engaged = rowTargeted || tileTargets > 0
+        dragDisengage?.cancel()
+        if engaged {
+            dragEngaged = true
+        } else {
+            dragDisengage = Task {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+                dragEngaged = false
+            }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -133,14 +157,17 @@ private struct EditorSectionView: View {
                     NewItemsChip()
                 }
                 ForEach(items, id: \.id.rawValue) { item in
-                    ItemTile(item: item, section: section)
+                    ItemTile(item: item, section: section) { targeting in
+                        tileTargets = max(0, tileTargets + (targeting ? 1 : -1))
+                        updateDragEngaged()
+                    }
                 }
-                // Trailing landing slot: appears while a chip hovers the row
-                // itself (append position).
-                if rowTargeted {
+                // Trailing landing slot: appears while a chip hovers anywhere
+                // over the row (append position on a row drop).
+                if dragEngaged {
                     LandingSlot()
                 }
-                if items.isEmpty, !rowTargeted {
+                if items.isEmpty, !dragEngaged {
                     Text("Drop icons here")
                         .font(.callout)
                         .foregroundStyle(.tertiary)
@@ -152,9 +179,9 @@ private struct EditorSectionView: View {
             .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(.quaternary.opacity(rowTargeted ? 0.8 : (section == .visible ? 0.35 : 0.55)))
+                    .fill(.quaternary.opacity(dragEngaged ? 0.8 : (section == .visible ? 0.35 : 0.55)))
             )
-            .animation(.spring(duration: 0.25), value: rowTargeted)
+            .animation(.spring(duration: 0.25), value: dragEngaged)
             .dropDestination(for: String.self) { dropped, _ in
                 guard let raw = dropped.first else { return false }
                 if raw == NewItemsChip.dragID {
@@ -166,6 +193,7 @@ private struct EditorSectionView: View {
                 return true
             } isTargeted: { targeting in
                 rowTargeted = targeting
+                updateDragEngaged()
             }
         }
     }
@@ -223,6 +251,9 @@ private struct ItemTile: View {
     @Environment(AppState.self) private var appState
     let item: ObservedItem
     let section: PelmetCore.Section
+    /// Reports targeting transitions up so the section row can keep its
+    /// drag affordances stable while the chip crosses nested destinations.
+    var onTargeting: (Bool) -> Void = { _ in }
     @State private var hovered = false
     @State private var targeted = false
 
@@ -324,6 +355,7 @@ private struct ItemTile: View {
             appState.moveItem(ItemID(rawValue: raw), to: section, before: item.id)
             return true
         } isTargeted: { targeting in
+            if targeting != targeted { onTargeting(targeting) }
             targeted = targeting
         }
     }

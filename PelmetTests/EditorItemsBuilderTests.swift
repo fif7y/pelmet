@@ -63,11 +63,22 @@ struct EditorItemsBuilderTests {
         let result = build(
             concealed: [velja],
             model: model,
+            running: ["com.sindresorhus.Velja"],
             names: ["com.sindresorhus.Velja": "Velja"]
         )
         #expect(result.map(\.id) == [velja])
         #expect(result.first?.frame == nil)
         #expect(result.first?.appName == "Velja")
+    }
+
+    /// The engine's concealed set is "as of the last converge" — an app that
+    /// quits stays in it, and its stand-in must NOT outlive the app on the
+    /// board (Bitwarden quit while settings open, 2026-08-31).
+    @Test func concealedStandInOfQuitAppDrops() {
+        var model = SectionModel()
+        model.assignments[velja.sectionKey] = .hidden
+        let result = build(concealed: [velja], model: model)
+        #expect(result.isEmpty)
     }
 
     @Test func staleConcealedTwinOfLiveBundleDrops() {
@@ -102,7 +113,8 @@ struct EditorItemsBuilderTests {
         let result = build(
             items: [ObservedItem(id: velja, frame: frame(x: 100), appName: nil)],
             concealed: [figma],
-            model: model
+            model: model,
+            running: ["com.figma.Desktop"]
         )
         // Figma is explicitly ordered first despite Velja's live frame.
         #expect(result.map(\.id) == [figma, velja])
@@ -112,7 +124,8 @@ struct EditorItemsBuilderTests {
         let unordered = build(
             items: [ObservedItem(id: velja, frame: frame(x: 100), appName: nil)],
             concealed: [figma],
-            model: model
+            model: model,
+            running: ["com.figma.Desktop"]
         )
         #expect(unordered.map(\.id) == [velja, figma])
     }

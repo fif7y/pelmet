@@ -38,6 +38,15 @@ enum AppTiming {
     /// Precapture waits this long after quiesce so the ghost's fade never
     /// bakes into the snapshot.
     static let precaptureGhostClearance: Duration = .milliseconds(300)
+    /// Camera/mic indicator activation edge → placement queue: the system
+    /// camera pill often takes over within ~50ms and the indicator defers to
+    /// it again — queuing before the flap settles queues a dead walk.
+    static let cameraIndicatorPlaceDebounce: Duration = .milliseconds(500)
+    /// Relaunched app → adoption window: first wait lets the app construct
+    /// its status item; the retry covers slow bootstraps (Electron vault
+    /// apps build their tray ~20s in).
+    static let relaunchAdoptionDelay: Duration = .seconds(3)
+    static let relaunchAdoptionRetry: Duration = .seconds(15)
     /// Rescue force-show → measure: the attach + fade + agent reflow must
     /// finish or the frame still reads as a phantom (burned attempt 1 live).
     static let rescueForceShowSettle: Duration = .milliseconds(600)

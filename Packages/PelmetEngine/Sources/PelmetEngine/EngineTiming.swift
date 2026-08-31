@@ -33,4 +33,16 @@ enum EngineTiming {
     /// verifyConcealment: bounded poll until concealed bundles drop out of AX.
     static let verifyWindow: TimeInterval = 3
     static let verifyPoll: Duration = .milliseconds(150)
+    /// Synthetic-drag idle gate: don't grab the pointer out of the user's
+    /// hand — wait for this much HID-mouse quiet before starting, but never
+    /// stall a placement longer than the cap (the shield protects either way).
+    static let dragIdleQuietGap: TimeInterval = 0.25
+    static let dragIdleMaxWait: TimeInterval = 1.5
+    static let dragIdlePoll: Duration = .milliseconds(50)
+    /// Bounded wait for the shield's tap thread to arm before posting events.
+    static let dragShieldArmTimeout: TimeInterval = 0.3
+    /// Adoption window: assertion-free gap for a parked fresh registration to
+    /// land (lands instantly in practice; the deadline bounds the flash).
+    static let adoptionWindowDeadline: TimeInterval = 2.5
+    static let adoptionWindowPoll: Duration = .milliseconds(200)
 }
