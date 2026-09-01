@@ -5,10 +5,24 @@ posts). Real screenshots are the base; only the rows showing apps are
 re-rendered from a config, so the result is pixel-faithful and never leaks a
 personal setup.
 
-Two pages:
+Surfaces:
 - `index.html` — Settings → Menu Bar window (the editor)
 - `bar.html`   — the menu bar itself, with a fake "revealed" hidden section
   drawn from white brand glyphs over a real collapsed capture (`bar-base.png`)
+- `bar-anim.svg` — self-contained animated SVG of the bar in action (glyphs
+  tuck away and return, hero.svg's 5.7s cycle/easing); works in a plain
+  `<img>` on GitHub and the site. Regenerate with the python snippet in git
+  history or tweak positions/delays in-file. Preview: `anim-test.html`.
+  NB: Playwright screenshots freeze CSS animations — verify with a
+  `document.getAnimations()` scrub, not frame diffs.
+- `renders/` — finished, caption-ready shots (see below)
+
+## Renders (message → shot)
+- "Calm by default."            → `renders/bar-collapsed.png`
+- "Hover, and it's all back."   → `renders/bar-revealed-bignames.png`
+- "A real layout editor."       → `renders/editor-bignames.png`
+- "Your rules for revealing."   → `renders/settings-general.png`
+- the bar in action             → `bar-anim.svg`
 
 ## Tweak
 
