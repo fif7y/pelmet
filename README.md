@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://pelmet.fif7y.com"><img src="https://img.shields.io/badge/website-pelmet.fif7y.com-6841ED" alt="Website: pelmet.fif7y.com"></a>
   <a href="https://github.com/fif7y/pelmet/releases/latest"><img src="https://img.shields.io/github/v/release/fif7y/pelmet?label=download&color=2ea44f" alt="Download latest release"></a>
   <a href="#install"><img src="https://img.shields.io/badge/requirements-macOS_27%2B-E8A33D" alt="Requires macOS 27 or later"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/fif7y/pelmet" alt="License: GPL-3.0"></a>
