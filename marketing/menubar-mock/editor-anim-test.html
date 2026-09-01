@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>editor-anim verify</title>
+<style>html,body{margin:0;background:#111}</style>
+<div id="host"></div>
+<script>
+window.ready = fetch('editor-anim.svg').then(r => r.text()).then(t => {
+  document.getElementById('host').innerHTML = t;
+  return true;
+});
+</script>

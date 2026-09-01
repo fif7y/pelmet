@@ -1,1 +1,13 @@
-<body style="background:#333;padding:20px"><img src="bar-anim.svg" width="1150">
+<!doctype html>
+<meta charset="utf-8">
+<title>bar-anim verify</title>
+<style>html,body{margin:0;background:#333;padding:20px}</style>
+<div id="host"></div>
+<script>
+// Inlined (not <img>) so document.getAnimations() can scrub frames —
+// Playwright screenshots freeze CSS animations, scrubbing is the only verify.
+window.ready = fetch('bar-anim.svg').then(r => r.text()).then(t => {
+  document.getElementById('host').innerHTML = t;
+  return true;
+});
+</script>
