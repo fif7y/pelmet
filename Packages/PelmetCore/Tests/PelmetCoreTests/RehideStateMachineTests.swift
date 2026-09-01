@@ -86,6 +86,30 @@ import Testing
         #expect(machine.state == .concealed)
     }
 
+    @Test func hoverMidWiderRevealTransitionDoesNotNarrow() {
+        // Observed live 2026-08-31 22:36: a hover reveal [hidden] landed
+        // while the double-click [hidden, alwaysHidden] reveal was still
+        // applying — the queued narrower reveal settled as the tracked state
+        // while the engine (additive reveal) kept everything visible, so
+        // every later hover reveal showed always-hidden items.
+        var machine = RehideStateMachine()
+        _ = machine.handle(.revealRequested([.hidden, .alwaysHidden], .doubleClick), now: now)
+        let effects = machine.handle(.revealRequested([.hidden], .hover), now: now)
+        #expect(effects == [.none])
+        _ = machine.handle(.transitionSettled, now: now)
+        #expect(machine.state == .revealed(sections: [.hidden, .alwaysHidden], reason: .doubleClick))
+    }
+
+    @Test func wideningRevealMidFlightQueuesTheUnion() {
+        var machine = RehideStateMachine()
+        _ = machine.handle(.revealRequested([.hidden], .hover), now: now)
+        _ = machine.handle(.revealRequested([.alwaysHidden], .doubleClick), now: now)
+        let effects = machine.handle(.transitionSettled, now: now)
+        #expect(effects == [.reveal([.hidden, .alwaysHidden])])
+        _ = machine.handle(.transitionSettled, now: now)
+        #expect(machine.state == .revealed(sections: [.hidden, .alwaysHidden], reason: .doubleClick))
+    }
+
     @Test func wideningRevealUnionsSections() {
         var machine = RehideStateMachine()
         _ = machine.handle(.revealRequested([.hidden], .hover), now: now)
