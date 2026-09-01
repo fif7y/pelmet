@@ -1,0 +1,99 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pelmet settings mock — marketing compositor</title>
+<style>
+  html,body{margin:0;padding:0;background:#111}
+  #stage{position:relative;width:1560px;height:1800px;overflow:hidden}
+  #bg{position:absolute;left:0;top:0;width:1560px;height:1800px}
+  .patch{position:absolute}
+  .tile{position:absolute;text-align:center}
+  .tile img,.tile canvas{width:64px;height:64px;display:block;margin:0 auto}
+  .tile .lb{margin-top:12px;font:400 24px/1 -apple-system,'SF Pro Text',system-ui,sans-serif;
+    letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sq{width:64px;height:64px;border-radius:14px;margin:0 auto;position:relative}
+  .sq .dot{position:absolute;left:50%;top:50%;width:7px;height:7px;border-radius:50%;
+    transform:translate(-50%,-50%)}
+  .sq .pipe{position:absolute;left:50%;top:50%;width:3px;height:30px;border-radius:2px;
+    transform:translate(-50%,-50%)}
+</style>
+<div id="stage">
+  <img id="bg" src="base-menubar.png">
+  <div id="layers"></div>
+</div>
+<script>
+/* ================= EDIT ME =================
+   Tile spec: {icon:'icons/x.png', label:'X'}   app icon tile
+              {sprite:[cx,cy], label:'X'}       64px crop lifted from the base image
+              {sep:'pipe'} | {sep:'dot'}        separator tile
+   Rows are laid out right-to-left, right-aligned like the real editor.        */
+const HIDDEN = [
+  {icon:'icons/snib.png',   label:'Snib'},
+  {sprite:[1355,696],       label:'Pelmet'},   // camera & mic stand-in glyph
+  {sep:'pipe'},
+  {icon:'icons/claude.png', label:'Claude'},
+  {icon:'icons/velja.png',  label:'Velja'},
+  {icon:'icons/popclip.png',label:'PopClip'},
+];
+const ALWAYS_HIDDEN = [
+  {icon:'icons/gdrive.png',      label:'Google Drive'},
+  {icon:'icons/notion.png',      label:'Notion'},
+  {icon:'icons/discord.png',     label:'Discord'},
+  {icon:'icons/zoom.png',        label:'zoom.us'},
+  {icon:'icons/soundsource.png', label:'SoundSource'},
+  {sep:'dot'},
+];
+/* =========== END EDIT ME =========== */
+
+// Geometry of the two editor rows in base-menubar.png (image px, @2x).
+const ROWS = [
+  {items: HIDDEN,        iconY: 664, patch:[600,662,900,110], sample:[500,711]},
+  {items: ALWAYS_HIDDEN, iconY: 900, patch:[600,892,900,112], sample:[500,947]},
+];
+const RIGHT_EDGE = 1490, GAP = 26, MAXW = 130, SEP_SQ = [1109,900];
+
+window.ready = new Promise(res => {
+  const bg = document.getElementById('bg');
+  bg.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = 1560; c.height = 1800;
+    const g = c.getContext('2d');
+    g.drawImage(bg, 0, 0, 1560, 1800);
+    g.font = "400 24px -apple-system, 'SF Pro Text', system-ui, sans-serif";
+    const px = (x,y) => { const d = g.getImageData(x,y,1,1).data; return `rgb(${d[0]},${d[1]},${d[2]})`; };
+    const labelColor = 'rgb(152,146,162)';
+    const sepFill = px(SEP_SQ[0], SEP_SQ[1] + 10), sepInk = 'rgb(207,202,216)';
+    const layers = document.getElementById('layers');
+    for (const row of ROWS) {
+      const p = document.createElement('div');
+      p.className = 'patch';
+      const [x,y,w,h] = row.patch;
+      Object.assign(p.style, {left:x+'px', top:y+'px', width:w+'px', height:h+'px',
+                              background: px(row.sample[0], row.sample[1])});
+      layers.appendChild(p);
+      let cursor = RIGHT_EDGE;
+      for (let i = row.items.length - 1; i >= 0; i--) {
+        const it = row.items[i];
+        const label = it.sep ? 'Separator' : it.label;
+        const w2 = Math.max(64, Math.min(Math.ceil(g.measureText(label).width) + 4, MAXW));
+        const t = document.createElement('div');
+        t.className = 'tile';
+        Object.assign(t.style, {width:w2+'px', left:(cursor-w2)+'px', top:row.iconY+'px'});
+        let inner;
+        if (it.sep) {
+          inner = `<div class="sq" style="background:${sepFill}"><div class="${it.sep}" style="background:${sepInk}"></div></div>`;
+        } else if (it.sprite) {
+          const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64;
+          cv.getContext('2d').drawImage(bg, it.sprite[0]-32, it.sprite[1]-32, 64, 64, 0, 0, 64, 64);
+          inner = `<img src="${cv.toDataURL()}">`;
+        } else {
+          inner = `<img src="${it.icon}">`;
+        }
+        t.innerHTML = `${inner}<div class="lb" style="color:${labelColor}">${label}</div>`;
+        layers.appendChild(t);
+        cursor -= w2 + GAP;
+      }
+    }
+    res(true);
+  };
+});
+</script>
