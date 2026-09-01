@@ -1,9 +1,14 @@
-# Settings-window mock — marketing compositor
+# Menu bar mocks — marketing compositors
 
-Reusable, tweakable recreation of Pelmet's Settings → Menu Bar window for
-marketing (README, site, posts). A real full-window screenshot is the base;
-only the two editor rows are re-rendered from a config, so the result is
-pixel-faithful everywhere else and never leaks a personal setup.
+Reusable, tweakable recreations of Pelmet's marketing surfaces (README, site,
+posts). Real screenshots are the base; only the rows showing apps are
+re-rendered from a config, so the result is pixel-faithful and never leaks a
+personal setup.
+
+Two pages:
+- `index.html` — Settings → Menu Bar window (the editor)
+- `bar.html`   — the menu bar itself, with a fake "revealed" hidden section
+  drawn from white brand glyphs over a real collapsed capture (`bar-base.png`)
 
 ## Tweak
 
@@ -28,19 +33,34 @@ Then screenshot the `#stage` element at 1560×1800 (Playwright:
 `page.locator('#stage').screenshot(...)` — `file://` is blocked by the
 browser tools, hence the server). Output is @2x; display at 780px wide.
 
-## Icons
-
-`icons/` holds 128px PNGs extracted from locally installed apps:
+## Icons — automated via `fetch-icon.sh`
 
 ```sh
-sips -s format png -Z 128 "/Applications/X.app/Contents/Resources/<CFBundleIconFile>.icns" --out icons/x.png
+./fetch-icon.sh slack "Slack" slack        # <slug> "<search term>" [simpleicons-slug|-]
 ```
 
-Library: gdrive, notion, discord, zoom, soundsource, snib, claude, velja,
-popclip, bitwarden, figma, obsidian, signal, whatsapp, vscode,
-monitorcontrol, windscribe, 1blocker, arc, purepaste, unclutter.
-For apps not installed (1Password, Raycast, Slack, Spotify…), drop an icon
-PNG in `icons/` from the vendor's press kit and reference it.
+Tries, in order:
+1. **Local extract** — `/Applications/<term>.app` icns → `icons/<slug>.png`
+2. **App Store artwork** — iTunes Search API (`entity=macSoftware`, then
+   `software`), official 512px icon
+3. **Glyph** — `cdn.simpleicons.org/<slug>/white` → `glyphs/<slug>.svg`
+   (white monochrome, menubar-style; pass `-` to skip)
+
+For apps with no usable App Store artwork (Docker, Spotify, Raycast were
+wrong/missing), **recreate** the app icon from the glyph:
+
+```sh
+./make-tile.sh docker 2496ED     # brand-color tile + white glyph → icons/docker.png
+```
+
+Library today — icons: gdrive, notion, discord, zoom, soundsource, snib,
+claude, velja, popclip, bitwarden, figma, obsidian, signal, whatsapp,
+vscode, monitorcontrol, windscribe, 1blocker, arc, purepaste, unclutter,
+1password, slack, spotify, dropbox, docker, raycast, rectangle,
+fantastical, telegram, tailscale. Glyphs: 1password, spotify, raycast,
+dropbox, docker, telegram, tailscale, slack.
+Simple Icons drops some trademarked brands over time; if a glyph 404s,
+recreate it or pull the vendor press kit.
 
 ## Regenerating the base
 
