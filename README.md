@@ -15,6 +15,12 @@ bar architecture instead of the window-juggling tricks older managers rely
 on, which is why hiding feels like part of the system: no overlay windows, no
 fake bars, no icons jumping when the bar reflows.
 
+<p align="center">
+  <img src="docs/assets/screenshot-bar-collapsed.png" alt="The menu bar with hidden icons tucked away" width="575"><br>
+  <img src="docs/assets/screenshot-bar-revealed.png" alt="The same menu bar with hidden icons revealed on hover" width="575"><br>
+  <sub>Collapsed, and a hover later.</sub>
+</p>
+
 ## Features
 
 - **Hidden and always-hidden sections** — drag icons across the chevron to
@@ -35,6 +41,11 @@ fake bars, no icons jumping when the bar reflows.
   come back, with an adjustable auto-rehide delay.
 - **Signed updates** — Sparkle with EdDSA signatures, checked against a
   signed appcast.
+
+<p align="center">
+  <img src="docs/assets/screenshot-editor.png" alt="The layout editor: Visible, Hidden and Always Hidden sections with real app icons" width="640"><br>
+  <sub>The layout editor — drag icons between Visible, Hidden and Always&nbsp;Hidden.</sub>
+</p>
 
 ## How it works
 
