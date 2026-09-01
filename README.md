@@ -11,9 +11,9 @@
 </p>
 
 Pelmet hides the icons you don't need until you do — hover, click, or press a
-shortcut and they slide back in. It's built natively on macOS 27's new menu
-bar architecture instead of the window-juggling tricks older managers rely
-on, which is why hiding feels like part of the system: no overlay windows, no
+shortcut and they slide back in. Apple rebuilt the menu bar from the ground
+up in macOS 27, and Pelmet is written for that new architecture from day one,
+which is why hiding feels like part of the system: no overlay windows, no
 fake bars, no icons jumping when the bar reflows.
 
 <p align="center">
