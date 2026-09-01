@@ -83,6 +83,29 @@ struct BarAdoptionTests {
         #expect(result?.model.assignments[velja.sectionKey] == .hidden)
     }
 
+    @Test func noChevronDraggedItemAdoptsWithoutABaseline() {
+        // Fresh boot: no revealed pass ran before the drag, so the dragged
+        // item has no baseline — the gesture is the evidence and a confident
+        // reading must adopt anyway (observed live 2026-08-31 22:26).
+        var model = SectionModel()
+        model.assignments[velja.sectionKey] = .hidden
+        model.assignments[figma.sectionKey] = .alwaysHidden
+        model.assignments[anchor.sectionKey] = .alwaysHidden
+        let result = BarAdoption.reconcile(
+            items: [
+                (id: figma, minX: 300),
+                (id: velja, minX: 350),    // dropped mid always-hidden cluster
+                (id: anchor, minX: 400),
+            ],
+            model: model,
+            previousZones: [:],
+            pelmetBundleID: pelmet,
+            draggedID: velja
+        )
+        #expect(result?.changed == true)
+        #expect(result?.model.assignments[velja.sectionKey] == .alwaysHidden)
+    }
+
     @Test func noChevronWithoutDraggedIDNeitherAdoptsNorEatsTheDrag() {
         // Order-change passes fire DURING a drag with no dragged id — they
         // must neither adopt nor fold the moved item's new side into the

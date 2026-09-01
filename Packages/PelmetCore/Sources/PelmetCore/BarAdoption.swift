@@ -146,8 +146,18 @@ public enum BarAdoption {
             // Chevron-less readings are baseline-only except for the dragged
             // item — see the doc comment (stale-model poisoning).
             guard chevronX != nil || item.id == draggedID else { continue }
-            // First sighting establishes a baseline; only a zone CHANGE adopts.
-            guard !isFirstPass, let previousZone, previousZone != zone else { continue }
+            if chevronX == nil {
+                // The ⌘-drag gesture itself is the evidence — a fresh boot may
+                // hold no baseline for the dragged item yet (observed live:
+                // the only revealed pass ran 90ms AFTER the drop, and the
+                // agreement rule above rightly refused to baseline the moved
+                // position), so a confident reading adopts without one.
+                guard confident else { continue }
+            } else {
+                // First sighting establishes a baseline; only a zone CHANGE
+                // adopts.
+                guard !isFirstPass, let previousZone, previousZone != zone else { continue }
+            }
             guard zone != current else { continue }
             if zone == .visible {
                 model.assignments.removeValue(forKey: item.id.sectionKey)
