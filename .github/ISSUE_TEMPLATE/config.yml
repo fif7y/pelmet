@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or help
+    url: https://github.com/fif7y/pelmet/discussions/categories/q-a
+    about: Ask in Discussions. Check the FAQ first, it covers permissions, protected icons and the private API.
+  - name: FAQ
+    url: https://github.com/fif7y/pelmet/blob/main/docs/FAQ.md
+    about: Why some icons can't hide, what permissions are for, how hiding works.
