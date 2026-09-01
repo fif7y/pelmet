@@ -1,0 +1,16 @@
+name: Feature request
+description: Something you wish Pelmet did
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: The situation, not the solution. What's annoying today?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: If you have a specific idea, describe it. Sketches and screenshots welcome.
