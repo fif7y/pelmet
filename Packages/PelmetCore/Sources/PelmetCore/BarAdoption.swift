@@ -21,10 +21,17 @@ public enum BarAdoption {
     /// Reconcile the observed bar against the model. `items` is every
     /// observed item with its frame's minX (nil when concealed/unmeasured),
     /// in snapshot order. Without a measurable chevron (the user can hide
-    /// Pelmet's status item entirely) there is no visible/hidden boundary, so
-    /// zone adoption is skipped — but the within-section order fold-in needs
-    /// only live frames and still runs, or a bar ⌘-drag would never reach
-    /// the editor.
+    /// Pelmet's status item entirely) the clusters themselves are the only
+    /// boundary: an item measured at/right of the visible cluster's left edge
+    /// reads visible, one at/left of the concealable clusters' right edge
+    /// reads into the hidden side, and the gap between them is ambiguous —
+    /// the model's word stands. Cluster edges are computed from the (stale,
+    /// mid-drag) model, so the dragged item itself poisons every OTHER item's
+    /// reading — chevron-less zone adoption therefore applies ONLY to
+    /// `draggedID` (the item the band monitor saw ⌘-dragged, whose
+    /// self-excluded pools are clean); everyone else still gets confident
+    /// readings folded into the zone baseline. The within-section order
+    /// fold-in needs only live frames and always runs.
     ///
     /// Anything sitting LEFT of the chevron (smaller AX x) is adopted into
     /// Hidden; right of it back to Visible. Always-Hidden has no physical
@@ -39,7 +46,8 @@ public enum BarAdoption {
         items: [(id: ItemID, minX: CGFloat?)],
         model startModel: SectionModel,
         previousZones: [String: Section],
-        pelmetBundleID: String
+        pelmetBundleID: String,
+        draggedID: ItemID? = nil
     ) -> Result? {
         let chevronX = items.first(where: {
             $0.id.bundleID == pelmetBundleID
@@ -62,8 +70,14 @@ public enum BarAdoption {
             guard section != .visible else { return nil }
             return ($0.id, x, section)
         }
+        // The visible cluster's measured members — its left edge is the
+        // implicit boundary when the chevron is hidden. Self-excluded per
+        // item below so a dragged item never bounds itself.
+        let visibleX: [(id: ItemID, x: CGFloat)] = items.compactMap {
+            guard let x = $0.minX, model.section(of: $0.id) == .visible else { return nil }
+            return ($0.id, x)
+        }
         for item in items {
-            guard let chevronX else { break }
             guard let bundle = item.id.bundleID,
                   bundle != pelmetBundleID || MenuBarPolicy.isPelmetExtraID(item.id),
                   !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
@@ -72,7 +86,30 @@ public enum BarAdoption {
             let current = model.section(of: item.id)
             let zone: Section
             var confident = true
-            if x >= chevronX {
+            // true = concealable side, false = visible side, nil = no
+            // measurable boundary on either side of this x.
+            let concealableSide: Bool?
+            if let chevronX {
+                concealableSide = x < chevronX
+            } else {
+                // No chevron: adopt only INSIDE a measured cluster — the gap
+                // between the clusters has no boundary to judge against.
+                let visMin = visibleX.filter { $0.id != item.id }.map(\.x).min()
+                let hiddenMax = clusterX.filter { $0.id != item.id }.map(\.x).max()
+                if let visMin, x >= visMin {
+                    concealableSide = false
+                } else if let hiddenMax, x <= hiddenMax {
+                    concealableSide = true
+                } else {
+                    concealableSide = nil
+                }
+            }
+            if concealableSide == nil {
+                // Unbounded — the model's word stands, and the guess must
+                // not become a baseline.
+                zone = current
+                confident = false
+            } else if concealableSide == false {
                 zone = .visible
             } else {
                 let ahMax = clusterX
@@ -98,7 +135,17 @@ public enum BarAdoption {
             // far left, reads "hidden" while concealed (ambiguous) and
             // "alwaysHidden" on the next full reveal — that flap would adopt
             // as if the user dragged it. Only measured zones persist.
-            if confident { zones[item.id.rawValue] = zone }
+            // Chevron-less baselines additionally require agreement with the
+            // model: a drag reflows the bar and fires order-change passes
+            // BEFORE the drag-end pass — folding the moved item's new side
+            // into the baseline there would eat the adoption (previousZone
+            // would already equal the drag-end reading).
+            if confident, chevronX != nil || zone == current {
+                zones[item.id.rawValue] = zone
+            }
+            // Chevron-less readings are baseline-only except for the dragged
+            // item — see the doc comment (stale-model poisoning).
+            guard chevronX != nil || item.id == draggedID else { continue }
             // First sighting establishes a baseline; only a zone CHANGE adopts.
             guard !isFirstPass, let previousZone, previousZone != zone else { continue }
             guard zone != current else { continue }
@@ -108,6 +155,9 @@ public enum BarAdoption {
                 model.assignments[item.id.sectionKey] = zone
             }
             log.append("adopt: \(item.id.rawValue) → \(zone)")
+            // The accepted zone IS the new baseline (the chevron-less store
+            // above skipped it because it disagreed with the pre-drag model).
+            zones[item.id.rawValue] = zone
             changed = true
         }
         // Within-section order: the editor treats the explicit stored order as

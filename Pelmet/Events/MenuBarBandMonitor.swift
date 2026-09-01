@@ -67,13 +67,16 @@ final class MenuBarBandMonitor {
         case .leftMouseUp:
             guard cmdDragActive else { return }
             cmdDragActive = false
-            PelmetLog.log("band: ⌘-drag ended → adopting")
+            // The drop x identifies WHICH item was dragged (it lands under
+            // the cursor) — chevron-less zone adoption needs that identity.
+            let dropX = NSEvent.mouseLocation.x
+            PelmetLog.log("band: ⌘-drag ended → adopting (dropX=\(Int(dropX)))")
             // Give MenuBarAgent a beat to finalize the new position, then
             // adopt before rehide can run a stale conceal.
             DispatchQueue.main.asyncAfter(deadline: .now() + AppTiming.dragAdoptDelay) { [weak self] in
                 guard let self, let appState = self.appState else { return }
                 self.dragSinceAdoption = false
-                appState.adoptSectionsFromBar()
+                appState.adoptSectionsFromBar(dragEndX: dropX)
                 if appState.isRevealed {
                     appState.pointerLeftBand()  // re-arm the countdown
                 }
