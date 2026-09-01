@@ -139,9 +139,11 @@ window to conceal the curtain fittings. Now also: the same, for your menu bar.
 ## Licenses & acknowledgements
 
 Pelmet was inspired by [Ice](https://github.com/jordanbaird/Ice), the open-source
-menu bar manager for earlier versions of macOS — Pelmet picks up where Ice left
-off, rebuilt from scratch for macOS 27's new menu bar architecture (no code is
-shared between the projects).
+menu bar manager for earlier versions of macOS. Apple's macOS 27 rebuild of the
+menu bar doesn't carry the old architecture forward, so Ice and the other
+managers built on it stop working there. Pelmet takes over from macOS 27 on,
+rebuilt from scratch for the new architecture (no code is shared between the
+projects).
 
 Pelmet's only third-party dependency is
 [Sparkle](https://github.com/sparkle-project/Sparkle) (in-app updates), used
