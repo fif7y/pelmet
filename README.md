@@ -16,36 +16,53 @@ on, which is why hiding feels like part of the system: no overlay windows, no
 fake bars, no icons jumping when the bar reflows.
 
 <p align="center">
-  <img src="docs/assets/screenshot-bar-collapsed.png" alt="The menu bar with hidden icons tucked away" width="575"><br>
-  <img src="docs/assets/screenshot-bar-revealed.png" alt="The same menu bar with hidden icons revealed on hover" width="575"><br>
+  <img src="docs/assets/bar-anim.svg" alt="The menu bar: hidden icons tuck away behind the chevron, then return on hover" width="575"><br>
   <sub>Collapsed, and a hover later.</sub>
 </p>
 
-## Features
+## Choose what stays
 
-- **Hidden and always-hidden sections** — drag icons across the chevron to
-  choose what stays, what hides, and what only appears when you ask.
-- **A real layout editor** — app-icon previews, drag-and-drop ordering, and
-  honest badges for what macOS groups together or protects.
+Three sections, one rule: **Visible** is always there, **Hidden** comes back
+on a hover or a click, and **Always Hidden** only appears when you ask for it
+(double-click or ⌥-click the chevron). Arrange them in the layout editor —
+real app-icon previews, drag-and-drop ordering — or skip the window entirely
+and ⌘-drag icons across the chevron right in the menu bar; Pelmet adopts the
+move either way.
+
+<p align="center">
+  <img src="docs/assets/editor-anim.svg" alt="The layout editor: dragging an icon from Always Hidden to Hidden, both sections reflowing" width="640"><br>
+  <sub>The layout editor — drag icons between Visible, Hidden and Always&nbsp;Hidden.</sub>
+</p>
+
+System icons hide too — Sound, Battery, Wi-Fi and friends behave like any
+other icon. The few macOS protects (Clock, Control Center, Siri) are shown
+locked in the editor, not pretended away, and anything macOS groups together
+gets an honest badge instead of a fake handle.
+
+## Reveal on your terms
+
+Every way back in is a setting: hover (with an adjustable delay), a click on
+empty menu bar space, a double-click for the always-hidden section, or the
+chevron itself. Pick how it looks — **Instant**, **Smooth**, or **Fade** —
+and how it ends: auto-rehide after a delay you set, or the moment you click
+somewhere else.
+
+<p align="center">
+  <img src="docs/assets/screenshot-settings.png" alt="General settings: reveal on hover with delay, click and double-click reveals, Instant/Smooth/Fade animation, auto-rehide rules" width="640"><br>
+  <sub>Your rules for revealing — and for putting everything back.</sub>
+</p>
+
+## And the rest
+
 - **Per-display behavior** — set a display to always show everything or to
   collapse; whichever display your pointer is on wins.
-- **System icons too** — Sound, Battery, Wi-Fi and friends can hide like
-  anything else. The few macOS protects (Clock, Control Center, Siri) are
-  shown locked, not pretended away.
 - **Built-in replacements** — media controls, AirDrop, camera/mic indicator,
   and Shortcuts items that survive hiding, since macOS temporarily removes
   its own extras while hiding is active.
 - **Separators** — visual dividers that behave like icons, with adjustable
-  opacity.
-- **Reveal styles** — Instant, Smooth, or Fade animation when hidden icons
-  come back, with an adjustable auto-rehide delay.
+  opacity, ⌘-draggable anywhere in the bar.
 - **Signed updates** — Sparkle with EdDSA signatures, checked against a
   signed appcast.
-
-<p align="center">
-  <img src="docs/assets/screenshot-editor.png" alt="The layout editor: Visible, Hidden and Always Hidden sections with real app icons" width="640"><br>
-  <sub>The layout editor — drag icons between Visible, Hidden and Always&nbsp;Hidden.</sub>
-</p>
 
 ## How it works
 
