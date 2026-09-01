@@ -127,6 +127,31 @@ public struct RehideStateMachine: Equatable, Sendable {
             if queued == .conceal, reason == .hover {
                 return [.none]
             }
+            // A reveal landing mid-reveal must never NARROW what's in flight
+            // or queued: the engine's reveal is additive, so settling a queued
+            // [hidden] right after a double-click [hidden, alwaysHidden]
+            // leaves the bar fully revealed while the machine tracks
+            // hidden-only — hover reveals then keep showing always-hidden
+            // items until the next conceal (observed live 2026-08-31 22:36).
+            // Union instead; a request already covered is a no-op, and a
+            // hover re-fire never downgrades a deliberate reveal's reason.
+            if case .reveal(let inFlight, let inFlightReason) = target {
+                var union = inFlight
+                var keptReason = inFlightReason
+                if case .reveal(let queuedSections, let queuedReason)? = queued {
+                    union.formUnion(queuedSections)
+                    keptReason = queuedReason
+                }
+                if sections.subtracting(union).isEmpty {
+                    return [.none]
+                }
+                union.formUnion(sections)
+                state = .transitioning(
+                    target: target,
+                    queued: .reveal(union, reason == .hover ? keptReason : reason)
+                )
+                return [.none]
+            }
             state = .transitioning(target: target, queued: .reveal(sections, reason))
             return [.none]
 
