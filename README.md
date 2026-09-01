@@ -14,7 +14,7 @@ Pelmet hides the icons you don't need until you do — hover, click, or press a
 shortcut and they slide back in. Apple rebuilt the menu bar from the ground
 up in macOS 27, and Pelmet is written for that new architecture from day one,
 which is why hiding feels like part of the system: no overlay windows, no
-fake bars, no icons jumping when the bar reflows.
+fake bars, no icons jumping when the bar reflows. Free and open source.
 
 <p align="center">
   <img src="docs/assets/bar-anim.svg" alt="The menu bar: hidden icons tuck away behind the chevron, then return on hover" width="575"><br>
@@ -62,6 +62,8 @@ somewhere else.
   its own extras while hiding is active.
 - **Separators** — visual dividers that behave like icons, with adjustable
   opacity, ⌘-draggable anywhere in the bar.
+- **Nothing to phone home about** — no account, no analytics, no server.
+  The only connection Pelmet ever makes is checking for its own updates.
 - **Signed updates** — Sparkle with EdDSA signatures, checked against a
   signed appcast.
 
@@ -128,6 +130,11 @@ convergence) — each with its own test suite:
 swift test --package-path Packages/PelmetCore
 swift test --package-path Packages/PelmetEngine
 ```
+
+## Why "Pelmet"
+
+*pelmet* (n.) — a narrow border of cloth or wood, fitted across the top of a
+window to conceal the curtain fittings. Now also: the same, for your menu bar.
 
 ## Licenses & acknowledgements
 
