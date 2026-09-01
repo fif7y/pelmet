@@ -688,7 +688,7 @@ final class AppState {
     /// spawns N concurrent retry chains, each pulling its own snapshot.
     private var adoptionInFlight = false
 
-    func adoptSectionsFromBar(retry: Int = 0) {
+    func adoptSectionsFromBar(retry: Int = 0, dragEndX: CGFloat? = nil) {
         if retry == 0 {
             guard !adoptionInFlight else { return }
             adoptionInFlight = true
@@ -708,14 +708,14 @@ final class AppState {
                     return
                 }
                 try? await Task.sleep(for: AppTiming.adoptDeferralDelay)
-                adoptSectionsFromBar(retry: retry + 1)
+                adoptSectionsFromBar(retry: retry + 1, dragEndX: dragEndX)
                 return
             }
             defer { adoptionInFlight = false }
             let snap = await engine.snapshot()
             updateSnapshot(snap)
             PelmetLog.log("adopt: pass (retry=\(retry), items=\(snap.items.count))")
-            adopt(from: snap)
+            adopt(from: snap, dragEndX: dragEndX)
         }
     }
 
@@ -785,17 +785,32 @@ final class AppState {
         }
     }
 
-    private func adopt(from snap: EngineSnapshot) {
-        // No showStatusItem guard: with the Pelmet icon hidden reconcile just
-        // skips zone adoption (no boundary) — order fold-in must still run.
+    private func adopt(from snap: EngineSnapshot, dragEndX: CGFloat? = nil) {
+        // No showStatusItem guard: with the Pelmet icon hidden reconcile
+        // falls back to cluster-edge boundaries, where zone adoption applies
+        // only to the item the user just dragged — identified here by the
+        // drop x (the dragged item lands under the cursor; x is
+        // origin-agnostic, so no Cocoa→AX y-flip needed).
         // adoptSectionsFromBar defers while transitioning/settling; this is
         // the last line of defense if called on a stale path.
         guard !isTransitioning else { return }
+        let draggedID: ItemID? = dragEndX.flatMap { x in
+            let hit = snap.items
+                .compactMap { item -> (id: ItemID, distance: CGFloat)? in
+                    guard let frame = item.frame else { return nil }
+                    guard frame.minX - 8 <= x, x <= frame.maxX + 8 else { return nil }
+                    return (item.id, abs(frame.midX - x))
+                }
+                .min { $0.distance < $1.distance }
+            if let hit { PelmetLog.log("adopt: dragged=\(hit.id.rawValue)") }
+            return hit?.id
+        }
         guard let result = BarAdoption.reconcile(
             items: snap.items.map { (id: $0.id, minX: $0.frame?.minX) },
             model: settings.sectionModel,
             previousZones: lastAdoptionZones,
-            pelmetBundleID: PelmetBundle.mainID
+            pelmetBundleID: PelmetBundle.mainID,
+            draggedID: draggedID
         ) else { return }
         for line in result.log { PelmetLog.log(line) }
         lastAdoptionZones = result.zones
