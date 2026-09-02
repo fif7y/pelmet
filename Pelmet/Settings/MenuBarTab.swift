@@ -100,8 +100,8 @@ struct MenuBarTab: View {
 private struct EditorSectionView: View {
     @Environment(AppState.self) private var appState
     let section: PelmetCore.Section
-    let title: String
-    let caption: String
+    let title: LocalizedStringKey
+    let caption: LocalizedStringKey
     let symbol: String
 
     private var items: [ObservedItem] {
@@ -259,10 +259,10 @@ private struct ItemTile: View {
 
     private var displayName: String {
         if item.id.rawValue.contains("Pelmet.Separator") {
-            return "Separator"
+            return String(localized: "Separator")
         }
         if item.id.rawValue.contains("::com.apple.menuextra.") {
-            let suffix = item.id.rawValue.components(separatedBy: ".").last ?? "System"
+            let suffix = item.id.rawValue.components(separatedBy: ".").last ?? String(localized: "System")
             return suffix.replacingOccurrences(of: "-", with: " ").capitalized
         }
         return item.appName ?? item.id.bundleID?.components(separatedBy: ".").last ?? "?"
@@ -441,7 +441,7 @@ private struct PelmetItemsStrip: View {
                         Image(systemName: spec.symbol ?? "bolt.fill")
                             .frame(width: 18)
                             .foregroundStyle(.secondary)
-                        Text(spec.shortcutName ?? "Shortcut")
+                        Text(spec.shortcutName ?? String(localized: "Shortcut"))
                             .font(.callout)
                         Text("Runs your shortcut")
                             .font(.caption)
@@ -467,8 +467,8 @@ private struct PelmetItemsStrip: View {
 
 private struct PelmetItemRow: View {
     let symbol: String
-    let title: String
-    let caption: String
+    let title: LocalizedStringKey
+    let caption: LocalizedStringKey
     let isOn: Bool
     let onToggle: (Bool) -> Void
 
@@ -599,7 +599,7 @@ private struct SeparatorChip: View {
                             )
                     }
                     .buttonStyle(.plain)
-                    .help(style.displayName)
+                    .help(Self.name(for: style))
                 }
             }
             if separator.style != .space {
@@ -614,7 +614,7 @@ private struct SeparatorChip: View {
                             appState.settingsChanged()
                         }
                     ), in: 0.1...1)
-                    Text("\(Int(separator.opacity * 100))%")
+                    Text(separator.opacity, format: .percent.precision(.fractionLength(0)))
                         .font(.caption)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
@@ -625,6 +625,18 @@ private struct SeparatorChip: View {
             }
             .padding(10)
             .frame(width: 240)
+        }
+    }
+
+    /// Localized twin of `SeparatorStyle.displayName` (PelmetCore has no catalog).
+    private static func name(for style: SeparatorStyle) -> LocalizedStringKey {
+        switch style {
+        case .pipe: "Pipe"
+        case .dot: "Dot"
+        case .chevronLeft: "Chevron ‹"
+        case .chevronRight: "Chevron ›"
+        case .dash: "Dash"
+        case .space: "Invisible spacer"
         }
     }
 }

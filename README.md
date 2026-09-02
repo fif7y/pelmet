@@ -66,6 +66,10 @@ somewhere else.
   The only connection Pelmet ever makes is checking for its own updates.
 - **Signed updates** — Sparkle with EdDSA signatures, checked against a
   signed appcast.
+- **Ten languages** — English, German, French, Spanish, Italian, Portuguese
+  (Brazil), Japanese, Simplified Chinese, Korean and Russian, following your
+  system language. Translations are AI-drafted; corrections welcome in
+  `scripts/gen-xcstrings.py`.
 
 ## How it works
 
@@ -130,6 +134,10 @@ convergence) — each with its own test suite:
 swift test --package-path Packages/PelmetCore
 swift test --package-path Packages/PelmetEngine
 ```
+
+UI strings live in `Pelmet/Resources/Localizable.xcstrings`, generated from
+the translation table in `scripts/gen-xcstrings.py` — edit the script, re-run
+it, commit both. English keys must match the code literals exactly.
 
 ## Why "Pelmet"
 
