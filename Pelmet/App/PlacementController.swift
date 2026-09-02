@@ -309,7 +309,9 @@ final class PlacementController {
             systemMinX: systemMinX,
             screenMaxX: screen.frame.maxX
         ) else {
-            PelmetLog.log("place: no live neighbors and no chevron for \(id.rawValue) — skipping")
+            let rawLeft = globalOrder[..<index].reversed().first(where: { $0.frame != nil })
+            let rawRight = globalOrder[(min(index + 1, globalOrder.count))...].first(where: { $0.frame != nil })
+            PelmetLog.log("place: no live neighbors and no chevron for \(id.rawValue) — skipping (frame=\(frame) index=\(index)/\(globalOrder.count) rawLeft=\(rawLeft?.id.rawValue ?? "nil") \(rawLeft?.frame.map(String.init(describing:)) ?? "") rawRight=\(rawRight?.id.rawValue ?? "nil") \(rawRight?.frame.map(String.init(describing:)) ?? ""))")
             return false
         }
 

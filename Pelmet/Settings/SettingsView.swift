@@ -25,6 +25,16 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Localized label — `rawValue` stays the stable identifier.
+    var title: LocalizedStringKey {
+        switch self {
+        case .general: "General"
+        case .menuBar: "Menu Bar"
+        case .displays: "Displays"
+        case .about: "About"
+        }
+    }
+
     var symbol: String {
         switch self {
         case .general: "gearshape"
@@ -62,7 +72,7 @@ struct SettingsView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text(appState.settingsTab.rawValue)
+                Text(appState.settingsTab.title)
                     .font(.system(size: 22, weight: .semibold))
                     .padding(.bottom, 2)
                 switch appState.settingsTab {
@@ -96,7 +106,7 @@ private struct SettingsSidebar: View {
         .padding(10)
         // Clear the traffic lights — the sidebar runs under the titlebar.
         .padding(.top, 42)
-        .frame(width: 178, alignment: .leading)
+        .frame(width: 196, alignment: .leading)
         .frame(maxHeight: .infinity)
         .background(.quaternary.opacity(0.35))
     }
@@ -114,8 +124,17 @@ private struct SidebarRow: View {
                 Image(systemName: item.symbol)
                     .font(.system(size: 13))
                     .frame(width: 18)
-                Text(item.rawValue)
-                    .font(.system(size: 13, weight: selected ? .semibold : .regular))
+                // Size the row for the semibold weight so selecting never
+                // reflows — the regular label sits over a hidden bold twin.
+                Text(item.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .hidden()
+                    .overlay(alignment: .leading) {
+                        Text(item.title)
+                            .font(.system(size: 13, weight: selected ? .semibold : .regular))
+                    }
+                    .lineLimit(1)
+                    .fixedSize()
                 Spacer(minLength: 0)
             }
             .foregroundStyle(selected ? PelmetAccent.accent : .primary)
@@ -141,7 +160,7 @@ private struct SidebarRow: View {
 /// brand accent — every option visible at once, no menu to open.
 struct PelmetSegments<T: Hashable>: View {
     @Binding var selection: T
-    let options: [(T, String)]
+    let options: [(T, LocalizedStringKey)]
 
     var body: some View {
         HStack(spacing: 2) {
@@ -158,7 +177,7 @@ struct PelmetSegments<T: Hashable>: View {
 }
 
 private struct PelmetSegmentButton: View {
-    let label: String
+    let label: LocalizedStringKey
     let selected: Bool
     let action: () -> Void
     @State private var hovered = false
@@ -188,7 +207,7 @@ private struct PelmetSegmentButton: View {
 
 /// Borderless grouping card: soft fill, no outline (de-box).
 struct SettingsCard<Content: View>: View {
-    var title: String? = nil
+    var title: LocalizedStringKey? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -209,14 +228,27 @@ struct SettingsCard<Content: View>: View {
 
 /// Title + optional caption on the left, any control on the right.
 struct SettingRow<Control: View>: View {
-    let title: String
-    var caption: String? = nil
-    @ViewBuilder var control: Control
+    let title: Text
+    var caption: LocalizedStringKey? = nil
+    let control: Control
+
+    /// Literal titles localize through the string catalog.
+    init(title: LocalizedStringKey, caption: LocalizedStringKey? = nil, @ViewBuilder control: () -> Control) {
+        self.title = Text(title)
+        self.caption = caption
+        self.control = control()
+    }
+
+    /// Runtime titles (display names, user data) are shown as-is.
+    init(verbatim title: String, @ViewBuilder control: () -> Control) {
+        self.title = Text(verbatim: title)
+        self.control = control()
+    }
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                title
                 if let caption {
                     Text(caption)
                         .font(.caption)
@@ -230,8 +262,8 @@ struct SettingRow<Control: View>: View {
 }
 
 struct SettingToggleRow: View {
-    let title: String
-    var caption: String? = nil
+    let title: LocalizedStringKey
+    var caption: LocalizedStringKey? = nil
     @Binding var isOn: Bool
 
     var body: some View {
@@ -245,7 +277,7 @@ struct SettingToggleRow: View {
 }
 
 struct SettingSliderRow: View {
-    let title: String
+    let title: LocalizedStringKey
     @Binding var value: TimeInterval
     let range: ClosedRange<Double>
     let format: String
@@ -270,6 +302,7 @@ struct SettingSliderRow: View {
 
 private struct GeneralPane: View {
     @Environment(AppState.self) private var appState
+    @State private var language = AppLanguage.current
 
     var body: some View {
         SettingsCard {
@@ -288,6 +321,23 @@ private struct GeneralPane: View {
                     if !enabled { Self.showIconlessHint() }
                 })
             )
+            SettingRow(title: "Language", caption: "Relaunches Pelmet to apply.") {
+                Picker("", selection: $language) {
+                    Text("System language").tag(AppLanguage.system)
+                    Divider()
+                    ForEach(AppLanguage.allCases.filter { $0 != .system }) { language in
+                        Text(verbatim: language.endonym).tag(language)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .fixedSize()
+                .onChange(of: language) { _, newValue in
+                    guard newValue != AppLanguage.current else { return }
+                    AppLanguage.set(newValue)
+                    AppLanguage.offerRelaunch()
+                }
+            }
         }
 
         SettingsCard(title: "Reveal") {
@@ -319,7 +369,7 @@ private struct GeneralPane: View {
                     value: binding(\.rehideDelay),
                     range: 0...10,
                     format: "%.2gs",
-                    zeroLabel: "Instant"
+                    zeroLabel: String(localized: "Instant")
                 )
             }
             SettingToggleRow(title: "Rehide when clicking elsewhere", isOn: binding(\.rehideOnClickElsewhere))
@@ -358,8 +408,8 @@ private struct GeneralPane: View {
     /// One-time orientation when the user goes iconless.
     static func showIconlessHint() {
         let alert = NSAlert()
-        alert.messageText = "Pelmet stays a click away"
-        alert.informativeText = "You can always open Pelmet Settings by:\n\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar"
+        alert.messageText = String(localized: "Pelmet stays a click away")
+        alert.informativeText = String(localized: "You can always open Pelmet Settings by:\n\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar")
         alert.alertStyle = .informational
         alert.runModal()
     }
@@ -388,7 +438,7 @@ private struct DisplayRow: View {
     }
 
     var body: some View {
-        SettingRow(title: screen.localizedName) {
+        SettingRow(verbatim: screen.localizedName) {
             HStack(spacing: 8) {
                 if hasNotch {
                     Text("Notch")
@@ -428,7 +478,7 @@ private struct AboutPane: View {
         let info = Bundle.main
         let short = info.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
         let build = info.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
-        return "Version \(short) (\(build))"
+        return String(localized: "Version \(short) (\(build))")
     }
 
     private var copyright: String {

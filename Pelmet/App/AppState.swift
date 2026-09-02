@@ -257,8 +257,24 @@ final class AppState {
             // new-items section before the first converge. VISIBLE newcomers
             // get their placement drag now (still live-framed); concealed
             // destinations queue until a reveal makes them measurable.
-            let launchNewItems = registerNewItems(from: await engine.snapshot())
+            let launchSnapshot = await engine.snapshot()
+            let launchNewItems = registerNewItems(from: launchSnapshot)
             placement.pendingPlacements.formUnion(launchNewItems)
+            // Pelmet's own extras and separators are fresh registrations on
+            // every relaunch — the agent seeds their slot, not the model
+            // (the media control landed in the hidden zone, 2026-09-02).
+            // Nothing else walks own items back, so queue the ones that are
+            // actually in layout; `alreadyPlaced` short-circuits the ones
+            // that landed right. Out-of-layout ones (camera pill idle,
+            // width-collapsed hidden separators) have no frame to drag and
+            // would just requeue and log on every reveal settle.
+            let liveKeys = Set(
+                launchSnapshot.items
+                    .filter { $0.frame.map(MenuBarGeometry.isInBand) == true }
+                    .map(\.id.sectionKey)
+            )
+            let ownItems = (extras?.managedItemIDs ?? []) + (separators?.managedItemIDs ?? [])
+            placement.pendingPlacements.formUnion(ownItems.filter { liveKeys.contains($0.sectionKey) })
             await engine.setModel(settings.sectionModel)
             // Visible-destined newcomers place right away (the flush filter
             // passes them without a reveal); concealed ones wait for one.
@@ -842,7 +858,16 @@ final class AppState {
         guard !expected.isEmpty else { return }
         let deadline = Date.now.addingTimeInterval(8)
         while Date.now < deadline {
-            let observed = Set(await engine.snapshot().items.map(\.id))
+            // In-band frames only: a registration made while the PREVIOUS
+            // instance's assertion still held (relaunch overlap) is present
+            // in AX but parked offscreen (x=4800, 2026-09-02) — counting it
+            // as adopted let the first converge assert over it, parking the
+            // media control in the wrong zone for the whole session.
+            let observed = Set(
+                await engine.snapshot().items
+                    .filter { $0.frame.map(MenuBarGeometry.isInBand) == true }
+                    .map(\.id)
+            )
             if expected.subtracting(observed).isEmpty {
                 PelmetLog.log("start: own items adopted (\(expected.count))")
                 return

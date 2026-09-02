@@ -160,6 +160,15 @@ final class ExtrasManager {
                     mediaPlaying = audioActive
                 }
                 updateMediaSymbol(item, title: spec.itemTitle)
+                // Same re-entry hazard as the camera pill: audio starting
+                // (or the linger expiring and resuming) puts the item back
+                // in layout at the agent's slot, not the model's.
+                let itemID = Self.itemID(for: spec)
+                if visible, lastVisible[id] != true {
+                    appState?.queueDynamicExtraPlacement(itemID)
+                } else if !visible, lastVisible[id] == true {
+                    appState?.cancelDynamicExtraPlacement(itemID)
+                }
             case .airdrop, .shortcut:
                 break
             }
@@ -246,7 +255,7 @@ final class ExtrasManager {
         let camera = monitor?.cameraActive ?? false
         let mic = monitor?.micActive ?? false
         let symbol = camera ? "video.fill" : (mic ? "mic.fill" : "video.fill")
-        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Camera & Mic")
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: String(localized: "Camera & Mic"))
         if camera || mic {
             image?.isTemplate = false
             item.button?.contentTintColor = camera ? .systemGreen : .systemOrange
@@ -269,8 +278,8 @@ final class ExtrasManager {
         case .mediaControls:
             if rightClick {
                 let menu = NSMenu()
-                let previous = NSMenuItem(title: "Previous Track", action: #selector(previousTrack), keyEquivalent: "")
-                let next = NSMenuItem(title: "Next Track", action: #selector(nextTrack), keyEquivalent: "")
+                let previous = NSMenuItem(title: String(localized: "Previous Track"), action: #selector(previousTrack), keyEquivalent: "")
+                let next = NSMenuItem(title: String(localized: "Next Track"), action: #selector(nextTrack), keyEquivalent: "")
                 for menuItem in [previous, next] { menuItem.target = self }
                 menu.items = [previous, next]
                 popUp(menu, on: statusItem.value)

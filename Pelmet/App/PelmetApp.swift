@@ -32,6 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !relaunching else { return }
         appState.start()
+        if AppLanguage.takeReopenSettingsFlag() {
+            appState.openSettings()
+        }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

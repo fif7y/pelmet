@@ -203,15 +203,6 @@ private struct AccessStep: View {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 18)
 
-            if NookMigration.didMigrate, !appState.accessibilityGranted {
-                Spacer().frame(height: 12)
-                Text("Updating from Nook? A leftover Nook row may appear in the list — it no longer works. Remove it with −, then grant the new Pelmet entry.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Ink.textDim)
-                    .frame(maxWidth: 420, alignment: .leading)
-                    .opacity(appeared ? 1 : 0)
-            }
-
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
