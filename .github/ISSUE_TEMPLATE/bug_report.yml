@@ -13,7 +13,7 @@ body:
     id: versions
     attributes:
       label: Pelmet and macOS versions
-      placeholder: "Pelmet 0.2.3 · macOS 27.0 (25A000)"
+      placeholder: "Pelmet 0.2.4 · macOS 27.0 (25A000)"
     validations:
       required: true
   - type: dropdown
