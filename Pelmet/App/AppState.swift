@@ -21,6 +21,11 @@ final class AppState {
     /// While the settings window is open, auto-rehide is fully suppressed —
     /// the user is mid-workflow between the editor and the bar, and nothing
     /// should collapse under them. Closing the window re-conceals.
+    /// Only the layout editor holds the bar open: it previews the full bar
+    /// and drags there must stay in sync with it. On any other tab (or with
+    /// the window closed) hover-rehide behaves normally (Gab, 2026-09-02).
+    var editorHoldsBar: Bool { settingsWindowVisible && settingsTab == .menuBar }
+
     var settingsWindowVisible = false {
         didSet {
             guard oldValue != settingsWindowVisible else { return }
@@ -41,6 +46,8 @@ final class AppState {
     @ObservationIgnored private lazy var transitions = TransitionCoordinator(appState: self, engine: engine)
     private var rehide = RehideStateMachine()
     private var rehideTimer: Timer?
+    /// One "rehide: deferred" line per armed countdown, not one per re-arm.
+    private var rehideDeferLogged = false
     private var statusItem: PelmetStatusItem?
     private var separators: SeparatorManager?
     private var extras: ExtrasManager?
@@ -662,6 +669,7 @@ final class AppState {
             case .conceal:
                 transitions.performConceal()
             case .armTimer(let deadline):
+                rehideDeferLogged = false
                 scheduleRehideTimer(at: deadline)
             case .cancelTimer:
                 rehideTimer?.invalidate()
@@ -681,9 +689,13 @@ final class AppState {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
-                if self.settingsWindowVisible
+                if self.editorHoldsBar
                     || self.pointerDisplayBehavior == .alwaysShowAll
                     || self.bandMonitor?.shouldDeferRehide() == true {
+                    if !self.rehideDeferLogged {
+                        self.rehideDeferLogged = true
+                        PelmetLog.log("rehide: deferred — editor=\(self.editorHoldsBar) policy=\(self.pointerDisplayBehavior) \(self.bandMonitor?.deferReason() ?? "band=?")")
+                    }
                     self.scheduleRehideTimer(at: Date().addingTimeInterval(AppTiming.rehideDeferRearm))
                 } else {
                     self.rehideTriggered(.delayExpired)
@@ -727,8 +739,20 @@ final class AppState {
                 adoptSectionsFromBar(retry: retry + 1, dragEndX: dragEndX)
                 return
             }
-            defer { adoptionInFlight = false }
             let snap = await engine.snapshot()
+            // A transiently empty AX walk (the agent rebuilding mid-reflow —
+            // 22 empty passes in one afternoon's log) is not a bar to
+            // reconcile against: the drag-end pass read 0 items and the
+            // user's ⌘-drag evidence (dragEndX) was lost for good
+            // (2026-09-02, Sconce right of media never folded in). Defer
+            // like a transition instead of consuming the pass.
+            if snap.items.isEmpty, retry < AppTiming.adoptMaxDeferrals {
+                PelmetLog.log("adopt: empty snapshot — deferring (retry=\(retry))")
+                try? await Task.sleep(for: AppTiming.adoptDeferralDelay)
+                adoptSectionsFromBar(retry: retry + 1, dragEndX: dragEndX)
+                return
+            }
+            defer { adoptionInFlight = false }
             updateSnapshot(snap)
             PelmetLog.log("adopt: pass (retry=\(retry), items=\(snap.items.count))")
             adopt(from: snap, dragEndX: dragEndX)
@@ -810,8 +834,21 @@ final class AppState {
         // adoptSectionsFromBar defers while transitioning/settling; this is
         // the last line of defense if called on a stale path.
         guard !isTransitioning else { return }
+        // Primary-band frames only. The AX walk carries other displays' bars
+        // too (Sconce at x=-265 AND x=1535 in one snapshot, 2026-09-02), and
+        // the order fold-in keys "leftmost frame wins" — a left-display copy
+        // pinned Sconce to the front of Visible no matter where the user
+        // dropped it. Off-band copies read as unmeasured.
+        let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        let items: [ObservedItem] = snap.items.map { item in
+            guard let frame = item.frame,
+                  MenuBarGeometry.isInBand(frame),
+                  frame.midX > 0, frame.midX < primaryMaxX
+            else { return ObservedItem(id: item.id, frame: nil, appName: item.appName) }
+            return item
+        }
         let draggedID: ItemID? = dragEndX.flatMap { x in
-            let hit = snap.items
+            let hit = items
                 .compactMap { item -> (id: ItemID, distance: CGFloat)? in
                     guard let frame = item.frame else { return nil }
                     guard frame.minX - 8 <= x, x <= frame.maxX + 8 else { return nil }
@@ -822,13 +859,19 @@ final class AppState {
             return hit?.id
         }
         guard let result = BarAdoption.reconcile(
-            items: snap.items.map { (id: $0.id, minX: $0.frame?.minX) },
+            items: items.map { (id: $0.id, minX: $0.frame?.minX) },
             model: settings.sectionModel,
             previousZones: lastAdoptionZones,
             pelmetBundleID: PelmetBundle.mainID,
             draggedID: draggedID
         ) else { return }
         for line in result.log { PelmetLog.log(line) }
+        // Visible-section live order vs model order — the fold-in's inputs.
+        let liveVisible = items
+            .filter { settings.sectionModel.section(of: $0.id) == .visible && $0.frame != nil }
+            .sorted { $0.frame!.minX < $1.frame!.minX }
+            .map { "\($0.id.sectionKey)@\(Int($0.frame!.minX))" }
+        PelmetLog.log("adopt: visible live=\(liveVisible) model=\((settings.sectionModel.order[.visible] ?? []).map(\.rawValue))")
         lastAdoptionZones = result.zones
         if result.changed {
             settings.sectionModel = result.model

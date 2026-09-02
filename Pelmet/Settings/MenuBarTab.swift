@@ -261,6 +261,16 @@ private struct ItemTile: View {
         if item.id.rawValue.contains("Pelmet.Separator") {
             return String(localized: "Separator")
         }
+        // Pelmet's own extras: name the thing, not the app that hosts it.
+        if item.id.rawValue.contains("Pelmet.MediaControls") {
+            return String(localized: "Media")
+        }
+        if item.id.rawValue.contains("Pelmet.CameraMic") {
+            return String(localized: "Camera")
+        }
+        if item.id.rawValue.contains("Pelmet.AirDrop") {
+            return String(localized: "AirDrop")
+        }
         if item.id.rawValue.contains("::com.apple.menuextra.") {
             let suffix = item.id.rawValue.components(separatedBy: ".").last ?? String(localized: "System")
             return suffix.replacingOccurrences(of: "-", with: " ").capitalized

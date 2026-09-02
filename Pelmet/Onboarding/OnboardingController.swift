@@ -9,6 +9,8 @@ final class OnboardingController {
     static let shared = OnboardingController()
     private var window: NSWindow?
 
+    var isPresented: Bool { window?.isVisible == true }
+
     func present(appState: AppState) {
         if let window {
             window.makeKeyAndOrderFront(nil)

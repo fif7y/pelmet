@@ -157,8 +157,15 @@ final class MenuBarBandMonitor {
     /// menubar-anchored menu/popover, or interacting with Pelmet's own windows.
     func shouldDeferRehide() -> Bool {
         if pointerInBand { return true }
-        if NSApp.isActive { return true }  // user is in Pelmet settings/onboarding
+        // Pelmet frontmost only holds the bar for the layout editor and the
+        // onboarding demo — the General tab is not a reason to stay revealed.
+        if NSApp.isActive, appState?.editorHoldsBar == true || OnboardingController.shared.isPresented { return true }
         return pointerIsOverElevatedWindow()
+    }
+
+    /// Diagnostic twin of `shouldDeferRehide` — which gate held.
+    func deferReason() -> String {
+        "band=\(pointerInBand) active=\(NSApp.isActive) elevated=\(pointerIsOverElevatedWindow())"
     }
 
     /// Deliberately narrow: only visible, menu/popover-sized windows at
@@ -175,6 +182,12 @@ final class MenuBarBandMonitor {
         else { return false }
         // CG window bounds are top-left-origin global coordinates.
         let cgPoint = CGPoint(x: location.x, y: primary.frame.maxY - location.y)
+        // Menus and popovers hang BELOW the bar. Anything whose top edge sits
+        // in or above the band is a host/overlay window, not something the
+        // user opened: Control Center keeps a 656×973 layer-101 window at
+        // y=0 and Sconce a 640×538 layer-25 overlay at y=-40 — both passed
+        // the size filter and pinned every hover-out reveal open (2026-09-02).
+        let bandHeight = primary.frame.maxY - primary.visibleFrame.maxY
         for window in windows {
             guard
                 let layer = window[kCGWindowLayer as String] as? Int,
@@ -186,7 +199,8 @@ final class MenuBarBandMonitor {
                 let x = bounds["X"], let y = bounds["Y"],
                 let width = bounds["Width"], let height = bounds["Height"],
                 // Menu/popover-sized, not screen-covering overlays.
-                width < 900, height < 1200, width > 4, height > 4
+                width < 900, height < 1200, width > 4, height > 4,
+                y >= bandHeight - 1
             else { continue }
             if CGRect(x: x, y: y, width: width, height: height).contains(cgPoint) {
                 return true
@@ -275,7 +289,7 @@ final class MenuBarBandMonitor {
             // part of using the revealed items — and while the settings window
             // is open nothing collapses, period. Clicks on an "always show"
             // display never collapse either: the display's policy wins.
-            if !appState.settingsWindowVisible, !NSApp.isActive, !pointerIsOverElevatedWindow(),
+            if !appState.editorHoldsBar, !NSApp.isActive, !pointerIsOverElevatedWindow(),
                appState.settings.behavior(forDisplayUUID: screen?.displayUUIDString) == .collapse {
                 appState.rehideTriggered(.clickedElsewhere)
             }
