@@ -49,7 +49,7 @@ and how it ends: auto-rehide after a delay you set, or the moment you click
 somewhere else.
 
 <p align="center">
-  <img src="docs/assets/screenshot-settings.png" alt="General settings: reveal on hover with delay, click and double-click reveals, Instant/Smooth/Fade animation, auto-rehide rules" width="640"><br>
+  <img src="docs/assets/screenshot-settings.png" alt="General settings: launch at login, menu bar icon, language picker, reveal on hover with delay, click and double-click reveals, Instant/Smooth/Fade animation, auto-rehide, system extras" width="640"><br>
   <sub>Your rules for revealing — and for putting everything back.</sub>
 </p>
 
@@ -66,10 +66,11 @@ somewhere else.
   The only connection Pelmet ever makes is checking for its own updates.
 - **Signed updates** — Sparkle with EdDSA signatures, checked against a
   signed appcast.
-- **Ten languages** — English, German, French, Spanish, Italian, Portuguese
-  (Brazil), Japanese, Simplified Chinese, Korean and Russian, following your
-  system language. Translations are AI-drafted; corrections welcome in
-  `scripts/gen-xcstrings.py`.
+- **Speaks your language** — English, German, French, Spanish, Italian,
+  Portuguese (Brazil), Japanese, Simplified Chinese, Korean and Russian.
+  Pelmet follows your system language, or pick one in Settings › General ›
+  Language. Translations are machine-drafted for now; corrections are welcome
+  in `scripts/gen-xcstrings.py`.
 
 ## How it works
 
