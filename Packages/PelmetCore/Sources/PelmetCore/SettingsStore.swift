@@ -155,6 +155,12 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     /// consistently hidden instead of jumping in and out on every transition.
     public var hideSystemExtras: Bool = SettingsDefaults.hideSystemExtras
 
+    /// Clicking the clock opens Notification Center even while icons are
+    /// hidden. macOS refuses the click under any hide assertion, so Pelmet
+    /// drops the assertion for the blink it takes the click to land, then
+    /// re-acquires it (hidden icons flash in and out for ~0.5s).
+    public var clockOpensNotificationCenter: Bool = true
+
     /// Pelmet's own media-controls item (play/pause/next/prev via media keys).
     /// Superseded by `extraItems`; kept for migration of early builds.
     public var showMediaControls: Bool = false
@@ -193,6 +199,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case revealTriggers, autoRehide, rehideDelay, rehideOnClickElsewhere, revealAnimation
         case hideSystemExtras, showMediaControls, extraItems, sectionModel, separators
         case displayTemplate, displayOverrides
+        case clockOpensNotificationCenter
     }
 
     public init(from decoder: Decoder) throws {
@@ -221,6 +228,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         separators = field([SeparatorSpec].self, .separators, defaults.separators)
         displayTemplate = field(DisplayBehavior.self, .displayTemplate, defaults.displayTemplate)
         displayOverrides = field([String: DisplayBehavior].self, .displayOverrides, defaults.displayOverrides)
+        clockOpensNotificationCenter = field(Bool.self, .clockOpensNotificationCenter, defaults.clockOpensNotificationCenter)
     }
 
     // MARK: - Persistence

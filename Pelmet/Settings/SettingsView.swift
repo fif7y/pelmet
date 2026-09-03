@@ -389,6 +389,14 @@ private struct GeneralPane: View {
                 .fixedSize()
             }
         }
+
+        SettingsCard(title: "Notification Center") {
+            SettingToggleRow(
+                title: "Clicking the clock opens Notification Center",
+                caption: "macOS blocks that click while any icons are hidden. Pelmet shows everything for a blink so it gets through.",
+                isOn: binding(\.clockOpensNotificationCenter)
+            )
+        }
     }
 
     private func binding<T>(

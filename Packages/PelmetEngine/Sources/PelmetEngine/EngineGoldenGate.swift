@@ -573,6 +573,32 @@ public actor EngineGoldenGate: MenuBarEngine {
         }
     }
 
+    // MARK: - Clock blink
+
+    /// Drop the live assertion so a clock click can reach Notification
+    /// Center (ControlCenter refuses it under ANY visibility restriction —
+    /// probe-proven 2026-09-03, no origin or allowlist escapes it). Returns
+    /// false when nothing was held, in which case the click needs no help.
+    /// Synchronous inside the actor: the caller posts the click the moment
+    /// this returns, and the invalidate XPC is already queued ahead of it.
+    /// Bumps the converge epoch so an in-flight converge can't re-assert
+    /// between the drop and the click.
+    public func beginClockBlink() -> Bool {
+        guard assertion != nil else { return false }
+        convergeEpoch += 1
+        invalidateAssertion()
+        PelmetLog.log("clock: blink — assertion dropped for the click")
+        return true
+    }
+
+    /// Re-acquire after the click landed. Bookkeeping was cleared by the
+    /// drop, so a plain converge fails the no-op guard and swaps back in.
+    /// (The reflow's own itemsChanged may have converged already; then this
+    /// is the no-op.) NC stays open through the re-acquire — verified.
+    public func endClockBlink() async {
+        await converge()
+    }
+
     private func invalidateAssertion() {
         if assertion != nil {
             // Dropping an assertion reflows the bar exactly like a swap —
