@@ -33,7 +33,7 @@ public enum ItemMover {
         guard let source = CGEventSource(stateID: .hidSystemState) else { return }
         // Tag every event from this source so the shield's tap can tell our
         // synthetic stream from real HID input.
-        source.userData = DragShield.syntheticTag
+        source.userData = SyntheticInput.tag
         let originalPosition = CGEvent(source: nil)?.location
 
         // Don't grab the pointer out of the user's hand mid-motion — bounded
@@ -129,8 +129,13 @@ public enum ItemMover {
 /// The tap needs a runloop; a dedicated thread hosts it because the main
 /// runloop is busy running AppKit's drag tracking during own-item drags, and
 /// a starved tap gets auto-disabled by timeout (passing everything through).
+/// Marks CGEvents Pelmet posts itself (source userData), so Pelmet's own
+/// event taps let them through and only physical input is intercepted.
+public enum SyntheticInput {
+    public static let tag: Int64 = 0x504C_4D54 // "PLMT"
+}
+
 private final class DragShield {
-    static let syntheticTag: Int64 = 0x504C_4D54 // "PLMT"
 
     private var tap: CFMachPort?
     private var tapRunLoop: CFRunLoop?
@@ -239,7 +244,7 @@ private final class DragShield {
                 if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
                     return Unmanaged.passUnretained(event)
                 }
-                if event.getIntegerValueField(.eventSourceUserData) == DragShield.syntheticTag {
+                if event.getIntegerValueField(.eventSourceUserData) == SyntheticInput.tag {
                     return Unmanaged.passUnretained(event)
                 }
                 return nil // physical mouse input — swallowed for the window

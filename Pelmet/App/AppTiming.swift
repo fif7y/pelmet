@@ -7,6 +7,12 @@ import Foundation
 enum AppTiming {
     /// Reveal/conceal cover watchdog.
     static let transitionCoverSafety: TimeInterval = 2.5
+    /// Clock blink: replayed click's down→up hold, and how long after the
+    /// up to re-acquire the assertion. The re-acquire delay doesn't change
+    /// the visible flash (the agent finishes its reveal animation first —
+    /// R=0/100/250ms all measured ~0.5s); it only keeps the click ahead.
+    static let clockReplayHold: TimeInterval = 0.06
+    static let clockBlinkReacquire: Duration = .milliseconds(120)
     /// Adoption deferral while a transition is in flight.
     static let adoptDeferralDelay: Duration = .milliseconds(300)
     static let adoptMaxDeferrals = 10

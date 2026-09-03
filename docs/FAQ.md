@@ -16,6 +16,14 @@ extras. Pelmet can’t exempt them individually; they come back the moment hidin
 is off. Pelmet ships its own replacements for the common ones (media controls,
 AirDrop, camera/mic indicator, Shortcuts) — add them in Settings → Menu Bar.
 
+**Clicking the clock flashes the hidden icons for a moment.**
+That's Pelmet working around macOS: while any icon is hidden, the system
+refuses the clock's click to open Notification Center (the same lockdown exam
+mode relies on), and nothing else can open it from outside. So Pelmet lets
+everything show for the blink it takes the click to land, then hides again.
+Turn it off in Settings → Menu Bar → Notification Center if you'd rather use
+the two-finger swipe from the right edge of the trackpad, which always works.
+
 **Why does Pelmet ask for Accessibility?**
 It’s how Pelmet sees the menu bar’s items and their positions, and how clicking
 a hidden item works without revealing everything. Required.

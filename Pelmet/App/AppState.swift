@@ -52,6 +52,7 @@ final class AppState {
     private var separators: SeparatorManager?
     private var extras: ExtrasManager?
     private var bandMonitor: MenuBarBandMonitor?
+    private var clockRelay: ClockClickRelay?
     private var hotkey: HotkeyManager?
     private var eventTask: Task<Void, Never>?
 
@@ -162,6 +163,12 @@ final class AppState {
         let bandMonitor = MenuBarBandMonitor(appState: self)
         bandMonitor.start()
         self.bandMonitor = bandMonitor
+
+        let clockRelay = ClockClickRelay { [weak self] point in
+            self?.clockClicked(at: point)
+        }
+        clockRelay.setEnabled(settings.clockOpensNotificationCenter)
+        self.clockRelay = clockRelay
 
         let hotkey = HotkeyManager { [weak self] in
             self?.toggle(reason: .hotkey)
@@ -405,8 +412,21 @@ final class AppState {
     /// bits apply immediately; the save and the engine converge are debounced
     /// — slider drags call this per tick, and each un-debounced tick paid a
     /// JSON save plus a full AX-walking converge that concluded "no-op".
+    /// Clock blink (see ClockClickRelay): drop the assertion, replay the
+    /// swallowed click, re-acquire. With nothing held the click just replays.
+    private func clockClicked(at point: CGPoint) {
+        Task { @MainActor in
+            let blinked = await engine.beginClockBlink()
+            ClockClickRelay.postClick(at: point)
+            guard blinked else { return }
+            try? await Task.sleep(for: AppTiming.clockBlinkReacquire)
+            await engine.endClockBlink()
+        }
+    }
+
     func settingsChanged() {
         rehide.policy = settings.rehidePolicy
+        clockRelay?.setEnabled(settings.clockOpensNotificationCenter)
         if settings.showStatusItem, statusItem == nil {
             statusItem = PelmetStatusItem(appState: self)
         } else if !settings.showStatusItem {
@@ -783,6 +803,9 @@ final class AppState {
     func updateSnapshot(_ snap: EngineSnapshot) {
         guard snapshot?.contentEquals(snap) != true else { return }
         snapshot = snap
+        clockRelay?.updateClockFrame(
+            snap.items.first { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }?.frame
+        )
         bundleCounts = snap.items.reduce(into: [:]) { counts, item in
             guard let bundle = item.id.bundleID else { return }
             counts[bundle, default: 0] += 1

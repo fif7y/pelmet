@@ -57,6 +57,18 @@ T = {
     "Rehide when clicking elsewhere": dict(de="Bei Klick an anderer Stelle ausblenden", fr="Masquer en cliquant ailleurs", es="Ocultar al hacer clic en otro sitio", it="Nascondi quando fai clic altrove", pt="Ocultar ao clicar em outro lugar", ja="他の場所をクリックしたら隠す", zh="点击其他位置时隐藏", ko="다른 곳을 클릭하면 숨김", ru="Скрывать при щелчке в другом месте"),
     "System extras": dict(de="System-Extras", fr="Extras système", es="Extras del sistema", it="Extra di sistema", pt="Extras do sistema", ja="システムの追加項目", zh="系统附加项", ko="시스템 추가 항목", ru="Системные элементы"),
     "Now Playing, camera controls, AirDrop, Focus": dict(de="Jetzt läuft, Kamerasteuerung, AirDrop, Fokus", fr="Lecture en cours, commandes de caméra, AirDrop, Concentration", es="Ahora suena, controles de cámara, AirDrop, Modos de concentración", it="In riproduzione, controlli fotocamera, AirDrop, Full immersion", pt="Tocando agora, controles de câmera, AirDrop, Foco", ja="再生中、カメラコントロール、AirDrop、集中モード", zh="现在播放、相机控制、隔空投送、专注模式", ko="지금 재생 중, 카메라 제어, AirDrop, 집중 모드", ru="Сейчас играет, управление камерой, AirDrop, Фокусирование"),
+    "Notification Center": dict(de="Mitteilungszentrale", fr="Centre de notifications", es="Centro de notificaciones", it="Centro Notifiche", pt="Central de Notificações", ja="通知センター", zh="通知中心", ko="알림 센터", ru="Центр уведомлений"),
+    "Clicking the clock opens Notification Center": dict(de="Klick auf die Uhr öffnet die Mitteilungszentrale", fr="Un clic sur l’horloge ouvre le centre de notifications", es="Hacer clic en el reloj abre el centro de notificaciones", it="Il clic sull’orologio apre Centro Notifiche", pt="Clicar no relógio abre a Central de Notificações", ja="時計をクリックで通知センターを開く", zh="点击时钟打开通知中心", ko="시계를 클릭하면 알림 센터 열기", ru="Щелчок по часам открывает Центр уведомлений"),
+    "macOS blocks that click while any icons are hidden. Pelmet shows everything for a blink so it gets through.": dict(
+        de="macOS blockiert diesen Klick, solange irgendein Symbol verborgen ist. Pelmet zeigt alles für einen Augenblick, damit er durchkommt.",
+        fr="macOS bloque ce clic tant qu’une icône est masquée. Pelmet affiche tout l’espace d’un instant pour le laisser passer.",
+        es="macOS bloquea ese clic mientras haya algún icono oculto. Pelmet muestra todo por un instante para que llegue.",
+        it="macOS blocca quel clic finché un’icona è nascosta. Pelmet mostra tutto per un istante per farlo passare.",
+        pt="O macOS bloqueia esse clique enquanto algum ícone estiver oculto. O Pelmet mostra tudo por um instante para ele passar.",
+        ja="アイコンが1つでも隠れているとmacOSはこのクリックをブロックします。Pelmetは一瞬すべてを表示してクリックを通します。",
+        zh="只要有任何图标被隐藏，macOS 就会拦截这次点击。Pelmet 会短暂显示全部图标，让点击生效。",
+        ko="아이콘이 하나라도 숨겨져 있으면 macOS가 이 클릭을 막습니다. Pelmet이 잠깐 모두 표시해 클릭이 전달되게 합니다.",
+        ru="macOS блокирует этот щелчок, пока скрыт хотя бы один значок. Pelmet на миг показывает всё, чтобы он прошёл."),
     "macOS hides these whenever any icons are concealed — they can only appear while the whole bar is revealed.": dict(
         de="macOS blendet diese aus, sobald irgendein Symbol verborgen ist – sie erscheinen nur, während die gesamte Leiste eingeblendet ist.",
         fr="macOS les masque dès qu’une icône est cachée : ils n’apparaissent que lorsque toute la barre est affichée.",
