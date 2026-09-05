@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/hero.svg" alt="Pelmet — a calm menu bar for macOS" width="800">
+  <img src="docs/assets/hero.svg" alt="Pelmet, a calm menu bar for macOS" width="800">
 </p>
 
 <p align="center">
@@ -10,7 +10,7 @@
   <a href="https://github.com/sponsors/fif7y"><img src="https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa" alt="Sponsor Pelmet"></a>
 </p>
 
-Pelmet hides the icons you don't need until you do — hover, click, or press a
+Pelmet hides the icons you don't need until you do. Hover, click or press a
 shortcut and they slide back in. Apple rebuilt the menu bar from the ground
 up in macOS 27, and Pelmet is written for that new architecture from day one,
 which is why hiding feels like part of the system: no overlay windows, no
@@ -25,64 +25,64 @@ fake bars, no icons jumping when the bar reflows. Free and open source.
 
 Three sections, one rule: **Visible** is always there, **Hidden** comes back
 on a hover or a click, and **Always Hidden** only appears when you ask for it
-(double-click or ⌥-click the chevron). Arrange them in the layout editor —
-real app-icon previews, drag-and-drop ordering — or skip the window entirely
-and ⌘-drag icons across the chevron right in the menu bar; Pelmet adopts the
+(double-click or ⌥-click the chevron). Arrange them in the layout editor
+(real app-icon previews, drag-and-drop ordering), or skip the window entirely
+and ⌘-drag icons across the chevron right in the menu bar. Pelmet adopts the
 move either way.
 
 <p align="center">
   <img src="docs/assets/editor-anim.svg" alt="The layout editor: dragging an icon from Always Hidden to Hidden, both sections reflowing" width="640"><br>
-  <sub>The layout editor — drag icons between Visible, Hidden and Always&nbsp;Hidden.</sub>
+  <sub>The layout editor. Drag icons between Visible, Hidden and Always&nbsp;Hidden.</sub>
 </p>
 
-System icons hide too — Sound, Battery, Wi-Fi and friends behave like any
+System icons hide too. Sound, Battery and friends behave like any
 other icon. The few macOS protects (Clock, Control Center, Siri) are shown
-locked in the editor, not pretended away, and anything macOS groups together
+locked in the editor rather than pretended away, and anything macOS groups together
 gets an honest badge instead of a fake handle.
 
 ## Reveal on your terms
 
 Every way back in is a setting: hover (with an adjustable delay), a click on
 empty menu bar space, a double-click for the always-hidden section, or the
-chevron itself. Pick how it looks — **Instant**, **Smooth**, or **Fade** —
-and how it ends: auto-rehide after a delay you set, or the moment you click
+chevron itself. Pick how it looks (**Instant**, **Smooth** or **Fade**)
+and how it ends, either auto-rehide after a delay you set or the moment you click
 somewhere else.
 
 <p align="center">
   <img src="docs/assets/screenshot-settings.png" alt="General settings: launch at login, menu bar icon, language picker, reveal on hover with delay, click and double-click reveals, Instant/Smooth/Fade animation, auto-rehide, system extras" width="640"><br>
-  <sub>Your rules for revealing — and for putting everything back.</sub>
+  <sub>Your rules for revealing, and for putting everything back.</sub>
 </p>
 
 ## And the rest
 
-- **Per-display behavior** — set a display to always show everything or to
-  collapse; whichever display your pointer is on wins.
-- **Built-in replacements** — media controls, AirDrop, camera/mic indicator,
+- **Per-display behavior.** Set a display to always show everything or to
+  collapse. Whichever display your pointer is on wins.
+- **Built-in replacements.** Media controls, AirDrop, camera/mic indicator
   and Shortcuts items that survive hiding, since macOS temporarily removes
   its own extras while hiding is active.
-- **Separators** — visual dividers that behave like icons, with adjustable
-  opacity, ⌘-draggable anywhere in the bar.
-- **Nothing to phone home about** — no account, no analytics, no server.
+- **Separators.** Visual dividers that behave like icons, with adjustable
+  opacity. ⌘-drag them anywhere in the bar.
+- **Nothing to phone home about.** No account, no analytics, no server.
   The only connection Pelmet ever makes is checking for its own updates.
-- **Signed updates** — Sparkle with EdDSA signatures, checked against a
+- **Signed updates.** Sparkle with EdDSA signatures, checked against a
   signed appcast.
-- **Speaks your language** — English, German, French, Spanish, Italian,
+- **Speaks your language.** English, German, French, Spanish, Italian,
   Portuguese (Brazil), Japanese, Simplified Chinese, Korean and Russian.
   Pelmet follows your system language, or pick one in Settings › General ›
-  Language. Translations are machine-drafted for now; corrections are welcome
+  Language. Translations are machine-drafted for now, corrections are welcome
   in `scripts/gen-xcstrings.py`.
 
 ## How it works
 
-macOS 27's menu bar can hide items natively — it's the mechanism behind the
-system's assessment (exam lockdown) mode. Pelmet drives that mechanism directly:
-it asserts a configuration listing what should stay visible, and macOS itself
+macOS 27's menu bar can hide items natively. It's the mechanism behind the
+system's assessment (exam lockdown) mode. Pelmet drives that mechanism directly.
+It asserts a configuration listing what should stay visible, and macOS itself
 hides the rest and reflows the bar. That's why hiding feels like part of the
-system — it *is* the system.
+system. It *is* the system.
 
 The catch: this API lives in a **private Apple framework**
 (`MenuBarClientCore`). It isn't documented or guaranteed, so a macOS update
-could change or remove it. Pelmet resolves it at runtime and fails soft — if the
+could change or remove it. Pelmet resolves it at runtime and fails soft. If the
 API ever disappears, Pelmet simply reports hiding as unavailable rather than
 breaking your menu bar. Everything else (item positions, clicks, previews)
 uses public APIs: Accessibility and ScreenCaptureKit.
@@ -97,21 +97,21 @@ brew install fif7y/tap/pelmet
 ```
 
 Requires **macOS 27 (Golden Gate)**. Earlier versions of macOS use a
-different menu bar architecture that Pelmet does not target.
+different menu bar architecture that Pelmet doesn't target.
 
 On first launch Pelmet asks for one permission:
 
-- **Accessibility** (required) — how Pelmet sees the menu bar's items and
+- **Accessibility** (required). How Pelmet sees the menu bar's items and
   positions, and how clicking a hidden item works without revealing
   everything.
 
-Screen Recording is optional and never prompted for during onboarding — if
-granted, Pelmet uses it to paint seamless cover strips over the bar while
-items swap during reveals and reorders; without it, transitions simply run
+Screen Recording is optional and never prompted for during onboarding. If
+granted, Pelmet uses it to paint solid cover strips over the bar while
+items swap during reveals and reorders. Without it, transitions simply run
 uncovered.
 
-Pelmet is notarized by Apple and ships with the hardened runtime. It is not
-sandboxed — managing the menu bar requires APIs the App Store sandbox
+Pelmet is notarized by Apple and ships with the hardened runtime. It isn't
+sandboxed, managing the menu bar requires APIs the App Store sandbox
 forbids.
 
 More in the [FAQ](docs/FAQ.md).
@@ -127,9 +127,9 @@ xcodegen
 xcodebuild -project Pelmet.xcodeproj -scheme Pelmet -configuration Release build
 ```
 
-The engine logic lives in two local Swift packages — `Packages/PelmetCore`
+The engine logic lives in two local Swift packages, `Packages/PelmetCore`
 (section model, rehide state machine) and `Packages/PelmetEngine` (menu bar
-convergence) — each with its own test suite:
+convergence), each with its own test suite:
 
 ```sh
 swift test --package-path Packages/PelmetCore
@@ -137,13 +137,13 @@ swift test --package-path Packages/PelmetEngine
 ```
 
 UI strings live in `Pelmet/Resources/Localizable.xcstrings`, generated from
-the translation table in `scripts/gen-xcstrings.py` — edit the script, re-run
+the translation table in `scripts/gen-xcstrings.py`. Edit the script, re-run
 it, commit both. English keys must match the code literals exactly.
 
 ## Why "Pelmet"
 
-*pelmet* (n.) — a narrow border of cloth or wood, fitted across the top of a
-window to conceal the curtain fittings. Now also: the same, for your menu bar.
+*pelmet* (n.), a narrow border of cloth or wood, fitted across the top of a
+window to conceal the curtain fittings. Now also the same thing, for your menu bar.
 
 ## Licenses & acknowledgements
 
@@ -162,8 +162,8 @@ Everything else is custom code on top of Apple's system frameworks.
 ## License
 
 © 2026 Gabriel Faucon. Licensed under the
-[GNU General Public License v3.0](LICENSE) — use, study, and fork freely;
-distributed derivatives must remain open under the same license.
+[GNU General Public License v3.0](LICENSE). Use it, fork it.
+Distributed derivatives must remain open under the same license.
 
 Pelmet is an independent project, not affiliated with or endorsed by Apple Inc.
 Apple, macOS, and the Mac are trademarks of Apple Inc.
