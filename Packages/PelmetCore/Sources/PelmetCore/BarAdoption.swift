@@ -63,9 +63,15 @@ public enum BarAdoption {
         log.append("adopt: chevronX=\(chevronX.map { "\($0)" } ?? "none") firstPass=\(isFirstPass) trackedZones=\(previousZones.count)")
         // Cluster edges from the PRE-adoption model: the always-hidden and
         // hidden members' live frames (only present during a full reveal).
-        // Self-excluded per item below so an item never bounds itself.
+        // Self-excluded per item below so an item never bounds itself. The
+        // dragged item is excluded from both pools outright: its model
+        // section is stale by definition (that is what the drag changes), so
+        // its new x would otherwise stretch its OLD cluster over the
+        // neighbors it landed among and adopt them out (the always-hidden
+        // separator read "inside hidden" when Sconce dropped left of it,
+        // 2026-09-05).
         let clusterX: [(id: ItemID, x: CGFloat, section: Section)] = items.compactMap {
-            guard let x = $0.minX else { return nil }
+            guard let x = $0.minX, $0.id != draggedID else { return nil }
             let section = model.section(of: $0.id)
             guard section != .visible else { return nil }
             return ($0.id, x, section)
@@ -74,7 +80,7 @@ public enum BarAdoption {
         // implicit boundary when the chevron is hidden. Self-excluded per
         // item below so a dragged item never bounds itself.
         let visibleX: [(id: ItemID, x: CGFloat)] = items.compactMap {
-            guard let x = $0.minX, model.section(of: $0.id) == .visible else { return nil }
+            guard let x = $0.minX, $0.id != draggedID, model.section(of: $0.id) == .visible else { return nil }
             return ($0.id, x)
         }
         for item in items {
@@ -146,12 +152,16 @@ public enum BarAdoption {
             // Chevron-less readings are baseline-only except for the dragged
             // item — see the doc comment (stale-model poisoning).
             guard chevronX != nil || item.id == draggedID else { continue }
-            if chevronX == nil {
+            if item.id == draggedID {
                 // The ⌘-drag gesture itself is the evidence — a fresh boot may
                 // hold no baseline for the dragged item yet (observed live:
                 // the only revealed pass ran 90ms AFTER the drop, and the
                 // agreement rule above rightly refused to baseline the moved
                 // position), so a confident reading adopts without one.
+                // With a chevron too: a cluster's edge member (self-excluded,
+                // it reads "between the clusters") NEVER earns a baseline, so
+                // the zone-change rule alone could never move the leftmost
+                // hidden item into Always Hidden (Sconce, 2026-09-05).
                 guard confident else { continue }
             } else {
                 // First sighting establishes a baseline; only a zone CHANGE

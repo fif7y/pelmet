@@ -194,6 +194,63 @@ struct BarAdoptionTests {
         #expect(result?.model.assignments[velja.sectionKey] == nil)
     }
 
+    @Test func draggedLeftmostHiddenMemberAdoptsAlwaysHiddenWithoutABaseline() {
+        // The Sconce case (2026-09-05): the LEFTMOST hidden member never
+        // earns a confident baseline — self-excluded, it always reads
+        // "between the clusters" — so the zone-change rule could never fire
+        // for it. The ⌘-drag itself is the evidence: a confident reading of
+        // the dragged item adopts with a chevron too.
+        var model = SectionModel()
+        model.assignments[velja.sectionKey] = .hidden          // Sconce stand-in
+        model.assignments[figma.sectionKey] = .hidden          // Snib stand-in
+        model.assignments[anchor.sectionKey] = .alwaysHidden   // trailing AH separator
+        model.order[.hidden] = [velja.sectionKey, figma.sectionKey]
+        model.order[.alwaysHidden] = [anchor.sectionKey]
+        let result = BarAdoption.reconcile(
+            items: [
+                (id: chevron, minX: 1000),
+                (id: figma, minX: 430),
+                (id: anchor, minX: 370),
+                (id: velja, minX: 340),   // dropped LEFT of the AH cluster's right edge
+            ],
+            model: model,
+            previousZones: [figma.rawValue: .hidden, anchor.rawValue: .alwaysHidden],
+            pelmetBundleID: pelmet,
+            draggedID: velja
+        )
+        #expect(result?.changed == true)
+        #expect(result?.model.assignments[velja.sectionKey] == .alwaysHidden)
+        #expect(result?.zones[velja.rawValue] == .alwaysHidden)
+        // The dragged item's stale .hidden entry must not stretch the hidden
+        // cluster over the AH separator it landed left of.
+        #expect(result?.model.assignments[anchor.sectionKey] == .alwaysHidden)
+        #expect(result?.model.order[.hidden] == [figma.sectionKey])
+        #expect(result?.model.order[.alwaysHidden] == [velja.sectionKey, anchor.sectionKey])
+    }
+
+    @Test func draggedItemBetweenClustersKeepsTheModelsWord() {
+        // Dropped right of the AH cluster and left of the hidden one: still
+        // ambiguous even for the dragged item — no boundary to judge against.
+        var model = SectionModel()
+        model.assignments[velja.sectionKey] = .hidden
+        model.assignments[figma.sectionKey] = .hidden
+        model.assignments[anchor.sectionKey] = .alwaysHidden
+        let result = BarAdoption.reconcile(
+            items: [
+                (id: chevron, minX: 1000),
+                (id: figma, minX: 430),
+                (id: velja, minX: 400),
+                (id: anchor, minX: 370),
+            ],
+            model: model,
+            previousZones: [figma.rawValue: .hidden, anchor.rawValue: .alwaysHidden],
+            pelmetBundleID: pelmet,
+            draggedID: velja
+        )
+        #expect(result?.model.assignments[velja.sectionKey] == .hidden)
+        #expect(result?.zones[velja.rawValue] == nil)
+    }
+
     @Test func ambiguousZoneConservesModelAndDoesNotPersist() {
         // No measurable hidden/always-hidden cluster besides the item itself
         // → ambiguous; the model's word stands and the guess is not tracked.
