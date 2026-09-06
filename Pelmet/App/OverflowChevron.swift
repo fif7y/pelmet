@@ -15,6 +15,53 @@ import ApplicationServices
 import PelmetCore
 import PelmetEngine
 
+/// The «'s AX description is localized by the AGENT process (the system
+/// language, not Pelmet's per-app language), so an English match only found
+/// it on English Macs. Both labels ship in MenuBarAgent's MenuBarCore.loctable
+/// under stable keys; match against every translation in that table.
+nonisolated enum OverflowChevronLabels {
+    static let showKey = "menuBar.showOverflowItemsAccessibilityLabel"
+    static let hideKey = "menuBar.hideOverflowItemsAccessibilityLabel"
+    static let englishShow = "Show Hidden Menu Bar Items"
+    static let englishHide = "Hide Menu Bar Items"
+
+    struct Table: Sendable {
+        let show: Set<String>
+        let hide: Set<String>
+    }
+
+    static let defaultURL = URL(fileURLWithPath:
+        "/System/Library/CoreServices/MenuBarAgent.app/Contents/Resources/MenuBarCore.loctable")
+
+    static let table: Table = load(at: defaultURL)
+        ?? Table(show: [englishShow], hide: [englishHide])
+
+    /// loctable = plist dictionary keyed by language code, each a strings
+    /// dictionary. English is always seeded so a missing/reshaped table
+    /// degrades to the old behavior instead of finding nothing.
+    static func load(at url: URL) -> Table? {
+        guard let data = try? Data(contentsOf: url),
+              let root = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+        else { return nil }
+        var show: Set<String> = [englishShow]
+        var hide: Set<String> = [englishHide]
+        for (_, value) in root {
+            guard let strings = value as? [String: Any] else { continue }
+            if let s = strings[showKey] as? String { show.insert(s) }
+            if let h = strings[hideKey] as? String { hide.insert(h) }
+        }
+        return Table(show: show, hide: hide)
+    }
+
+    /// nil = not the toggle. true = expanded (the label offers to hide).
+    static func expandedState(forDescription desc: String) -> Bool? {
+        let d = desc.trimmingCharacters(in: .whitespacesAndNewlines)
+        if table.hide.contains(d) { return true }
+        if table.show.contains(d) { return false }
+        return nil
+    }
+}
+
 enum OverflowChevron {
     /// Set when WE expanded it — editor exit only collapses in that case,
     /// never undoing an expansion the user made themselves.
@@ -46,7 +93,8 @@ enum OverflowChevron {
             guard roleV as? String == "AXButton" else { continue }
             var descV: CFTypeRef?
             AXUIElementCopyAttributeValue(el, kAXDescriptionAttribute as CFString, &descV)
-            guard let desc = descV as? String, desc.contains("Menu Bar Items") else { continue }
+            guard let desc = descV as? String,
+                  let expanded = OverflowChevronLabels.expandedState(forDescription: desc) else { continue }
             var pid: pid_t = 0
             AXUIElementGetPid(el, &pid)
             guard NSRunningApplication(processIdentifier: pid)?.bundleIdentifier == PelmetBundle.agentID else { continue }
@@ -61,7 +109,7 @@ enum OverflowChevron {
                 AXValueGetValue(sizeV as! AXValue, .cgSize, &s)
                 frame = CGRect(origin: p, size: s)
             }
-            return Toggle(element: el, frame: frame, expanded: desc.hasPrefix("Hide"))
+            return Toggle(element: el, frame: frame, expanded: expanded)
         }
         return nil
     }
