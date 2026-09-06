@@ -42,14 +42,14 @@ gets an honest badge instead of a fake handle.
 
 ## Reveal on your terms
 
-Every way back in is a setting: hover (with an adjustable delay), a click on
-empty menu bar space, a double-click for the always-hidden section, or the
-chevron itself. Pick how it looks (**Instant**, **Smooth** or **Fade**)
-and how it ends, either auto-rehide after a delay you set or the moment you click
-somewhere else.
+Every way back in is a setting: hover (with a delay from 0.1 to 0.5 seconds),
+a click on empty menu bar space, a double-click for the always-hidden section,
+or the chevron itself. Pick how it looks (**Instant**, **Smooth** or **Fade**)
+and how it ends, either auto-rehide after a delay you set (instant to 5
+seconds) or the moment you click somewhere else.
 
 <p align="center">
-  <img src="docs/assets/screenshot-settings.png" alt="General settings: launch at login, menu bar icon, language picker, reveal on hover with delay, click and double-click reveals, Instant/Smooth/Fade animation, auto-rehide, system extras" width="640"><br>
+  <img src="docs/assets/screenshot-settings.png" alt="Behavior settings: reveal on hover with a stepped delay slider, click and double-click reveals, Instant/Smooth/Fade animation, auto-rehide after a stepped delay, system extras, clock click opens Notification Center" width="640"><br>
   <sub>Your rules for revealing, and for putting everything back.</sub>
 </p>
 
@@ -66,11 +66,19 @@ somewhere else.
   The only connection Pelmet ever makes is checking for its own updates.
 - **Signed updates.** Sparkle with EdDSA signatures, checked against a
   signed appcast.
+- **Your icon, or none.** Six menu bar icon styles (chevron, arrow, eye,
+  dots, grid, panel), or turn the icon off entirely and reach Settings by
+  shortcut or right-click.
 - **Speaks your language.** English, German, French, Spanish, Italian,
   Portuguese (Brazil), Japanese, Simplified Chinese, Korean and Russian.
   Pelmet follows your system language, or pick one in Settings › General ›
   Language. Translations are machine-drafted for now, corrections are welcome
   in `scripts/gen-xcstrings.py`.
+
+<p align="center">
+  <img src="docs/assets/screenshot-general.png" alt="General settings: launch at login, the menu bar icon toggle with six icon styles, display language picker, Accessibility permission status" width="640"><br>
+  <sub>General. Pick the icon Pelmet wears, or your language.</sub>
+</p>
 
 ## How it works
 

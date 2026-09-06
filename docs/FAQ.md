@@ -70,6 +70,15 @@ check manually in Settings → About.
 Any of: the global shortcut (⌥⌘, by default), right-click a Pelmet separator,
 right-click empty menu bar space, or launch Pelmet again from Finder/Spotlight.
 
+**Can I change the Pelmet icon?**
+Settings → General → Icon. Six styles: chevron, arrow, eye, dots, grid and
+panel. Chevron, arrow, eye and panel flip to a revealed face while the bar is
+open, so the icon keeps pointing at what a click will do.
+
+**How short can the hover delay be?**
+0.1 to 0.5 seconds, in 0.1 steps. Auto-rehide runs from instant to 5 seconds
+in half-second steps. Both live in Settings → Behavior.
+
 **I'm developing an app in Xcode and its menu bar icon disappears while Pelmet runs.**
 A macOS limitation with no setting for it. The system's menu-bar hiding mechanism
 matches apps by their LaunchServices registration, and apps running out of
