@@ -10,6 +10,7 @@ import SwiftUI
 
 struct MenuBarTab: View {
     @Environment(AppState.self) private var appState
+    @State private var dragSession = EditorDragSession()
 
     var body: some View {
         // No own ScrollView — the settings shell provides scrolling + padding.
@@ -82,6 +83,7 @@ struct MenuBarTab: View {
                 SeparatorStrip()
         }
         .animation(.spring(duration: 0.3), value: appState.settings.sectionModel)
+        .environment(dragSession)
         // Editing the bar shows the bar: reveal everything while this tab is
         // open so drags in the editor and in the real menubar stay in sync.
         .onAppear {
@@ -99,40 +101,63 @@ struct MenuBarTab: View {
 
 private struct EditorSectionView: View {
     @Environment(AppState.self) private var appState
+    @Environment(EditorDragSession.self) private var session
     let section: PelmetCore.Section
     let title: LocalizedStringKey
     let caption: LocalizedStringKey
     let symbol: String
 
+    /// Live tile frames in the strip's coordinate space, for insertion math.
+    @State private var frames: [ItemID: CGRect] = [:]
+
     private var items: [ObservedItem] {
         appState.editorItems(in: section)
     }
 
-    @State private var rowTargeted = false
-    /// Tiles are nested drop destinations, so the ROW's isTargeted flips
-    /// false over every tile and true in the 6pt gaps — driving the trailing
-    /// slot and row highlight straight off it made both pop per tile
-    /// crossing, reflowing the whole row each time. `dragEngaged` is the
-    /// stable union (row OR any tile targeted) with a short clear delay to
-    /// ride out the one-frame gap between a tile untargeting and the row
-    /// targeting.
-    @State private var tileTargets = 0
-    @State private var dragEngaged = false
-    @State private var dragDisengage: Task<Void, Never>?
+    /// Tiles with the lifted one removed — the placeholder stands in for it.
+    private var tiles: [ObservedItem] {
+        guard let lifted = session.liftedItem else { return items }
+        return items.filter { $0.id != lifted }
+    }
 
-    private func updateDragEngaged() {
-        let engaged = rowTargeted || tileTargets > 0
-        dragDisengage?.cancel()
-        if engaged {
-            dragEngaged = true
-        } else {
-            dragDisengage = Task {
-                try? await Task.sleep(for: .milliseconds(250))
-                guard !Task.isCancelled else { return }
-                dragEngaged = false
+    private var isTarget: Bool {
+        session.target?.section == section
+    }
+
+    /// Where the placeholder sits: under the cursor while this strip is the
+    /// target; at the lifted tile's home slot while the cursor is over no
+    /// strip (so the row doesn't collapse the moment the drag leaves it).
+    private var placeholderIndex: Int? {
+        switch session.payload {
+        case .item(_, let home, let homeIndex):
+            if let target = session.target {
+                return target.section == section ? min(target.index, tiles.count) : nil
+            }
+            return home == section ? min(homeIndex, tiles.count) : nil
+        default:
+            return nil
+        }
+    }
+
+    private enum Slot: Identifiable {
+        case tile(ObservedItem)
+        case placeholder
+
+        var id: String {
+            switch self {
+            case .tile(let item): item.id.rawValue
+            case .placeholder: "pelmet.editor.placeholder"
             }
         }
     }
+
+    private var slots: [Slot] {
+        var slots = tiles.map(Slot.tile)
+        if let index = placeholderIndex { slots.insert(.placeholder, at: index) }
+        return slots
+    }
+
+    private var coordinateSpace: String { "pelmet.strip.\(section.rawValue)" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -156,18 +181,18 @@ private struct EditorSectionView: View {
                 if appState.settings.sectionModel.newItemsDestination == section {
                     NewItemsChip()
                 }
-                ForEach(items, id: \.id.rawValue) { item in
-                    ItemTile(item: item, section: section) { targeting in
-                        tileTargets = max(0, tileTargets + (targeting ? 1 : -1))
-                        updateDragEngaged()
+                ForEach(Array(slots.enumerated()), id: \.element.id) { index, slot in
+                    switch slot {
+                    case .tile(let item):
+                        ItemTile(item: item, section: section, index: index)
+                            .onGeometryChange(for: CGRect.self) { proxy in
+                                proxy.frame(in: .named(coordinateSpace))
+                            } action: { frames[item.id] = $0 }
+                    case .placeholder:
+                        SlotPlaceholder()
                     }
                 }
-                // Trailing landing slot: appears while a chip hovers anywhere
-                // over the row (append position on a row drop).
-                if dragEngaged {
-                    LandingSlot()
-                }
-                if items.isEmpty, !dragEngaged {
+                if slots.isEmpty {
                     Text("Drop icons here")
                         .font(.callout)
                         .foregroundStyle(.tertiary)
@@ -179,31 +204,40 @@ private struct EditorSectionView: View {
             .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(.quaternary.opacity(dragEngaged ? 0.8 : (section == .visible ? 0.35 : 0.55)))
+                    .fill(.quaternary.opacity(isTarget ? 0.8 : (section == .visible ? 0.35 : 0.55)))
             )
-            .animation(.spring(duration: 0.25), value: dragEngaged)
-            .dropDestination(for: String.self) { dropped, _ in
-                guard let raw = dropped.first else { return false }
-                if raw == NewItemsChip.dragID {
-                    appState.settings.sectionModel.newItemsDestination = section
-                    appState.settingsChanged()
-                    return true
-                }
-                appState.moveItem(ItemID(rawValue: raw), to: section, before: nil)
-                return true
-            } isTargeted: { targeting in
-                rowTargeted = targeting
-                updateDragEngaged()
-            }
+            .coordinateSpace(name: coordinateSpace)
+            .onDrop(of: [.text], delegate: StripDropDelegate(
+                section: section,
+                session: session,
+                order: { tiles.map(\.id) },
+                frames: { frames },
+                onDrop: handleDrop
+            ))
+            .animation(.spring(duration: 0.25), value: session.target)
+            .animation(.spring(duration: 0.25), value: session.payload)
+        }
+    }
+
+    private func handleDrop(_ payload: EditorDragSession.Payload, at index: Int) {
+        switch payload {
+        case .newItemsChip:
+            appState.settings.sectionModel.newItemsDestination = section
+            appState.settingsChanged()
+        case .item(let id, _, _):
+            let others = items.filter { $0.id != id }
+            let before = index < others.count ? others[index].id : nil
+            appState.moveItem(id, to: section, before: before)
         }
     }
 }
 
 /// Ghost slot marking where new menu bar icons land — the
 /// `newItemsDestination` setting as a draggable artifact. Dashed placeholder
-/// language (kin to LandingSlot), not a bordered tile: it is a slot, not an
-/// item.
+/// language (kin to SlotPlaceholder), not a bordered tile: it is a slot, not
+/// an item.
 private struct NewItemsChip: View {
+    @Environment(EditorDragSession.self) private var session
     static let dragID = "pelmet.new-items-marker"
 
     var body: some View {
@@ -227,21 +261,29 @@ private struct NewItemsChip: View {
                 .frame(maxWidth: 52)
         }
         .help("New menu bar icons land here — drag into another section to change it")
-        .draggable(Self.dragID)
+        .onDrag {
+            session.begin(.newItemsChip)
+            return NSItemProvider(object: Self.dragID as NSString)
+        }
     }
 }
 
-/// Animated placeholder showing where a dragged chip will land.
-private struct LandingSlot: View {
+/// The one slot that moves during a drag: the lifted tile's stand-in, sized
+/// like a tile so the row keeps its rhythm.
+private struct SlotPlaceholder: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 9)
-            .fill(.tint.opacity(0.18))
-            .overlay(
-                RoundedRectangle(cornerRadius: 9)
-                    .strokeBorder(.tint.opacity(0.7), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-            )
-            .frame(width: 34, height: 34)
-            .transition(.scale(scale: 0.6).combined(with: .opacity))
+        VStack(spacing: 3) {
+            RoundedRectangle(cornerRadius: 9)
+                .fill(.tint.opacity(0.18))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9)
+                        .strokeBorder(.tint.opacity(0.7), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                )
+                .frame(width: 34, height: 34)
+            Text(" ")
+                .font(.system(size: 9))
+        }
+        .transition(.scale(scale: 0.6).combined(with: .opacity))
     }
 }
 
@@ -249,13 +291,13 @@ private struct LandingSlot: View {
 
 private struct ItemTile: View {
     @Environment(AppState.self) private var appState
+    @Environment(EditorDragSession.self) private var session
     let item: ObservedItem
     let section: PelmetCore.Section
-    /// Reports targeting transitions up so the section row can keep its
-    /// drag affordances stable while the chip crosses nested destinations.
-    var onTargeting: (Bool) -> Void = { _ in }
+    /// Position among the strip's slots at lift time — the home slot the
+    /// placeholder keeps open while the cursor is over no strip.
+    let index: Int
     @State private var hovered = false
-    @State private var targeted = false
 
     private var displayName: String {
         if item.id.rawValue.contains("Pelmet.Separator") {
@@ -341,32 +383,10 @@ private struct ItemTile: View {
                 .frame(maxWidth: 52)
         }
         .onHover { hovered = $0 }
-        // Insertion gap: the tile slides right and an accent bar marks where
-        // the dragged chip will land (before this tile).
-        .padding(.leading, targeted ? 16 : 0)
-        .overlay(alignment: .leading) {
-            if targeted {
-                Capsule()
-                    .fill(.tint)
-                    .frame(width: 3, height: 34)
-                    .offset(x: 5, y: -7)
-                    .transition(.scale(scale: 0.5).combined(with: .opacity))
-            }
-        }
-        .animation(.spring(duration: 0.22), value: targeted)
-        .draggable(item.id.rawValue)
-        .dropDestination(for: String.self) { dropped, _ in
-            guard let raw = dropped.first, raw != item.id.rawValue else { return false }
-            if raw == NewItemsChip.dragID {
-                appState.settings.sectionModel.newItemsDestination = section
-                appState.settingsChanged()
-                return true
-            }
-            appState.moveItem(ItemID(rawValue: raw), to: section, before: item.id)
-            return true
-        } isTargeted: { targeting in
-            if targeting != targeted { onTargeting(targeting) }
-            targeted = targeting
+        .onDrag {
+            hovered = false
+            session.begin(.item(item.id, home: section, homeIndex: index))
+            return NSItemProvider(object: item.id.rawValue as NSString)
         }
     }
 }
