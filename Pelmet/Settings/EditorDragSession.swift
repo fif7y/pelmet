@@ -9,6 +9,7 @@
 
 import AppKit
 import PelmetCore
+import PelmetEngine
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -36,6 +37,7 @@ final class EditorDragSession {
     }
 
     func begin(_ payload: Payload) {
+        PelmetLog.log("editor-drag: begin \(payload)")
         self.payload = payload
         target = nil
         endWatcher?.cancel()
@@ -49,14 +51,15 @@ final class EditorDragSession {
                     // Let a landing's performDrop run first.
                     try? await Task.sleep(for: .milliseconds(120))
                     guard !Task.isCancelled else { return }
-                    self?.end()
+                    self?.end(reason: "button up (buttons=\(NSEvent.pressedMouseButtons))")
                     return
                 }
             }
         }
     }
 
-    func end() {
+    func end(reason: String) {
+        if payload != nil { PelmetLog.log("editor-drag: end — \(reason)") }
         endWatcher?.cancel()
         endWatcher = nil
         payload = nil
@@ -110,7 +113,8 @@ struct StripDropDelegate: DropDelegate {
     let onDrop: (EditorDragSession.Payload, Int) -> Void
 
     func validateDrop(info: DropInfo) -> Bool {
-        session.payload != nil
+        if session.payload == nil { PelmetLog.log("editor-drag: \(section) refused — no session") }
+        return session.payload != nil
     }
 
     func dropEntered(info: DropInfo) {
@@ -127,16 +131,23 @@ struct StripDropDelegate: DropDelegate {
     }
 
     func performDrop(info: DropInfo) -> Bool {
-        guard let payload = session.payload else { return false }
+        guard let payload = session.payload else {
+            PelmetLog.log("editor-drag: drop with no session")
+            return false
+        }
         let index = session.target?.section == section
             ? session.target!.index
             : EditorInsertion.index(at: info.location, order: order(), frames: frames())
-        session.end()
+        PelmetLog.log("editor-drag: drop → \(section) index=\(index)")
+        session.end(reason: "drop")
         onDrop(payload, index)
         return true
     }
 
     private func track(_ info: DropInfo) {
+        // SwiftUI sends one more dropUpdated ~300ms after performDrop; with
+        // no session it must not re-target the strip (highlight would stick).
+        guard session.payload != nil else { return }
         // The chip always lands at the strip's far left — only the strip
         // highlight matters, not a slot.
         let index = session.payload == .newItemsChip
