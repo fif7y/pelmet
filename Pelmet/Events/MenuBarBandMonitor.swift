@@ -250,6 +250,10 @@ final class MenuBarBandMonitor {
         scheduleHoverReveal()
     }
 
+    /// A single click on a revealed bar, held for the double-click interval
+    /// so a double's first click can't collapse what its second reopens.
+    private var pendingConceal: Task<Void, Never>?
+
     private func clicked(_ event: NSEvent) {
         guard let appState else { return }
         let location = NSEvent.mouseLocation
@@ -272,16 +276,35 @@ final class MenuBarBandMonitor {
             guard appState.settings.revealTriggers.clickEnabled else { return }
             PelmetLog.log("band: empty-area click count=\(event.clickCount)")
             if event.clickCount >= 2 {
-                // Second click of a double. With the feature off, ignore it —
-                // acting again reads as an open-shut flash.
+                // Second click of a double: the deferred conceal (below) is
+                // moot. With the feature off, ignore the click — acting
+                // again reads as an open-shut flash.
+                pendingConceal?.cancel()
+                pendingConceal = nil
                 if appState.settings.revealTriggers.doubleClickForAlwaysHidden {
                     appState.reveal([.hidden, .alwaysHidden], reason: .doubleClick)
                 }
+            } else if appState.isRevealed, appState.settings.revealTriggers.doubleClickForAlwaysHidden {
+                // Revealed bar (hover got there first, the usual case): a
+                // plain click conceals, but a double's FIRST click landed
+                // here too and collapsed the bar 170ms before the second
+                // click reopened it wider — a choppy shut-then-open flash
+                // (2026-09-05). Hold the conceal for the system's
+                // double-click interval; a second click cancels it. Only the
+                // dismiss waits — summoning below stays instant.
+                pendingConceal?.cancel()
+                let interval = NSEvent.doubleClickInterval
+                pendingConceal = Task { @MainActor [weak appState] in
+                    try? await Task.sleep(for: .seconds(interval))
+                    guard !Task.isCancelled, let appState, appState.isRevealed else { return }
+                    PelmetLog.log("band: deferred single-click conceal fired")
+                    appState.toggle(reason: .click)
+                }
             } else {
-                // Single click acts IMMEDIATELY — the old 300ms double-click
-                // defer made every plain click feel dead. A double's second
-                // click widens the reveal on top (revealRequested unions), so
-                // no defer is needed to keep double-click working.
+                // Concealed bar: a single click acts IMMEDIATELY — the old
+                // 300ms double-click defer made every plain click feel dead.
+                // A double's second click widens the reveal on top
+                // (revealRequested unions), so no defer is needed here.
                 appState.toggle(reason: .click)
             }
         } else if appState.isRevealed {

@@ -32,13 +32,35 @@ final class TransitionCoordinator {
     /// capture before the swap can even start (snappiness).
     private var revealCoverSnapshot: [ConcealGhostOverlay.BarSnapshot] = []
 
-    /// The reveal cover's footprint: the remembered strip, padded generously —
-    /// left is the slide origin (empty bar, free to cover), right catches the
-    /// visible cluster shifting. Strip width drifts between conceals.
+    /// The widest strip any conceal has measured (left edge only — the
+    /// right edge is the same chevron/visible cluster every time). A
+    /// hidden-only conceal remembers a short strip; the next full reveal
+    /// then slid the always-hidden cluster in UNCOVERED left of it (Sconce's
+    /// bar: cover 249px @1352, items landing from 1075 — 2026-09-05).
+    private var widestStripMinX: CGFloat?
+    /// Concealable items in the last engine snapshot — the floor for the
+    /// cover's width before any full conceal has measured the real strip.
+    private var concealableCount = 0
+    /// Per-item width for that estimate: icons run ~30–36pt with padding,
+    /// separators less. Over-covering is free — the cover is a snapshot of
+    /// the empty bar floated over the empty bar.
+    private static let estimatedItemWidth: CGFloat = 36
+    /// The reveal cover's footprint: the remembered strip, widened to the
+    /// widest strip ever measured (or the item-count estimate) and padded
+    /// generously — left is the slide origin (empty bar, free to cover),
+    /// right catches the visible cluster shifting. Strip width drifts
+    /// between conceals.
     private var revealCoverRect: CGRect? {
         lastConcealedStripRect.map {
-            CGRect(x: $0.minX - 120, y: $0.minY, width: $0.width + 180, height: $0.height)
+            let estimatedMinX = $0.maxX - CGFloat(concealableCount) * Self.estimatedItemWidth
+            let minX = min($0.minX, widestStripMinX ?? $0.minX, estimatedMinX)
+            return CGRect(x: minX - 120, y: $0.minY, width: ($0.maxX - minX) + 180, height: $0.height)
         }
+    }
+    private func rememberStrip(_ strip: CGRect?) {
+        lastConcealedStripRect = strip
+        guard let strip else { return }
+        widestStripMinX = min(widestStripMinX ?? strip.minX, strip.minX)
     }
 
     func performReveal(_ sections: Set<PelmetCore.Section>) {
@@ -98,16 +120,16 @@ final class TransitionCoordinator {
             // every exit by ~70ms before the swap could start.
             let ghost: ConcealGhostOverlay.GhostSet?
             if appState.settings.revealAnimation == .instant {
-                lastConcealedStripRect = await concealStripFrames()
+                rememberStrip(await concealStripFrames())
                 ghost = nil
             } else if let first = concealGhostSnapshot.first,
                       let rect = concealGhostStripRect,
                       Date().timeIntervalSince(first.takenAt) < AppTiming.concealGhostFreshness {
-                lastConcealedStripRect = rect
+                rememberStrip(rect)
                 ghost = ConcealGhostOverlay.begin(from: concealGhostSnapshot, safety: AppTiming.transitionCoverSafety)
             } else {
                 let strip = await concealStripFrames()
-                lastConcealedStripRect = strip
+                rememberStrip(strip)
                 ghost = await ConcealGhostOverlay.begin(over: strip, safety: AppTiming.transitionCoverSafety)
             }
             concealGhostSnapshot = []
@@ -203,6 +225,9 @@ final class TransitionCoordinator {
         let snap = await engine.snapshot()
         var union: CGRect?
         var count = 0
+        concealableCount = snap.items.filter {
+            !$0.id.isSystemModule && appState.settings.sectionModel.section(of: $0.id) != .visible
+        }.count
         for item in snap.items {
             guard let frame = item.frame,
                   MenuBarGeometry.isInBand(frame),
