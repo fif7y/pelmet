@@ -10,15 +10,17 @@ import SwiftUI
 
 /// The brand accent — pelmet purple; slightly lighter in dark mode for contrast.
 enum PelmetAccent {
-    static let accent = Color(nsColor: NSColor(name: nil) { appearance in
+    static let nsColor = NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             ? NSColor(red: 0.494, green: 0.373, blue: 0.949, alpha: 1)  // #7E5FF2
             : NSColor(red: 0.408, green: 0.255, blue: 0.929, alpha: 1)  // #6841ED
-    })
+    }
+    static let accent = Color(nsColor: nsColor)
 }
 
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "General"
+    case behavior = "Behavior"
     case menuBar = "Menu Bar"
     case displays = "Displays"
     case about = "About"
@@ -29,6 +31,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var title: LocalizedStringKey {
         switch self {
         case .general: "General"
+        case .behavior: "Behavior"
         case .menuBar: "Menu Bar"
         case .displays: "Displays"
         case .about: "About"
@@ -38,6 +41,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .general: "gearshape"
+        case .behavior: "cursorarrow.motionlines"
         case .menuBar: "menubar.rectangle"
         case .displays: "display.2"
         case .about: "shippingbox"
@@ -77,6 +81,7 @@ struct SettingsView: View {
                     .padding(.bottom, 2)
                 switch appState.settingsTab {
                 case .general: GeneralPane()
+                case .behavior: BehaviorPane()
                 case .menuBar: MenuBarTab()
                 case .displays: DisplaysPane()
                 case .about: AboutPane()
@@ -94,12 +99,24 @@ struct SettingsView: View {
 // MARK: - Sidebar
 
 private struct SettingsSidebar: View {
+    @Environment(AppState.self) private var appState
     @Binding var tab: SettingsTab
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
             ForEach(SettingsTab.allCases) { item in
-                SidebarRow(item: item, selected: tab == item) { tab = item }
+                SidebarRow(
+                    item: item,
+                    selected: tab == item,
+                    // The Accessibility row lives in General; the dot says
+                    // "something here needs you" from any tab.
+                    attention: item == .general && !appState.accessibilityGranted,
+                    // An available update chips the About row in the same
+                    // accent as its "Update to…" button — a trail for someone
+                    // who just opened Settings.
+                    badge: item == .about && SparkleController.shared.availableVersion != nil
+                        ? "Update" : nil
+                ) { tab = item }
             }
             Spacer()
         }
@@ -115,6 +132,8 @@ private struct SettingsSidebar: View {
 private struct SidebarRow: View {
     let item: SettingsTab
     let selected: Bool
+    var attention = false
+    var badge: LocalizedStringKey? = nil
     let action: () -> Void
     @State private var hovered = false
 
@@ -136,10 +155,21 @@ private struct SidebarRow: View {
                     .lineLimit(1)
                     .fixedSize()
                 Spacer(minLength: 0)
+                if attention {
+                    Circle().fill(.orange).frame(width: 7, height: 7)
+                }
+                if let badge {
+                    Text(badge)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(PelmetAccent.accent, in: Capsule())
+                }
             }
             .foregroundStyle(selected ? PelmetAccent.accent : .primary)
             .padding(.horizontal, 9)
-            .padding(.vertical, 6)
+            .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 7)
                     .fill(selected
@@ -340,6 +370,57 @@ private struct GeneralPane: View {
             }
         }
 
+        SettingsCard(title: "Permissions") {
+            SettingRow(
+                title: "Accessibility",
+                caption: appState.accessibilityGranted
+                    ? "How Pelmet sees the menu bar and moves its icons."
+                    : "Off. Pelmet can't see or arrange the menu bar without it."
+            ) {
+                if appState.accessibilityGranted {
+                    StatusChip(text: "Granted", symbol: "checkmark.circle.fill", tint: .green)
+                } else {
+                    AccentChipButton(text: "Grant access", symbol: "hand.raised.fill") {
+                        SettingsWindowController.shared.lowerForSystemPrompt()
+                        AccessibilityAccess.request()
+                    }
+                }
+            }
+        }
+    }
+
+    private func binding<T>(
+        _ keyPath: WritableKeyPath<SettingsStore, T>,
+        onSet: ((T) -> Void)? = nil
+    ) -> Binding<T> {
+        Binding(
+            get: { appState.settings[keyPath: keyPath] },
+            set: { newValue in
+                appState.settings[keyPath: keyPath] = newValue
+                onSet?(newValue)
+                appState.settingsChanged()
+            }
+        )
+    }
+
+    /// One-time orientation when the user goes iconless.
+    static func showIconlessHint() {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Pelmet stays a click away")
+        alert.informativeText = String(localized: "You can always open Pelmet Settings by:\n\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar")
+        alert.alertStyle = .informational
+        alert.runModal()
+    }
+}
+
+// MARK: - Behavior
+
+/// How the bar behaves day to day: what reveals it, when it closes, and the
+/// two macOS quirks Pelmet works around. App-level settings stay in General.
+private struct BehaviorPane: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
         SettingsCard(title: "Reveal") {
             SettingToggleRow(title: "Reveal on hover", isOn: binding(\.revealTriggers.hoverEnabled))
             if appState.settings.revealTriggers.hoverEnabled {
@@ -411,15 +492,6 @@ private struct GeneralPane: View {
                 appState.settingsChanged()
             }
         )
-    }
-
-    /// One-time orientation when the user goes iconless.
-    static func showIconlessHint() {
-        let alert = NSAlert()
-        alert.messageText = String(localized: "Pelmet stays a click away")
-        alert.informativeText = String(localized: "You can always open Pelmet Settings by:\n\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar")
-        alert.alertStyle = .informational
-        alert.runModal()
     }
 }
 
@@ -516,10 +588,53 @@ private struct AboutPane: View {
                 }
             }
             .padding(.top, 18)
+
+            HStack(spacing: 18) {
+                Link("Website", destination: URL(string: "https://pelmet.fif7y.com")!)
+                Link("GitHub", destination: URL(string: "https://github.com/fif7y/pelmet")!)
+                Link("Report an issue", destination: URL(string: "https://github.com/fif7y/pelmet/issues")!)
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .padding(.top, 22)
+
+            if SparkleController.shared.isConfigured {
+                updatesCard
+                    .padding(.top, 28)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
         .onAppear { SparkleController.shared.probe() }
+    }
+
+    /// Two preferences, both quiet by design: scheduled checks never open a
+    /// window (see SparkleController); these decide what a found update
+    /// does instead.
+    @ViewBuilder private var updatesCard: some View {
+        @Bindable var appState = appState
+        SettingsCard(title: "Updates") {
+            SettingToggleRow(
+                title: "Download updates automatically",
+                caption: "Installs on the next quit.",
+                isOn: Binding(
+                    get: { SparkleController.shared.automaticallyDownloadsUpdates },
+                    set: { SparkleController.shared.automaticallyDownloadsUpdates = $0 }
+                )
+            )
+            SettingToggleRow(
+                title: "Notify me when an update is available",
+                isOn: Binding(
+                    get: { appState.settings.notifyOnUpdates },
+                    set: { appState.settings.notifyOnUpdates = $0; appState.settingsChanged() }
+                )
+            )
+            if let checked = SparkleController.shared.lastUpdateCheckDate {
+                Text("Last checked \(checked, format: .relative(presentation: .named))")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
     }
 
     /// Inline update state — no "you're up to date" alert; the pane just
@@ -529,17 +644,9 @@ private struct AboutPane: View {
     @ViewBuilder private var updateRow: some View {
         switch SparkleController.shared.status {
         case .available(let version):
-            Button {
+            AccentChipButton(text: "Update to \(version)", symbol: "arrow.down.circle.fill") {
                 SparkleController.shared.checkForUpdates()
-            } label: {
-                Label("Update to \(version)", systemImage: "arrow.down.circle.fill")
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .background(PelmetAccent.accent, in: Capsule())
             }
-            .buttonStyle(.plain)
         case .checking:
             HStack(spacing: 7) {
                 ProgressView()
@@ -551,12 +658,7 @@ private struct AboutPane: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 7)
         case .upToDate:
-            Label("You're on the latest version", systemImage: "checkmark.seal.fill")
-                .font(.callout.weight(.medium))
-                .foregroundStyle(.green)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(.green.opacity(0.13), in: Capsule())
+            StatusChip(text: "You're on the latest version", symbol: "checkmark.seal.fill", tint: .green)
         case .unknown:
             Button {
                 SparkleController.shared.probe()
@@ -570,5 +672,43 @@ private struct AboutPane: View {
             }
             .buttonStyle(.plain)
         }
+    }
+}
+
+// MARK: - Chips
+
+/// De-boxed state chip: tinted fill, no border. Shared by About's update
+/// state and General's permission row so the two read as one family.
+struct StatusChip: View {
+    let text: LocalizedStringKey
+    let symbol: String
+    let tint: Color
+
+    var body: some View {
+        Label(text, systemImage: symbol)
+            .font(.callout.weight(.medium))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(tint.opacity(0.13), in: Capsule())
+    }
+}
+
+/// The one true CTA treatment: solid brand accent, white label.
+struct AccentChipButton: View {
+    let text: LocalizedStringKey
+    let symbol: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(text, systemImage: symbol)
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(PelmetAccent.accent, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }

@@ -79,7 +79,11 @@ final class PlacementController {
                 // itemsChanged fires this flush mid-conceal too (a rescue's
                 // restore is itself an itemsChanged) — placing a concealed
                 // section's item there measures fading frames. Hold until
-                // ITS section is actually revealed.
+                // ITS section is actually revealed. The chevron never rides
+                // this queue: its walk runs at boot and on toggle-on, under
+                // a deliberate reveal — a reveal-settle walk grabbed the
+                // cursor mid-hover (2026-09-06).
+                if id == AppState.chevronItemID { continue }
                 guard section == .visible
                     || appState.revealedSectionsForExtras.contains(section) else {
                     pendingPlacements.insert(id)
@@ -239,7 +243,12 @@ final class PlacementController {
         // Chevron is OPTIONAL: with the Pelmet icon hidden, live neighbor
         // frames alone anchor the target — only the no-neighbor fallbacks
         // and the final side clamp need the chevron.
-        let rawChevronFrame = appState.pelmetChevronItem(in: snap)?.frame
+        // Placing the chevron ITSELF: it is not an editor item, so it has
+        // no index in the desired order — its slot is the hidden/visible
+        // boundary (right of every hidden item, left of the first visible
+        // one), and it can't be its own anchor.
+        let isChevron = appState.pelmetChevronItem(in: snap)?.id == item.id
+        let rawChevronFrame = isChevron ? nil : appState.pelmetChevronItem(in: snap)?.frame
 
         // Neighbors in the DESIRED order that have live frames — adjusted into
         // the "lifted" coordinate space: once the drag picks the item up, the
@@ -268,8 +277,9 @@ final class PlacementController {
             + appState.editorItems(in: .visible)
         // Canonical comparison: the editor's representative for this bundle
         // may be a different title-variant of the same item.
-        let index = globalOrder.firstIndex(where: { $0.id.sectionKey == id.sectionKey })
-            ?? globalOrder.count
+        let index = isChevron
+            ? appState.editorItems(in: .alwaysHidden).count + appState.editorItems(in: .hidden).count
+            : globalOrder.firstIndex(where: { $0.id.sectionKey == id.sectionKey }) ?? globalOrder.count
         // Only frames in the SAME menu-bar band as the dragged item are
         // trustworthy: an AX walk can carry another display's bar (its own
         // coordinate origin), and one foreign neighbor frame aimed a drop at
@@ -350,12 +360,36 @@ final class PlacementController {
             let rightMid = rightPair
                 .flatMap { r in snap.items.first { $0.id == r.id }?.frame }
                 .flatMap { inBand($0) ? $0.midX : nil }
-            return PlacementGeometry.inSlot(x: x, leftMidX: leftMid, rightMidX: rightMid)
+            let ok = PlacementGeometry.inSlot(x: x, leftMidX: leftMid, rightMidX: rightMid)
+            if !ok {
+                // A verification miss costs a whole second drag — say why.
+                PelmetLog.log("place: verify x=\(x) left=\(leftPair?.id.rawValue ?? "nil")@\(leftMid.map { "\($0)" } ?? "-") right=\(rightPair?.id.rawValue ?? "nil")@\(rightMid.map { "\($0)" } ?? "-")")
+            }
+            return ok
+        }
+        // The chevron's slot is an ORDER, not an x: with both boundary
+        // neighbors live, sitting between them is the whole job. The x
+        // target is a 13pt-off estimate that dragged it every launch and
+        // bounced it straight back (2026-09-06). Concealed left neighbor
+        // (no frame) → fall through: the drag is what fixes a chevron that
+        // landed inside the collapsed cluster.
+        if isChevron,
+           let l = leftPair?.frame, let r = rightPair?.frame,
+           l.midX < frame.midX, frame.midX < r.midX {
+            PelmetLog.log("place: chevron already between its neighbors (x=\(frame.midX)) — no drag")
+            return true
+        }
+        // No live hidden neighbor = the cluster is concealed; a drop now
+        // lands before every concealed item. Stay queued for a reveal.
+        if isChevron, leftPair == nil {
+            PelmetLog.log("place: chevron has no live hidden neighbor — waiting for a reveal")
+            return false
         }
         PelmetLog.log("place: dragging \(id.rawValue) x=\(frame.midX) → \(targetX) (section \(section))")
         await ItemMover.cmdDrag(
             from: CGPoint(x: frame.midX, y: 12),
-            to: CGPoint(x: targetX, y: 12)
+            to: CGPoint(x: targetX, y: 12),
+            ownItem: dragIsPelmetOwned
         )
         try? await Task.sleep(for: AppTiming.postDragSettle)
         var after = await engine.snapshot()
@@ -366,6 +400,15 @@ final class PlacementController {
             PelmetLog.log("place: item not observable after drag")
         }
         var placed = landedInSlot(after)
+        // The chevron's order check is only meaningful with the hidden
+        // neighbor still live — with it gone, "between" is vacuous and the
+        // drop most likely landed in the concealed gap. Unverified: requeue
+        // for the next reveal rather than trust it.
+        if isChevron, placed,
+           leftPair.flatMap({ l in after.items.first { $0.id == l.id }?.frame }).map(inBand) != true {
+            PelmetLog.log("place: chevron's hidden neighbor vanished mid-drag — unverified, requeued")
+            return false
+        }
         if !placed,
            let retryFrame = after.items.first(where: { $0.id == liveID })?.frame,
            let rawLeft = leftPair.flatMap({ l in after.items.first { $0.id == l.id }?.frame }),
@@ -378,7 +421,8 @@ final class PlacementController {
             PelmetLog.log("place: retry with raw frames \(id.rawValue) x=\(retryFrame.midX) → \(retryX)")
             await ItemMover.cmdDrag(
                 from: CGPoint(x: retryFrame.midX, y: 12),
-                to: CGPoint(x: retryX, y: 12)
+                to: CGPoint(x: retryX, y: 12),
+                ownItem: dragIsPelmetOwned
             )
             try? await Task.sleep(for: AppTiming.postDragSettle)
             after = await engine.snapshot()

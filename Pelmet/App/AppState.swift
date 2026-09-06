@@ -12,7 +12,7 @@ final class AppState {
     let engine = EngineGoldenGate()
     var settings = SettingsStore.load()
     private(set) var snapshot: EngineSnapshot?
-    private(set) var accessibilityGranted = AXIsProcessTrusted()
+    private(set) var accessibilityGranted = AccessibilityAccess.isGranted
     private(set) var engineCanHide = true
     /// Settings window tab. Owned here (not view @State) so every window
     /// open can reset it to General — reopening straight onto the Menu Bar
@@ -55,6 +55,9 @@ final class AppState {
     private var clockRelay: ClockClickRelay?
     private var hotkey: HotkeyManager?
     private var eventTask: Task<Void, Never>?
+    @ObservationIgnored private lazy var accessibility = AccessibilityMonitor { [weak self] granted in
+        self?.accessibilityChanged(granted)
+    }
 
     // MARK: - Lifecycle
 
@@ -132,13 +135,26 @@ final class AppState {
     private func applyPolicyAndStartUpdater() {
         rehide.policy = settings.rehidePolicy
         engineCanHide = engine.capabilities.canHide
-        PelmetLog.log("start: axTrusted=\(AXIsProcessTrusted()) canHide=\(engineCanHide) assignments=\(settings.sectionModel.assignments.count)")
+        PelmetLog.log("start: axTrusted=\(accessibilityGranted) canHide=\(engineCanHide) assignments=\(settings.sectionModel.assignments.count)")
+        SparkleController.shared.notifyOnUpdates = { [weak self] in self?.settings.notifyOnUpdates ?? true }
+        SparkleController.shared.onStatusChange = { [weak self] status in
+            if case .available = status {
+                self?.statusItem?.showUpdateDot(true)
+            } else {
+                self?.statusItem?.showUpdateDot(false)
+            }
+        }
         SparkleController.shared.start()
     }
 
+    /// First run gets the intro. A finished install that lost its grant
+    /// (an update re-signed the bundle, the toggle was flipped) gets the
+    /// one-step recovery instead of the whole intro again.
     private func presentOnboardingIfNeeded() {
-        if !accessibilityGranted || !settings.onboardingCompleted {
-            OnboardingController.shared.present(appState: self)
+        if !settings.onboardingCompleted {
+            OnboardingController.shared.present(appState: self, mode: .intro)
+        } else if !accessibilityGranted {
+            OnboardingController.shared.present(appState: self, mode: .accessRecovery)
         }
     }
 
@@ -160,6 +176,7 @@ final class AppState {
     }
 
     private func startMonitors() {
+        accessibility.start()
         let bandMonitor = MenuBarBandMonitor(appState: self)
         bandMonitor.start()
         self.bandMonitor = bandMonitor
@@ -289,6 +306,14 @@ final class AppState {
             )
             let ownItems = (extras?.managedItemIDs ?? []) + (separators?.managedItemIDs ?? [])
             placement.pendingPlacements.formUnion(ownItems.filter { liveKeys.contains($0.sectionKey) })
+            // The chevron's slot is the hidden cluster's right edge, only
+            // measurable while that cluster is live — and right now, before
+            // the first converge, everything is. Walk it HERE: doing it at a
+            // later hover grabbed the cursor for two seconds mid-hover
+            // (2026-09-06). Already-in-order skips without a drag.
+            if settings.showStatusItem {
+                await placement.physicallyPlace(Self.chevronItemID, in: .visible)
+            }
             await engine.setModel(settings.sectionModel)
             // Visible-destined newcomers place right away (the flush filter
             // passes them without a reveal); concealed ones wait for one.
@@ -313,6 +338,7 @@ final class AppState {
     func beginTermination() {
         rehideTimer?.invalidate()
         eventTask?.cancel()
+        SparkleController.shared.clearUpdateNotification()
         Task { [engine] in
             await engine.stop()
             self.replyTerminate()
@@ -334,6 +360,13 @@ final class AppState {
         let effects = rehide.handle(.toggleRequested([.hidden], reason))
         PelmetLog.log("toggle(\(reason)) state=\(rehide.state) effects=\(effects)")
         dispatch(effects)
+        // A deliberate conceal under a hovering pointer must STAY concealed:
+        // the pointer is in the band by definition (it just clicked there),
+        // and the conceal-settle hover re-arm would reopen the bar at once —
+        // every chevron click read as a dead click (2026-09-06).
+        if effects.contains(.conceal) {
+            bandMonitor?.suppressHoverUntilPointerLeaves()
+        }
     }
 
     func reveal(_ sections: Set<PelmetCore.Section>, reason: RevealReason) {
@@ -397,12 +430,29 @@ final class AppState {
         separators?.apply(model: settings.sectionModel, revealed: currentRevealedSections)
     }
 
-    func openSettings() {
-        SettingsWindowController.shared.show(appState: self)
+    func openSettings(tab: SettingsTab = .general) {
+        SettingsWindowController.shared.show(appState: self, tab: tab)
     }
 
     func refreshAccessibility() {
-        accessibilityGranted = AXIsProcessTrusted()
+        accessibility.refresh()
+    }
+
+    /// Grant arrived: the engine's walks were empty until now, and the clock
+    /// relay's tap never came up — re-read the bar, retry the tap, and
+    /// re-apply the model. Grant lost: nothing to tear down (walks just go
+    /// empty), but the status item and settings show the warning.
+    private func accessibilityChanged(_ granted: Bool) {
+        accessibilityGranted = granted
+        PelmetLog.log("ax: trusted=\(granted)")
+        statusItem?.updateAccessibilityWarning(granted: granted)
+        guard granted else { return }
+        clockRelay?.setEnabled(settings.clockOpensNotificationCenter)
+        Task {
+            updateSnapshot(await engine.snapshot())
+            await engine.setModel(settings.sectionModel)
+            dispatch(rehide.handle(.concealRequested))
+        }
     }
 
     private var settingsApplyWork: Task<Void, Never>?
@@ -424,11 +474,34 @@ final class AppState {
         }
     }
 
+    /// Pelmet's own chevron in the engine's id grammar.
+    static let chevronItemID = ItemID(rawValue: "status:\(PelmetBundle.mainID)::Pelmet.StatusItem")
+
     func settingsChanged() {
         rehide.policy = settings.rehidePolicy
         clockRelay?.setEnabled(settings.clockOpensNotificationCenter)
+        var newOwnIDs: Set<ItemID> = []
         if settings.showStatusItem, statusItem == nil {
             statusItem = PelmetStatusItem(appState: self)
+            // A chevron switched on mid-session is a fresh registration the
+            // agent hosts wherever it likes — it landed INSIDE the hidden
+            // cluster (Snib and the pipe right of it, 2026-09-06), then
+            // drifted with every reveal reflow. Walk it to the boundary NOW,
+            // under a deliberate reveal (its slot needs the hidden cluster
+            // live), while the user is looking at the toggle they just
+            // flipped — never at a later hover.
+            Task {
+                try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
+                reveal([.hidden], reason: .settingsPreview)
+                try? await Task.sleep(for: AppTiming.tidyRevealWait)
+                if await placement.physicallyPlace(Self.chevronItemID, in: .visible) {
+                    // Seed the next fresh registration's slot.
+                    await engine.writeOrderHint()
+                }
+                if !settingsWindowVisible {
+                    applyPointerDisplayPolicyAfterDismissal()
+                }
+            }
         } else if !settings.showStatusItem {
             statusItem?.remove()
             statusItem = nil
@@ -450,7 +523,7 @@ final class AppState {
         let previousExtraIDs = Set(extras?.managedItemIDs ?? [])
         extras?.sync(with: settings.extraItems)
         let newExtraIDs = Set(extras?.managedItemIDs ?? []).subtracting(previousExtraIDs)
-        let newOwnIDs = newSeparatorIDs.union(newExtraIDs)
+        newOwnIDs.formUnion(newSeparatorIDs.union(newExtraIDs))
         if !newOwnIDs.isEmpty {
             Task {
                 try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
@@ -709,12 +782,17 @@ final class AppState {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
+                // A synthetic placement drag needs the frames it measured
+                // to stay put: a rehide mid-drag collapsed the hidden
+                // cluster under the chevron's walk, and it landed in the
+                // concealed gap again (2026-09-06 01:17).
                 if self.editorHoldsBar
                     || self.pointerDisplayBehavior == .alwaysShowAll
+                    || self.syntheticDragInFlight
                     || self.bandMonitor?.shouldDeferRehide() == true {
                     if !self.rehideDeferLogged {
                         self.rehideDeferLogged = true
-                        PelmetLog.log("rehide: deferred — editor=\(self.editorHoldsBar) policy=\(self.pointerDisplayBehavior) \(self.bandMonitor?.deferReason() ?? "band=?")")
+                        PelmetLog.log("rehide: deferred — editor=\(self.editorHoldsBar) policy=\(self.pointerDisplayBehavior) drag=\(self.syntheticDragInFlight) \(self.bandMonitor?.deferReason() ?? "band=?")")
                     }
                     self.scheduleRehideTimer(at: Date().addingTimeInterval(AppTiming.rehideDeferRearm))
                 } else {

@@ -145,10 +145,16 @@ final class ConcealGhostOverlay {
             // Bar heights differ per display (37pt notched builtin, 24pt
             // externals) — take each display's own band; visibleFrame can
             // collapse under full-screen apps, so fall back to the strip's.
-            let ownBand = screen.frame.maxY - screen.visibleFrame.maxY
-            let bandHeight = screen == primary
-                ? max(rect.maxY, ownBand)
-                : (ownBand > 0 ? ownBand : rect.maxY)
+            // Never taller than the band: the AX strip reported 39pt on the
+            // 37pt notched bar, and the extra 2pt captured whatever window
+            // sat under the bar — a white line under the icons for the
+            // length of every transition (2026-09-06).
+            // Notched displays: the safe-area inset IS the bar height (38pt
+            // here); visibleFrame's band runs 1pt taller (39pt).
+            let ownBand = screen.safeAreaInsets.top > 0
+                ? screen.safeAreaInsets.top
+                : screen.frame.maxY - screen.visibleFrame.maxY
+            let bandHeight = ownBand > 0 ? ownBand : rect.maxY
             // Right-anchored translation onto this display, padded so the
             // snapshot's background is continuous with the bar around it.
             let translatedX = rect.minX + (screen.frame.maxX - primary.frame.maxX)

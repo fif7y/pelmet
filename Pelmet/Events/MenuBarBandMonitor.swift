@@ -19,6 +19,9 @@ final class MenuBarBandMonitor {
     /// a catch-all for missed mouse-ups — but unconditionally snapshotting the
     /// AX tree on EVERY top-edge graze was the tax; only drags change layout.
     private var dragSinceAdoption = false
+    /// Set by a deliberate conceal (chevron / empty-area click) so the hover
+    /// path can't undo it while the pointer is still where it clicked.
+    private var hoverSuppressedUntilExit = false
     private var lastDisplayUUID: String?
 
     init(appState: AppState) {
@@ -143,6 +146,7 @@ final class MenuBarBandMonitor {
         } else if !inBand, pointerInBand {
             pointerInBand = false
             hoverTimer?.invalidate()
+            hoverSuppressedUntilExit = false
             // Leaving the band arms the countdown (never an instant conceal),
             // and catches a ⌘-drag whose mouse-up the monitor missed.
             appState.pointerLeftBand()
@@ -216,7 +220,7 @@ final class MenuBarBandMonitor {
     private func scheduleHoverReveal() {
         guard let appState,
               appState.settings.revealTriggers.hoverEnabled, !appState.isRevealed,
-              !appState.syntheticDragInFlight else { return }
+              !appState.syntheticDragInFlight, !hoverSuppressedUntilExit else { return }
         // Floor: otherwise the bar flaps open on the way to a hot corner.
         let delay = max(appState.settings.revealTriggers.hoverDelay, AppTiming.hoverDelayFloor)
         hoverTimer?.invalidate()
@@ -240,6 +244,11 @@ final class MenuBarBandMonitor {
     /// hover out-in can put the pointer back in the band while a conceal is
     /// mid-flight — the entry edge is already spent, so without this the bar
     /// stays shut under a hovering pointer until it leaves and re-enters.
+    func suppressHoverUntilPointerLeaves() {
+        hoverSuppressedUntilExit = true
+        hoverTimer?.invalidate()
+    }
+
     func rearmHoverAfterConceal() {
         guard pointerInBand,
               let appState,

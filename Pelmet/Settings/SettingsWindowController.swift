@@ -11,11 +11,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private weak var appState: AppState?
 
-    func show(appState: AppState) {
+    func show(appState: AppState, tab: SettingsTab = .general) {
         self.appState = appState
-        // Always land on General: opening straight onto the Menu Bar tab
-        // triggers its full-reveal preview before the user asked for it.
-        appState.settingsTab = .general
+        // Always land on General (or the caller's tab): opening straight
+        // onto the Menu Bar tab triggers its full-reveal preview before the
+        // user asked for it.
+        appState.settingsTab = tab
         if let window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate()

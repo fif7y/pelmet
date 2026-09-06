@@ -17,6 +17,7 @@ OUT = Path(__file__).resolve().parent.parent / "Pelmet" / "Resources" / "Localiz
 T = {
     # ── Settings shell ──────────────────────────────────────────────
     "General": dict(de="Allgemein", fr="Général", es="General", it="Generali", pt="Geral", ja="一般", zh="通用", ko="일반", ru="Основные"),
+    "Behavior": dict(de="Verhalten", fr="Comportement", es="Comportamiento", it="Comportamento", pt="Comportamento", ja="動作", zh="行为", ko="동작", ru="Поведение"),
     "Menu Bar": dict(de="Menüleiste", fr="Barre des menus", es="Barra de menús", it="Barra dei menu", pt="Barra de menus", ja="メニューバー", zh="菜单栏", ko="메뉴 막대", ru="Строка меню"),
     "Displays": dict(de="Displays", fr="Écrans", es="Pantallas", it="Schermi", pt="Telas", ja="ディスプレイ", zh="显示器", ko="디스플레이", ru="Мониторы"),
     "About": dict(de="Über", fr="À propos", es="Acerca de", it="Informazioni", pt="Sobre", ja="情報", zh="关于", ko="정보", ru="О программе"),
@@ -206,6 +207,44 @@ T = {
     "Previous Track": dict(de="Vorheriger Titel", fr="Piste précédente", es="Pista anterior", it="Brano precedente", pt="Faixa anterior", ja="前の曲", zh="上一曲", ko="이전 트랙", ru="Предыдущий трек"),
     "Next Track": dict(de="Nächster Titel", fr="Piste suivante", es="Pista siguiente", it="Brano successivo", pt="Próxima faixa", ja="次の曲", zh="下一曲", ko="다음 트랙", ru="Следующий трек"),
     "Camera & Mic": dict(de="Kamera & Mikrofon", fr="Caméra et micro", es="Cámara y micro", it="Fotocamera e microfono", pt="Câmera e microfone", ja="カメラ＆マイク", zh="相机和麦克风", ko="카메라 및 마이크", ru="Камера и микрофон"),
+    # ── Permissions (General) + status item warning ─────────────────
+    "Permissions": dict(de="Berechtigungen", fr="Autorisations", es="Permisos", it="Autorizzazioni", pt="Permissões", ja="権限", zh="权限", ko="권한", ru="Разрешения"),
+    "Accessibility": dict(de="Bedienungshilfen", fr="Accessibilité", es="Accesibilidad", it="Accessibilità", pt="Acessibilidade", ja="アクセシビリティ", zh="辅助功能", ko="손쉬운 사용", ru="Универсальный доступ"),
+    "How Pelmet sees the menu bar and moves its icons.": dict(de="So sieht Pelmet die Menüleiste und bewegt ihre Symbole.", fr="C’est ainsi que Pelmet voit la barre des menus et déplace ses icônes.", es="Así es como Pelmet ve la barra de menús y mueve sus iconos.", it="È così che Pelmet vede la barra dei menu e ne sposta le icone.", pt="É assim que o Pelmet vê a barra de menus e move seus ícones.", ja="Pelmetがメニューバーを認識し、アイコンを動かすための権限です。", zh="Pelmet 借此识别菜单栏并移动其图标。", ko="Pelmet이 메뉴 막대를 인식하고 아이콘을 옮기는 데 사용됩니다.", ru="Так Pelmet видит строку меню и перемещает её значки."),
+    "Off. Pelmet can't see or arrange the menu bar without it.": dict(de="Aus. Ohne sie kann Pelmet die Menüleiste weder sehen noch ordnen.", fr="Désactivée. Sans elle, Pelmet ne peut ni voir ni organiser la barre des menus.", es="Desactivada. Sin ella, Pelmet no puede ver ni organizar la barra de menús.", it="Disattivata. Senza, Pelmet non può vedere né organizzare la barra dei menu.", pt="Desativada. Sem ela, o Pelmet não consegue ver nem organizar a barra de menus.", ja="オフです。この権限がないとPelmetはメニューバーを認識も整理もできません。", zh="已关闭。没有它，Pelmet 无法识别或整理菜单栏。", ko="꺼짐. 이 권한이 없으면 Pelmet은 메뉴 막대를 인식하거나 정리할 수 없습니다.", ru="Выключено. Без него Pelmet не видит строку меню и не может её упорядочить."),
+    "Granted": dict(de="Erteilt", fr="Accordée", es="Concedido", it="Concessa", pt="Concedida", ja="許可済み", zh="已授权", ko="허용됨", ru="Предоставлено"),
+    "Grant access": dict(de="Zugriff erlauben", fr="Accorder l’accès", es="Conceder acceso", it="Concedi l’accesso", pt="Conceder acesso", ja="アクセスを許可", zh="授予访问权限", ko="접근 허용", ru="Разрешить доступ"),
+    "Accessibility access is off. Turn it on…": dict(de="Bedienungshilfen-Zugriff ist aus. Einschalten …", fr="L’accès Accessibilité est désactivé. L’activer…", es="El acceso de Accesibilidad está desactivado. Activarlo…", it="L’accesso Accessibilità è disattivato. Attivalo…", pt="O acesso de Acessibilidade está desativado. Ativar…", ja="アクセシビリティのアクセスがオフです。オンにする…", zh="辅助功能访问已关闭。开启…", ko="손쉬운 사용 접근이 꺼져 있습니다. 켜기…", ru="Доступ «Универсальный доступ» выключен. Включить…"),
+
+    # ── Access recovery (onboarding window, one beat) ───────────────
+    "Access got lost.": dict(de="Zugriff verloren.", fr="L’accès s’est perdu.", es="Se perdió el acceso.", it="L’accesso è andato perso.", pt="O acesso se perdeu.", ja="アクセスが失われました。", zh="访问权限丢失了。", ko="접근 권한이 사라졌습니다.", ru="Доступ потерян."),
+    "macOS dropped Pelmet's accessibility permission, which happens after some updates and reinstalls. Grant it again and everything picks up where it left off.": dict(
+        de="macOS hat Pelmets Bedienungshilfen-Berechtigung verworfen, was nach manchen Updates und Neuinstallationen passiert. Erteile sie erneut, und alles macht dort weiter, wo es aufgehört hat.",
+        fr="macOS a retiré l’autorisation d’accessibilité de Pelmet, ce qui arrive après certaines mises à jour et réinstallations. Accordez-la à nouveau et tout reprend là où ça s’était arrêté.",
+        es="macOS retiró el permiso de accesibilidad de Pelmet, algo que ocurre tras algunas actualizaciones y reinstalaciones. Concédelo de nuevo y todo continúa donde se quedó.",
+        it="macOS ha rimosso l’autorizzazione Accessibilità di Pelmet, cosa che succede dopo alcuni aggiornamenti e reinstallazioni. Concedila di nuovo e tutto riprende da dove si era fermato.",
+        pt="O macOS retirou a permissão de acessibilidade do Pelmet, o que acontece após algumas atualizações e reinstalações. Conceda-a de novo e tudo continua de onde parou.",
+        ja="macOSがPelmetのアクセシビリティ権限を解除しました。一部のアップデートや再インストールの後に起こることがあります。もう一度許可すれば、すべて元どおりに再開します。",
+        zh="macOS 移除了 Pelmet 的辅助功能权限，这在某些更新和重新安装后会发生。重新授予后，一切会从上次的状态继续。",
+        ko="macOS가 Pelmet의 손쉬운 사용 권한을 해제했습니다. 일부 업데이트나 재설치 후에 일어나는 일입니다. 다시 허용하면 모든 것이 이전 상태에서 이어집니다.",
+        ru="macOS сбросила разрешение Pelmet на универсальный доступ — так бывает после некоторых обновлений и переустановок. Предоставьте его снова, и всё продолжится с того же места."),
+    "Done": dict(de="Fertig", fr="Terminé", es="Listo", it="Fine", pt="Concluído", ja="完了", zh="完成", ko="완료", ru="Готово"),
+
+    # ── About: links + updates ──────────────────────────────────────
+    "Website": dict(de="Website", fr="Site web", es="Sitio web", it="Sito web", pt="Site", ja="Webサイト", zh="网站", ko="웹사이트", ru="Сайт"),
+    "GitHub": dict(de="GitHub", fr="GitHub", es="GitHub", it="GitHub", pt="GitHub", ja="GitHub", zh="GitHub", ko="GitHub", ru="GitHub"),
+    "Report an issue": dict(de="Problem melden", fr="Signaler un problème", es="Informar de un problema", it="Segnala un problema", pt="Relatar um problema", ja="問題を報告", zh="报告问题", ko="문제 신고", ru="Сообщить о проблеме"),
+    "Updates": dict(de="Updates", fr="Mises à jour", es="Actualizaciones", it="Aggiornamenti", pt="Atualizações", ja="アップデート", zh="更新", ko="업데이트", ru="Обновления"),
+    "Download updates automatically": dict(de="Updates automatisch laden", fr="Télécharger les mises à jour automatiquement", es="Descargar actualizaciones automáticamente", it="Scarica gli aggiornamenti automaticamente", pt="Baixar atualizações automaticamente", ja="アップデートを自動でダウンロード", zh="自动下载更新", ko="업데이트 자동 다운로드", ru="Загружать обновления автоматически"),
+    "Installs on the next quit.": dict(de="Wird beim nächsten Beenden installiert.", fr="S’installe à la prochaine fermeture.", es="Se instala al salir la próxima vez.", it="Si installa alla prossima uscita.", pt="Instala ao encerrar da próxima vez.", ja="次回終了時にインストールされます。", zh="下次退出时安装。", ko="다음에 종료할 때 설치됩니다.", ru="Установится при следующем выходе."),
+    "Notify me when an update is available": dict(de="Benachrichtigen, wenn ein Update verfügbar ist", fr="Me prévenir quand une mise à jour est disponible", es="Avisarme cuando haya una actualización", it="Avvisami quando è disponibile un aggiornamento", pt="Avisar quando houver uma atualização", ja="アップデートがあれば通知", zh="有可用更新时通知我", ko="업데이트가 있으면 알림", ru="Уведомлять о новых обновлениях"),
+    "Last checked %@": dict(de="Zuletzt geprüft %@", fr="Dernière vérification %@", es="Última comprobación %@", it="Ultimo controllo %@", pt="Última verificação %@", ja="最終確認 %@", zh="上次检查 %@", ko="마지막 확인 %@", ru="Последняя проверка %@"),
+    "Update": dict(de="Update", fr="Mise à jour", es="Actualizar", it="Aggiorna", pt="Atualizar", ja="更新", zh="更新", ko="업데이트", ru="Обновить"),
+    "Update to %@…": dict(de="Auf %@ aktualisieren …", fr="Mettre à jour vers %@…", es="Actualizar a %@…", it="Aggiorna a %@…", pt="Atualizar para %@…", ja="%@ にアップデート…", zh="更新到 %@…", ko="%@(으)로 업데이트…", ru="Обновить до %@…"),
+    "Pelmet %@ is available": dict(de="Pelmet %@ ist verfügbar", fr="Pelmet %@ est disponible", es="Pelmet %@ está disponible", it="Pelmet %@ è disponibile", pt="Pelmet %@ está disponível", ja="Pelmet %@ が利用可能です", zh="Pelmet %@ 已可用", ko="Pelmet %@ 사용 가능", ru="Доступна версия Pelmet %@"),
+    "Pelmet %@ is ready": dict(de="Pelmet %@ ist bereit", fr="Pelmet %@ est prêt", es="Pelmet %@ está listo", it="Pelmet %@ è pronto", pt="Pelmet %@ está pronto", ja="Pelmet %@ の準備ができました", zh="Pelmet %@ 已准备就绪", ko="Pelmet %@ 준비 완료", ru="Pelmet %@ готов к установке"),
+    "Installs when you quit. Click to update now.": dict(de="Wird beim Beenden installiert. Zum sofortigen Aktualisieren klicken.", fr="S’installe à la fermeture. Cliquez pour mettre à jour maintenant.", es="Se instala al salir. Haz clic para actualizar ahora.", it="Si installa all’uscita. Fai clic per aggiornare adesso.", pt="Instala ao encerrar. Clique para atualizar agora.", ja="終了時にインストールされます。今すぐ更新するにはクリック。", zh="退出时安装。点击立即更新。", ko="종료할 때 설치됩니다. 지금 업데이트하려면 클릭하세요.", ru="Установится при выходе. Нажмите, чтобы обновить сейчас."),
+    "A few seconds and a relaunch. Click to update.": dict(de="Ein paar Sekunden und ein Neustart. Zum Aktualisieren klicken.", fr="Quelques secondes et un redémarrage. Cliquez pour mettre à jour.", es="Unos segundos y un reinicio. Haz clic para actualizar.", it="Pochi secondi e un riavvio. Fai clic per aggiornare.", pt="Alguns segundos e um reinício. Clique para atualizar.", ja="数秒と再起動だけ。クリックしてアップデート。", zh="只需几秒钟并重新启动。点击以更新。", ko="몇 초와 다시 실행이면 됩니다. 클릭하여 업데이트하세요.", ru="Пара секунд и перезапуск. Нажмите, чтобы обновить."),
 }
 
 LANG_CODES = {"de": "de", "fr": "fr", "es": "es", "it": "it", "pt": "pt-BR", "ja": "ja", "zh": "zh-Hans", "ko": "ko", "ru": "ru"}

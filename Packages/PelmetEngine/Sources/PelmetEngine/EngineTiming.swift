@@ -38,6 +38,10 @@ enum EngineTiming {
     /// stall a placement longer than the cap (the shield protects either way).
     static let dragIdleQuietGap: TimeInterval = 0.25
     static let dragIdleMaxWait: TimeInterval = 1.5
+    /// Pelmet's own items (chevron, separators, extras) move with the bar
+    /// frozen and the user usually just asked for it (a toggle, a launch):
+    /// a short courtesy gap, not the full stall (2026-09-06).
+    static let ownItemDragIdleMaxWait: TimeInterval = 0.3
     static let dragIdlePoll: Duration = .milliseconds(50)
     /// Bounded wait for the shield's tap thread to arm before posting events.
     static let dragShieldArmTimeout: TimeInterval = 0.3

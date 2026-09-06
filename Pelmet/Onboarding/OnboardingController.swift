@@ -11,7 +11,7 @@ final class OnboardingController {
 
     var isPresented: Bool { window?.isVisible == true }
 
-    func present(appState: AppState) {
+    func present(appState: AppState, mode: OnboardingFlow.Mode = .intro) {
         if let window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate()
@@ -19,6 +19,7 @@ final class OnboardingController {
         }
         let view = OnboardingFlow(
             appState: appState,
+            mode: mode,
             onFinished: { [weak self] in self?.dismiss() }
         )
         let hosting = NSHostingController(rootView: view)

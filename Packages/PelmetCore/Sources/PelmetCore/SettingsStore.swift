@@ -160,6 +160,10 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     /// drops the assertion for the blink it takes the click to land, then
     /// re-acquires it (hidden icons flash in and out for ~0.5s).
     public var clockOpensNotificationCenter: Bool = true
+    /// A found update posts a user notification instead of Sparkle's window
+    /// interrupting whatever the user is doing. Off: only the About pane
+    /// shows it. (Auto-download is Sparkle's own preference.)
+    public var notifyOnUpdates: Bool = true
 
     /// Pelmet's own media-controls item (play/pause/next/prev via media keys).
     /// Superseded by `extraItems`; kept for migration of early builds.
@@ -199,7 +203,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case revealTriggers, autoRehide, rehideDelay, rehideOnClickElsewhere, revealAnimation
         case hideSystemExtras, showMediaControls, extraItems, sectionModel, separators
         case displayTemplate, displayOverrides
-        case clockOpensNotificationCenter
+        case clockOpensNotificationCenter, notifyOnUpdates
     }
 
     public init(from decoder: Decoder) throws {
@@ -229,6 +233,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         displayTemplate = field(DisplayBehavior.self, .displayTemplate, defaults.displayTemplate)
         displayOverrides = field([String: DisplayBehavior].self, .displayOverrides, defaults.displayOverrides)
         clockOpensNotificationCenter = field(Bool.self, .clockOpensNotificationCenter, defaults.clockOpensNotificationCenter)
+        notifyOnUpdates = field(Bool.self, .notifyOnUpdates, defaults.notifyOnUpdates)
     }
 
     // MARK: - Persistence

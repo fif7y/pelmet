@@ -29,7 +29,9 @@ public enum ItemMover {
     /// every own-item drop reverted, while a real ⌘-drag on the same item
     /// worked (verified live 2026-08-21). Third-party items never cared
     /// (their owning app tracks the drag).
-    public static func cmdDrag(from: CGPoint, to: CGPoint) async {
+    /// `ownItem`: Pelmet's own registrations get the short courtesy gap
+    /// before the pointer is borrowed (EngineTiming.ownItemDragIdleMaxWait).
+    public static func cmdDrag(from: CGPoint, to: CGPoint, ownItem: Bool = false) async {
         guard let source = CGEventSource(stateID: .hidSystemState) else { return }
         // Tag every event from this source so the shield's tap can tell our
         // synthetic stream from real HID input.
@@ -38,7 +40,9 @@ public enum ItemMover {
 
         // Don't grab the pointer out of the user's hand mid-motion — bounded
         // wait for a quiet gap (the shield still protects if it never comes).
-        await waitForPointerQuiet()
+        await waitForPointerQuiet(
+            maxWait: ownItem ? EngineTiming.ownItemDragIdleMaxWait : EngineTiming.dragIdleMaxWait
+        )
 
         let shield = DragShield()
         shield.activate()
@@ -102,8 +106,8 @@ public enum ItemMover {
         }.min() ?? .infinity
     }
 
-    private static func waitForPointerQuiet() async {
-        let deadline = Date.now.addingTimeInterval(EngineTiming.dragIdleMaxWait)
+    private static func waitForPointerQuiet(maxWait: TimeInterval) async {
+        let deadline = Date.now.addingTimeInterval(maxWait)
         while Date.now < deadline {
             if secondsSincePointerActivity() >= EngineTiming.dragIdleQuietGap { return }
             try? await Task.sleep(for: EngineTiming.dragIdlePoll)

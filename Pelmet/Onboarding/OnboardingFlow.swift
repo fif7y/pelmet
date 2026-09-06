@@ -27,11 +27,25 @@ private let springSoft = Animation.spring(response: 0.7, dampingFraction: 0.85)
 // MARK: - Flow
 
 struct OnboardingFlow: View {
+    /// `.intro` is the four-beat first run. `.accessRecovery` is the Access
+    /// beat alone, for an install that lost its grant after the intro was
+    /// done: no progress line, no Back, and it closes itself once the grant
+    /// is back.
+    enum Mode { case intro, accessRecovery }
+
     let appState: AppState
+    var mode: Mode = .intro
     let onFinished: () -> Void
 
     @State private var step = 0
     private let stepCount = 4
+
+    init(appState: AppState, mode: Mode = .intro, onFinished: @escaping () -> Void) {
+        self.appState = appState
+        self.mode = mode
+        self.onFinished = onFinished
+        _step = State(initialValue: mode == .accessRecovery ? 1 : 0)
+    }
 
     var body: some View {
         ZStack {
@@ -42,7 +56,7 @@ struct OnboardingFlow: View {
                     switch step {
                     case 0: WelcomeStep()
                         .transition(stepTransition)
-                    case 1: AccessStep(appState: appState)
+                    case 1: AccessStep(appState: appState, recovery: mode == .accessRecovery)
                         .transition(stepTransition)
                     case 2: TryItStep()
                         .transition(stepTransition)
@@ -58,6 +72,15 @@ struct OnboardingFlow: View {
         }
         .frame(width: 720, height: 540)
         .preferredColorScheme(.dark)
+        .onChange(of: appState.accessibilityGranted) { _, granted in
+            // Recovery has one job; once it's done, let the "Access granted"
+            // beat land, then get out of the way.
+            guard mode == .accessRecovery, granted else { return }
+            Task {
+                try? await Task.sleep(for: .seconds(1.2))
+                onFinished()
+            }
+        }
     }
 
     private var stepTransition: AnyTransition {
@@ -71,31 +94,35 @@ struct OnboardingFlow: View {
         step == 1 ? appState.accessibilityGranted : true
     }
 
+    private var isLastStep: Bool { mode == .accessRecovery || step == stepCount - 1 }
+
     private var footer: some View {
         HStack(spacing: 0) {
             // Progress: thin accent line that grows — no dots row.
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Ink.text.opacity(0.08)).frame(height: 2)
-                    Capsule().fill(Ink.accent)
-                        .frame(width: geo.size.width * CGFloat(step + 1) / CGFloat(stepCount), height: 2)
-                        .animation(springSoft, value: step)
+            if mode == .intro {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Ink.text.opacity(0.08)).frame(height: 2)
+                        Capsule().fill(Ink.accent)
+                            .frame(width: geo.size.width * CGFloat(step + 1) / CGFloat(stepCount), height: 2)
+                            .animation(springSoft, value: step)
+                    }
+                    .frame(maxHeight: .infinity, alignment: .center)
                 }
-                .frame(maxHeight: .infinity, alignment: .center)
+                .frame(width: 120, height: 20)
             }
-            .frame(width: 120, height: 20)
 
             Spacer()
 
-            if step > 0 {
+            if step > 0, mode == .intro {
                 Button("Back") {
                     withAnimation(springSnappy) { step -= 1 }
                 }
                 .buttonStyle(GhostButtonStyle())
             }
 
-            Button(step == stepCount - 1 ? "Start using Pelmet" : "Continue") {
-                if step == stepCount - 1 {
+            Button(mode == .accessRecovery ? "Done" : step == stepCount - 1 ? "Start using Pelmet" : "Continue") {
+                if isLastStep {
                     appState.settings.onboardingCompleted = true
                     appState.settingsChanged()
                     onFinished()
@@ -159,6 +186,7 @@ private struct WelcomeStep: View {
 
 private struct AccessStep: View {
     let appState: AppState
+    var recovery = false
     @State private var appeared = false
     @State private var poll: Timer?
 
@@ -166,7 +194,7 @@ private struct AccessStep: View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer()
 
-            Text("One permission.")
+            Text(recovery ? LocalizedStringKey("Access got lost.") : "One permission.")
                 .font(.system(size: 46, weight: .semibold))
                 .tracking(-1.2)
                 .foregroundStyle(Ink.text)
@@ -175,7 +203,9 @@ private struct AccessStep: View {
 
             Spacer().frame(height: 16)
 
-            Text("Pelmet arranges your menu bar through macOS accessibility — that's how it sees the icons and moves them. Nothing is read from your screen, nothing leaves your Mac.")
+            Text(recovery
+                 ? LocalizedStringKey("macOS dropped Pelmet's accessibility permission, which happens after some updates and reinstalls. Grant it again and everything picks up where it left off.")
+                 : "Pelmet arranges your menu bar through macOS accessibility — that's how it sees the icons and moves them. Nothing is read from your screen, nothing leaves your Mac.")
                 .font(.system(size: 13))
                 .foregroundStyle(Ink.textDim)
                 .frame(maxWidth: 420, alignment: .leading)
@@ -220,19 +250,7 @@ private struct AccessStep: View {
         // The system dialog / System Settings must land IN FRONT of the
         // floating onboarding window.
         OnboardingController.shared.lowerForSystemPrompt()
-        let alreadyPrompted = UserDefaults.standard.bool(forKey: "pelmet.axPromptShown")
-        // Migrated nook installs always re-fire the prompt API: it registers
-        // the row for the NEW bundle identity — the old Nook row in the list
-        // is dead (TCC keys grants to the old bundle ID) and toggling it
-        // does nothing.
-        if !alreadyPrompted || NookMigration.didMigrate {
-            UserDefaults.standard.set(true, forKey: "pelmet.axPromptShown")
-            AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-        } else {
-            NSWorkspace.shared.open(URL(
-                string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-            )!)
-        }
+        AccessibilityAccess.request()
     }
 }
 

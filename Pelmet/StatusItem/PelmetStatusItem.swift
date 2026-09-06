@@ -26,6 +26,39 @@ final class PelmetStatusItem {
             // Stable engine identity (chevron-boundary lookups key off this).
             button.setAccessibilityTitle("Pelmet.StatusItem")
         }
+        updateAccessibilityWarning(granted: appState.accessibilityGranted)
+        showUpdateDot(SparkleController.shared.availableVersion != nil)
+    }
+
+    /// An available update earns a 5pt accent dot at the chevron's top
+    /// right — the one surface most users ever look at. It lives until the
+    /// install relaunches the app.
+    private var updateDot: NSView?
+
+    func showUpdateDot(_ show: Bool) {
+        guard let button = item.button else { return }
+        if show, updateDot == nil {
+            let size: CGFloat = 5
+            let dot = NSView(frame: NSRect(
+                x: button.bounds.width - size - 3, y: button.bounds.height - size - 3,
+                width: size, height: size
+            ))
+            dot.wantsLayer = true
+            dot.layer?.backgroundColor = PelmetAccent.nsColor.cgColor
+            dot.layer?.cornerRadius = size / 2
+            dot.autoresizingMask = [.minXMargin, .minYMargin]
+            button.addSubview(dot)
+            updateDot = dot
+        } else if !show {
+            updateDot?.removeFromSuperview()
+            updateDot = nil
+        }
+    }
+
+    /// Without the Accessibility grant Pelmet can't see the bar, so the
+    /// chevron itself carries the warning: system orange until it's back.
+    func updateAccessibilityWarning(granted: Bool) {
+        item.button?.contentTintColor = granted ? nil : .systemOrange
     }
 
     /// Call before releasing (deinit can't touch main-actor AppKit state under
@@ -78,10 +111,32 @@ final class PelmetStatusItem {
         )
         let target = AppMenuTarget.shared
         target.appState = appState
-        for menuItem in [toggle, showAll, settings, quit] {
+        var items: [NSMenuItem] = [toggle, showAll, .separator(), settings, .separator(), quit]
+        // Same line in every right-click (chevron, separators, empty bar):
+        // the About chip is the only other trace once the banner is gone.
+        if let version = SparkleController.shared.availableVersion {
+            let update = NSMenuItem(
+                title: String(localized: "Update to \(version)…"),
+                action: #selector(AppMenuTarget.installUpdate), keyEquivalent: ""
+            )
+            update.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(paletteColors: [PelmetAccent.nsColor]))
+            items.insert(contentsOf: [update, .separator()], at: 0)
+        }
+        if !appState.accessibilityGranted {
+            // Lead with the fix: nothing else in this menu works without it.
+            let grant = NSMenuItem(
+                title: String(localized: "Accessibility access is off. Turn it on…"),
+                action: #selector(AppMenuTarget.grantAccessibility), keyEquivalent: ""
+            )
+            grant.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(paletteColors: [.systemOrange]))
+            items.insert(contentsOf: [grant, .separator()], at: 0)
+        }
+        for menuItem in items where !menuItem.isSeparatorItem {
             menuItem.target = target
         }
-        menu.items = [toggle, showAll, .separator(), settings, .separator(), quit]
+        menu.items = items
         return menu
     }
 }
@@ -95,5 +150,9 @@ final class AppMenuTarget: NSObject {
     @objc func toggle() { appState?.toggle(reason: .statusItem) }
     @objc func showAll() { appState?.reveal([.hidden, .alwaysHidden], reason: .statusItem) }
     @objc func openSettings() { appState?.openSettings() }
+    @objc func grantAccessibility() { AccessibilityAccess.request() }
+    /// The About pane is the update hub (chip, notes, toggles) — land there
+    /// rather than straight in Sparkle's window.
+    @objc func installUpdate() { appState?.openSettings(tab: .about) }
     @objc func quit() { NSApp.terminate(nil) }
 }

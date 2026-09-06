@@ -19,12 +19,6 @@ enum NookMigration {
     static let newBundleID = "app.fif7y.Pelmet"
     private static let markerKey = "app.fif7y.Pelmet.migratedFromNook"
 
-    /// True on installs that came from nook (marker present AND the old
-    /// domain exists) — used to adapt the accessibility re-grant UX.
-    static var didMigrate: Bool {
-        UserDefaults.standard.bool(forKey: markerKey)
-            && UserDefaults.standard.persistentDomain(forName: oldBundleID) != nil
-    }
     private static let newSettingsKey = "app.fif7y.Pelmet.settings.v1"
 
     static func runIfNeeded() {

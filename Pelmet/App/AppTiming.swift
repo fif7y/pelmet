@@ -35,6 +35,10 @@ enum AppTiming {
     static let rehideDeferRearm: TimeInterval = 1.5
     /// Termination: max wait for engine.stop() before replying anyway.
     static let terminationStopDeadline: TimeInterval = 2
+    /// Accessibility grant poll. A revoked grant only shows up as empty AX
+    /// walks, so the app reads TCC directly; 2s keeps a flipped toggle in
+    /// System Settings visible within a breath without a hot loop.
+    static let accessibilityPoll: Duration = .seconds(2)
     /// Physical placement: pre-measure bar settle, then bounded lookup
     /// retries for a freshly-shown item, then post-drag reflow settle.
     static let placementPreSettle: Duration = .milliseconds(450)
