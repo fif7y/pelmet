@@ -306,17 +306,85 @@ struct SettingToggleRow: View {
     }
 }
 
+/// Six glyphs for the menu bar icon, drawn at bar size. Picking one repaints
+/// the live status item through settingsChanged().
+struct StatusIconPicker: View {
+    @Binding var selection: StatusIconStyle
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(StatusIconStyle.allCases) { style in
+                StatusIconTile(symbol: style.symbol(revealed: false), selected: selection == style) {
+                    selection = style
+                }
+            }
+        }
+        .padding(3)
+        .background(RoundedRectangle(cornerRadius: 9).fill(.quaternary.opacity(0.35)))
+        .animation(.spring(duration: 0.22), value: selection)
+    }
+}
+
+private struct StatusIconTile: View {
+    let symbol: String
+    let selected: Bool
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(selected ? PelmetAccent.accent : .secondary)
+                .frame(width: 30, height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(selected
+                            ? PelmetAccent.accent.opacity(0.16)
+                            : .primary.opacity(hovered ? 0.06 : 0))
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+        .onHover { hovered = $0 }
+    }
+}
+
+/// A quiet explanatory box inside a card — for the "what happens if" line
+/// that is too long to sit as a row caption.
+struct SettingNote: View {
+    let text: LocalizedStringKey
+    init(_ text: LocalizedStringKey) { self.text = text }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "info.circle")
+                .foregroundStyle(.secondary)
+            Text(text)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.5)))
+    }
+}
+
 struct SettingSliderRow: View {
     let title: LocalizedStringKey
     @Binding var value: TimeInterval
     let range: ClosedRange<Double>
+    let step: Double
     let format: String
     var zeroLabel: String? = nil
 
     var body: some View {
         SettingRow(title: title) {
             HStack(spacing: 8) {
-                Slider(value: $value, in: range)
+                Slider(value: $value, in: range, step: step)
                     .frame(width: 160)
                 Text(value == 0 ? (zeroLabel ?? String(format: format, value)) : String(format: format, value))
                     .font(.callout)
@@ -346,12 +414,20 @@ private struct GeneralPane: View {
             )
             SettingToggleRow(
                 title: "Show Pelmet icon in the menu bar",
-                caption: "Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.",
                 isOn: binding(\.showStatusItem, onSet: { enabled in
                     if !enabled { Self.showIconlessHint() }
                 })
             )
-            SettingRow(title: "Language", caption: "Relaunches Pelmet to apply.") {
+            if appState.settings.showStatusItem {
+                SettingRow(title: "Icon") {
+                    StatusIconPicker(selection: binding(\.statusIconStyle))
+                }
+            }
+            SettingNote("Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.")
+        }
+
+        SettingsCard(title: "Language") {
+            SettingRow(title: "Display language", caption: "Relaunches Pelmet to apply.") {
                 Picker("", selection: $language) {
                     Text("System language").tag(AppLanguage.system)
                     Divider()
@@ -427,8 +503,9 @@ private struct BehaviorPane: View {
                 SettingSliderRow(
                     title: "Hover delay",
                     value: binding(\.revealTriggers.hoverDelay),
-                    range: 0.15...0.75,
-                    format: "%.2fs"
+                    range: 0.1...0.5,
+                    step: 0.1,
+                    format: "%.1fs"
                 )
             }
             SettingToggleRow(title: "Reveal on click in empty menu bar area", isOn: binding(\.revealTriggers.clickEnabled))
@@ -448,7 +525,8 @@ private struct BehaviorPane: View {
                 SettingSliderRow(
                     title: "After",
                     value: binding(\.rehideDelay),
-                    range: 0...10,
+                    range: 0...5,
+                    step: 0.5,
                     format: "%.2gs",
                     zeroLabel: String(localized: "Instant")
                 )

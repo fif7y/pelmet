@@ -27,8 +27,9 @@ enum AppTiming {
     static let tidyRevealWait: Duration = .seconds(1.2)
     /// Newly toggled-on extras become hostable before placing.
     static let newExtraPlacementDelay: Duration = .milliseconds(600)
-    /// Below ~150ms every swipe-through of the band reads as a hover.
-    static let hoverDelayFloor: TimeInterval = 0.15
+    /// Below ~100ms every swipe-through of the band reads as a hover
+    /// (the fire-time live-pointer check catches the rest).
+    static let hoverDelayFloor: TimeInterval = 0.1
     /// MenuBarAgent finalizes a ⌘-drag position before adoption reads it.
     static let dragAdoptDelay: TimeInterval = 0.35
     /// Rehide re-arm while deferred (pointer in band / elevated window).

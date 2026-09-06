@@ -17,7 +17,7 @@ final class PelmetStatusItem {
         item.autosaveName = "Pelmet.StatusItem"
         if let button = item.button {
             button.image = NSImage(
-                systemSymbolName: "chevron.compact.left",
+                systemSymbolName: appState.settings.statusIconStyle.symbol(revealed: false),
                 accessibilityDescription: "Pelmet"
             )
             button.target = self
@@ -68,8 +68,9 @@ final class PelmetStatusItem {
     }
 
     func updateSymbol(revealed: Bool) {
+        guard let style = appState?.settings.statusIconStyle else { return }
         item.button?.image = NSImage(
-            systemSymbolName: revealed ? "chevron.compact.right" : "chevron.compact.left",
+            systemSymbolName: style.symbol(revealed: revealed),
             accessibilityDescription: "Pelmet"
         )
     }

@@ -126,6 +126,11 @@ final class AppState {
         }
         UserDefaults.standard.set(true, forKey: "pelmet.migratedHoverDelay01")
 
+        // Sliders are stepped now (hover 0.1–0.5, rehide 0–5): snap stores
+        // saved under the old free ranges onto the grid.
+        settings.revealTriggers.hoverDelay = (min(max(settings.revealTriggers.hoverDelay, 0.1), 0.5) * 10).rounded() / 10
+        settings.rehideDelay = (min(max(settings.rehideDelay, 0), 5) * 2).rounded() / 2
+
         // Migrate the model to canonical (bundle-level) keys — collapses any
         // title-variant twin entries left by older builds.
         settings.sectionModel.canonicalize()
@@ -505,6 +510,8 @@ final class AppState {
         } else if !settings.showStatusItem {
             statusItem?.remove()
             statusItem = nil
+        } else {
+            statusItem?.updateSymbol(revealed: isRevealedOrRevealing)
         }
         // Re-registering unregisters first — a per-tick re-register left the
         // shortcut momentarily dead. Only touch it when it actually changed.

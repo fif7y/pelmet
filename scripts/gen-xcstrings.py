@@ -26,6 +26,7 @@ T = {
     # ── General pane ────────────────────────────────────────────────
     "Launch at login": dict(de="Bei der Anmeldung öffnen", fr="Ouvrir à l’ouverture de session", es="Abrir al iniciar sesión", it="Apri al login", pt="Abrir ao iniciar sessão", ja="ログイン時に起動", zh="登录时启动", ko="로그인 시 열기", ru="Открывать при входе"),
     "Show Pelmet icon in the menu bar": dict(de="Pelmet-Symbol in der Menüleiste anzeigen", fr="Afficher l’icône Pelmet dans la barre des menus", es="Mostrar el icono de Pelmet en la barra de menús", it="Mostra l’icona di Pelmet nella barra dei menu", pt="Mostrar o ícone do Pelmet na barra de menus", ja="メニューバーにPelmetアイコンを表示", zh="在菜单栏中显示 Pelmet 图标", ko="메뉴 막대에 Pelmet 아이콘 표시", ru="Показывать значок Pelmet в строке меню"),
+    "Icon": dict(de="Symbol", fr="Icône", es="Icono", it="Icona", pt="Ícone", ja="アイコン", zh="图标", ko="아이콘", ru="Значок"),
     "Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.": dict(
         de="Ohne Symbol: Pelmet erneut über Spotlight öffnen oder mit der rechten Maustaste auf einen Trenner oder eine freie Stelle der Menüleiste klicken.",
         fr="Sans elle : rouvrez Pelmet depuis Spotlight, ou faites un clic droit sur un séparateur ou une zone vide de la barre des menus.",
@@ -36,6 +37,7 @@ T = {
         zh="隐藏后：可通过 Spotlight 重新打开 Pelmet，或右键点击分隔符或菜单栏的空白处。",
         ko="숨기면: Spotlight에서 Pelmet을 다시 열거나, 구분선 또는 메뉴 막대의 빈 곳을 오른쪽 클릭하세요.",
         ru="Без значка: откройте Pelmet через Spotlight или нажмите правой кнопкой на разделитель или пустое место строки меню."),
+    "Display language": dict(de="Anzeigesprache", fr="Langue d’affichage", es="Idioma de la interfaz", it="Lingua dell’interfaccia", pt="Idioma da interface", ja="表示言語", zh="显示语言", ko="표시 언어", ru="Язык интерфейса"),
     "Language": dict(de="Sprache", fr="Langue", es="Idioma", it="Lingua", pt="Idioma", ja="言語", zh="语言", ko="언어", ru="Язык"),
     "Relaunches Pelmet to apply.": dict(de="Pelmet wird zum Übernehmen neu gestartet.", fr="Pelmet redémarre pour appliquer.", es="Pelmet se reinicia para aplicarlo.", it="Pelmet si riavvia per applicare.", pt="O Pelmet reinicia para aplicar.", ja="適用するにはPelmetが再起動します。", zh="Pelmet 将重新启动以应用。", ko="적용하려면 Pelmet이 다시 실행됩니다.", ru="Pelmet перезапустится, чтобы применить."),
     "System language": dict(de="Systemsprache", fr="Langue du système", es="Idioma del sistema", it="Lingua di sistema", pt="Idioma do sistema", ja="システムの言語", zh="系统语言", ko="시스템 언어", ru="Язык системы"),

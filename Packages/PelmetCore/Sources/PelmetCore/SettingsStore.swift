@@ -122,6 +122,26 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
 /// How concealed icons come back on reveal. Conceal always fades (the agent
 /// pops items off with no animation; Pelmet's ghost overlay manufactures the
 /// hide motion) — this only styles the reveal side.
+/// Glyph for Pelmet's own menu bar icon. Each style has a concealed and a
+/// revealed face so the icon keeps pointing at what a click will do.
+public enum StatusIconStyle: String, Codable, CaseIterable, Sendable, Identifiable {
+    case chevron, arrow, eye, dots, grid, panel
+
+    public var id: String { rawValue }
+
+    /// SF Symbol name for the current bar state.
+    public func symbol(revealed: Bool) -> String {
+        switch self {
+        case .chevron: revealed ? "chevron.compact.right" : "chevron.compact.left"
+        case .arrow: revealed ? "arrow.right" : "arrow.left"
+        case .eye: revealed ? "eye" : "eye.slash"
+        case .dots: "ellipsis"
+        case .grid: "square.grid.2x2"
+        case .panel: revealed ? "rectangle.righthalf.inset.filled" : "rectangle.lefthalf.inset.filled"
+        }
+    }
+}
+
 public enum RevealAnimation: String, Codable, CaseIterable, Sendable {
     /// No animation — icons appear in place once the swap lands.
     case instant
@@ -141,6 +161,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     public var onboardingCompleted: Bool = false
     public var launchAtLogin: Bool = false
     public var showStatusItem: Bool = true
+    public var statusIconStyle: StatusIconStyle = .chevron
     public var hotkey: HotkeySpec? = nil
 
     public var revealTriggers = RevealTriggers()
@@ -204,6 +225,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case hideSystemExtras, showMediaControls, extraItems, sectionModel, separators
         case displayTemplate, displayOverrides
         case clockOpensNotificationCenter, notifyOnUpdates
+        case statusIconStyle
     }
 
     public init(from decoder: Decoder) throws {
@@ -234,6 +256,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         displayOverrides = field([String: DisplayBehavior].self, .displayOverrides, defaults.displayOverrides)
         clockOpensNotificationCenter = field(Bool.self, .clockOpensNotificationCenter, defaults.clockOpensNotificationCenter)
         notifyOnUpdates = field(Bool.self, .notifyOnUpdates, defaults.notifyOnUpdates)
+        statusIconStyle = field(StatusIconStyle.self, .statusIconStyle, defaults.statusIconStyle)
     }
 
     // MARK: - Persistence
