@@ -105,7 +105,7 @@ final class MenuBarBandMonitor {
         guard let appState else { return }
         let location = NSEvent.mouseLocation
         let screen = NSScreen.containing(location)
-        let inBand = screen.map { isInMenuBarBand(location, of: $0) } ?? false
+        let inBand = screen.map { isBarHover(location, of: $0) } ?? false
         let displayUUID = screen?.displayUUIDString
 
         // Per-display behavior: crossing onto an "always show all" display
@@ -233,7 +233,7 @@ final class MenuBarBandMonitor {
                 // graze must not open the bar.
                 let location = NSEvent.mouseLocation
                 guard let screen = NSScreen.containing(location),
-                      self.isInMenuBarBand(location, of: screen),
+                      self.isBarHover(location, of: screen),
                       !appState.syntheticDragInFlight else { return }
                 appState.reveal([.hidden], reason: .hover)
             }
@@ -329,6 +329,46 @@ final class MenuBarBandMonitor {
     }
 
     // MARK: - Geometry
+
+    /// In the band AND on the bar itself. A pointer resting on another app's
+    /// window that straddles the band — Sconce's notch surface (640×542 at
+    /// y=-44, 2026-09-07) — is that app's hover, not ours: hovering the notch
+    /// to open Sconce revealed the hidden section a beat later, which read as
+    /// the bar "going blank and re-rendering". The window-server hit-test is
+    /// the arbiter (it honours ignoresMouseEvents, so Sconce's transparent
+    /// canvas margins still count as bar; a geometric containment check
+    /// would not, and would also catch Control Center's host window across
+    /// the top-right quadrant). Thin strips (Unclutter's 2pt trigger) and the
+    /// menubar host window itself never exceed the band's height.
+    private func isBarHover(_ point: NSPoint, of screen: NSScreen) -> Bool {
+        guard isInMenuBarBand(point, of: screen) else { return false }
+        let overlay = foreignOverlay(under: point, of: screen)
+        if overlay != lastForeignOverlay {
+            lastForeignOverlay = overlay
+            PelmetLog.log("band: pointer \(overlay.map { "on \($0)" } ?? "off any") overlay at (\(Int(point.x)),\(Int(screen.frame.maxY - point.y)))")
+        }
+        return overlay == nil
+    }
+
+    private var lastForeignOverlay: String?
+
+    /// Owner + size of another process's tall window under the point, or nil
+    /// when the hit is the bar (or one of our own covers / ghosts).
+    private func foreignOverlay(under point: NSPoint, of screen: NSScreen) -> String? {
+        let number = NSWindow.windowNumber(at: point, belowWindowWithWindowNumber: 0)
+        guard number > 0,
+              let windows = CGWindowListCopyWindowInfo(.optionIncludingWindow, CGWindowID(number)) as? [[String: Any]],
+              let window = windows.first,
+              let pid = window[kCGWindowOwnerPID as String] as? Int32,
+              pid != ProcessInfo.processInfo.processIdentifier,
+              let bounds = window[kCGWindowBounds as String] as? [String: CGFloat],
+              let height = bounds["Height"], let width = bounds["Width"], let y = bounds["Y"]
+        else { return nil }
+        let bandHeight = screen.frame.maxY - screen.visibleFrame.maxY
+        guard height > bandHeight + 1 else { return nil }
+        let owner = window[kCGWindowOwnerName as String] as? String ?? "pid \(pid)"
+        return "\(owner) \(Int(width))×\(Int(height))@y\(Int(y)) L\(window[kCGWindowLayer as String] ?? "?")"
+    }
 
     private func isInMenuBarBand(_ point: NSPoint, of screen: NSScreen) -> Bool {
         let bandHeight = screen.frame.maxY - screen.visibleFrame.maxY
