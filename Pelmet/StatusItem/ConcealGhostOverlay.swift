@@ -142,18 +142,20 @@ final class ConcealGhostOverlay {
             guard let displayID = screen.directDisplayID,
                   let display = await scDisplay(for: displayID) else { continue }
             let bounds = CGDisplayBounds(displayID)  // CG top-left global
-            // Bar heights differ per display (37pt notched builtin, 24pt
+            // Bar heights differ per display (39pt notched builtin, 24pt
             // externals) — take each display's own band; visibleFrame can
-            // collapse under full-screen apps, so fall back to the strip's.
-            // Never taller than the band: the AX strip reported 39pt on the
-            // 37pt notched bar, and the extra 2pt captured whatever window
-            // sat under the bar — a white line under the icons for the
-            // length of every transition (2026-09-06).
-            // Notched displays: the safe-area inset IS the bar height (38pt
-            // here); visibleFrame's band runs 1pt taller (39pt).
-            let ownBand = screen.safeAreaInsets.top > 0
-                ? screen.safeAreaInsets.top
-                : screen.frame.maxY - screen.visibleFrame.maxY
+            // collapse under full-screen apps, so fall back to the safe
+            // area, then to the strip's. Cover the bar WINDOW's height
+            // (visibleFrame band, 39pt on the notched builtin), not the
+            // safe-area inset (38pt): the uncovered bottom row flashed
+            // light on a cold reveal — a white line under the icons
+            // (2026-09-07). Windows start below the bar window, so its
+            // last row is still bar, never a window; a band more than
+            // 2pt past the safe area is not the bar and is clamped.
+            let safeBand = screen.safeAreaInsets.top
+            let visibleBand = screen.frame.maxY - screen.visibleFrame.maxY
+            let ownBand = visibleBand > 0 && (safeBand == 0 || visibleBand <= safeBand + 2)
+                ? visibleBand : safeBand
             let bandHeight = ownBand > 0 ? ownBand : rect.maxY
             // Right-anchored translation onto this display, padded so the
             // snapshot's background is continuous with the bar around it.
