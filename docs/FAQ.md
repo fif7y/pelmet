@@ -28,6 +28,13 @@ the two-finger swipe from the right edge of the trackpad, which always works.
 It's how Pelmet sees the menu bar's items and their positions, and how clicking
 a hidden item works without revealing everything. Required.
 
+**Pelmet isn't in the Accessibility list. Do I add it by hand?**
+It should appear on its own, toggled off, when Pelmet opens the pane. If the
+row is missing, first check Pelmet is running from Applications, not from the
+disk image or Downloads: macOS runs those copies from a temporary path, and a
+grant recorded there dies with it. Move it, relaunch, and press Grant access
+again. Adding the row with the + button works too.
+
 **Why does Pelmet ask for Screen Recording? Do I need it?**
 Only for live icon previews in the layout editor. It's optional. Without it
 the editor shows app icons instead. macOS re-confirms Screen Recording roughly

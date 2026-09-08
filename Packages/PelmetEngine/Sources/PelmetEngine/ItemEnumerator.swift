@@ -81,16 +81,22 @@ public actor ItemEnumerator {
     }
 
     private func describeGroup(_ group: AXUIElement) -> RawItem? {
-        guard let frame = frame(of: group) else { return nil }
-        for child in children(of: group) {
+        guard let frame = frame(of: group) else {
+            logDrop("no AXFrame", pid: nil, role: role(of: group))
+            return nil
+        }
+        let kids = children(of: group)
+        for child in kids {
             switch role(of: child) {
             case "AXApplication":
                 // Third-party item: owning app nested right in the tree.
                 let appName = copyAttribute(child, kAXTitleAttribute) as? String
                 var appPID: pid_t = 0
                 AXUIElementGetPid(child, &appPID)
-                let bundleID = NSRunningApplication(processIdentifier: appPID)?.bundleIdentifier
-                guard let bundleID else { return nil }
+                guard let bundleID = bundleID(ofPID: appPID) else {
+                    logDrop("no bundle id for AXApplication", pid: appPID, role: "AXApplication")
+                    return nil
+                }
                 let title = statusItemTitle(in: child) ?? "Item-0"
                 return RawItem(
                     id: .status(bundle: bundleID, title: title),
@@ -113,29 +119,93 @@ public actor ItemEnumerator {
                 // Plain NSStatusItem buttons (Pelmet's own chevron/separators,
                 // Thaw's dividers) sit in the tree as bare AXButtons — no
                 // nested AXApplication. Attribute by the button's owning pid.
-                var pid: pid_t = 0
-                AXUIElementGetPid(child, &pid)
-                guard
-                    pid > 0,
-                    let app = NSRunningApplication(processIdentifier: pid),
-                    let bundleID = app.bundleIdentifier
-                else { continue }
-                let candidates = [
-                    copyAttribute(child, kAXTitleAttribute) as? String,
-                    copyAttribute(child, kAXIdentifierAttribute) as? String,
-                    copyAttribute(child, kAXDescriptionAttribute) as? String,
-                ]
-                let title = candidates.compactMap { $0?.isEmpty == false ? $0 : nil }.first ?? "Item-0"
-                return RawItem(
-                    id: .status(bundle: bundleID, title: title),
-                    frame: frame,
-                    appName: app.localizedName
-                )
+                if let item = describeLeaf(child, frame: frame) { return item }
             default:
                 continue
             }
         }
+        // Nothing matched the known shapes (a custom status view exposed as
+        // AXStaticText/AXUnknown, issue #1: Little Snitch's two-line traffic
+        // monitor). Any child with an owning pid outside the agent still
+        // names its app; attribute by that rather than dropping the item.
+        for child in kids {
+            var pid: pid_t = 0
+            AXUIElementGetPid(child, &pid)
+            guard pid > 0, pid != agentPID else { continue }
+            if let item = describeLeaf(child, frame: frame) {
+                logOnce("enumerate: fallback — role=\(role(of: child) ?? "?") → \(item.id.rawValue)", pid: pid)
+                return item
+            }
+        }
+        logDrop("unrecognized children \(kids.map { role(of: $0) ?? "?" })", pid: nil, role: nil)
         return nil
+    }
+
+    /// Item attributed by a leaf element's owning pid, titled by whichever of
+    /// title / identifier / description the element exposes.
+    private func describeLeaf(_ element: AXUIElement, frame: CGRect) -> RawItem? {
+        var pid: pid_t = 0
+        AXUIElementGetPid(element, &pid)
+        guard pid > 0, let bundleID = bundleID(ofPID: pid) else {
+            logDrop("no bundle id for leaf", pid: pid, role: role(of: element))
+            return nil
+        }
+        let candidates = [
+            copyAttribute(element, kAXTitleAttribute) as? String,
+            copyAttribute(element, kAXIdentifierAttribute) as? String,
+            copyAttribute(element, kAXDescriptionAttribute) as? String,
+        ]
+        let title = candidates.compactMap { $0?.isEmpty == false ? $0 : nil }.first ?? "Item-0"
+        return RawItem(
+            id: .status(bundle: bundleID, title: title),
+            frame: frame,
+            appName: NSRunningApplication(processIdentifier: pid)?.localizedName
+        )
+    }
+
+    /// `NSRunningApplication.bundleIdentifier` first; when the process is not
+    /// registered as an application (helper agents nested in another app's
+    /// Components/ folder), read the Info.plist of the nearest enclosing .app
+    /// on its executable path.
+    private func bundleID(ofPID pid: pid_t) -> String? {
+        guard pid > 0 else { return nil }
+        let app = NSRunningApplication(processIdentifier: pid)
+        if let id = app?.bundleIdentifier { return id }
+        var url = app?.executableURL ?? executableURL(ofPID: pid)
+        while let current = url, current.path != "/" {
+            if current.pathExtension == "app", let id = Bundle(url: current)?.bundleIdentifier {
+                return id
+            }
+            url = current.deletingLastPathComponent()
+        }
+        return nil
+    }
+
+    private func executableURL(ofPID pid: pid_t) -> URL? {
+        var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { return nil }
+        return URL(fileURLWithPath: String(cString: buffer))
+    }
+
+    /// Each distinct drop is logged once per process lifetime: the walk runs
+    /// on every converge and the same unrecognized group would flood the log.
+    private var loggedDrops: Set<String> = []
+
+    private func logDrop(_ reason: String, pid: pid_t?, role: String?) {
+        var line = "enumerate: skipped — \(reason)"
+        if let role { line += " role=\(role)" }
+        logOnce(line, pid: pid)
+    }
+
+    private func logOnce(_ message: String, pid: pid_t?) {
+        var line = message
+        if let pid, pid > 0 {
+            let name = NSRunningApplication(processIdentifier: pid)?.localizedName
+                ?? executableURL(ofPID: pid)?.lastPathComponent ?? "?"
+            line += " pid=\(pid) (\(name))"
+        }
+        guard loggedDrops.insert(line).inserted else { return }
+        PelmetLog.log(line)
     }
 
     /// Best-effort title of the app's status item button (used in the agent

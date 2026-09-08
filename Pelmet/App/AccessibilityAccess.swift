@@ -50,24 +50,48 @@ enum AccessibilityAccess {
     /// Direct TCC read, never the in-process cache.
     static var isGranted: Bool { AXIsProcessTrustedWithOptions(nil) }
 
-    /// Ask for the grant: clear the stale TCC row (a Deny, or a row keyed to
-    /// an older signature — toggling one of those in System Settings does
-    /// nothing), re-register through the prompt API so the system dialog
-    /// shows, and open the Accessibility pane behind it. Callers lower any
-    /// floating window first: the tccd dialog comes up at normal level.
+    /// Ask for the grant. The first press per launch is the plain path:
+    /// register through the prompt API (which is what makes tccd add the
+    /// row, toggled off) and open the Accessibility pane behind it. Only a
+    /// repeat press while still ungranted clears the row first — a Deny, or
+    /// a row keyed to an older signature, which toggling in System Settings
+    /// does nothing about. The reset used to run unconditionally *before*
+    /// the prompt; `tccutil` returns before tccd commits the delete, so the
+    /// prompt's insert could land first and get wiped, leaving no row at all
+    /// (issue #3, macOS 27 b8). Callers lower any floating window first:
+    /// the tccd dialog comes up at normal level.
     /// The reset is keyed by BUNDLE ID, so it revokes every copy of Pelmet
     /// on the machine — harmless for one install, a trap for a dev running
     /// a second differently-signed copy (which also poisons the row on its
     /// own, 2026-09-06). Guarded to only ever run while NOT granted.
-    static func request() {
+    @MainActor private static var requestCount = 0
+
+    @MainActor static func request() {
         guard !isGranted else { return }
+        requestCount += 1
+        let repeatPress = requestCount > 1
+        if isTranslocated {
+            PelmetLog.log("ax: running translocated from \(Bundle.main.bundleURL.path) — grant will not stick")
+        }
         Task.detached {
-            await resetStaleRow()
+            if repeatPress {
+                await resetStaleRow()
+                // Let tccd commit the delete before re-registering.
+                try? await Task.sleep(for: .milliseconds(500))
+            }
             await MainActor.run {
                 AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+                PelmetLog.log("ax: prompt requested (press \(requestCount), reset=\(repeatPress))")
                 openSystemSettings()
             }
         }
+    }
+
+    /// True when Gatekeeper is running us from a randomized read-only copy
+    /// (launched straight from the DMG or a quarantined Downloads folder).
+    /// A TCC row recorded against that path dies with the mount.
+    static var isTranslocated: Bool {
+        Bundle.main.bundleURL.path.contains("/AppTranslocation/")
     }
 
     static func openSystemSettings() {
