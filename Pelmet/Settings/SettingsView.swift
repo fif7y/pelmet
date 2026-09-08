@@ -540,6 +540,10 @@ private struct BehaviorPane: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
+        SettingsCard(title: "Animation") {
+            AnimationShowcase(selection: binding(\.revealAnimation))
+        }
+
         SettingsCard(title: "Reveal") {
             SettingToggleRow(title: "Reveal on hover", isOn: binding(\.revealTriggers.hoverEnabled))
             if appState.settings.revealTriggers.hoverEnabled {
@@ -553,16 +557,6 @@ private struct BehaviorPane: View {
             }
             SettingToggleRow(title: "Reveal on click in empty menu bar area", isOn: binding(\.revealTriggers.clickEnabled))
             SettingToggleRow(title: "Double-click reveals always-hidden too", isOn: binding(\.revealTriggers.doubleClickForAlwaysHidden))
-        }
-
-        SettingsCard(title: "Animation") {
-            SettingRow(title: "Style", caption: animationCaption) {
-                PelmetSegments(selection: binding(\.revealAnimation), options: [
-                    (.instant, "Instant"),
-                    (.smooth, "Smooth"),
-                    (.fade, "Fade"),
-                ])
-            }
         }
 
         SettingsCard(title: "Auto-rehide") {
@@ -601,15 +595,6 @@ private struct BehaviorPane: View {
                 caption: "macOS blocks that click while any icons are hidden. Pelmet shows everything for a blink so it gets through.",
                 isOn: binding(\.clockOpensNotificationCenter)
             )
-        }
-    }
-
-    /// The same move in and out; the caption says which.
-    private var animationCaption: LocalizedStringKey {
-        switch appState.settings.revealAnimation {
-        case .instant: "Icons appear and vanish in one frame."
-        case .smooth: "Icons slide in from the chevron and tuck back behind it."
-        case .fade: "Icons fade in and dissolve out in place."
         }
     }
 
@@ -1015,5 +1000,156 @@ struct ChipLabel<Icon: View>: View {
         .padding(.vertical, 7)
         .background(tint.opacity(0.13), in: Capsule())
         .contentShape(Capsule())
+    }
+}
+
+// MARK: - Animation showcase
+
+/// Three cards, one per style, each a mock bar (squircles + chevron) playing
+/// that style's show/hide loop. Only one plays at a time: the selected card,
+/// or the hovered one while the pointer is on it (the selected card pauses,
+/// then resumes on hover out). A card at rest shows its name instead.
+struct AnimationShowcase: View {
+    @Binding var selection: RevealAnimation
+    @State private var hovered: RevealAnimation?
+
+    private static let styles: [(RevealAnimation, LocalizedStringKey)] = [
+        (.instant, "Instant"), (.smooth, "Smooth"), (.fade, "Fade"),
+    ]
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(Self.styles, id: \.0) { style, title in
+                AnimationStyleCard(
+                    style: style,
+                    title: title,
+                    selected: selection == style,
+                    playing: hovered == style || (hovered == nil && selection == style)
+                ) {
+                    selection = style
+                }
+                .onHover { inside in
+                    if inside { hovered = style } else if hovered == style { hovered = nil }
+                }
+            }
+        }
+    }
+}
+
+private struct AnimationStyleCard: View {
+    let style: RevealAnimation
+    let title: LocalizedStringKey
+    let selected: Bool
+    let playing: Bool
+    let select: () -> Void
+
+    @State private var revealed = false
+    @State private var pressed = false
+
+    var body: some View {
+        ZStack {
+            MockBar(style: style, revealed: revealed)
+                .opacity(playing ? 1 : 0)
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(selected ? PelmetAccent.accent : .secondary)
+                .opacity(playing ? 0 : 1)
+        }
+        .animation(.easeInOut(duration: 0.25), value: playing)
+        .frame(maxWidth: .infinity)
+        .frame(height: 72)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(selected ? PelmetAccent.accent.opacity(0.14) : Color.primary.opacity(0.05))
+        )
+        .shadow(color: .black.opacity(selected ? 0.18 : 0), radius: 8, y: 3)
+        .scaleEffect(pressed ? 0.98 : 1)
+        .animation(.easeOut(duration: 0.15), value: pressed)
+        .animation(.easeInOut(duration: 0.2), value: selected)
+        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .onTapGesture(perform: select)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in pressed = true }
+                .onEnded { _ in pressed = false }
+        )
+        .task(id: playing) {
+            // The loop: show, hold, hide, hold. Ends with the bar collapsed
+            // so a paused card rests where a real bar rests.
+            guard playing else { revealed = false; return }
+            revealed = false
+            try? await Task.sleep(for: .milliseconds(350))
+            while !Task.isCancelled {
+                revealed = true
+                try? await Task.sleep(for: .milliseconds(1400))
+                guard !Task.isCancelled else { break }
+                revealed = false
+                try? await Task.sleep(for: .milliseconds(1000))
+            }
+        }
+    }
+}
+
+/// A menu bar in miniature: three hidden squircles left of the chevron,
+/// two visible ones right of it. The hidden group moves the way the real
+/// style does, with the same durations (AppTiming).
+private struct MockBar: View {
+    let style: RevealAnimation
+    let revealed: Bool
+
+    private let dot: CGFloat = 12
+    private let gap: CGFloat = 9
+
+    var body: some View {
+        HStack(spacing: gap) {
+            // Hidden group, clipped at the chevron so a slide emerges from
+            // behind it exactly like the real strip.
+            HStack(spacing: gap) {
+                ForEach(0..<3, id: \.self) { _ in squircle }
+            }
+            .offset(x: hiddenOffset)
+            .opacity(revealed ? 1 : 0)
+            .animation(hiddenAnimation, value: revealed)
+            .frame(width: 3 * dot + 2 * gap, alignment: .trailing)
+            .clipped()
+
+            Image(systemName: revealed ? "chevron.right" : "chevron.left")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(PelmetAccent.accent)
+                .frame(width: 12)
+                .contentTransition(.symbolEffect(.replace))
+
+            ForEach(0..<2, id: \.self) { _ in squircle }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 28)
+        .background(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(Color.black.opacity(0.28))
+        )
+    }
+
+    private var squircle: some View {
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(Color.primary.opacity(0.8))
+            .frame(width: dot, height: dot)
+    }
+
+    private var hiddenOffset: CGFloat {
+        guard case .smooth = style, !revealed else { return 0 }
+        return 3 * dot + 2 * gap  // parked behind the chevron
+    }
+
+    private var hiddenAnimation: Animation? {
+        switch style {
+        case .instant:
+            nil
+        case .smooth:
+            revealed
+                ? .timingCurve(0.16, 1, 0.3, 1, duration: AppTiming.smoothRevealDuration)
+                : .timingCurve(0.55, 0, 0.8, 0.4, duration: AppTiming.smoothExitDuration)
+        case .fade:
+            .timingCurve(0.42, 0, 0.58, 1, duration: revealed ? AppTiming.fadeRevealDuration : AppTiming.fadeExitDuration)
+        }
     }
 }

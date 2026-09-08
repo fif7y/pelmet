@@ -125,8 +125,9 @@ final class TransitionCoordinator {
                 var picture: [ConcealGhostOverlay.BarSnapshot]? = revealedStripSnapshot
                 if recipe.entrance.needsCutOut {
                     picture = ConcealGhostOverlay.iconsOnly(
-                        revealedStripSnapshot, background: emptyBar, punch: chevronPunch,
-                        keep: lastConcealedStripRect.map { ($0.minX - 6)...($0.maxX + 6) }
+                        revealedStripSnapshot, background: emptyBar,
+                        punch: chevronPunch(clearingFrom: lastConcealedStripRect?.maxX),
+                        keep: entranceKeep
                     )
                 }
                 if let picture {
@@ -203,7 +204,7 @@ final class TransitionCoordinator {
             case .slide:
                 if !emptyBar.isEmpty {
                     let icons = await ConcealGhostOverlay.snapshotSet(of: stripRect)
-                    if let cut = ConcealGhostOverlay.iconsOnly(icons, background: emptyBar, punch: chevronPunch) {
+                    if let cut = ConcealGhostOverlay.iconsOnly(icons, background: emptyBar, punch: chevronPunch(clearingFrom: stripRect?.maxX)) {
                         cover = ConcealGhostOverlay.begin(from: emptyCover, safety: AppTiming.transitionCoverSafety)
                         strip = ConcealGhostOverlay.begin(from: cut, safety: AppTiming.transitionCoverSafety)
                     }
@@ -246,10 +247,27 @@ final class TransitionCoordinator {
 
     /// The chevron's columns, relative to the strip rect — its glyph flips
     /// between the two captures and would otherwise ride the cut-out.
-    private var chevronPunch: [ClosedRange<CGFloat>] {
+    private var chevronPunch: [ClosedRange<CGFloat>] { chevronPunch(clearingFrom: nil) }
+
+    /// The chevron's columns, never starting left of `x`: its AX frame
+    /// overlaps the neighboring icon by a few points, and a punch from the
+    /// frame's edge clipped that icon before it moved (Gab, Smooth exit).
+    private func chevronPunch(clearingFrom x: CGFloat?) -> [ClosedRange<CGFloat>] {
         guard let chevron = appState?.snapshot?.items.first(where: { $0.id == AppState.chevronItemID })?.frame
         else { return [] }
-        return [chevron.minX...chevron.maxX]
+        let lower = max(chevron.minX, x ?? -.greatestFiniteMagnitude)
+        guard lower < chevron.maxX else { return [] }
+        return [lower...chevron.maxX]
+    }
+
+    /// The widest strip any conceal has measured: AX lists freshly revealed
+    /// items progressively, and a short measurement left the leftmost icons
+    /// outside the entrance picture — they popped in at lift instead of
+    /// sliding (Gab: "sometimes not all icons slide").
+    private var entranceKeep: ClosedRange<CGFloat>? {
+        guard let strip = lastConcealedStripRect else { return nil }
+        let minX = min(strip.minX, widestStripMinX ?? strip.minX)
+        return (minX - 6)...(strip.maxX + 6)
     }
 
     private var precaptureTask: Task<Void, Never>?
