@@ -4,13 +4,13 @@
 // this (identical constants, identical ghost code) — the timings here were
 // hard-won against the agent's reflow behavior; change them in ONE place.
 //
-// Two-phase hide: the width-collapse rides the same coalesced bar reflow as
-// the assertion swap (any later width change is a second agent animation —
-// bounce and all), then after the reflow settles the item leaves layout
-// entirely — zero-length items still reserve their built-in spacing, which
-// reads as a dead gap next to the chevron. The glyph outlives its item as a
-// ghost overlay fading at its old screen position, exactly how the agent
-// renders third-party conceals.
+// Three-phase hide: the glyph goes first (alpha 0, a ghost copy fades at its
+// old position, exactly how the agent fades third-party conceals in place),
+// the width collapses only once that fade is over — collapsing at swap time
+// shifted every still-fading neighbor to its left by the item's width, the
+// "dot slides" of issue #5 (frame-burst 2026-09-08) — and after that reflow
+// settles the item leaves layout entirely: zero-length items still reserve
+// their built-in spacing, which reads as a dead gap next to the chevron.
 
 import AppKit
 
@@ -21,8 +21,13 @@ enum StatusItemFader {
     private static let attachDelay: TimeInterval = 0.08
     /// Fade duration, symmetric for show and hide (matched to the agent's).
     private static let fadeDuration: TimeInterval = 0.22
-    /// When the collapsed item leaves layout (after the reflow settles).
-    private static let layoutDropDelay: TimeInterval = 0.45
+    /// When the width collapses: after the agent's own conceal fade (~10
+    /// frames, measured 0.19s) so nothing visible is left of the item to
+    /// shift. Also after this fader's ghost, which the collapse would
+    /// otherwise pull a real-item reflow under.
+    private static let collapseDelay: TimeInterval = 0.26
+    /// When the collapsed item leaves layout (after that reflow settles).
+    private static let layoutDropDelay: TimeInterval = 0.7
     /// Ease-out for entrances.
     private static let showCurve: (Float, Float, Float, Float) = (0.16, 1, 0.3, 1)
     /// Ease-IN for exits (hold, then accelerate away) — the show curve dumped
@@ -54,8 +59,11 @@ enum StatusItemFader {
             }
         } else {
             showFadingGhost(for: item)
-            item.length = 0
             item.button?.alphaValue = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + collapseDelay) { [weak item] in
+                guard stillCurrent() else { return }
+                item?.length = 0
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + layoutDropDelay) { [weak item] in
                 guard stillCurrent() else { return }
                 item?.isVisible = false

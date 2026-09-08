@@ -113,10 +113,11 @@ On first launch Pelmet asks for one permission:
   positions, and how clicking a hidden item works without revealing
   everything.
 
-Screen Recording is optional and never prompted for during onboarding. If
-granted, Pelmet uses it to paint solid cover strips over the bar while
-items swap during reveals and reorders. Without it, transitions simply run
-uncovered.
+Screen Recording is optional, offered next to Accessibility in onboarding
+and skippable. The Fade and Instant reveal styles use it to hold a still of
+the empty menu bar over the moment icons come back, hiding the slide macOS
+plays on its own. Nothing is recorded or kept. The default Smooth style
+never asks for it.
 
 Pelmet is notarized by Apple and ships with the hardened runtime. It isn't
 sandboxed, managing the menu bar requires APIs the App Store sandbox

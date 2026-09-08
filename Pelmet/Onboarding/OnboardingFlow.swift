@@ -194,7 +194,7 @@ private struct AccessStep: View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer()
 
-            Text(recovery ? LocalizedStringKey("Access got lost.") : "One permission.")
+            Text(recovery ? LocalizedStringKey("Access got lost.") : "Two permissions.")
                 .font(.system(size: 46, weight: .semibold))
                 .tracking(-1.2)
                 .foregroundStyle(Ink.text)
@@ -205,7 +205,7 @@ private struct AccessStep: View {
 
             Text(recovery
                  ? LocalizedStringKey("macOS dropped Pelmet's accessibility permission, which happens after some updates and reinstalls. Grant it again and everything picks up where it left off.")
-                 : "Pelmet arranges your menu bar through macOS accessibility — that's how it sees the icons and moves them. Nothing is read from your screen, nothing leaves your Mac.")
+                 : "Accessibility is how Pelmet sees the icons and moves them, nothing leaves your Mac. Screen Recording is optional: the Fade and Instant styles use a still of the empty menu bar to cover the moment icons come back. Nothing is recorded or kept.")
                 .font(.system(size: 13))
                 .foregroundStyle(Ink.textDim)
                 .frame(maxWidth: 420, alignment: .leading)
@@ -233,13 +233,46 @@ private struct AccessStep: View {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 18)
 
+            // Optional second row (issue #6): offered here with context
+            // rather than as a surprise system dialog at the first hide.
+            // Continue never waits on it. Recovery has one job — Accessibility.
+            if !recovery {
+                Spacer().frame(height: 14)
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(appState.screenRecordingGranted ? Ink.accent : Ink.text.opacity(0.15))
+                        .frame(width: 8, height: 8)
+                        .animation(springSnappy, value: appState.screenRecordingGranted)
+                    if appState.screenRecordingGranted {
+                        Text("Screen Recording on")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Ink.text)
+                    } else {
+                        Button("Allow Screen Recording") {
+                            NSApp.activate()
+                            OnboardingController.shared.lowerForSystemPrompt()
+                            ScreenRecordingAccess.request()
+                        }
+                        .buttonStyle(GhostButtonStyle())
+                        Text("Optional")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Ink.textDim)
+                    }
+                }
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 18)
+            }
+
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {
             withAnimation(springSoft.delay(0.1)) { appeared = true }
             poll = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-                Task { @MainActor in appState.refreshAccessibility() }
+                Task { @MainActor in
+                    appState.refreshAccessibility()
+                    appState.refreshScreenRecording()
+                }
             }
         }
         .onDisappear { poll?.invalidate() }

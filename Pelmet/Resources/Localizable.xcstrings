@@ -523,6 +523,64 @@
         }
       }
     },
+    "Accessibility is how Pelmet sees the icons and moves them, nothing leaves your Mac. Screen Recording is optional: the Fade and Instant styles use a still of the empty menu bar to cover the moment icons come back. Nothing is recorded or kept.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über die Bedienungshilfen sieht Pelmet die Symbole und bewegt sie, nichts verlässt deinen Mac. Bildschirmaufnahme ist optional: Die Stile „Überblenden“ und „Sofort“ nutzen ein Standbild der leeren Menüleiste, um den Moment abzudecken, in dem Symbole zurückkehren. Es wird nichts aufgezeichnet oder gespeichert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La accesibilidad es cómo Pelmet ve los iconos y los mueve, nada sale de tu Mac. La grabación de pantalla es opcional: los estilos Fundido e Instantánea usan una imagen fija de la barra de menús vacía para cubrir el momento en que vuelven los iconos. No se graba ni se guarda nada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’accessibilité est ce qui permet à Pelmet de voir les icônes et de les déplacer, rien ne quitte votre Mac. L’enregistrement de l’écran est facultatif : les styles Fondu et Instantané utilisent une image fixe de la barre des menus vide pour couvrir le moment où les icônes reviennent. Rien n’est enregistré ni conservé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’accessibilità è il modo in cui Pelmet vede le icone e le sposta, nulla lascia il tuo Mac. La registrazione schermo è facoltativa: gli stili Dissolvenza e Istantanea usano un fermo immagine della barra dei menu vuota per coprire il momento in cui le icone tornano. Non viene registrato né conservato nulla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセシビリティは、Pelmetがアイコンを認識して移動するための仕組みで、データがMacの外に出ることはありません。画面収録は任意です。「フェード」と「即時」スタイルは、空のメニューバーの静止画でアイコンが戻る瞬間を覆います。何も記録・保存されません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손쉬운 사용은 Pelmet이 아이콘을 인식하고 옮기는 방식이며 어떤 것도 Mac 밖으로 나가지 않습니다. 화면 기록은 선택 사항입니다. 페이드와 즉시 스타일은 빈 메뉴 막대의 정지 화면으로 아이콘이 돌아오는 순간을 가립니다. 아무것도 기록하거나 저장하지 않습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A acessibilidade é como o Pelmet vê os ícones e os move, nada sai do seu Mac. A gravação de tela é opcional: os estilos Esmaecer e Instantânea usam uma imagem parada da barra de menus vazia para cobrir o momento em que os ícones voltam. Nada é gravado nem guardado."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Универсальный доступ — так Pelmet видит значки и перемещает их, ничего не покидает ваш Mac. Запись экрана необязательна: стили «Плавно» и «Мгновенно» используют стоп-кадр пустой строки меню, чтобы прикрыть момент возвращения значков. Ничего не записывается и не хранится."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辅助功能是 Pelmet 识别并移动图标的方式，数据不会离开你的 Mac。屏幕录制是可选的：“淡入淡出”和“即时”样式用一张空菜单栏的静态图遮住图标返回的瞬间。不会录制或保存任何内容。"
+          }
+        }
+      }
+    },
     "Add a separator": {
       "localizations": {
         "de": {
@@ -693,6 +751,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "隔空投送"
+          }
+        }
+      }
+    },
+    "Allow Screen Recording": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirmaufnahme erlauben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permitir grabación de pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autoriser l’enregistrement de l’écran"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti registrazione schermo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面収録を許可"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 기록 허용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permitir gravação de tela"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разрешить запись экрана"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许屏幕录制"
           }
         }
       }
@@ -4003,6 +4119,64 @@
         }
       }
     },
+    "Lets the Fade and Instant styles cover the menu bar while icons come back.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deckt bei den Stilen „Überblenden“ und „Sofort“ die Menüleiste ab, während Symbole zurückkehren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite que los estilos Fundido e Instantánea cubran la barra de menús mientras vuelven los iconos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permet aux styles Fondu et Instantané de couvrir la barre des menus pendant que les icônes reviennent."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consente agli stili Dissolvenza e Istantanea di coprire la barra dei menu mentre le icone tornano."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「フェード」と「即時」スタイルで、アイコンが戻る間メニューバーを覆えるようにします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "페이드와 즉시 스타일이 아이콘이 돌아오는 동안 메뉴 막대를 가릴 수 있게 합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite que os estilos Esmaecer e Instantânea cubram a barra de menus enquanto os ícones voltam."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Позволяет стилям «Плавно» и «Мгновенно» прикрывать строку меню, пока значки возвращаются."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让“淡入淡出”和“即时”样式在图标返回时遮住菜单栏。"
+          }
+        }
+      }
+    },
     "Media": {
       "localizations": {
         "de": {
@@ -4757,64 +4931,6 @@
         }
       }
     },
-    "One permission.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine Berechtigung."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un solo permiso."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Une seule autorisation."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un solo permesso."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "必要な許可はひとつ。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "권한 하나면 됩니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uma permissão."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Одно разрешение."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只需一项权限。"
-          }
-        }
-      }
-    },
     "One person builds it on evenings and weekends. No account, no tracking, no upsell.\nIf it earned a spot in your bar, here's how to help.": {
       "localizations": {
         "de": {
@@ -4985,6 +5101,122 @@
           "stringUnit": {
             "state": "translated",
             "value": "打开访达的隔空投送视图"
+          }
+        }
+      }
+    },
+    "Optional": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opcional"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facultatif"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facoltativo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任意"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택 사항"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opcional"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Необязательно"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可选"
+          }
+        }
+      }
+    },
+    "Optional. Without it, icons slide back in the way macOS does it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional. Ohne sie gleiten Symbole so zurück, wie macOS es tut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opcional. Sin él, los iconos vuelven deslizándose, como lo hace macOS."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facultatif. Sans lui, les icônes reviennent en glissant, comme macOS le fait."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facoltativo. Senza, le icone tornano scorrendo, come fa macOS."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任意です。なければmacOSと同じようにアイコンがスライドして戻ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택 사항입니다. 없으면 macOS 방식대로 아이콘이 슬라이드하며 돌아옵니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opcional. Sem ela, os ícones voltam deslizando, como o macOS faz."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Необязательно. Без него значки возвращаются скольжением, как в macOS."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可选。没有它，图标会像 macOS 那样滑动回来。"
           }
         }
       }
@@ -5275,64 +5507,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pelmet 设置…"
-          }
-        }
-      }
-    },
-    "Pelmet arranges your menu bar through macOS accessibility — that's how it sees the icons and moves them. Nothing is read from your screen, nothing leaves your Mac.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet ordnet deine Menüleiste über die Bedienungshilfen von macOS – so sieht es die Symbole und verschiebt sie. Nichts wird von deinem Bildschirm gelesen, nichts verlässt deinen Mac."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet organiza tu barra de menús mediante la accesibilidad de macOS: así ve los iconos y los mueve. No lee nada de tu pantalla y nada sale de tu Mac."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet organise votre barre des menus via l’accessibilité de macOS : c’est ainsi qu’il voit les icônes et les déplace. Rien n’est lu sur votre écran, rien ne quitte votre Mac."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet organizza la barra dei menu tramite l’accessibilità di macOS: è così che vede le icone e le sposta. Non legge nulla dallo schermo e nulla lascia il tuo Mac."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PelmetはmacOSのアクセシビリティを通じてメニューバーを整えます。それによってアイコンを認識し、移動します。画面の内容を読み取ることはなく、Macの外にデータが出ることもありません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet은 macOS 손쉬운 사용을 통해 메뉴 막대를 정리합니다. 그렇게 아이콘을 인식하고 옮깁니다. 화면을 읽지 않으며, 어떤 데이터도 Mac 밖으로 나가지 않습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O Pelmet organiza sua barra de menus pela acessibilidade do macOS: é assim que ele vê os ícones e os move. Nada é lido da sua tela, nada sai do seu Mac."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet упорядочивает строку меню через Универсальный доступ macOS: так он видит значки и перемещает их. Ничего не считывается с экрана, ничего не покидает ваш Mac."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet 通过 macOS 辅助功能整理菜单栏，它借此识别并移动图标。不会读取你的屏幕内容，任何数据都不会离开你的 Mac。"
           }
         }
       }
@@ -6551,6 +6725,122 @@
           "stringUnit": {
             "state": "translated",
             "value": "运行你的快捷指令"
+          }
+        }
+      }
+    },
+    "Screen Recording": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirmaufnahme"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación de pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement de l’écran"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazione schermo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面収録"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 기록"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravação de tela"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запись экрана"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "屏幕录制"
+          }
+        }
+      }
+    },
+    "Screen Recording on": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirmaufnahme aktiv"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación de pantalla activada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement de l’écran activé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazione schermo attiva"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面収録オン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 기록 켜짐"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravação de tela ativada"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запись экрана включена"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "屏幕录制已开启"
           }
         }
       }
@@ -8001,6 +8291,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在整理…"
+          }
+        }
+      }
+    },
+    "Two permissions.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwei Berechtigungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dos permisos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deux autorisations."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due autorizzazioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2つの権限。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "두 가지 권한."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duas permissões."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Два разрешения."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两个权限。"
           }
         }
       }

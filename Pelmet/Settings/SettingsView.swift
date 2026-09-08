@@ -482,6 +482,29 @@ private struct GeneralPane: View {
                     }
                 }
             }
+            SettingRow(
+                title: "Screen Recording",
+                caption: appState.screenRecordingGranted
+                    ? "Lets the Fade and Instant styles cover the menu bar while icons come back."
+                    : "Optional. Without it, icons slide back in the way macOS does it."
+            ) {
+                if appState.screenRecordingGranted {
+                    StatusChip(text: "Granted", symbol: "checkmark.circle.fill", tint: .green)
+                } else {
+                    AccentChipButton(text: "Grant access", symbol: "rectangle.dashed.badge.record") {
+                        SettingsWindowController.shared.lowerForSystemPrompt()
+                        ScreenRecordingAccess.request()
+                    }
+                }
+            }
+        }
+        .task {
+            // The grant lands in System Settings, outside our window —
+            // poll while the tab is up so the chip flips without a relaunch.
+            while !Task.isCancelled {
+                appState.refreshScreenRecording()
+                try? await Task.sleep(for: .seconds(1))
+            }
         }
     }
 

@@ -116,3 +116,33 @@ enum AccessibilityAccess {
         }
     }
 }
+
+/// Screen Recording is optional: it feeds the hide/reveal covers (icons fade
+/// and slide instead of popping). One system prompt per launch — the OS shows
+/// its dialog at most once per app anyway; a repeat press, or a press after
+/// an earlier Deny, opens the Screen & System Audio Recording pane instead.
+enum ScreenRecordingAccess {
+    static var isGranted: Bool { CGPreflightScreenCaptureAccess() }
+
+    @MainActor private static var prompted = false
+
+    /// True when this call raised the system dialog (vs. opening Settings).
+    @MainActor @discardableResult
+    static func request() -> Bool {
+        guard !isGranted else { return false }
+        if !prompted {
+            prompted = true
+            CGRequestScreenCaptureAccess()
+            PelmetLog.log("screen: recording access prompted (grant needs a relaunch)")
+            return true
+        }
+        openSystemSettings()
+        return false
+    }
+
+    static func openSystemSettings() {
+        NSWorkspace.shared.open(URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+        )!)
+    }
+}

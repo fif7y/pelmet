@@ -1,11 +1,11 @@
 // ConcealGhostOverlay.swift
-// The agent animates reveals (slide + fade over ~150ms) but drops concealed
-// items with NO animation — the whole strip pops off within a frame or two
-// (measured via frame capture, 2026-08-20). The overlay manufactures the
-// missing hide motion: screenshot the strip of items about to conceal, float
-// it over the bar, let the swap pop the real items beneath the cover, then
-// fade the snapshot out. One motion for the whole strip — third-party and
-// Pelmet-owned items alike (per-item ghosts stand down while a strip is up).
+// The reveal cover. The agent animates reveals with a slide-in of its own;
+// the Instant and Fade styles hide that slide under a snapshot of the still-
+// empty strip, floated over the bar until the swap lands, then dropped
+// (Instant) or faded (Fade). Conceals need no cover: the agent fades
+// concealed items in place on its own (frame-burst 2026-09-08, 27.0 b8) —
+// the manufactured exit strip this file used to float was retired in 0.2.14
+// (issue #5: the Smooth slide dragged the wallpaper along).
 
 import AppKit
 import PelmetEngine
@@ -50,11 +50,11 @@ enum AlphaFade {
 
 @MainActor
 final class ConcealGhostOverlay {
-    /// True while any strip overlay is covering a bar — SeparatorManager and
-    /// ExtrasManager skip their per-item ghosts (the strip already shows their
-    /// glyphs; a second fading copy would double-expose). Count-tracked: with
-    /// back-to-back conceals, an OLDER strip's fade completion must not clear
-    /// the flag while a newer strip is still up.
+    /// True while a reveal cover is up — SeparatorManager and ExtrasManager
+    /// skip their per-item ghosts under it (a fading copy showing through
+    /// would double-expose). Count-tracked: with back-to-back reveals, an
+    /// OLDER cover's fade completion must not clear the flag while a newer
+    /// cover is still up.
     static var stripActive: Bool { activeStripCount > 0 }
     private static var activeStripCount = 0
 
@@ -64,7 +64,7 @@ final class ConcealGhostOverlay {
     struct GhostSet {
         fileprivate let overlays: [ConcealGhostOverlay]
         func dismiss() { for overlay in overlays { overlay.dismiss() } }
-        func fadeOut(slide: Bool = false) { for overlay in overlays { overlay.fadeOut(slide: slide) } }
+        func fadeOut() { for overlay in overlays { overlay.fadeOut() } }
     }
 
     /// SCShareableContent lookup is the slow part (can be 100ms+) — cache the
@@ -104,8 +104,8 @@ final class ConcealGhostOverlay {
     private var finished = false
     private var stoodDown = false
 
-    /// A captured strip image ready to float — reveal covers pre-capture at
-    /// conceal settle so the reveal path pays zero capture latency.
+    /// A captured strip image ready to float — pre-captured at conceal settle
+    /// so the reveal path pays zero capture latency.
     struct BarSnapshot: @unchecked Sendable {
         let image: CGImage
         /// Cocoa bottom-left global — where this display's cover floats.
@@ -118,21 +118,15 @@ final class ConcealGhostOverlay {
     /// other bars mirror the same items against their own trailing edge, so
     /// the rect translates right-anchored (the notch only eats the leading
     /// side). Empty result → callers run uncovered, never blocked.
-    /// One request per launch: without Screen Recording every hide/reveal
-    /// runs uncovered (icons pop instead of fading), and nothing else in the
-    /// app ever triggers the system prompt — nook-era grants also died with
-    /// the bundle-ID change. Contextual: fires the first time a cover is
-    /// actually wanted. The OS shows its dialog at most once per app.
-    private static var requestedAccess = false
-
+    /// Without Screen Recording every reveal runs uncovered (the agent's
+    /// slide-in shows). Contextual: the system prompt fires the first time a
+    /// cover is actually wanted (once per launch, see ScreenRecordingAccess);
+    /// the General tab's Permissions card carries the row for anyone who
+    /// dismissed it (issue #6).
     static func snapshotSet(of rect: CGRect?) async -> [BarSnapshot] {
         guard let rect, rect.width > 8 else { return [] }
-        guard CGPreflightScreenCaptureAccess() else {
-            if !requestedAccess {
-                requestedAccess = true
-                CGRequestScreenCaptureAccess()
-                PelmetLog.log("ghost: no screen-recording access — prompted (grant needs a relaunch)")
-            }
+        guard ScreenRecordingAccess.isGranted else {
+            ScreenRecordingAccess.request()
             return []
         }
         guard let primary = NSScreen.screens.first else { return [] }
@@ -246,25 +240,12 @@ final class ConcealGhostOverlay {
     }
 
     /// Fade the cover out — ease-in (holds visibility, then accelerates away),
-    /// the mirror of the show fade's ease-out. Idempotent. `slide` adds a
-    /// rightward drift toward the chevron — the Smooth style's manufactured
-    /// tuck-away, mirroring the agent's slide-in on reveal.
-    /// Hide-fade duration shared by the slide drift and the alpha fade.
+    /// the mirror of the show fade's ease-out. Idempotent.
     private static let dismissDuration: CFTimeInterval = 0.16
 
-    func fadeOut(slide: Bool = false) {
+    func fadeOut() {
         guard !finished else { return }
         finished = true
-        if slide, let layer = imageView.layer {
-            let shift = min(imageView.bounds.width * 0.5, 80)
-            let anim = CABasicAnimation(keyPath: "position.x")
-            anim.fromValue = layer.position.x
-            anim.toValue = layer.position.x + shift
-            anim.duration = Self.dismissDuration
-            anim.timingFunction = CAMediaTimingFunction(controlPoints: 0.55, 0, 0.8, 0.4)
-            layer.add(anim, forKey: "pelmetSlideOut")
-            layer.position.x += shift
-        }
         // Strong self: the completion is the count's decrement — a weak
         // capture could leak activeStripCount high and suppress per-item
         // ghosts forever.

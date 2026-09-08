@@ -13,6 +13,9 @@ final class AppState {
     var settings = SettingsStore.load()
     private(set) var snapshot: EngineSnapshot?
     private(set) var accessibilityGranted = AccessibilityAccess.isGranted
+    /// Optional grant behind the hide/reveal covers; re-read while the
+    /// General tab is up (no watcher — nothing in the app depends on it).
+    private(set) var screenRecordingGranted = ScreenRecordingAccess.isGranted
     private(set) var engineCanHide = true
     /// Settings window tab. Owned here (not view @State) so every window
     /// open can reset it to General — reopening straight onto the Menu Bar
@@ -441,6 +444,13 @@ final class AppState {
 
     func refreshAccessibility() {
         accessibility.refresh()
+    }
+
+    func refreshScreenRecording() {
+        let granted = ScreenRecordingAccess.isGranted
+        guard granted != screenRecordingGranted else { return }
+        screenRecordingGranted = granted
+        PelmetLog.log("screen: recording granted=\(granted)")
     }
 
     /// Grant arrived: the engine's walks were empty until now, and the clock
@@ -1029,7 +1039,6 @@ final class AppState {
     }
 
     private func handle(engineEvent: EngineEvent) {
-        transitions.invalidateConcealPrecapture()
         switch engineEvent {
         case .externalOrderChange:
             adoptSectionsFromBar()

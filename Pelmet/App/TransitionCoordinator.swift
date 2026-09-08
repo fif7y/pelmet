@@ -104,50 +104,25 @@ final class TransitionCoordinator {
             }
             PelmetLog.log("effect reveal settled")
             onRevealSettled?()
-            scheduleConcealGhostPrecapture()
         }
     }
 
     func performConceal() {
         Task {
             guard let appState else { return }
-            // Cover the strip BEFORE the swap: the agent pops
-            // concealed items with no animation, so the overlay is
-            // the hide animation. Fades once the swap has landed.
-            // Instant style skips the cover — the pop IS the look.
-            // Pre-captured while the bar idled revealed (mirror of the
-            // reveal cover): a live AX walk + SCK capture here delayed
-            // every exit by ~70ms before the swap could start.
-            let ghost: ConcealGhostOverlay.GhostSet?
-            if appState.settings.revealAnimation == .instant {
-                rememberStrip(await concealStripFrames())
-                ghost = nil
-            } else if let first = concealGhostSnapshot.first,
-                      let rect = concealGhostStripRect,
-                      Date().timeIntervalSince(first.takenAt) < AppTiming.concealGhostFreshness {
-                rememberStrip(rect)
-                ghost = ConcealGhostOverlay.begin(from: concealGhostSnapshot, safety: AppTiming.transitionCoverSafety)
-            } else {
-                let strip = await concealStripFrames()
-                rememberStrip(strip)
-                ghost = await ConcealGhostOverlay.begin(over: strip, safety: AppTiming.transitionCoverSafety)
-            }
-            concealGhostSnapshot = []
-            concealGhostStripRect = nil
+            // No cover on the way out. The agent fades concealed items in
+            // place on its own (~100ms, frame-burst 2026-09-08 on 27.0 b8,
+            // Instant/Fade/Smooth alike); the manufactured strip that used
+            // to float here was built against an earlier build that popped
+            // them, and by 0.2.13 it only added artifacts — the Smooth slide
+            // dragged the wallpaper along (issue #5), a pre-captured strip
+            // one reflow stale made the chevron jump when it faded, and a
+            // cut-out variant showed two sets of icons. The strip rect is
+            // still measured: it is the reveal cover's footprint.
+            rememberStrip(await concealStripFrames())
             PelmetLog.log("effect conceal → engine")
             await engine.conceal()
             appState.updateSnapshot(await engine.snapshot())
-            if let ghost {
-                // Same swap-quiet hold as the reveal cover: a late
-                // second swap after the ghost fades reads as a bounce.
-                // Exit mirrors the entry style — Smooth tucks toward
-                // the chevron, Fade dissolves in place.
-                let slide = appState.settings.revealAnimation == .smooth
-                Task { @MainActor in
-                    await appState.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
-                    ghost.fadeOut(slide: slide)
-                }
-            }
             PelmetLog.log("effect conceal settled")
             onConcealSettled?()
             scheduleRevealCoverPrecapture()
@@ -155,50 +130,11 @@ final class TransitionCoordinator {
     }
 
     private var precaptureTask: Task<Void, Never>?
-    private var concealPrecaptureTask: Task<Void, Never>?
 
-    /// The concealable strip captured while the bar idles revealed, so
-    /// `performConceal` floats it synchronously. Short freshness window
-    /// (unlike the empty reveal cover, this freezes live icons).
-    private var concealGhostSnapshot: [ConcealGhostOverlay.BarSnapshot] = []
-    private var concealGhostStripRect: CGRect?
-
-    /// The bar changed under the cached strip (item added/removed, external
-    /// reorder) — a cover floated at the old frames would read as a glitch.
-    /// Recapture if still revealed.
-    func invalidateConcealPrecapture() {
-        concealGhostSnapshot = []
-        concealGhostStripRect = nil
-        if appState?.currentRevealedSections.isEmpty == false {
-            scheduleConcealGhostPrecapture()
-        }
-    }
-
-    /// Mirror of `scheduleRevealCoverPrecapture` for the exit: once the bar
-    /// is swap-quiet after a reveal, the concealable frames are exactly the
-    /// strip the next conceal wants covered — capture now, hide instantly.
-    private func scheduleConcealGhostPrecapture() {
-        guard appState?.settings.revealAnimation != .instant else { return }
-        concealPrecaptureTask?.cancel()
-        concealPrecaptureTask = Task { @MainActor in
-            guard let appState else { return }
-            await appState.waitUntilQuiesced(interval: 0.5, deadline: 3, poll: .milliseconds(200))
-            // Any reveal cover's fade must not bake into the snapshot.
-            try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
-            guard !Task.isCancelled,
-                  !appState.currentRevealedSections.isEmpty, !ConcealGhostOverlay.stripActive
-            else { return }
-            let strip = await concealStripFrames()
-            guard !Task.isCancelled else { return }
-            concealGhostStripRect = strip
-            concealGhostSnapshot = await ConcealGhostOverlay.snapshotSet(of: strip)
-        }
-    }
-
-    /// Once the bar has gone swap-quiet after a conceal and the ghost is off
-    /// screen, the strip region shows exactly the "empty bar" the next reveal
-    /// wants to freeze — capture it now so the reveal floats it instantly.
-    /// One in flight at a time: rapid conceal cycles otherwise stack
+    /// Once the bar has gone swap-quiet after a conceal, the strip region
+    /// shows exactly the "empty bar" the next reveal wants to freeze —
+    /// capture it now so the reveal floats it instantly. Smooth never floats
+    /// a cover. One in flight at a time: rapid conceal cycles otherwise stack
     /// overlapping 3s polls, each ending in an SCK capture.
     private func scheduleRevealCoverPrecapture() {
         guard appState?.settings.revealAnimation != .smooth else { return }
@@ -206,11 +142,9 @@ final class TransitionCoordinator {
         precaptureTask = Task { @MainActor in
             guard let appState else { return }
             await appState.waitUntilQuiesced(interval: 0.5, deadline: 3, poll: .milliseconds(200))
-            // The ghost's fade must not bake into the snapshot.
+            // The agent's own conceal fade must not bake into the snapshot.
             try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
-            guard !Task.isCancelled,
-                  appState.currentRevealedSections.isEmpty, !ConcealGhostOverlay.stripActive
-            else { return }
+            guard !Task.isCancelled, appState.currentRevealedSections.isEmpty else { return }
             revealCoverSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
         }
     }
