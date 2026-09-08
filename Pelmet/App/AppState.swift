@@ -880,6 +880,9 @@ final class AppState {
     /// settings-assigned item still sitting in its old zone is never
     /// "corrected" back.
     private var lastAdoptionZones: [String: PelmetCore.Section] = [:]
+    /// The chevron's x at the last pass — a moved boundary re-baselines
+    /// instead of adopting (see BarAdoption.reconcile).
+    private var lastAdoptionChevronX: CGFloat?
 
     var isTransitioning: Bool {
         if case .transitioning = rehide.state { return true }
@@ -980,6 +983,7 @@ final class AppState {
             items: items.map { (id: $0.id, minX: $0.frame?.minX) },
             model: settings.sectionModel,
             previousZones: lastAdoptionZones,
+            previousChevronX: lastAdoptionChevronX,
             pelmetBundleID: PelmetBundle.mainID,
             draggedID: draggedID
         ) else { return }
@@ -991,6 +995,7 @@ final class AppState {
             .map { "\($0.id.sectionKey)@\(Int($0.frame!.minX))" }
         PelmetLog.log("adopt: visible live=\(liveVisible) model=\((settings.sectionModel.order[.visible] ?? []).map(\.rawValue))")
         lastAdoptionZones = result.zones
+        lastAdoptionChevronX = result.chevronX
         if result.changed {
             settings.sectionModel = result.model
             settings.save()

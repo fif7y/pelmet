@@ -14,6 +14,8 @@ public enum BarAdoption {
         /// Zone tracking to carry into the next pass (confident measurements
         /// only — a guessed zone must never become a baseline).
         public let zones: [String: Section]
+        /// Where the chevron measured this pass — the next pass compares.
+        public let chevronX: CGFloat?
         public let changed: Bool
         public let log: [String]
     }
@@ -46,21 +48,35 @@ public enum BarAdoption {
         items: [(id: ItemID, minX: CGFloat?)],
         model startModel: SectionModel,
         previousZones: [String: Section],
+        previousChevronX: CGFloat? = nil,
         pelmetBundleID: String,
         draggedID: ItemID? = nil
     ) -> Result? {
-        let chevronX = items.first(where: {
+        let chevron = items.first(where: {
             $0.id.bundleID == pelmetBundleID
                 && !MenuBarPolicy.isPelmetExtraID($0.id)
                 && !$0.id.rawValue.contains("Separator")
-        })?.minX
+        })
+        let chevronX = chevron?.minX
 
         var log: [String] = []
         var zones = previousZones
         var model = startModel
         var changed = false
         let isFirstPass = previousZones.isEmpty
-        log.append("adopt: chevronX=\(chevronX.map { "\($0)" } ?? "none") firstPass=\(isFirstPass) trackedZones=\(previousZones.count)")
+        // The boundary itself moved since the last pass, and not by a user
+        // drag of the chevron: Pelmet's own extras right of the chevron
+        // collapse on conceal and the agent re-slots the chevron past a
+        // third-party item that registered between them (Figma, 2026-09-08:
+        // chevron 1427 → 1497 across a conceal, Figma steady at 1465, and
+        // the zone-change rule flipped it to Hidden). A zone change measured
+        // against a boundary that moved says nothing about the item — such
+        // a pass re-baselines only; the ⌘-dragged item still adopts.
+        let chevronMoved: Bool = {
+            guard let chevronX, let previousChevronX, draggedID != chevron?.id else { return false }
+            return abs(chevronX - previousChevronX) > 4
+        }()
+        log.append("adopt: chevronX=\(chevronX.map { "\($0)" } ?? "none") firstPass=\(isFirstPass) trackedZones=\(previousZones.count)\(chevronMoved ? " boundaryMoved(from \(previousChevronX!)) — re-baseline only" : "")")
         // Cluster edges from the PRE-adoption model: the always-hidden and
         // hidden members' live frames (only present during a full reveal).
         // Self-excluded per item below so an item never bounds itself. The
@@ -146,6 +162,11 @@ public enum BarAdoption {
             // would already equal the drag-end reading).
             if confident, chevronX != nil || zone == current {
                 zones[item.id.rawValue] = zone
+            } else if chevronMoved {
+                // Measured against a boundary that moved, and not even
+                // confidently: the old baseline is void too, or the next
+                // steady pass would adopt the same phantom change.
+                zones.removeValue(forKey: item.id.rawValue)
             }
             // Chevron-less readings are baseline-only except for the dragged
             // item — see the doc comment (stale-model poisoning).
@@ -163,8 +184,8 @@ public enum BarAdoption {
                 guard confident else { continue }
             } else {
                 // First sighting establishes a baseline; only a zone CHANGE
-                // adopts.
-                guard !isFirstPass, let previousZone, previousZone != zone else { continue }
+                // adopts — and only against a boundary that stood still.
+                guard !isFirstPass, !chevronMoved, let previousZone, previousZone != zone else { continue }
             }
             guard zone != current else { continue }
             if zone == .visible {
@@ -216,6 +237,6 @@ public enum BarAdoption {
                 changed = true
             }
         }
-        return Result(model: model, zones: zones, changed: changed, log: log)
+        return Result(model: model, zones: zones, chevronX: chevronX, changed: changed, log: log)
     }
 }

@@ -46,6 +46,47 @@ struct BarAdoptionTests {
         #expect(result?.zones[siri.rawValue] == nil)
     }
 
+    @Test func movedChevronReBaselinesInsteadOfAdopting() {
+        // Figma, 2026-09-08: registered right of the chevron and adopted
+        // Visible; on conceal Pelmet's extras right of the chevron folded and
+        // the agent re-slotted the chevron past Figma (1427 → 1497, Figma
+        // steady at 1465). The item never moved — no adoption, new baseline.
+        var model = SectionModel()
+        model.order[.visible] = [figma.sectionKey]
+        let pass2 = BarAdoption.reconcile(
+            items: [(id: figma, minX: 1465), (id: chevron, minX: 1497)],
+            model: model,
+            previousZones: [figma.rawValue: .visible],
+            previousChevronX: 1427,
+            pelmetBundleID: pelmet
+        )
+        #expect(pass2?.changed == false)
+        #expect(pass2?.model.assignments[figma.sectionKey] == nil)
+        // Collapsed bar: no hidden cluster measurable, so the reading is a
+        // guess — the stale Visible baseline is dropped, not replaced.
+        #expect(pass2?.zones[figma.rawValue] == nil)
+        #expect(pass2?.chevronX == 1497)
+        // Same bar again, chevron steady: still nothing to adopt.
+        let pass3 = BarAdoption.reconcile(
+            items: [(id: figma, minX: 1465), (id: chevron, minX: 1497)],
+            model: model,
+            previousZones: pass2!.zones,
+            previousChevronX: pass2!.chevronX,
+            pelmetBundleID: pelmet
+        )
+        #expect(pass3?.changed == false)
+        // A ⌘-drag of the chevron itself IS a re-sectioning: adoption runs.
+        let dragged = BarAdoption.reconcile(
+            items: [(id: figma, minX: 1465), (id: chevron, minX: 1497)],
+            model: model,
+            previousZones: [figma.rawValue: .visible],
+            previousChevronX: 1427,
+            pelmetBundleID: pelmet,
+            draggedID: chevron
+        )
+        #expect(dragged?.model.assignments[figma.sectionKey] == .hidden)
+    }
+
     @Test func missingChevronSkipsZoneAdoptionButStillFoldsOrder() {
         // The user can hide Pelmet's status item — no boundary, so zones
         // must not move, but a bar ⌘-drag still reorders within a section.
