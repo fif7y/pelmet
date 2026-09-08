@@ -251,6 +251,8 @@ T = {
     # ── Animation card (Behavior) ───────────────────────────────────
     "Animation": dict(de="Animation", fr="Animation", es="Animación", it="Animazione", pt="Animação", ja="アニメーション", zh="动画", ko="애니메이션", ru="Анимация"),
 
+    "Active": dict(de="Aktiv", fr="Actif", es="Activo", it="Attivo", pt="Ativo", ja="使用中", zh="当前", ko="사용 중", ru="Активно"),
+
     # ── Access recovery (onboarding window, one beat) ───────────────
     "Access got lost.": dict(de="Zugriff verloren.", fr="L’accès s’est perdu.", es="Se perdió el acceso.", it="L’accesso è andato perso.", pt="O acesso se perdeu.", ja="アクセスが失われました。", zh="访问权限丢失了。", ko="접근 권한이 사라졌습니다.", ru="Доступ потерян."),
     "macOS dropped Pelmet's accessibility permission, which happens after some updates and reinstalls. Grant it again and everything picks up where it left off.": dict(

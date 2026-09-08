@@ -1047,26 +1047,45 @@ private struct AnimationStyleCard: View {
     @State private var pressed = false
 
     var body: some View {
-        ZStack {
+        VStack(alignment: .leading, spacing: 6) {
+            // The name lives above the card so it stays readable while the
+            // card plays; the selected one carries an Active tag.
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(selected ? PelmetAccent.accent : .secondary)
+                if selected {
+                    Text("Active")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(PelmetAccent.accent)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1.5)
+                        .background(Capsule().fill(PelmetAccent.accent.opacity(0.16)))
+                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                }
+            }
+            .padding(.leading, 2)
+            .animation(.easeInOut(duration: 0.2), value: selected)
+
             MockBar(style: style, revealed: revealed)
-                .opacity(playing ? 1 : 0)
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(selected ? PelmetAccent.accent : .secondary)
-                .opacity(playing ? 0 : 1)
+                .opacity(playing ? 1 : 0.45)
+                .animation(.easeInOut(duration: 0.25), value: playing)
+                .frame(maxWidth: .infinity)
+                .frame(height: 64)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(selected ? PelmetAccent.accent.opacity(0.14) : Color.primary.opacity(0.05))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(PelmetAccent.accent.opacity(selected ? 0.7 : 0), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(selected ? 0.18 : 0), radius: 8, y: 3)
+                .scaleEffect(pressed ? 0.98 : 1)
+                .animation(.easeOut(duration: 0.15), value: pressed)
+                .animation(.easeInOut(duration: 0.2), value: selected)
+                .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
-        .animation(.easeInOut(duration: 0.25), value: playing)
-        .frame(maxWidth: .infinity)
-        .frame(height: 72)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(selected ? PelmetAccent.accent.opacity(0.14) : Color.primary.opacity(0.05))
-        )
-        .shadow(color: .black.opacity(selected ? 0.18 : 0), radius: 8, y: 3)
-        .scaleEffect(pressed ? 0.98 : 1)
-        .animation(.easeOut(duration: 0.15), value: pressed)
-        .animation(.easeInOut(duration: 0.2), value: selected)
-        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .onTapGesture(perform: select)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
@@ -1074,8 +1093,8 @@ private struct AnimationStyleCard: View {
                 .onEnded { _ in pressed = false }
         )
         .task(id: playing) {
-            // The loop: show, hold, hide, hold. Ends with the bar collapsed
-            // so a paused card rests where a real bar rests.
+            // The loop: show, hold, hide, hold. A card at rest shows the
+            // collapsed bar — frame one of the animation, dimmed.
             guard playing else { revealed = false; return }
             revealed = false
             try? await Task.sleep(for: .milliseconds(350))
