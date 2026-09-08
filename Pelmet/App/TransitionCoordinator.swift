@@ -111,8 +111,12 @@ final class TransitionCoordinator {
             var finished: ConcealGhostOverlay.GhostSet?
             let emptyBar = freshEmptyBarSnapshots()
             if !emptyBar.isEmpty {
+                // The still shows the collapsed glyph; a hole over the
+                // glyph's core lets the live chevron (flipped at the swap)
+                // show through without exposing a neighbor's edge.
                 cover = ConcealGhostOverlay.begin(
-                    from: ConcealGhostOverlay.clearing(emptyBar, columns: chevronPunch), safety: AppTiming.transitionCoverSafety
+                    from: ConcealGhostOverlay.clearing(emptyBar, columns: chevronPunch.map { ($0.lowerBound + 6)...($0.upperBound - 6) }),
+                    safety: AppTiming.transitionCoverSafety
                 )
             } else if style != .smooth {
                 cover = await ConcealGhostOverlay.begin(over: revealCoverRect, safety: AppTiming.transitionCoverSafety)
@@ -185,7 +189,11 @@ final class TransitionCoordinator {
             let emptyBar = freshEmptyBarSnapshots()
             var cover: ConcealGhostOverlay.GhostSet?
             var strip: ConcealGhostOverlay.GhostSet?
-            let emptyCover = ConcealGhostOverlay.clearing(emptyBar, columns: chevronPunch)
+            // No chevron hole on the way out: the empty-bar still already
+            // shows the collapsed glyph, and on a bar where the chevron
+            // shifts as Pelmet's extras collapse the hole ended up over the
+            // last hidden icon, showing a sliver of it fading (Gab).
+            let emptyCover = emptyBar
             switch recipe.exit {
             case .pop:
                 cover = ConcealGhostOverlay.begin(from: emptyCover, safety: AppTiming.transitionCoverSafety)
