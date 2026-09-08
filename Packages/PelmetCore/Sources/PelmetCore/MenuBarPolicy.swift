@@ -82,6 +82,19 @@ public enum MenuBarPolicy {
     public static func isUnmanagedAppleBundle(_ bundle: String?) -> Bool {
         bundle?.hasPrefix("com.apple.") == true
     }
+
+    /// True when a bar ⌘-drag of this item may change its section: third-party
+    /// items, Pelmet's own extras/separators, and the core system extras the
+    /// assertion can individually allow (Sound, battery, Wi-Fi…). The rest of
+    /// Apple's items and the chevron itself are never adopted. Mirrors the
+    /// editor's tile filter — Sound dragged right of the chevron stayed
+    /// "hidden" because adoption skipped every `com.apple.` bundle (2026-09-08).
+    public static func isZoneAdoptable(_ id: ItemID, pelmetBundleID: String) -> Bool {
+        guard let bundle = id.bundleID, !id.isSystemModule else { return false }
+        if bundle == pelmetBundleID { return isPelmetExtraID(id) }
+        if isUnmanagedAppleBundle(bundle) { return systemItem(for: id) != nil }
+        return true
+    }
 }
 
 /// Menubar band geometry in CG top-left global coordinates.

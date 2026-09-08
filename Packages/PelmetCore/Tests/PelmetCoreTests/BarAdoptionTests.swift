@@ -14,6 +14,38 @@ struct BarAdoptionTests {
     let figma = ItemID(rawValue: "status:com.figma.Desktop::Item-0")
     let anchor = ItemID(rawValue: "status:com.example.Anchor::Item-0")
 
+    let sound = ItemID(rawValue: "status:com.apple.MenuBarAgent::com.apple.menuextra.sound")
+    let siri = ItemID(rawValue: "status:com.apple.systemuiserver::Siri")
+
+    @Test func systemExtraDraggedRightOfChevronAdoptsVisible() {
+        // 2026-09-08: Sound ⌘-dragged right of the chevron kept hiding on
+        // rehide — adoption skipped every com.apple. bundle, including the
+        // extras the assertion can individually allow. Siri (unmanageable,
+        // hard-pinned by the agent) must still be ignored.
+        var model = SectionModel()
+        model.assignments[sound.sectionKey] = .hidden
+        model.assignments[siri.sectionKey] = .hidden
+        model.order[.hidden] = [sound.sectionKey]
+        model.order[.visible] = []
+        let result = BarAdoption.reconcile(
+            items: [
+                (id: chevron, minX: 1421),
+                (id: sound, minX: 1516),
+                (id: siri, minX: 1657),
+            ],
+            model: model,
+            previousZones: [sound.rawValue: .hidden],
+            pelmetBundleID: pelmet,
+            draggedID: sound
+        )
+        #expect(result?.changed == true)
+        #expect(result?.model.assignments[sound.sectionKey] == nil)
+        #expect(result?.model.order[.hidden] == [])
+        #expect(result?.model.order[.visible] == [sound.sectionKey])
+        #expect(result?.model.assignments[siri.sectionKey] == .hidden)
+        #expect(result?.zones[siri.rawValue] == nil)
+    }
+
     @Test func missingChevronSkipsZoneAdoptionButStillFoldsOrder() {
         // The user can hide Pelmet's status item — no boundary, so zones
         // must not move, but a bar ⌘-drag still reorders within a section.

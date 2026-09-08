@@ -84,9 +84,7 @@ public enum BarAdoption {
             return ($0.id, x)
         }
         for item in items {
-            guard let bundle = item.id.bundleID,
-                  bundle != pelmetBundleID || MenuBarPolicy.isPelmetExtraID(item.id),
-                  !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
+            guard MenuBarPolicy.isZoneAdoptable(item.id, pelmetBundleID: pelmetBundleID),
                   let x = item.minX
             else { continue }
             let current = model.section(of: item.id)
@@ -203,9 +201,7 @@ public enum BarAdoption {
             let missing = items.filter {
                 $0.minX != nil && !known.contains($0.id.sectionKey)
                     && model.section(of: $0.id) == section
-                    && !$0.id.isSystemModule
-                    && !MenuBarPolicy.isUnmanagedAppleBundle($0.id.bundleID)
-                    && ($0.id.bundleID != pelmetBundleID || MenuBarPolicy.isPelmetExtraID($0.id))
+                    && MenuBarPolicy.isZoneAdoptable($0.id, pelmetBundleID: pelmetBundleID)
             }
             for item in missing.sorted(by: { liveX[$0.id.sectionKey]! < liveX[$1.id.sectionKey]! }) {
                 let key = item.id.sectionKey
