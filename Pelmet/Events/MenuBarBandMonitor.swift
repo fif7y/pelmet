@@ -10,6 +10,7 @@ import PelmetEngine
 final class MenuBarBandMonitor {
     private weak var appState: AppState?
     private var mouseMonitor: Any?
+    private var localMouseMonitor: Any?
     private var clickMonitor: Any?
     private var dragMonitor: Any?
     private var hoverTimer: Timer?
@@ -33,6 +34,15 @@ final class MenuBarBandMonitor {
         // event swallowing (empty-area clicks fall through harmlessly).
         mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved]) { [weak self] _ in
             self?.pointerMoved()
+        }
+        // Global monitors never see the app's OWN events. While Pelmet is the
+        // active app — after Settings or onboarding closes it stays active
+        // with no window until the user clicks elsewhere — every menubar
+        // mouseMoved is Pelmet's own, and hovers went blind (2026-09-08:
+        // "the first few hovers after closing Settings do nothing").
+        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved]) { [weak self] event in
+            self?.pointerMoved()
+            return event
         }
         clickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
@@ -91,6 +101,8 @@ final class MenuBarBandMonitor {
 
     func stop() {
         if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
+        if let localMouseMonitor { NSEvent.removeMonitor(localMouseMonitor) }
+        localMouseMonitor = nil
         if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
         if let dragMonitor { NSEvent.removeMonitor(dragMonitor) }
         mouseMonitor = nil

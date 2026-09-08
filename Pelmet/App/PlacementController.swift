@@ -97,9 +97,17 @@ final class PlacementController {
                 }
                 // Still unmeasurable (section concealed again, no frame) —
                 // requeue for the next reveal settle. Trapped items moved to
-                // the rescue queue instead; conceal is what frees them.
+                // the rescue queue instead; conceal is what frees them. A
+                // Pelmet extra with no frame is simply not hosted (media
+                // controls with nothing playing) — it attaches leftmost in
+                // its section when it next shows, so a standing placement
+                // would only re-run the lookup wait at every flush.
                 if !placed, !pendingRescues.contains(id) {
-                    pendingPlacements.insert(id)
+                    if MenuBarPolicy.isPelmetExtraID(id), !id.rawValue.contains("Separator") {
+                        PelmetLog.log("place: \(id.rawValue) not hosted — dropped from the queue")
+                    } else {
+                        pendingPlacements.insert(id)
+                    }
                 }
             }
         }
@@ -184,8 +192,6 @@ final class PlacementController {
         _ id: ItemID, in section: PelmetCore.Section, allowExpansion: Bool = true
     ) async -> Bool {
         guard let appState else { return false }
-        activePlacements += 1
-        defer { activePlacements -= 1 }
         try? await Task.sleep(for: AppTiming.placementPreSettle)
         // The payload can be a canonical `bundle:` id (stored/concealed
         // editor tile) or any title-variant — resolve to the live
@@ -211,6 +217,13 @@ final class PlacementController {
             PelmetLog.log("place: no frame for \(id.rawValue) — skipping physical move (concealed?)")
             return false
         }
+        // In flight from HERE: the pre-settle and the frame lookup above are
+        // ~2s of waiting with no synthetic events, and counting them held
+        // the rehide (3s deferral) and swallowed hover reveals after every
+        // reveal settle and Settings close (2026-09-08, a queued extra that
+        // was never hosted re-ran that wait at every flush).
+        activePlacements += 1
+        defer { activePlacements -= 1 }
         // Post-drag verification looks the item up by its LIVE id.
         let liveID = item.id
         // Primary display by design: the engine's canonical frames are the

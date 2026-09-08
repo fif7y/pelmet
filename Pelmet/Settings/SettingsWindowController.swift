@@ -57,6 +57,14 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         appState?.settingsWindowVisible = false
+        // Hand activation back: an agent app with no window left stays
+        // active until the user clicks elsewhere, and while it is active
+        // its own menubar events never reach the band monitor's global
+        // monitors (the local mirror covers it too, belt and braces).
+        let closing = notification.object as? NSWindow
+        if !NSApp.windows.contains(where: { $0 !== closing && $0.isVisible }) {
+            NSApp.deactivate()
+        }
     }
 
     /// Re-front the window after a synthetic menubar drag — the drag's
