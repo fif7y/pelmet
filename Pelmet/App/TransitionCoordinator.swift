@@ -342,6 +342,30 @@ final class TransitionCoordinator {
         }
     }
 
+    /// Boot: the first conceal is the engine's own converge, not a
+    /// `performConceal`, so nothing measured the strip and the first reveal
+    /// of every launch ran without pictures (macOS's own slide showed).
+    /// The launch snapshot was taken before any assertion — every hidden
+    /// item still had a frame — so the strip is known from it; the empty-
+    /// bar picture follows once the boot conceal has settled.
+    func warmAfterBoot(from snap: EngineSnapshot) {
+        guard lastConcealedStripRect == nil, let appState else { return }
+        var union: CGRect?
+        var count = 0
+        for item in snap.items {
+            guard let frame = item.frame, MenuBarGeometry.isInBand(frame),
+                  appState.settings.sectionModel.section(of: item.id) != .visible
+            else { continue }
+            count += 1
+            union = union.map { $0.union(frame) } ?? frame
+        }
+        concealableCount = count
+        guard let union else { return }
+        rememberStrip(union)
+        PelmetLog.log("strip: seeded at boot from \(count) pre-assertion frame(s) → \(Int(union.minX))..\(Int(union.maxX))")
+        scheduleRevealCoverPrecapture()
+    }
+
     /// Union of the on-screen frames about to conceal (main-display band
     /// only): everything assigned to a non-visible section that currently has
     /// a frame. Nil when nothing concealable is showing. Re-snapshots: AX

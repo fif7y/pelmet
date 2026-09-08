@@ -329,6 +329,7 @@ final class AppState {
             updateSnapshot(await engine.snapshot())
             // Startup state: everything the model says is hidden, is hidden.
             dispatch(rehide.handle(.concealRequested))
+            transitions.warmAfterBoot(from: launchSnapshot)
             // Launch baseline: the band monitor only applies display behavior
             // on crossings, so the display Pelmet launches under gets its
             // policy applied here (queued behind the conceal's settle).
