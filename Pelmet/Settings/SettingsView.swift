@@ -16,6 +16,13 @@ enum PelmetAccent {
             : NSColor(red: 0.408, green: 0.255, blue: 0.929, alpha: 1)  // #6841ED
     }
     static let accent = Color(nsColor: nsColor)
+
+    /// GitHub-star gold: bright on dark, amber on light so the label stays legible.
+    static let star = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(red: 1.0, green: 0.84, blue: 0.2, alpha: 1)    // #FFD633
+            : NSColor(red: 0.72, green: 0.5, blue: 0.0, alpha: 1)    // #B88000
+    })
 }
 
 enum SettingsTab: String, CaseIterable, Identifiable {
@@ -23,6 +30,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case behavior = "Behavior"
     case menuBar = "Menu Bar"
     case displays = "Displays"
+    case thanks = "Thanks"
     case about = "About"
 
     var id: String { rawValue }
@@ -34,6 +42,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .behavior: "Behavior"
         case .menuBar: "Menu Bar"
         case .displays: "Displays"
+        case .thanks: "Thanks"
         case .about: "About"
         }
     }
@@ -44,6 +53,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .behavior: "cursorarrow.motionlines"
         case .menuBar: "menubar.rectangle"
         case .displays: "display.2"
+        case .thanks: "heart"
         case .about: "shippingbox"
         }
     }
@@ -84,6 +94,7 @@ struct SettingsView: View {
                 case .behavior: BehaviorPane()
                 case .menuBar: MenuBarTab()
                 case .displays: DisplaysPane()
+                case .thanks: ThanksPane()
                 case .about: AboutPane()
                 }
             }
@@ -105,6 +116,15 @@ private struct SettingsSidebar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(SettingsTab.allCases) { item in
+                // Everything above is the app's settings; Thanks and About
+                // are the rest. One quiet hairline marks the split.
+                if item == .thanks {
+                    Rectangle()
+                        .fill(.primary.opacity(0.08))
+                        .frame(height: 1)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 6)
+                }
                 SidebarRow(
                     item: item,
                     selected: tab == item,
@@ -627,6 +647,134 @@ private struct DisplayRow: View {
     }
 }
 
+// MARK: - Thanks
+
+/// The ask, made once and quietly. One solid CTA (sponsor); stars, follows
+/// and sharing are tinted chips. Every link is a public URL — nothing here
+/// needs a key, and the star count comes from the unauthenticated API.
+private struct ThanksPane: View {
+    @State private var stars = GitHubStars.cached
+
+    private static let sponsor = URL(string: "https://github.com/sponsors/fif7y")!
+    private static let repo = URL(string: "https://github.com/fif7y/pelmet")!
+    private static let issues = URL(string: "https://github.com/fif7y/pelmet/issues")!
+    private static let x = URL(string: "https://x.com/FIF7Y")!
+    private static let instagram = URL(string: "https://www.instagram.com/madebyfif7y/")!
+    private static let website = URL(string: "https://pelmet.fif7y.com")!
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Pelmet is free. It stays that way.")
+                .font(.title3.weight(.semibold))
+            Text("One person builds it on evenings and weekends. No account, no tracking, no upsell.\nIf it earned a spot in your bar, here's how to help.")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+
+        VStack(alignment: .leading, spacing: 8) {
+            AccentChipButton(text: "Sponsor on GitHub", symbol: "heart.fill") { open(Self.sponsor) }
+            Text("From a coffee a month. Keeps the releases coming.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
+        SettingsCard {
+            Text("A star helps more people find Pelmet.")
+            HStack(spacing: 10) {
+                TintChipButton(text: "Star on GitHub", symbol: "star.fill", tint: PelmetAccent.star) { open(Self.repo) }
+                if let stars {
+                    Text("\(stars) stars")
+                        .font(.callout)
+                        .monospacedDigit()
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+
+        SettingsCard {
+            Text("Follow along for releases and what's next.")
+            HStack(spacing: 10) {
+                TintChipButton(verbatim: "@FIF7Y", icon: XGlyph()) { open(Self.x) }
+                TintChipButton(verbatim: "@madebyfif7y", icon: InstagramGlyph()) { open(Self.instagram) }
+                ShareLink(item: Self.website) {
+                    ChipLabel(text: Text("Tell a friend"), icon: Image(systemName: "square.and.arrow.up"))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+
+        VStack(spacing: 4) {
+            Text("Enjoy the extra room up there.")
+                .foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                Text("Found a bug?")
+                Link("Report an issue", destination: Self.issues)
+            }
+            .foregroundStyle(.tertiary)
+        }
+        .font(.caption)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 12)
+        .task {
+            if let count = await GitHubStars.fetch() { stars = count }
+        }
+    }
+
+    private func open(_ url: URL) { NSWorkspace.shared.open(url) }
+}
+
+/// Star count from the public repos endpoint: no token, one fetch per pane
+/// visit, last value cached so the number is there on the next open.
+enum GitHubStars {
+    private static let key = "thanks.githubStars"
+
+    static var cached: Int? { UserDefaults.standard.object(forKey: key) as? Int }
+
+    static func fetch() async -> Int? {
+        var request = URLRequest(url: URL(string: "https://api.github.com/repos/fif7y/pelmet")!)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let count = json["stargazers_count"] as? Int
+        else { return nil }
+        UserDefaults.standard.set(count, forKey: key)
+        return count
+    }
+}
+
+/// The X mark: one heavy diagonal, one light one across it.
+struct XGlyph: View {
+    var body: some View {
+        Canvas { context, size in
+            let w = size.width, h = size.height
+            var light = Path()
+            light.move(to: CGPoint(x: w * 0.92, y: h * 0.08))
+            light.addLine(to: CGPoint(x: w * 0.08, y: h * 0.92))
+            context.stroke(light, with: .foreground, style: StrokeStyle(lineWidth: w * 0.11, lineCap: .round))
+            var heavy = Path()
+            heavy.move(to: CGPoint(x: w * 0.08, y: h * 0.08))
+            heavy.addLine(to: CGPoint(x: w * 0.92, y: h * 0.92))
+            context.stroke(heavy, with: .foreground, style: StrokeStyle(lineWidth: w * 0.2, lineCap: .round))
+        }
+    }
+}
+
+/// The Instagram camera: rounded frame, lens, flash dot.
+struct InstagramGlyph: View {
+    var body: some View {
+        Canvas { context, size in
+            let w = size.width, h = size.height
+            let stroke = w * 0.11
+            let frame = CGRect(x: w * 0.08, y: h * 0.08, width: w * 0.84, height: h * 0.84)
+            context.stroke(Path(roundedRect: frame, cornerRadius: w * 0.26), with: .foreground, lineWidth: stroke)
+            let lens = CGRect(x: w * 0.3, y: h * 0.3, width: w * 0.4, height: h * 0.4)
+            context.stroke(Path(ellipseIn: lens), with: .foreground, lineWidth: stroke)
+            let dot = CGRect(x: w * 0.66, y: h * 0.2, width: w * 0.14, height: h * 0.14)
+            context.fill(Path(ellipseIn: dot), with: .foreground)
+        }
+    }
+}
+
 // MARK: - About
 
 private struct AboutPane: View {
@@ -738,17 +886,9 @@ private struct AboutPane: View {
         case .upToDate:
             StatusChip(text: "You're on the latest version", symbol: "checkmark.seal.fill", tint: .green)
         case .unknown:
-            Button {
+            TintChipButton(text: "Check for updates", symbol: "arrow.triangle.2.circlepath") {
                 SparkleController.shared.probe()
-            } label: {
-                Label("Check for updates", systemImage: "arrow.triangle.2.circlepath")
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(PelmetAccent.accent)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .background(PelmetAccent.accent.opacity(0.13), in: Capsule())
             }
-            .buttonStyle(.plain)
         }
     }
 }
@@ -788,5 +928,57 @@ struct AccentChipButton: View {
                 .background(PelmetAccent.accent, in: Capsule())
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// The tinted sibling of AccentChipButton: accent text on a soft accent fill.
+/// One recipe (ChipLabel) so About's update chip and the Thanks chips cannot
+/// drift apart.
+struct TintChipButton<Icon: View>: View {
+    let text: Text
+    let icon: Icon
+    var tint: Color = PelmetAccent.accent
+    let action: () -> Void
+
+    init(text: LocalizedStringKey, symbol: String, tint: Color = PelmetAccent.accent, action: @escaping () -> Void) where Icon == Image {
+        self.text = Text(text)
+        self.icon = Image(systemName: symbol)
+        self.tint = tint
+        self.action = action
+    }
+
+    /// Handles and other runtime strings, shown as-is with a custom glyph.
+    init(verbatim text: String, icon: Icon, action: @escaping () -> Void) {
+        self.text = Text(verbatim: text)
+        self.icon = icon
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            ChipLabel(text: text, icon: icon, tint: tint)
+        }
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+    }
+}
+
+struct ChipLabel<Icon: View>: View {
+    let text: Text
+    let icon: Icon
+    var tint: Color = PelmetAccent.accent
+
+    var body: some View {
+        HStack(spacing: 6) {
+            icon
+                .frame(width: 13, height: 13)
+            text
+        }
+        .font(.callout.weight(.medium))
+        .foregroundStyle(tint)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(tint.opacity(0.13), in: Capsule())
+        .contentShape(Capsule())
     }
 }
