@@ -485,8 +485,8 @@ private struct GeneralPane: View {
             SettingRow(
                 title: "Screen Recording",
                 caption: appState.screenRecordingGranted
-                    ? "Lets the Fade and Instant styles cover the menu bar while icons come back."
-                    : "Optional. Without it, icons slide back in the way macOS does it."
+                    ? "Lets the animation styles play over the system's own show and hide."
+                    : "Optional. Without it, icons show and hide the way macOS does it."
             ) {
                 if appState.screenRecordingGranted {
                     StatusChip(text: "Granted", symbol: "checkmark.circle.fill", tint: .green)
@@ -553,7 +553,10 @@ private struct BehaviorPane: View {
             }
             SettingToggleRow(title: "Reveal on click in empty menu bar area", isOn: binding(\.revealTriggers.clickEnabled))
             SettingToggleRow(title: "Double-click reveals always-hidden too", isOn: binding(\.revealTriggers.doubleClickForAlwaysHidden))
-            SettingRow(title: "Reveal animation") {
+        }
+
+        SettingsCard(title: "Animation") {
+            SettingRow(title: "Style", caption: animationCaption) {
                 PelmetSegments(selection: binding(\.revealAnimation), options: [
                     (.instant, "Instant"),
                     (.smooth, "Smooth"),
@@ -598,6 +601,15 @@ private struct BehaviorPane: View {
                 caption: "macOS blocks that click while any icons are hidden. Pelmet shows everything for a blink so it gets through.",
                 isOn: binding(\.clockOpensNotificationCenter)
             )
+        }
+    }
+
+    /// The same move in and out; the caption says which.
+    private var animationCaption: LocalizedStringKey {
+        switch appState.settings.revealAnimation {
+        case .instant: "Icons appear and vanish in one frame."
+        case .smooth: "Icons slide in from the chevron and tuck back behind it."
+        case .fade: "Icons fade in and dissolve out in place."
         }
     }
 

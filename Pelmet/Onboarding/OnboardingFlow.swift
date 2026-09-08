@@ -205,7 +205,7 @@ private struct AccessStep: View {
 
             Text(recovery
                  ? LocalizedStringKey("macOS dropped Pelmet's accessibility permission, which happens after some updates and reinstalls. Grant it again and everything picks up where it left off.")
-                 : "Accessibility is how Pelmet sees the icons and moves them, nothing leaves your Mac. Screen Recording is optional: the Fade and Instant styles use a still of the empty menu bar to cover the moment icons come back. Nothing is recorded or kept.")
+                 : "Accessibility is how Pelmet sees the icons and moves them, nothing leaves your Mac. Screen Recording is optional: it lets Pelmet's animation styles play over the way macOS shows and hides icons. Nothing is recorded or kept.")
                 .font(.system(size: 13))
                 .foregroundStyle(Ink.textDim)
                 .frame(maxWidth: 420, alignment: .leading)

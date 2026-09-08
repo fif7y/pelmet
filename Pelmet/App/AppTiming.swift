@@ -19,6 +19,24 @@ enum AppTiming {
     /// Precaptured reveal-cover freshness: an appearance/wallpaper change
     /// while idle would flash a stale background.
     static let revealCoverFreshness: TimeInterval = 900
+    /// Style signatures (2026-09-08): the agent's own reveal slide is ~300ms
+    /// and its conceal fade ~150–230ms; these sit clearly apart from both.
+    /// Fade: the empty-bar cover's crossfade on reveal, the opaque strip's
+    /// dissolve on hide. Smooth: the icons-only slide toward the chevron.
+    static let fadeRevealDuration: CFTimeInterval = 0.26
+    static let fadeExitDuration: CFTimeInterval = 0.34
+    static let smoothExitDuration: CFTimeInterval = 0.24
+    static let smoothRevealDuration: CFTimeInterval = 0.32
+    /// Minimum time the reveal pictures stay up: the agent's slide-in is
+    /// ~300ms and Pelmet's separators attach in the same reflow.
+    static let entranceCoverHold: TimeInterval = 0.45
+    /// Minimum time the empty-bar cover stays over a conceal: the agent's
+    /// own fade of the concealed items runs ~300ms past the swap.
+    static let exitCoverHold: TimeInterval = 0.42
+    /// Revealed-strip snapshot (taken at reveal settle) painted at once on the
+    /// next Instant/Fade reveal. Long-lived: engine item changes invalidate it
+    /// explicitly; the cap only guards wallpaper/appearance drift.
+    static let revealedStripFreshness: TimeInterval = 900
     /// Tidy waits for the full reveal to land before rebuilding.
     static let tidyRevealWait: Duration = .seconds(1.2)
     /// Newly toggled-on extras become hostable before placing.

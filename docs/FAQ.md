@@ -36,13 +36,14 @@ grant recorded there dies with it. Move it, relaunch, and press Grant access
 again. Adding the row with the + button works too.
 
 **Why does Pelmet ask for Screen Recording? Do I need it?**
-Only for the Fade and Instant reveal styles. macOS slides icons back in with
-an animation of its own, and those two styles hide that slide behind a still
-of the empty menu bar, which needs Screen Recording. Nothing is recorded or
-kept. It's optional, and the default Smooth style never asks. Onboarding
-offers it next to Accessibility, and Settings > General > Permissions shows
-whether it's on. macOS re-confirms Screen Recording roughly monthly for all
-apps. If the nag bothers you, turn the permission off and keep going.
+Only for the animation styles. macOS shows and hides menu bar icons with an
+animation of its own that no app can turn off, so Pelmet's Instant, Smooth
+and Fade styles play over it using two stills of the menu bar: one empty,
+one with the icons. Nothing is recorded or kept. It's optional. Without it,
+icons show and hide the way macOS does it. Onboarding offers it next to
+Accessibility, and Settings > General > Permissions shows whether it's on.
+macOS re-confirms Screen Recording roughly monthly for all apps. If the nag
+bothers you, turn the permission off and keep going.
 
 **Some system icons can't be hidden.**
 macOS protects a small set of system items (Clock, Control Center, Siri). Pelmet

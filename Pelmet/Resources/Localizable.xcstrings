@@ -523,60 +523,60 @@
         }
       }
     },
-    "Accessibility is how Pelmet sees the icons and moves them, nothing leaves your Mac. Screen Recording is optional: the Fade and Instant styles use a still of the empty menu bar to cover the moment icons come back. Nothing is recorded or kept.": {
+    "Accessibility is how Pelmet sees the icons and moves them, nothing leaves your Mac. Screen Recording is optional: it lets Pelmet's animation styles play over the way macOS shows and hides icons. Nothing is recorded or kept.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Über die Bedienungshilfen sieht Pelmet die Symbole und bewegt sie, nichts verlässt deinen Mac. Bildschirmaufnahme ist optional: Die Stile „Überblenden“ und „Sofort“ nutzen ein Standbild der leeren Menüleiste, um den Moment abzudecken, in dem Symbole zurückkehren. Es wird nichts aufgezeichnet oder gespeichert."
+            "value": "Über die Bedienungshilfen sieht Pelmet die Symbole und bewegt sie, nichts verlässt deinen Mac. Bildschirmaufnahme ist optional: Sie lässt Pelmets Animationsstile über dem Ein- und Ausblenden von macOS laufen. Es wird nichts aufgezeichnet oder gespeichert."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La accesibilidad es cómo Pelmet ve los iconos y los mueve, nada sale de tu Mac. La grabación de pantalla es opcional: los estilos Fundido e Instantánea usan una imagen fija de la barra de menús vacía para cubrir el momento en que vuelven los iconos. No se graba ni se guarda nada."
+            "value": "La accesibilidad es cómo Pelmet ve los iconos y los mueve, nada sale de tu Mac. La grabación de pantalla es opcional: permite que los estilos de animación de Pelmet se reproduzcan sobre la forma en que macOS muestra y oculta los iconos. No se graba ni se guarda nada."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L’accessibilité est ce qui permet à Pelmet de voir les icônes et de les déplacer, rien ne quitte votre Mac. L’enregistrement de l’écran est facultatif : les styles Fondu et Instantané utilisent une image fixe de la barre des menus vide pour couvrir le moment où les icônes reviennent. Rien n’est enregistré ni conservé."
+            "value": "L’accessibilité est ce qui permet à Pelmet de voir les icônes et de les déplacer, rien ne quitte votre Mac. L’enregistrement de l’écran est facultatif : il permet aux styles d’animation de Pelmet de se jouer par-dessus la façon dont macOS affiche et masque les icônes. Rien n’est enregistré ni conservé."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "L’accessibilità è il modo in cui Pelmet vede le icone e le sposta, nulla lascia il tuo Mac. La registrazione schermo è facoltativa: gli stili Dissolvenza e Istantanea usano un fermo immagine della barra dei menu vuota per coprire il momento in cui le icone tornano. Non viene registrato né conservato nulla."
+            "value": "L’accessibilità è il modo in cui Pelmet vede le icone e le sposta, nulla lascia il tuo Mac. La registrazione schermo è facoltativa: consente agli stili di animazione di Pelmet di sovrapporsi al modo in cui macOS mostra e nasconde le icone. Non viene registrato né conservato nulla."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクセシビリティは、Pelmetがアイコンを認識して移動するための仕組みで、データがMacの外に出ることはありません。画面収録は任意です。「フェード」と「即時」スタイルは、空のメニューバーの静止画でアイコンが戻る瞬間を覆います。何も記録・保存されません。"
+            "value": "アクセシビリティは、Pelmetがアイコンを認識して移動するための仕組みで、データがMacの外に出ることはありません。画面収録は任意です。Pelmetのアニメーションスタイルを、macOS標準のアイコン表示・非表示の上で再生できるようにします。何も記録・保存されません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "손쉬운 사용은 Pelmet이 아이콘을 인식하고 옮기는 방식이며 어떤 것도 Mac 밖으로 나가지 않습니다. 화면 기록은 선택 사항입니다. 페이드와 즉시 스타일은 빈 메뉴 막대의 정지 화면으로 아이콘이 돌아오는 순간을 가립니다. 아무것도 기록하거나 저장하지 않습니다."
+            "value": "손쉬운 사용은 Pelmet이 아이콘을 인식하고 옮기는 방식이며 어떤 것도 Mac 밖으로 나가지 않습니다. 화면 기록은 선택 사항입니다. Pelmet의 애니메이션 스타일이 macOS가 아이콘을 표시하고 숨기는 방식 위에서 재생되게 합니다. 아무것도 기록하거나 저장하지 않습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "A acessibilidade é como o Pelmet vê os ícones e os move, nada sai do seu Mac. A gravação de tela é opcional: os estilos Esmaecer e Instantânea usam uma imagem parada da barra de menus vazia para cobrir o momento em que os ícones voltam. Nada é gravado nem guardado."
+            "value": "A acessibilidade é como o Pelmet vê os ícones e os move, nada sai do seu Mac. A gravação de tela é opcional: permite que os estilos de animação do Pelmet rodem sobre a forma como o macOS mostra e esconde os ícones. Nada é gravado nem guardado."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Универсальный доступ — так Pelmet видит значки и перемещает их, ничего не покидает ваш Mac. Запись экрана необязательна: стили «Плавно» и «Мгновенно» используют стоп-кадр пустой строки меню, чтобы прикрыть момент возвращения значков. Ничего не записывается и не хранится."
+            "value": "Универсальный доступ — так Pelmet видит значки и перемещает их, ничего не покидает ваш Mac. Запись экрана необязательна: она позволяет стилям анимации Pelmet проигрываться поверх того, как macOS показывает и скрывает значки. Ничего не записывается и не хранится."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "辅助功能是 Pelmet 识别并移动图标的方式，数据不会离开你的 Mac。屏幕录制是可选的：“淡入淡出”和“即时”样式用一张空菜单栏的静态图遮住图标返回的瞬间。不会录制或保存任何内容。"
+            "value": "辅助功能是 Pelmet 识别并移动图标的方式，数据不会离开你的 Mac。屏幕录制是可选的：它让 Pelmet 的动画样式覆盖在 macOS 显示和隐藏图标的方式之上。不会录制或保存任何内容。"
           }
         }
       }
@@ -983,6 +983,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "始终显示在菜单栏"
+          }
+        }
+      }
+    },
+    "Animation": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animación"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animation"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アニメーション"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "애니메이션"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animação"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Анимация"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "动画"
           }
         }
       }
@@ -3539,6 +3597,122 @@
         }
       }
     },
+    "Icons appear and vanish in one frame.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole erscheinen und verschwinden in einem Bild."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los iconos aparecen y desaparecen en un solo fotograma."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les icônes apparaissent et disparaissent en une image."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le icone appaiono e spariscono in un solo fotogramma."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンが1フレームで現れ、消えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘이 한 프레임에 나타나고 사라집니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os ícones aparecem e somem em um único quadro."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Значки появляются и исчезают за один кадр."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图标在一帧内出现和消失。"
+          }
+        }
+      }
+    },
+    "Icons fade in and dissolve out in place.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole blenden an Ort und Stelle ein und aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los iconos aparecen y se desvanecen en su sitio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les icônes apparaissent et s’estompent sur place."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le icone sfumano in entrata e in uscita sul posto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンがその場でフェードイン・フェードアウトします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘이 제자리에서 페이드 인/아웃됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os ícones surgem e esmaecem no lugar."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Значки проявляются и растворяются на месте."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图标在原位淡入淡出。"
+          }
+        }
+      }
+    },
     "Icons from the same app hide together": {
       "localizations": {
         "de": {
@@ -3593,6 +3767,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "同一应用的图标会一起隐藏"
+          }
+        }
+      }
+    },
+    "Icons slide in from the chevron and tuck back behind it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole gleiten vom Chevron herein und schieben sich dahinter zurück."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los iconos se deslizan desde el chevrón y vuelven a esconderse tras él."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les icônes glissent depuis le chevron et se rangent derrière lui."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le icone scorrono dal chevron e si ritirano dietro di esso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンがシェブロンからスライドして現れ、その後ろに戻ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘이 셰브론에서 슬라이드하며 나타나고 그 뒤로 돌아갑니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os ícones deslizam a partir do chevron e se recolhem atrás dele."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Значки выезжают из-за шеврона и прячутся за него обратно."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图标从 V 形箭头滑入，再收回到它后面。"
           }
         }
       }
@@ -4119,60 +4351,60 @@
         }
       }
     },
-    "Lets the Fade and Instant styles cover the menu bar while icons come back.": {
+    "Lets the animation styles play over the system's own show and hide.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deckt bei den Stilen „Überblenden“ und „Sofort“ die Menüleiste ab, während Symbole zurückkehren."
+            "value": "Lässt die Animationsstile über dem Ein- und Ausblenden des Systems laufen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Permite que los estilos Fundido e Instantánea cubran la barra de menús mientras vuelven los iconos."
+            "value": "Permite que los estilos de animación se reproduzcan sobre el mostrar y ocultar del sistema."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Permet aux styles Fondu et Instantané de couvrir la barre des menus pendant que les icônes reviennent."
+            "value": "Permet aux styles d’animation de se jouer par-dessus l’affichage et le masquage du système."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Consente agli stili Dissolvenza e Istantanea di coprire la barra dei menu mentre le icone tornano."
+            "value": "Consente agli stili di animazione di sovrapporsi al mostra/nascondi del sistema."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「フェード」と「即時」スタイルで、アイコンが戻る間メニューバーを覆えるようにします。"
+            "value": "アニメーションスタイルをシステム標準の表示・非表示の上で再生できるようにします。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "페이드와 즉시 스타일이 아이콘이 돌아오는 동안 메뉴 막대를 가릴 수 있게 합니다."
+            "value": "애니메이션 스타일이 시스템의 표시/숨김 위에서 재생되게 합니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Permite que os estilos Esmaecer e Instantânea cubram a barra de menus enquanto os ícones voltam."
+            "value": "Permite que os estilos de animação rodem sobre o mostrar e esconder do sistema."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Позволяет стилям «Плавно» и «Мгновенно» прикрывать строку меню, пока значки возвращаются."
+            "value": "Позволяет стилям анимации проигрываться поверх системного показа и скрытия."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "让“淡入淡出”和“即时”样式在图标返回时遮住菜单栏。"
+            "value": "让动画样式覆盖在系统自带的显示与隐藏之上。"
           }
         }
       }
@@ -5163,60 +5395,60 @@
         }
       }
     },
-    "Optional. Without it, icons slide back in the way macOS does it.": {
+    "Optional. Without it, icons show and hide the way macOS does it.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Optional. Ohne sie gleiten Symbole so zurück, wie macOS es tut."
+            "value": "Optional. Ohne sie erscheinen und verschwinden Symbole so, wie macOS es tut."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opcional. Sin él, los iconos vuelven deslizándose, como lo hace macOS."
+            "value": "Opcional. Sin él, los iconos se muestran y ocultan como lo hace macOS."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Facultatif. Sans lui, les icônes reviennent en glissant, comme macOS le fait."
+            "value": "Facultatif. Sans lui, les icônes apparaissent et disparaissent comme macOS le fait."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Facoltativo. Senza, le icone tornano scorrendo, come fa macOS."
+            "value": "Facoltativo. Senza, le icone appaiono e scompaiono come fa macOS."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "任意です。なければmacOSと同じようにアイコンがスライドして戻ります。"
+            "value": "任意です。なければmacOSと同じようにアイコンが表示・非表示になります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "선택 사항입니다. 없으면 macOS 방식대로 아이콘이 슬라이드하며 돌아옵니다."
+            "value": "선택 사항입니다. 없으면 macOS 방식대로 아이콘이 표시되고 숨겨집니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opcional. Sem ela, os ícones voltam deslizando, como o macOS faz."
+            "value": "Opcional. Sem ela, os ícones aparecem e somem como o macOS faz."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Необязательно. Без него значки возвращаются скольжением, как в macOS."
+            "value": "Необязательно. Без него значки показываются и скрываются так, как это делает macOS."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "可选。没有它，图标会像 macOS 那样滑动回来。"
+            "value": "可选。没有它，图标会按 macOS 的方式显示和隐藏。"
           }
         }
       }
@@ -6497,64 +6729,6 @@
         }
       }
     },
-    "Reveal animation": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Animation"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Animación"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Animation"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Animazione"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "表示アニメーション"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "표시 애니메이션"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Animação"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Анимация показа"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "显示动画"
-          }
-        }
-      }
-    },
     "Reveal on click in empty menu bar area": {
       "localizations": {
         "de": {
@@ -7653,6 +7827,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "开始使用 Pelmet"
+          }
+        }
+      }
+    },
+    "Style": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stil"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estilo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Style"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stile"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スタイル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스타일"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estilo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Стиль"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "样式"
           }
         }
       }

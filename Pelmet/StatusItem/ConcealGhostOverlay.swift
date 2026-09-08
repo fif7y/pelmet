@@ -1,11 +1,12 @@
 // ConcealGhostOverlay.swift
-// The reveal cover. The agent animates reveals with a slide-in of its own;
-// the Instant and Fade styles hide that slide under a snapshot of the still-
-// empty strip, floated over the bar until the swap lands, then dropped
-// (Instant) or faded (Fade). Conceals need no cover: the agent fades
-// concealed items in place on its own (frame-burst 2026-09-08, 27.0 b8) —
-// the manufactured exit strip this file used to float was retired in 0.2.14
-// (issue #5: the Smooth slide dragged the wallpaper along).
+// Snapshot covers floated over the bar. The agent animates every swap on
+// its own (a slide-in on reveal, a fade in place on conceal — frame-burst
+// 2026-09-08, 27.0 b8) and offers no way to turn that off, so Pelmet's
+// styles are pictures animated OVER it: an empty-bar capture hides the
+// agent's motion, and a picture of the icons (opaque, or cut out against
+// the empty bar so it can move without smearing the wallpaper) performs the
+// style's own move — see `AnimationRecipe` in TransitionCoordinator. Without
+// a usable capture a style falls back to the agent's animation.
 
 import AppKit
 import PelmetEngine
@@ -64,7 +65,15 @@ final class ConcealGhostOverlay {
     struct GhostSet {
         fileprivate let overlays: [ConcealGhostOverlay]
         func dismiss() { for overlay in overlays { overlay.dismiss() } }
-        func fadeOut() { for overlay in overlays { overlay.fadeOut() } }
+        func fadeOut(duration: CFTimeInterval = ConcealGhostOverlay.dismissDuration, slide: Bool = false) {
+            for overlay in overlays { overlay.fadeOut(duration: duration, slide: slide) }
+        }
+        /// Perform a recipe move: `entering` runs it from the offset/faded
+        /// state to rest, otherwise from rest away. A `.pop` is a no-op
+        /// (the picture is simply there, or simply lifted by the caller).
+        func animate(_ move: AnimationRecipe.Move, entering: Bool) {
+            for overlay in overlays { overlay.animate(move, entering: entering) }
+        }
     }
 
     /// SCShareableContent lookup is the slow part (can be 100ms+) — cache the
@@ -186,6 +195,158 @@ final class ConcealGhostOverlay {
         return shots
     }
 
+    /// The Smooth exit slides the icons alone. SCK cannot hand them over
+    /// (excluding the wallpaper window drops the bar's items too — they are
+    /// drawn inside the WindowServer-owned Menubar window, probed
+    /// 2026-09-08), so the glyphs are cut out by difference against the
+    /// empty-bar capture taken at the last conceal settle: a pixel that
+    /// matches the background is background. `punch` lists x-ranges
+    /// cleared regardless —
+    /// the chevron flips glyph between the two captures (absolute x, points,
+    /// same origin as the strip frames). Where the captures don't overlap
+    /// the strip stays opaque; a strip that differs almost everywhere
+    /// (animated wallpaper) returns nil and the caller falls back to the
+    /// agent's animation.
+    static func iconsOnly(
+        _ strips: [BarSnapshot], background: [BarSnapshot],
+        punch: [ClosedRange<CGFloat>] = [], keep: ClosedRange<CGFloat>? = nil
+    ) -> [BarSnapshot]? {
+        var out: [BarSnapshot] = []
+        for strip in strips {
+            guard let bg = background.first(where: {
+                abs($0.windowFrame.minY - strip.windowFrame.minY) < 1
+                    && $0.windowFrame.intersects(strip.windowFrame)
+            }) else { return nil }
+            guard var cut = cutOut(strip: strip, background: bg, punch: punch) else { return nil }
+            var frame = strip.windowFrame
+            // Only the strip's own columns: a system icon at the picture's
+            // edge that changed between the captures (AirPods state,
+            // battery %) must not ride the slide — and a window that ends
+            // at the strip's edge CLIPS the slide, so the icons emerge from
+            // behind the chevron instead of crossing over it.
+            if let keep {
+                let dx = strip.windowFrame.minX - primaryOffset(of: strip, in: strips)
+                let scale = CGFloat(cut.width) / strip.windowFrame.width
+                let x0 = max(0, (keep.lowerBound + dx - strip.windowFrame.minX) * scale)
+                let x1 = min(CGFloat(cut.width), (keep.upperBound + dx - strip.windowFrame.minX) * scale)
+                guard x1 - x0 > 4 * scale,
+                      let cropped = cut.cropping(to: CGRect(x: x0.rounded(), y: 0, width: (x1 - x0).rounded(), height: CGFloat(cut.height)))
+                else { return nil }
+                cut = cropped
+                frame = NSRect(
+                    x: strip.windowFrame.minX + x0.rounded() / scale, y: frame.minY,
+                    width: (x1 - x0).rounded() / scale, height: frame.height
+                )
+            }
+            out.append(BarSnapshot(image: cut, windowFrame: frame, takenAt: strip.takenAt))
+        }
+        return out.isEmpty ? nil : out
+    }
+
+    /// The same pictures with `columns` (absolute x, points) made
+    /// transparent — the empty-bar cover with the chevron cut out, so the
+    /// real chevron (which flips at the swap) shows through instead of the
+    /// picture's stale glyph.
+    static func clearing(_ snaps: [BarSnapshot], columns: [ClosedRange<CGFloat>]) -> [BarSnapshot] {
+        guard !columns.isEmpty else { return snaps }
+        return snaps.map { snap in
+            let w = snap.image.width, h = snap.image.height
+            guard let px = rgba(snap.image, width: w, height: h) else { return snap }
+            let scale = CGFloat(w) / snap.windowFrame.width
+            for range in columns {
+                let x0 = max(0, Int(((range.lowerBound - snap.windowFrame.minX) * scale).rounded()))
+                let x1 = min(w, Int(((range.upperBound - snap.windowFrame.minX) * scale).rounded()))
+                guard x1 > x0 else { continue }
+                for y in 0..<h {
+                    let row = px.pointer + y * px.stride
+                    for x in x0..<x1 { (row + x * 4).update(repeating: 0, count: 4) }
+                }
+            }
+            guard let image = px.context.makeImage() else { return snap }
+            return BarSnapshot(image: image, windowFrame: snap.windowFrame, takenAt: snap.takenAt)
+        }
+    }
+
+    /// Snapshots on other displays are the primary strip translated
+    /// right-anchored (snapshotSet); `keep` is given in primary coordinates.
+    private static func primaryOffset(of strip: BarSnapshot, in strips: [BarSnapshot]) -> CGFloat {
+        guard let primary = strips.min(by: { abs($0.windowFrame.minX) < abs($1.windowFrame.minX) }) else { return 0 }
+        return primary.windowFrame.minX
+    }
+
+    private static func cutOut(
+        strip: BarSnapshot, background bg: BarSnapshot, punch: [ClosedRange<CGFloat>]
+    ) -> CGImage? {
+        let overlap = strip.windowFrame.intersection(bg.windowFrame)
+        guard overlap.width > 4 else { return nil }
+        let scale = CGFloat(strip.image.width) / strip.windowFrame.width
+        guard abs(CGFloat(bg.image.width) / bg.windowFrame.width - scale) < 0.01 else { return nil }
+        let w = strip.image.width, h = min(strip.image.height, bg.image.height)
+        guard let a = rgba(strip.image, width: w, height: h),
+              let b = rgba(bg.image, width: bg.image.width, height: h) else { return nil }
+        let ax0 = Int(((overlap.minX - strip.windowFrame.minX) * scale).rounded())
+        let bx0 = Int(((overlap.minX - bg.windowFrame.minX) * scale).rounded())
+        let span = min(Int((overlap.width * scale).rounded()), w - ax0, bg.image.width - bx0)
+        guard span > 0 else { return nil }
+        var changed = 0
+        for y in 0..<h {
+            let arow = a.pointer + y * a.stride
+            let brow = b.pointer + y * b.stride
+            for i in 0..<span {
+                let ap = arow + (ax0 + i) * 4
+                let bp = brow + (bx0 + i) * 4
+                let d = max(
+                    abs(Int(ap[0]) - Int(bp[0])),
+                    abs(Int(ap[1]) - Int(bp[1])),
+                    abs(Int(ap[2]) - Int(bp[2]))
+                )
+                // Soft key: identical → gone, 26+ levels off → kept whole.
+                let alpha = d <= 6 ? 0 : d >= 26 ? 255 : (d - 6) * 255 / 20
+                if alpha == 255 { changed += 1 }
+                if alpha < 255 {
+                    ap[0] = UInt8(Int(ap[0]) * alpha / 255)
+                    ap[1] = UInt8(Int(ap[1]) * alpha / 255)
+                    ap[2] = UInt8(Int(ap[2]) * alpha / 255)
+                    ap[3] = UInt8(alpha)
+                }
+            }
+        }
+        for range in punch {
+            let x0 = max(0, Int(((range.lowerBound - strip.windowFrame.minX) * scale).rounded()))
+            let x1 = min(w, Int(((range.upperBound - strip.windowFrame.minX) * scale).rounded()))
+            guard x1 > x0 else { continue }
+            for y in 0..<h {
+                let row = a.pointer + y * a.stride
+                for x in x0..<x1 { (row + x * 4).update(repeating: 0, count: 4) }
+            }
+        }
+        let ratio = Double(changed) / Double(span * h)
+        guard ratio < 0.6 else {
+            PelmetLog.log("ghost: cut-out skipped — \(Int(ratio * 100))% of the strip differs from the background")
+            return nil
+        }
+        return a.context.makeImage()
+    }
+
+    private struct Pixels {
+        let context: CGContext
+        let pointer: UnsafeMutablePointer<UInt8>
+        let stride: Int
+    }
+
+    /// Premultiplied BGRA8 copy of `image`, `width`×`height` from its top-left.
+    private static func rgba(_ image: CGImage, width: Int, height: Int) -> Pixels? {
+        let stride = width * 4
+        guard let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: stride,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ), let data = context.data else { return nil }
+        // Anchor the top rows: both captures share the bar's top edge.
+        context.draw(image, in: CGRect(x: 0, y: height - image.height, width: image.width, height: image.height))
+        return Pixels(context: context, pointer: data.assumingMemoryBound(to: UInt8.self), stride: stride)
+    }
+
     /// Capture now and float immediately. Call `fadeOut()`/`dismiss()` once
     /// the swap beneath has been issued; a safety timeout fades regardless.
     static func begin(over rect: CGRect?, safety: TimeInterval = 0.5) async -> GhostSet? {
@@ -193,12 +354,12 @@ final class ConcealGhostOverlay {
     }
 
     /// Float pre-captured snapshots — synchronous, zero capture latency.
-    static func begin(from snaps: [BarSnapshot], safety: TimeInterval = 0.5) -> GhostSet? {
+    static func begin(from snaps: [BarSnapshot], safety: TimeInterval = 0.5, startHidden: Bool = false) -> GhostSet? {
         guard !snaps.isEmpty else { return nil }
-        return GhostSet(overlays: snaps.map { ConcealGhostOverlay(snapshot: $0, safety: safety) })
+        return GhostSet(overlays: snaps.map { ConcealGhostOverlay(snapshot: $0, safety: safety, startHidden: startHidden) })
     }
 
-    private init(snapshot: BarSnapshot, safety: TimeInterval) {
+    private init(snapshot: BarSnapshot, safety: TimeInterval, startHidden: Bool = false) {
         let frame = snapshot.windowFrame
         let shot = snapshot.image
         window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
@@ -212,6 +373,7 @@ final class ConcealGhostOverlay {
         )
         imageView.frame = NSRect(origin: .zero, size: frame.size)
         imageView.wantsLayer = true
+        if startHidden { imageView.layer?.opacity = 0 }
         window.contentView = imageView
         window.orderFrontRegardless()
         window.displayIfNeeded()
@@ -239,17 +401,71 @@ final class ConcealGhostOverlay {
         standDown()
     }
 
-    /// Fade the cover out — ease-in (holds visibility, then accelerates away),
-    /// the mirror of the show fade's ease-out. Idempotent.
-    private static let dismissDuration: CFTimeInterval = 0.16
+    /// Ease-out into rest, ease-in away — the agent's own curves.
+    func animate(_ move: AnimationRecipe.Move, entering: Bool) {
+        guard !finished, let layer = imageView.layer else { return }
+        // Slides keep the agent's own curves (ease-out in, ease-in away);
+        // fades run symmetric so the whole duration reads as a crossfade.
+        let slideCurve: (Float, Float, Float, Float) = entering ? (0.16, 1, 0.3, 1) : (0.55, 0, 0.8, 0.4)
+        let fadeCurve: (Float, Float, Float, Float) = (0.42, 0, 0.58, 1)
+        let curve = { if case .slide = move { return slideCurve } else { return fadeCurve } }()
+        // The start state must be ON the layer before the animation reads
+        // its "from" — a picture floated with startHidden may not have had
+        // a layer yet when its opacity was zeroed.
+        if entering, case .pop = move {} else if entering { layer.opacity = 0 }
+        switch move {
+        case .pop:
+            return
+        case .fade(let duration):
+            if entering {
+                AlphaFade.run(imageView, to: 1, duration: duration, controlPoints: curve)
+            } else {
+                fadeOut(duration: duration, controlPoints: curve)
+            }
+        case .slide(let dx, let duration):
+            let rest = layer.position.x
+            let away = rest + dx
+            let slide = CABasicAnimation(keyPath: "position.x")
+            slide.fromValue = entering ? away : rest
+            slide.toValue = entering ? rest : away
+            slide.duration = duration
+            slide.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
+            layer.add(slide, forKey: "pelmetSlide")
+            layer.position.x = entering ? rest : away
+            if entering {
+                // Opaque early so the travel itself reads, not just a fade.
+                AlphaFade.run(imageView, to: 1, duration: min(duration, 0.14), controlPoints: curve)
+            } else {
+                fadeOut(duration: duration)
+            }
+        }
+    }
 
-    func fadeOut() {
+    /// Fade the cover out — ease-in (holds visibility, then accelerates away),
+    /// the mirror of the show fade's ease-out. Idempotent. `slide` adds a
+    /// drift toward the chevron (the Smooth exit's tuck-away).
+    static let dismissDuration: CFTimeInterval = 0.16
+
+    func fadeOut(
+        duration: CFTimeInterval = ConcealGhostOverlay.dismissDuration, slide: Bool = false,
+        controlPoints: (Float, Float, Float, Float) = (0.55, 0, 0.8, 0.4)
+    ) {
         guard !finished else { return }
         finished = true
+        if slide, let layer = imageView.layer {
+            let shift = min(imageView.bounds.width * 0.5, 80)
+            let anim = CABasicAnimation(keyPath: "position.x")
+            anim.fromValue = layer.position.x
+            anim.toValue = layer.position.x + shift
+            anim.duration = duration
+            anim.timingFunction = CAMediaTimingFunction(controlPoints: 0.55, 0, 0.8, 0.4)
+            layer.add(anim, forKey: "pelmetSlideOut")
+            layer.position.x += shift
+        }
         // Strong self: the completion is the count's decrement — a weak
         // capture could leak activeStripCount high and suppress per-item
         // ghosts forever.
-        AlphaFade.run(imageView, to: 0, duration: Self.dismissDuration, controlPoints: (0.55, 0, 0.8, 0.4)) { [window, self] in
+        AlphaFade.run(imageView, to: 0, duration: duration, controlPoints: controlPoints) { [window, self] in
             window.orderOut(nil)
             self.standDown()
         }

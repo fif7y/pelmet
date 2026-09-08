@@ -114,10 +114,10 @@ On first launch Pelmet asks for one permission:
   everything.
 
 Screen Recording is optional, offered next to Accessibility in onboarding
-and skippable. The Fade and Instant reveal styles use it to hold a still of
-the empty menu bar over the moment icons come back, hiding the slide macOS
-plays on its own. Nothing is recorded or kept. The default Smooth style
-never asks for it.
+and skippable. The animation styles use it: macOS shows and hides icons
+with an animation of its own, and Pelmet's Instant, Smooth and Fade play
+over it using two stills of the menu bar. Nothing is recorded or kept.
+Without it, icons show and hide the way macOS does it.
 
 Pelmet is notarized by Apple and ships with the hardened runtime. It isn't
 sandboxed, managing the menu bar requires APIs the App Store sandbox
