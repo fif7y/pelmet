@@ -87,6 +87,10 @@ final class PlacementController {
                     pendingPlacements.insert(id)
                     continue
                 }
+                if let after = framelessRetryAfter[id], after > .now {
+                    pendingPlacements.insert(id)
+                    continue
+                }
                 // Logged per attempt, not per flush: a concealed section's
                 // items ride every flush until their reveal, silently.
                 // itemsChanged fires this flush mid-conceal too (a rescue's
@@ -108,6 +112,22 @@ final class PlacementController {
                     // A verified reveal-time placement ends any rescue
                     // ping-pong — the item is truly in its slot.
                     rescueAttempts.removeValue(forKey: id)
+                    frameless.removeValue(forKey: id)
+                    framelessRetryAfter.removeValue(forKey: id)
+                } else if let since = frameless[id] {
+                    // No frame at all. If its section is on screen right now
+                    // the registration is parked — ask for an adoption
+                    // window (rate-limited per bundle), and retry slowly.
+                    framelessRetryAfter[id] = .now.addingTimeInterval(Self.framelessRetryInterval)
+                    let onScreen = section == .visible || appState.currentRevealedSections.contains(section)
+                    if onScreen, let bundle = id.bundleID, bundle != PelmetBundle.mainID,
+                       Date.now.timeIntervalSince(since) > 2,
+                       (readoptRequested[bundle].map { Date.now.timeIntervalSince($0) > Self.readoptInterval } ?? true) {
+                        readoptRequested[bundle] = .now
+                        PelmetLog.log("place: \(id.rawValue) has had no frame for \(Int(Date.now.timeIntervalSince(since)))s while its section is on screen — asking for an adoption window")
+                        let state = appState
+                        Task { await state.reopenAdoption(for: bundle) }
+                    }
                 }
                 // Still unmeasurable (section concealed again, no frame) —
                 // requeue for the next reveal settle. Trapped items moved to
@@ -129,6 +149,15 @@ final class PlacementController {
         }
     }
 
+    /// Items whose last attempt found no frame at all, with the time of the
+    /// first such miss. Retried on a slow clock, and once the item should be
+    /// visible (its section revealed) the app is asked to re-adopt it.
+    private var frameless: [ItemID: Date] = [:]
+    private var framelessRetryAfter: [ItemID: Date] = [:]
+    private var readoptRequested: [String: Date] = [:]
+    private static let framelessRetryInterval: TimeInterval = 30
+    private static let readoptInterval: TimeInterval = 120
+
     /// Placements held until the hidden cluster is materialized: their drag
     /// would touch the hidden zone while its items are absent. Stay queued
     /// (extras included) and try again at the next reveal settle.
@@ -149,6 +178,48 @@ final class PlacementController {
     /// under this reveal. The judgement is `OrderDrift.misplaced`; this
     /// adds the budget and the moments to stay out of the way (a synthetic
     /// drag in flight, a transition, a user ⌘-drag adoption still landing).
+    // MARK: - Parked registrations (in the model, absent from the bar)
+
+    /// Bundles already given an adoption window in their current process
+    /// lifetime. One window per launch: an app that legitimately drops its
+    /// icon while running must not have the assertion dropped every reveal.
+    private var readoptedPIDs: [String: pid_t] = [:]
+    /// Bundles seen missing at the previous reveal settle. A reveal's
+    /// "settled" callback runs while the agent is still materializing the
+    /// cluster (Snib and OpenClip read missing 23ms after a settle,
+    /// 2026-09-09), so one sighting is not evidence.
+    private var missingAtLastSettle: Set<String> = []
+
+    /// A model item whose app is running but which is neither live nor
+    /// concealed while its section is on screen has re-registered under the
+    /// assertion and parked (ChatGPT Classic re-creates its status item at
+    /// runtime, 2026-09-09). Same remedy as a relaunch: an adoption window.
+    func readoptMissing(in snap: EngineSnapshot) {
+        guard let appState else { return }
+        let revealed = appState.currentRevealedSections
+        let present = Set(snap.items.map(\.id.sectionKey)).union(snap.concealed.map(\.sectionKey))
+        var running: [String: pid_t] = [:]
+        for app in NSWorkspace.shared.runningApplications {
+            if let b = app.bundleIdentifier { running[b] = app.processIdentifier }
+        }
+        var missingNow: Set<String> = []
+        for (key, section) in appState.settings.sectionModel.assignments {
+            guard section == .visible || revealed.contains(section),
+                  let bundle = key.bundleID, bundle != PelmetBundle.mainID,
+                  !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
+                  let pid = running[bundle],
+                  !present.contains(key.sectionKey)
+            else { continue }
+            missingNow.insert(bundle)
+            guard missingAtLastSettle.contains(bundle), readoptedPIDs[bundle] != pid else { continue }
+            readoptedPIDs[bundle] = pid
+            PelmetLog.log("readopt: \(bundle) is running and assigned \(section) but had no registration at two reveals — opening an adoption window")
+            let state = appState
+            Task { await state.reopenAdoption(for: bundle) }
+        }
+        missingAtLastSettle = missingNow
+    }
+
     /// One measurement: the chevron's x and the wrong-side ids, or nil when
     /// the chevron has no in-band frame.
     private struct DriftReading: Equatable {
@@ -196,6 +267,16 @@ final class PlacementController {
         let first = await engine.snapshot()
         appState.updateSnapshot(first)
         guard let a = readDrift(first) else { return }
+        defer {
+            // Absence is judged on a later read than presence: the settle
+            // callback leads the agent's materialization by a few hundred ms.
+            Task { [weak self] in
+                try? await Task.sleep(for: Self.driftConfirmDelay)
+                guard let self, let appState = self.appState,
+                      !appState.isTransitioning, appState.currentRevealedSections.contains(.hidden) else { return }
+                self.readoptMissing(in: await self.engine.snapshot())
+            }
+        }
         if a.misplaced.isEmpty {
             for id in driftAttempts.keys { driftAttempts.removeValue(forKey: id) }
             PelmetLog.log("drift: none (chevron@\(a.chevronMinX), \(a.measuredCount) measured)")
@@ -387,8 +468,10 @@ final class PlacementController {
             let frame = item.frame
         else {
             PelmetLog.log("place: no frame for \(id.rawValue) — skipping physical move (concealed?)")
+            if frameless[id] == nil { frameless[id] = .now }
             return false
         }
+        frameless.removeValue(forKey: id)
         // In flight from HERE: the pre-settle and the frame lookup above are
         // ~2s of waiting with no synthetic events, and counting them held
         // the rehide (3s deferral) and swallowed hover reveals after every

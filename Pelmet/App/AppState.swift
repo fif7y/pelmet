@@ -250,6 +250,20 @@ final class AppState {
         }
     }
 
+    /// A known item that is in the model but absent from the bar even when
+    /// its section is revealed has re-registered under the assertion and
+    /// parked (ChatGPT Classic re-creates its status item at runtime, 2026-09-09;
+    /// the icon showed for a moment and never came back). Same remedy as a
+    /// relaunch: a brief adoption window, then place it.
+    func reopenAdoption(for bundle: String) async {
+        let keys = settings.sectionModel.assignments.keys.filter { $0.bundleID == bundle }
+        placement.pendingPlacements.formUnion(keys)
+        if await engine.openAdoptionWindow(for: bundle) {
+            updateSnapshot(await engine.snapshot())
+            placement.flushPendingPlacements()
+        }
+    }
+
     private func queueRelaunchedBundlePlacement(_ bundle: String) {
         guard bundle != PelmetBundle.mainID,
               !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
@@ -946,6 +960,7 @@ final class AppState {
     /// instead of adopting (see BarAdoption.reconcile).
     private var lastAdoptionChevronX: CGFloat?
     private var lastAdoptionPositions: [String: CGFloat] = [:]
+    private var lastAdoptionPending: [String: PelmetCore.Section] = [:]
 
     var isTransitioning: Bool {
         if case .transitioning = rehide.state { return true }
@@ -1048,6 +1063,7 @@ final class AppState {
             previousZones: lastAdoptionZones,
             previousChevronX: lastAdoptionChevronX,
             previousPositions: lastAdoptionPositions,
+            pendingZones: lastAdoptionPending,
             userDragged: dragEndX != nil,
             pelmetBundleID: PelmetBundle.mainID,
             draggedID: draggedID
@@ -1062,6 +1078,7 @@ final class AppState {
         lastAdoptionZones = result.zones
         lastAdoptionChevronX = result.chevronX
         lastAdoptionPositions = result.positions
+        lastAdoptionPending = result.pendingZones
         if result.changed {
             settings.sectionModel = result.model
             settings.save()
