@@ -289,7 +289,7 @@ private struct SlotPlaceholder: View {
 
 // MARK: - Icon tile
 
-private struct ItemTile: View {
+struct ItemTile: View {
     @Environment(AppState.self) private var appState
     @Environment(EditorDragSession.self) private var session
     let item: ObservedItem
@@ -299,7 +299,10 @@ private struct ItemTile: View {
     let index: Int
     @State private var hovered = false
 
-    private var displayName: String {
+    var displayName: String {
+        if item.id.bundleID == PelmetBundle.textInputAgentID {
+            return InputSourcePresentation.shared.name
+        }
         if item.id.rawValue.contains("Pelmet.Separator") {
             return String(localized: "Separator")
         }

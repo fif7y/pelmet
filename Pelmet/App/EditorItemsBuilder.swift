@@ -66,7 +66,8 @@ enum EditorItemsBuilder {
         for id in stored where byID[id] == nil && !representedKeys.contains(id.sectionKey) {
             guard let bundle = id.bundleID,
                   bundle != pelmetBundleID,
-                  !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
+                  !MenuBarPolicy.isUnmanagedAppleBundle(bundle)
+                    || MenuBarPolicy.systemItem(for: id) != nil,
                   isRunning(bundle)
             else { continue }
             byID[id] = ObservedItem(id: id, frame: nil, appName: appName(bundle))

@@ -29,6 +29,9 @@ enum ItemImageCache {
     }
 
     static func icon(for item: ItemID) -> NSImage? {
+        if item.bundleID == PelmetBundle.textInputAgentID {
+            return InputSourcePresentation.shared.icon
+        }
         if let image = pelmetItemImages.first(where: { item.rawValue.hasSuffix($0.key) })?.value {
             return image
         }

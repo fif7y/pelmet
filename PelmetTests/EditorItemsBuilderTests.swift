@@ -11,6 +11,20 @@ import PelmetEngine
 
 @MainActor
 struct EditorItemsBuilderTests {
+    @Test func weTypeAppearsInEditorAndSurvivesSourceSwitch() {
+        let weType = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: "微信输入法")
+        let abc = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: "ABC")
+        #expect(build(section: .visible, items: [ObservedItem(id: weType, frame: frame(x: 2516), appName: "微信输入法")]).map(\.id) == [weType])
+        let model = SectionModel(assignments: [weType.sectionKey: .hidden])
+        #expect(build(items: [ObservedItem(id: abc, frame: frame(x: 2516), appName: "ABC")], model: model).map(\.id) == [abc])
+    }
+
+    @Test func inputMenuStaysInEditorDuringSnapshotGap() {
+        let input = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: "微信输入法")
+        let model = SectionModel(assignments: [input.sectionKey: .hidden])
+        #expect(build(model: model, running: ["com.apple.TextInputMenuAgent"]).map(\.id) == [input.sectionKey])
+    }
+
     let pelmet = "app.fif7y.Pelmet"
     let velja = ItemID(rawValue: "status:com.sindresorhus.Velja::Item-0")
     let veljaTwin = ItemID(rawValue: "status:com.sindresorhus.Velja::Left arrows")

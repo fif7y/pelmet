@@ -39,6 +39,11 @@ public struct ItemID: RawRepresentable, Hashable, Codable, Sendable {
     /// per-bundle anyway. Pelmet's own items (stable Pelmet-chosen titles) and
     /// Apple/system items (stable agent identifiers) keep full identity.
     public var sectionKey: ItemID {
+        // Changing input sources changes the menu title, not the menu's
+        // identity or the user's chosen section.
+        if bundleID == PelmetBundle.textInputAgentID {
+            return ItemID(rawValue: "bundle:\(PelmetBundle.textInputAgentID)")
+        }
         guard let bundle = bundleID,
               bundle != "app.fif7y.Pelmet",
               !bundle.hasPrefix("com.apple.")

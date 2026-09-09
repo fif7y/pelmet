@@ -7,6 +7,23 @@ import Testing
 import PelmetCore
 
 struct MenuBarPolicyTests {
+    @Test func textInputAgentUsesKeyboardPolicyAcrossSourceNames() {
+        for title in ["微信输入法", "ABC", "拼音"] {
+            let id = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: title)
+            #expect(MenuBarPolicy.systemItem(for: id) == .keyboard)
+            #expect(MenuBarPolicy.isZoneAdoptable(id, pelmetBundleID: PelmetBundle.fallbackID))
+        }
+        #expect(MenuBarPolicy.systemItem(for: .status(bundle: "com.example.App", title: "微信输入法")) == nil)
+    }
+
+    @Test func inputSourceSwitchPreservesSection() {
+        let weType = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: "微信输入法")
+        let abc = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: "ABC")
+        let model = SectionModel(assignments: [weType.sectionKey: .hidden])
+        #expect(model.section(of: abc) == .hidden)
+        #expect(MenuBarPolicy.systemItem(for: weType.sectionKey) == .keyboard)
+    }
+
     private func menuExtra(_ suffix: String) -> ItemID {
         .status(bundle: PelmetBundle.agentID, title: "com.apple.menuextra.\(suffix)")
     }
