@@ -92,6 +92,14 @@ final class AppState {
             // Newcomers routed into a then-concealed section finally
             // have measurable neighbors — walk them to their slot.
             placement.flushPendingPlacements()
+            // Order supervisor: with the hidden cluster materialized, any
+            // item on the wrong side of the chevron is corrected now, under
+            // this reveal, from a fresh measurement.
+            Task { [weak self] in
+                guard let self else { return }
+                await placement.correctDrift()
+                placement.flushPendingPlacements()
+            }
             // Swipe-through hover: the pointer can be long gone by the
             // time the reveal settles — armIfNeeded gave the FULL delay.
             // Re-arm as a pointer-out so an accidental hover self-heals
@@ -218,14 +226,37 @@ final class AppState {
                   let bundle = app.bundleIdentifier else { return }
             MainActor.assumeIsolated { self?.queueRelaunchedBundlePlacement(bundle) }
         }
+        observeRunningApplications()
     }
 
     private var relaunchObserver: NSObjectProtocol?
+    private var runningAppsObservation: NSKeyValueObservation?
+    private var lastRelaunchQueue: [String: Date] = [:]
+
+    /// Menu-bar agent apps (LSUIElement / background-only) post no launch
+    /// notification — Snib, OpenClip and Sconce relaunched all afternoon
+    /// without a single re-slot (2026-09-09). KVO on runningApplications
+    /// sees every activation policy; both paths feed the same queue.
+    private func observeRunningApplications() {
+        runningAppsObservation = NSWorkspace.shared.observe(
+            \.runningApplications, options: [.old, .new]
+        ) { [weak self] _, change in
+            let before = Set((change.oldValue ?? []).compactMap(\.bundleIdentifier))
+            let appeared = (change.newValue ?? []).compactMap(\.bundleIdentifier).filter { !before.contains($0) }
+            guard !appeared.isEmpty else { return }
+            Task { @MainActor [weak self] in
+                for bundle in appeared { self?.queueRelaunchedBundlePlacement(bundle) }
+            }
+        }
+    }
 
     private func queueRelaunchedBundlePlacement(_ bundle: String) {
         guard bundle != PelmetBundle.mainID,
               !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
               settings.sectionModel.knownBundles.contains(bundle) else { return }
+        // The notification and the KVO path can both report one launch.
+        if let last = lastRelaunchQueue[bundle], Date.now.timeIntervalSince(last) < 3 { return }
+        lastRelaunchQueue[bundle] = .now
         let keys = settings.sectionModel.assignments.keys.filter { $0.bundleID == bundle }
         guard !keys.isEmpty else { return }
         placement.pendingPlacements.formUnion(keys)
@@ -663,11 +694,17 @@ final class AppState {
     /// (never an extra or separator).
     func pelmetChevronItem(in snap: EngineSnapshot) -> ObservedItem? {
         let pelmetBundle = PelmetBundle.mainID
-        return snap.items.first(where: {
+        let copies = snap.items.filter {
             $0.id.bundleID == pelmetBundle
                 && !MenuBarPolicy.isPelmetExtraID($0.id)
                 && !$0.id.rawValue.contains("Separator")
-        })
+        }
+        // The chevron registers once per display; only the main-band copy
+        // is a boundary anything can be measured against.
+        let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        return copies.first(where: {
+            $0.frame.map { MenuBarGeometry.isInBand($0) && $0.midX > 0 && $0.midX < primaryMaxX } == true
+        }) ?? copies.first
     }
 
     /// The on-screen left-to-right order of a section right now (fallback when
@@ -837,7 +874,12 @@ final class AppState {
     /// the item never adopted, 2026-09-08). Replayed when the chain ends.
     private var queuedDragEndX: CGFloat?
 
+    /// When the band monitor last saw a user ⌘-drag end. The order
+    /// supervisor stays out of the way while that adoption lands.
+    private(set) var lastUserDragEndedAt: Date?
+
     func adoptSectionsFromBar(retry: Int = 0, dragEndX: CGFloat? = nil) {
+        if retry == 0, dragEndX != nil { lastUserDragEndedAt = .now }
         if retry == 0 {
             guard !adoptionInFlight else {
                 if let dragEndX { queuedDragEndX = dragEndX }

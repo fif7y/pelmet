@@ -59,7 +59,14 @@ enum AppTiming {
     static let placementPreSettle: Duration = .milliseconds(450)
     static let placementLookupRetries = 3
     static let placementLookupRetryDelay: Duration = .milliseconds(550)
-    static let postDragSettle: Duration = .milliseconds(300)
+    /// Post-drag read: the agent animates the drop (~300ms slide, measured
+    /// 2026-09-08) and a single fixed-delay read judged mid-flight frames as
+    /// misses. Wait the floor, then re-read every poll until the dragged
+    /// item's frame repeats `quiesceMatches` times, bounded by the cap.
+    static let postDragSettleFloor: Duration = .milliseconds(150)
+    static let postDragQuiescePoll: Duration = .milliseconds(45)
+    static let postDragQuiesceMatches = 2
+    static let postDragQuiesceCap: Duration = .milliseconds(900)
     /// Precapture waits this long after quiesce so the ghost's fade never
     /// bakes into the snapshot.
     static let precaptureGhostClearance: Duration = .milliseconds(300)
