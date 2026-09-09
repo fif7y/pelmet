@@ -16,6 +16,9 @@ public enum BarAdoption {
         public let zones: [String: Section]
         /// Where the chevron measured this pass — the next pass compares.
         public let chevronX: CGFloat?
+        /// Where each measured item sat this pass — an item that moved
+        /// since the last pass was dragged, whatever the chevron did.
+        public let positions: [String: CGFloat]
         public let changed: Bool
         public let log: [String]
     }
@@ -49,6 +52,7 @@ public enum BarAdoption {
         model startModel: SectionModel,
         previousZones: [String: Section],
         previousChevronX: CGFloat? = nil,
+        previousPositions: [String: CGFloat] = [:],
         pelmetBundleID: String,
         draggedID: ItemID? = nil
     ) -> Result? {
@@ -76,7 +80,18 @@ public enum BarAdoption {
             guard let chevronX, let previousChevronX, draggedID != chevron?.id else { return false }
             return abs(chevronX - previousChevronX) > 4
         }()
-        log.append("adopt: chevronX=\(chevronX.map { "\($0)" } ?? "none") firstPass=\(isFirstPass) trackedZones=\(previousZones.count)\(chevronMoved ? " boundaryMoved(from \(previousChevronX!)) — re-baseline only" : "")")
+        log.append("adopt: chevronX=\(chevronX.map { "\($0)" } ?? "none") firstPass=\(isFirstPass) trackedZones=\(previousZones.count)\(chevronMoved ? " boundaryMoved(from \(previousChevronX!)) — only moved items adopt" : "")")
+        var positions: [String: CGFloat] = [:]
+        for item in items { if let x = item.minX { positions[item.id.rawValue] = x } }
+        // An item that itself travelled since the last pass was dragged —
+        // the moved boundary says nothing about it either way (ChatGPT
+        // 1535 → 1417 across a conceal on a bar whose chevron shifts every
+        // cycle, 2026-09-08: the band monitor's drop x missed the item and
+        // the guard then swallowed the drag).
+        func itemMoved(_ id: ItemID, _ x: CGFloat) -> Bool {
+            guard let before = previousPositions[id.rawValue] else { return false }
+            return abs(x - before) > 20
+        }
         // Cluster edges from the PRE-adoption model: the always-hidden and
         // hidden members' live frames (only present during a full reveal).
         // Self-excluded per item below so an item never bounds itself. The
@@ -160,9 +175,10 @@ public enum BarAdoption {
             // BEFORE the drag-end pass — folding the moved item's new side
             // into the baseline there would eat the adoption (previousZone
             // would already equal the drag-end reading).
+            let boundaryOnly = chevronMoved && !itemMoved(item.id, x)
             if confident, chevronX != nil || zone == current {
                 zones[item.id.rawValue] = zone
-            } else if chevronMoved {
+            } else if boundaryOnly {
                 // Measured against a boundary that moved, and not even
                 // confidently: the old baseline is void too, or the next
                 // steady pass would adopt the same phantom change.
@@ -185,7 +201,7 @@ public enum BarAdoption {
             } else {
                 // First sighting establishes a baseline; only a zone CHANGE
                 // adopts — and only against a boundary that stood still.
-                guard !isFirstPass, !chevronMoved, let previousZone, previousZone != zone else { continue }
+                guard !isFirstPass, !boundaryOnly, let previousZone, previousZone != zone else { continue }
             }
             guard zone != current else { continue }
             if zone == .visible {
@@ -237,6 +253,6 @@ public enum BarAdoption {
                 changed = true
             }
         }
-        return Result(model: model, zones: zones, chevronX: chevronX, changed: changed, log: log)
+        return Result(model: model, zones: zones, chevronX: chevronX, positions: positions, changed: changed, log: log)
     }
 }

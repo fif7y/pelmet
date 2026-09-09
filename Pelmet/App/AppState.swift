@@ -831,10 +831,18 @@ final class AppState {
     /// One adoption chain at a time — an externalOrderChange burst otherwise
     /// spawns N concurrent retry chains, each pulling its own snapshot.
     private var adoptionInFlight = false
+    /// A drag-end request that arrived while a chain was running: the
+    /// user's drop x is evidence that must not be dropped with it (ChatGPT
+    /// ⌘-dragged into Hidden while the 10s pass ran — the drop was lost and
+    /// the item never adopted, 2026-09-08). Replayed when the chain ends.
+    private var queuedDragEndX: CGFloat?
 
     func adoptSectionsFromBar(retry: Int = 0, dragEndX: CGFloat? = nil) {
         if retry == 0 {
-            guard !adoptionInFlight else { return }
+            guard !adoptionInFlight else {
+                if let dragEndX { queuedDragEndX = dragEndX }
+                return
+            }
             adoptionInFlight = true
         }
         Task {
@@ -849,6 +857,10 @@ final class AppState {
                 guard retry < AppTiming.adoptMaxDeferrals else {
                     PelmetLog.log("adopt: gave up after \(retry) deferrals")
                     adoptionInFlight = false
+                    if let queued = queuedDragEndX {
+                        queuedDragEndX = nil
+                        adoptSectionsFromBar(dragEndX: queued)
+                    }
                     return
                 }
                 try? await Task.sleep(for: AppTiming.adoptDeferralDelay)
@@ -868,7 +880,14 @@ final class AppState {
                 adoptSectionsFromBar(retry: retry + 1, dragEndX: dragEndX)
                 return
             }
-            defer { adoptionInFlight = false }
+            defer {
+                adoptionInFlight = false
+                if let queued = queuedDragEndX {
+                    queuedDragEndX = nil
+                    PelmetLog.log("adopt: replaying queued drop x=\(Int(queued))")
+                    adoptSectionsFromBar(dragEndX: queued)
+                }
+            }
             updateSnapshot(snap)
             PelmetLog.log("adopt: pass (retry=\(retry), items=\(snap.items.count))")
             adopt(from: snap, dragEndX: dragEndX)
@@ -884,6 +903,7 @@ final class AppState {
     /// The chevron's x at the last pass — a moved boundary re-baselines
     /// instead of adopting (see BarAdoption.reconcile).
     private var lastAdoptionChevronX: CGFloat?
+    private var lastAdoptionPositions: [String: CGFloat] = [:]
 
     var isTransitioning: Bool {
         if case .transitioning = rehide.state { return true }
@@ -985,6 +1005,7 @@ final class AppState {
             model: settings.sectionModel,
             previousZones: lastAdoptionZones,
             previousChevronX: lastAdoptionChevronX,
+            previousPositions: lastAdoptionPositions,
             pelmetBundleID: PelmetBundle.mainID,
             draggedID: draggedID
         ) else { return }
@@ -997,6 +1018,7 @@ final class AppState {
         PelmetLog.log("adopt: visible live=\(liveVisible) model=\((settings.sectionModel.order[.visible] ?? []).map(\.rawValue))")
         lastAdoptionZones = result.zones
         lastAdoptionChevronX = result.chevronX
+        lastAdoptionPositions = result.positions
         if result.changed {
             settings.sectionModel = result.model
             settings.save()

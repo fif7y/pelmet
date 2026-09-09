@@ -85,6 +85,18 @@ struct BarAdoptionTests {
             draggedID: chevron
         )
         #expect(dragged?.model.assignments[figma.sectionKey] == .hidden)
+        // The item itself travelled since the last pass (a ⌘-drag the band
+        // monitor's drop x missed): it adopts even though the chevron moved.
+        let travelled = BarAdoption.reconcile(
+            items: [(id: figma, minX: 1417), (id: chevron, minX: 1497)],
+            model: model,
+            previousZones: [figma.rawValue: .visible],
+            previousChevronX: 1459,
+            previousPositions: [figma.rawValue: 1535],
+            pelmetBundleID: pelmet
+        )
+        #expect(travelled?.model.assignments[figma.sectionKey] == .hidden)
+        #expect(travelled?.positions[figma.rawValue] == 1417)
     }
 
     @Test func missingChevronSkipsZoneAdoptionButStillFoldsOrder() {
