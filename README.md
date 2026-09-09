@@ -7,6 +7,7 @@
   <a href="https://github.com/fif7y/pelmet/releases/latest"><img src="https://img.shields.io/github/v/release/fif7y/pelmet?label=download&color=2ea44f" alt="Download latest release"></a>
   <a href="#install"><img src="https://img.shields.io/badge/requirements-macOS_27%2B-E8A33D" alt="Requires macOS 27 or later"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/fif7y/pelmet" alt="License: GPL-3.0"></a>
+  <a href="https://alternativeto.net/software/pelmet/about/"><img src="https://img.shields.io/badge/AlternativeTo-Pelmet-1f6feb" alt="Pelmet on AlternativeTo"></a>
   <a href="https://github.com/sponsors/fif7y"><img src="https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa" alt="Sponsor Pelmet"></a>
 </p>
 
