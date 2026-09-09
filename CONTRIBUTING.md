@@ -4,7 +4,7 @@ Thanks for helping. Issues, bug reports with `pelmet.log` excerpts, and pull req
 
 ## Before your first pull request
 
-Pelmet uses a Contributor License Agreement. When you open a pull request, a bot will ask you to sign it by posting one comment. You only do this once. Read [CLA.md](CLA.md) first; the short version is that you keep your copyright and grant the maintainer a broad license to your contribution, which keeps the option of dual-licensing Pelmet open.
+Pelmet uses a Contributor License Agreement. When you open a pull request, a bot asks you to sign it by posting one comment, once. The short version: you keep your copyright, the GPLv3 version of Pelmet stays GPLv3 forever, and you grant a license broad enough for things like a Mac App Store build or a future license fix. The full text and the reasons are in [CLA.md](CLA.md).
 
 ## Building
 

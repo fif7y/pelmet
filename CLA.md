@@ -36,7 +36,17 @@ Except for the representations in section 4, You provide Your Contributions on a
 
 ## 6. Why this agreement exists
 
-Pelmet is licensed under GPLv3. The Maintainer wants to keep the option of offering Pelmet under additional license terms in the future (for example a commercial license alongside the GPL). That is only possible if every contribution is licensed broadly enough to be redistributed under those terms. Section 2 makes that possible without taking your copyright away.
+Pelmet is licensed under GPLv3, and that does not change. **Every contribution stays available under the GPLv3 it was contributed under, forever.** A GPL release cannot be taken back, and the Maintainer has no wish to.
+
+The license grant in section 2 exists for a few practical reasons:
+
+1. **Provenance.** You confirm the code is yours to give and that no employer has a claim on it. That protects users and every other contributor.
+2. **Patents.** Nobody who contributes can later assert a patent against the Project over their own patch.
+3. **The Mac App Store.** GPLv3 is incompatible with App Store terms. If Pelmet is ever distributed there, even free of charge, every line has to be licensable under non-GPL terms as well.
+4. **License fixes and upgrades.** Moving to a future GPL version, adding an exception (a plugin API, a linking exception for a framework), or going more permissive all need every author's consent. A CLA collects that consent once, at contribution time.
+5. **Enforcement.** A single rights holder can act if someone violates the GPL. Without one, every contributor would have to join in.
+
+It also keeps open the option of offering Pelmet under a commercial license alongside the GPL one day. That is stated here so nobody is surprised later. If it ever happens, the GPLv3 version and your contributions to it remain exactly as free as they are today.
 
 ---
 
