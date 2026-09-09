@@ -53,6 +53,7 @@ public enum BarAdoption {
         previousZones: [String: Section],
         previousChevronX: CGFloat? = nil,
         previousPositions: [String: CGFloat] = [:],
+        userDragged: Bool = false,
         pelmetBundleID: String,
         draggedID: ItemID? = nil
     ) -> Result? {
@@ -83,13 +84,15 @@ public enum BarAdoption {
         log.append("adopt: chevronX=\(chevronX.map { "\($0)" } ?? "none") firstPass=\(isFirstPass) trackedZones=\(previousZones.count)\(chevronMoved ? " boundaryMoved(from \(previousChevronX!)) — only moved items adopt" : "")")
         var positions: [String: CGFloat] = [:]
         for item in items { if let x = item.minX { positions[item.id.rawValue] = x } }
-        // An item that itself travelled since the last pass was dragged —
-        // the moved boundary says nothing about it either way (ChatGPT
-        // 1535 → 1417 across a conceal on a bar whose chevron shifts every
-        // cycle, 2026-09-08: the band monitor's drop x missed the item and
-        // the guard then swallowed the drag).
+        // In the pass that follows a real ⌘-drag, an item that itself
+        // travelled since the last pass is the dragged one even when the
+        // drop x missed it — the moved boundary says nothing about it
+        // (ChatGPT 1535 → 1417 across a conceal on a bar whose chevron
+        // shifts every cycle, 2026-09-08). Only then: Pelmet's own placement
+        // drags move items too, and counting those adopted every editor
+        // drop into Always Hidden on an interleaved bar (0.2.17 regression).
         func itemMoved(_ id: ItemID, _ x: CGFloat) -> Bool {
-            guard let before = previousPositions[id.rawValue] else { return false }
+            guard userDragged, let before = previousPositions[id.rawValue] else { return false }
             return abs(x - before) > 20
         }
         // Cluster edges from the PRE-adoption model: the always-hidden and

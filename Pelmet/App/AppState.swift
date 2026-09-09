@@ -1006,6 +1006,7 @@ final class AppState {
             previousZones: lastAdoptionZones,
             previousChevronX: lastAdoptionChevronX,
             previousPositions: lastAdoptionPositions,
+            userDragged: dragEndX != nil,
             pelmetBundleID: PelmetBundle.mainID,
             draggedID: draggedID
         ) else { return }

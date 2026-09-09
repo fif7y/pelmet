@@ -93,10 +93,24 @@ struct BarAdoptionTests {
             previousZones: [figma.rawValue: .visible],
             previousChevronX: 1459,
             previousPositions: [figma.rawValue: 1535],
+            userDragged: true,
             pelmetBundleID: pelmet
         )
         #expect(travelled?.model.assignments[figma.sectionKey] == .hidden)
         #expect(travelled?.positions[figma.rawValue] == 1417)
+        // The same travel without a user drag is Pelmet's own placement
+        // (an editor drop): the boundary guard holds (0.2.17 regression —
+        // every editor drop adopted the item into Always Hidden).
+        let placed = BarAdoption.reconcile(
+            items: [(id: figma, minX: 1417), (id: chevron, minX: 1497)],
+            model: model,
+            previousZones: [figma.rawValue: .visible],
+            previousChevronX: 1459,
+            previousPositions: [figma.rawValue: 1535],
+            pelmetBundleID: pelmet
+        )
+        #expect(placed?.changed == false)
+        #expect(placed?.model.assignments[figma.sectionKey] == nil)
     }
 
     @Test func missingChevronSkipsZoneAdoptionButStillFoldsOrder() {
