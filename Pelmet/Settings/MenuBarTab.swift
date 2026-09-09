@@ -289,7 +289,7 @@ private struct SlotPlaceholder: View {
 
 // MARK: - Icon tile
 
-struct ItemTile: View {
+private struct ItemTile: View {
     @Environment(AppState.self) private var appState
     @Environment(EditorDragSession.self) private var session
     let item: ObservedItem
@@ -299,7 +299,7 @@ struct ItemTile: View {
     let index: Int
     @State private var hovered = false
 
-    var displayName: String {
+    private var displayName: String {
         if item.id.bundleID == PelmetBundle.textInputAgentID {
             return InputSourcePresentation.shared.name
         }

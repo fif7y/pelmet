@@ -37,8 +37,7 @@ final class InputSourcePresentation {
         if let raw = TISGetInputSourceProperty(source, kTISPropertyIconImageURL) {
             let url = Unmanaged<CFURL>.fromOpaque(raw).takeUnretainedValue() as URL
             image = NSImage(contentsOf: url)
-            // WeType supplies a monochrome menu PDF, which needs template
-            // rendering to remain legible in both light and dark settings.
+            // WeType’s menu_icon.pdf is monochrome: template-render it for light/dark contrast; other sources may supply color artwork.
             if bundleID == "com.tencent.inputmethod.wetype" { image?.isTemplate = true }
         }
         if image == nil, let raw = TISGetInputSourceProperty(source, kTISPropertyIconRef) {
