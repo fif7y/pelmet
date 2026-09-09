@@ -50,7 +50,7 @@ and how it ends, either auto-rehide after a delay you set (instant to 5
 seconds) or the moment you click somewhere else.
 
 <p align="center">
-  <img src="docs/assets/screenshot-settings.png" alt="Behavior settings: reveal on hover with a stepped delay slider, click and double-click reveals, Instant/Smooth/Fade animation, auto-rehide after a stepped delay, system extras, clock click opens Notification Center" width="640"><br>
+  <img src="docs/assets/screenshot-settings.png" alt="Behavior settings: Instant/Smooth/Fade animation cards with a live preview, reveal on hover with a stepped delay slider, click and double-click reveals, auto-rehide after a stepped delay, system extras, clock click opens Notification Center" width="640"><br>
   <sub>Your rules for revealing, and for putting everything back.</sub>
 </p>
 
@@ -77,7 +77,7 @@ seconds) or the moment you click somewhere else.
   in `scripts/gen-xcstrings.py`.
 
 <p align="center">
-  <img src="docs/assets/screenshot-general.png" alt="General settings: launch at login, the menu bar icon toggle with six icon styles, display language picker, Accessibility permission status" width="640"><br>
+  <img src="docs/assets/screenshot-general.png" alt="General settings: launch at login, the menu bar icon toggle with six icon styles, display language picker, Accessibility and Screen Recording permission status" width="640"><br>
   <sub>General. Pick the icon Pelmet wears, or your language.</sub>
 </p>
 
