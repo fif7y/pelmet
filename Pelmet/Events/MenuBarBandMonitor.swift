@@ -287,6 +287,18 @@ final class MenuBarBandMonitor {
             // item's phantom position has no element under it) and toggle a
             // reveal under the running drag (seen live during rescue).
             guard !appState.syntheticDragInFlight else { return }
+            // The window-server hit-test is the arbiter for clicks too. On
+            // its own `isEmptyMenuBarArea` reads any foreign AXWindow/AXGroup
+            // — and a nil hit — as empty bar, so a right-click on an app that
+            // draws its own surface across the band opened Pelmet's settings
+            // menu over that app's own menu (issue #8). This is the gate the
+            // hover path got on 2026-09-07; the click path never received it.
+            // Refusing here is a no-op, not a rehide: these monitors are
+            // passive, so the click reaches the app that owns the window.
+            if let screen, let overlay = foreignOverlay(under: location, of: screen) {
+                PelmetLog.log("band: click refused — on \(overlay)")
+                return
+            }
             guard isEmptyMenuBarArea(location, on: screen) else { return }
             if event.type == .rightMouseDown {
                 // Right-click on empty bar: always-available settings entry.
@@ -378,8 +390,15 @@ final class MenuBarBandMonitor {
         else { return nil }
         let bandHeight = screen.frame.maxY - screen.visibleFrame.maxY
         guard height > bandHeight + 1 else { return nil }
+        // Below desktop level nothing can be occluding the bar. The hit-test
+        // intermittently resolves to Finder's wallpaper window on an external
+        // display (`Finder 3440×1440@y-164 L-2147483603`, 13 times in one
+        // session) — harmless on the hover path, which re-reads on the next
+        // mouseMoved, but a click has no next event and would be swallowed.
+        let layer = window[kCGWindowLayer as String] as? Int ?? 0
+        guard layer >= 0 else { return nil }
         let owner = window[kCGWindowOwnerName as String] as? String ?? "pid \(pid)"
-        return "\(owner) \(Int(width))×\(Int(height))@y\(Int(y)) L\(window[kCGWindowLayer as String] ?? "?")"
+        return "\(owner) \(Int(width))×\(Int(height))@y\(Int(y)) L\(layer)"
     }
 
     private func isInMenuBarBand(_ point: NSPoint, of screen: NSScreen) -> Bool {
