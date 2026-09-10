@@ -38,11 +38,18 @@ enum EditorItemsBuilder {
             byID[id] = ObservedItem(id: id, frame: nil, appName: id.bundleID.flatMap(appName))
         }
         // Pelmet's extras are section-manageable (visibility-based hiding); when
-        // hidden they're absent from AX, so ensure they're represented.
+        // hidden they're absent from AX, so ensure they're represented. Live
+        // ones arrive named after their host ("Pelmet") — the spec's own name
+        // (the shortcut, the app stood in for) is what the tile should say.
         for spec in extraItems {
             let id = ExtrasManager.itemID(for: spec)
-            if byID[id] == nil {
-                byID[id] = ObservedItem(id: id, frame: nil, appName: spec.shortcutName ?? nil)
+            let name = spec.shortcutName ?? spec.appName
+            if let live = byID[id] {
+                if let name, live.appName != name {
+                    byID[id] = ObservedItem(id: id, frame: live.frame, appName: name, hostIsBundleless: live.hostIsBundleless)
+                }
+            } else {
+                byID[id] = ObservedItem(id: id, frame: nil, appName: name)
             }
         }
         // Separators too — same visibility-based hiding as extras.

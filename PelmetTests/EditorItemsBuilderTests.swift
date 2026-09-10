@@ -161,6 +161,28 @@ struct EditorItemsBuilderTests {
         ])
     }
 
+    @Test func appStandInCarriesItsAppNameAndBundlelessHostSurvives() {
+        let standIn = ExtraItemSpec(kind: .appStandIn, bundleID: "com.openai.chat", appName: "ChatGPT")
+        let helperItem = ItemID(rawValue: "status:com.openai.chat::Item-0")
+        var model = SectionModel()
+        model.assignments[ExtrasManager.itemID(for: standIn)] = .hidden
+        model.assignments[helperItem.sectionKey] = .hidden
+        let result = build(
+            items: [
+                ObservedItem(id: helperItem, frame: frame(x: 100), appName: "ChatGPT", hostIsBundleless: true),
+                // Live in AX, named after its host — the spec's name wins.
+                ObservedItem(id: ExtrasManager.itemID(for: standIn), frame: frame(x: 140), appName: "Pelmet"),
+            ],
+            extras: [standIn],
+            model: model,
+            running: ["com.openai.chat"]
+        )
+        let tile = result.first { $0.id == ExtrasManager.itemID(for: standIn) }
+        #expect(tile?.appName == "ChatGPT")
+        #expect(tile?.frame != nil)
+        #expect(result.first { $0.id == helperItem }?.hostIsBundleless == true)
+    }
+
     @Test func appleAndSystemModuleItemsStayOffTheBoard() {
         let clock = ItemID(rawValue: "status:com.apple.MenuBarAgent::com.apple.menuextra.clock")
         let siri = ItemID(rawValue: "status:com.apple.Siri::Item-0")

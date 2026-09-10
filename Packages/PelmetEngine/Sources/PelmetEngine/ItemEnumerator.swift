@@ -13,6 +13,16 @@ public struct RawItem: Equatable, Sendable {
     public let id: ItemID
     public let frame: CGRect
     public let appName: String?
+    /// See `ObservedItem.hostIsBundleless`.
+    public let hostIsBundleless: Bool
+}
+
+/// Bundle attribution of an item's owning process.
+private struct HostBundle {
+    let id: String
+    /// The process itself has no LS bundle id; `id` came from walking the
+    /// executable path up to the enclosing .app.
+    let bundleless: Bool
 }
 
 /// Runs off the main actor: AX calls into busy apps can block, so snapshots are
@@ -93,15 +103,16 @@ public actor ItemEnumerator {
                 let appName = copyAttribute(child, kAXTitleAttribute) as? String
                 var appPID: pid_t = 0
                 AXUIElementGetPid(child, &appPID)
-                guard let bundleID = bundleID(ofPID: appPID) else {
+                guard let host = hostBundle(ofPID: appPID) else {
                     logDrop("no bundle id for AXApplication", pid: appPID, role: "AXApplication")
                     return nil
                 }
                 let title = statusItemTitle(in: child) ?? "Item-0"
                 return RawItem(
-                    id: .status(bundle: bundleID, title: title),
+                    id: .status(bundle: host.id, title: title),
                     frame: frame,
-                    appName: appName
+                    appName: appName,
+                    hostIsBundleless: host.bundleless
                 )
             case "AXGroup":
                 // System item: AXGroup wrapping an AXMenuBarItem.
@@ -112,7 +123,8 @@ public actor ItemEnumerator {
                     return RawItem(
                         id: .status(bundle: Self.agentBundleID, title: identifier),
                         frame: frame,
-                        appName: nil
+                        appName: nil,
+                        hostIsBundleless: false
                     )
                 }
             case "AXButton":
@@ -146,7 +158,7 @@ public actor ItemEnumerator {
     private func describeLeaf(_ element: AXUIElement, frame: CGRect) -> RawItem? {
         var pid: pid_t = 0
         AXUIElementGetPid(element, &pid)
-        guard pid > 0, let bundleID = bundleID(ofPID: pid) else {
+        guard pid > 0, let host = hostBundle(ofPID: pid) else {
             logDrop("no bundle id for leaf", pid: pid, role: role(of: element))
             return nil
         }
@@ -157,24 +169,27 @@ public actor ItemEnumerator {
         ]
         let title = candidates.compactMap { $0?.isEmpty == false ? $0 : nil }.first ?? "Item-0"
         return RawItem(
-            id: .status(bundle: bundleID, title: title),
+            id: .status(bundle: host.id, title: title),
             frame: frame,
-            appName: NSRunningApplication(processIdentifier: pid)?.localizedName
+            appName: NSRunningApplication(processIdentifier: pid)?.localizedName,
+            hostIsBundleless: host.bundleless
         )
     }
 
     /// `NSRunningApplication.bundleIdentifier` first; when the process is not
     /// registered as an application (helper agents nested in another app's
     /// Components/ folder), read the Info.plist of the nearest enclosing .app
-    /// on its executable path.
-    private func bundleID(ofPID pid: pid_t) -> String? {
+    /// on its executable path — and say so, because such an item is filed
+    /// under a bundle the assertion can never hide.
+    private func hostBundle(ofPID pid: pid_t) -> HostBundle? {
         guard pid > 0 else { return nil }
         let app = NSRunningApplication(processIdentifier: pid)
-        if let id = app?.bundleIdentifier { return id }
+        if let id = app?.bundleIdentifier { return HostBundle(id: id, bundleless: false) }
         var url = app?.executableURL ?? executableURL(ofPID: pid)
         while let current = url, current.path != "/" {
             if current.pathExtension == "app", let id = Bundle(url: current)?.bundleIdentifier {
-                return id
+                logOnce("enumerate: bundle-less host → \(id) (\(app?.executableURL?.lastPathComponent ?? "?"))", pid: pid)
+                return HostBundle(id: id, bundleless: true)
             }
             url = current.deletingLastPathComponent()
         }

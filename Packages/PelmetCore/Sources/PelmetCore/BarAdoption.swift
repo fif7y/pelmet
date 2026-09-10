@@ -247,8 +247,14 @@ public enum BarAdoption {
         // runs on a settled bar — reflows shift frames but preserve X order.
         // Keyed canonically (leftmost frame wins for multi-item bundles) —
         // order arrays hold canonical section keys.
+        // Pelmet's own items (extras, stand-ins) re-enter layout at the
+        // agent's slot on every reveal — their bar X is never the user's
+        // intent unless the user ⌘-dragged that very item. They hold their
+        // model slot like frame-nil entries (a stand-in walked next to its
+        // app's own icon on every Settings open, 2026-09-09).
         let liveX: [ItemID: CGFloat] = items.reduce(into: [:]) {
             guard let x = $1.minX else { return }
+            if $1.id.bundleID == pelmetBundleID, $1.id != draggedID { return }
             let key = $1.id.sectionKey
             $0[key] = min($0[key] ?? .greatestFiniteMagnitude, x)
         }

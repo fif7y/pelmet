@@ -259,8 +259,16 @@ final class AppState {
         let keys = settings.sectionModel.assignments.keys.filter { $0.bundleID == bundle }
         placement.pendingPlacements.formUnion(keys)
         if await engine.openAdoptionWindow(for: bundle) {
+            absentBundles.remove(bundle)
             updateSnapshot(await engine.snapshot())
             placement.flushPendingPlacements()
+        } else {
+            // Running, assigned, and still no registration with the
+            // assertion dropped: the app has no bar icon right now (its
+            // "show in menu bar" is off — the stand-in flow's last step).
+            // The editor's no-flash guard must not keep a ghost tile for it.
+            absentBundles.insert(bundle)
+            PelmetLog.log("editor: \(bundle) has no menu bar item — off the board")
         }
     }
 
@@ -276,6 +284,10 @@ final class AppState {
                 && (!MenuBarPolicy.isUnmanagedAppleBundle(bundle) || MenuBarPolicy.systemItem(for: $0) != nil)
         }
     }
+
+    /// Bundles that are running but proven icon-less (an adoption window
+    /// found no registration). Cleared the moment an item of theirs shows.
+    private var absentBundles: Set<String> = []
 
     private func queueRelaunchedBundlePlacement(_ bundle: String) {
         let keys = Self.relaunchPlacementKeys(for: bundle, model: settings.sectionModel)
@@ -643,6 +655,54 @@ final class AppState {
     /// Move an item to `section`, inserted before `beforeID` (nil = append).
     /// Updates assignment + explicit order, then physically places the icon
     /// via a synthetic ⌘-drag (no agent restart).
+    /// Bundles with an icon on the editor board (live or concealed) that
+    /// Pelmet can actually manage — a stand-in would be a duplicate. Icons
+    /// marked incompatible are NOT here: those are exactly what stand-ins
+    /// are for, and the user picks them before turning the original off.
+    var manageableBarBundles: Set<String> {
+        guard let snapshot else { return [] }
+        let ids = snapshot.items.map(\.id) + Array(snapshot.concealed)
+        return Set(
+            ids.compactMap { id -> String? in
+                guard let bundle = id.bundleID,
+                      bundle != PelmetBundle.mainID,
+                      !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
+                      !unhideableKeys.contains(id.sectionKey),
+                      !bundlelessHosts.contains(bundle)
+                else { return nil }
+                return bundle
+            }
+        )
+    }
+
+    /// A third-party item whose app the user gave a stand-in.
+    func hasAppStandIn(for id: ItemID) -> Bool {
+        guard let bundle = id.bundleID, bundle != PelmetBundle.mainID else { return false }
+        return settings.extraItems.contains { $0.kind == .appStandIn && $0.bundleID == bundle }
+    }
+
+    /// Adds a Pelmet stand-in for an app, one per bundle. `section` pre-assigns
+    /// it (the editor's "Add a stand-in" puts it where the user put the icon it
+    /// replaces); nil routes it like any new menu bar icon — it is one.
+    @discardableResult
+    func addAppStandIn(bundleID: String, name: String, in section: PelmetCore.Section? = nil) -> Bool {
+        guard !settings.extraItems.contains(where: { $0.kind == .appStandIn && $0.bundleID == bundleID })
+        else { return false }
+        let spec = ExtraItemSpec(kind: .appStandIn, bundleID: bundleID, appName: name)
+        settings.extraItems.append(spec)
+        let target = section ?? settings.sectionModel.newItemsDestination
+        let key = ExtrasManager.itemID(for: spec).sectionKey
+        if target == .visible {
+            settings.sectionModel.assignments.removeValue(forKey: key)
+        } else {
+            settings.sectionModel.assignments[key] = target
+        }
+        settings.sectionModel.order[target, default: []].append(key)
+        PelmetLog.log("extras: add stand-in \(bundleID) → \(target)")
+        settingsChanged()
+        return true
+    }
+
     func moveItem(_ id: ItemID, to section: PelmetCore.Section, before beforeID: ItemID?) {
         // The model keys on canonical IDs; `id` arrives as a real bar item
         // (drag payload) and may be any title-variant of its bundle.
@@ -694,6 +754,19 @@ final class AppState {
     /// started. Editor drops still place immediately via moveItem.
     func queueDynamicExtraPlacement(_ id: ItemID) {
         placement.pendingPlacements.insert(id)
+    }
+
+    /// An own item that just (re-)entered a REVEALED bar sits at the agent's
+    /// slot, not the model's — a stand-in whose app launched mid-reveal
+    /// surfaced at the end of Always Hidden (ChatGPT Classic, 2026-09-09).
+    /// Place it now, same beat as a freshly added extra; the reveal-settle
+    /// queue would only catch the next reveal.
+    func placeOwnItemSoon(_ id: ItemID) {
+        placement.pendingPlacements.remove(id)
+        Task {
+            try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
+            await placement.physicallyPlace(id, in: settings.sectionModel.section(of: id))
+        }
     }
 
     /// Deactivation edge: a queued-but-never-placed indicator left in the
@@ -793,7 +866,7 @@ final class AppState {
             separators: settings.separators,
             model: settings.sectionModel,
             pelmetBundleID: PelmetBundle.mainID,
-            isRunning: { app($0) != nil },
+            isRunning: { app($0) != nil && !absentBundles.contains($0) },
             appName: { app($0)?.localizedName }
         )
     }
@@ -986,8 +1059,57 @@ final class AppState {
     /// assignment fires @Observable invalidation (re-running the editor
     /// pipeline while settings is open), and most snapshots differ only by
     /// `takenAt`.
+    private var lastBundlelessIDs: [String] = []
+    private var unhideableTracker = UnhideableTracker()
+    /// Canonical keys of icons the bar kept showing after Pelmet concealed
+    /// them — the editor's "can't hide" badge. See UnhideableTracker.
+    private(set) var unhideableKeys: Set<ItemID> = []
+    /// Bundles whose bar item is hosted by a bundle-less process (ChatGPT
+    /// Classic's helper): the assertion allowlist can't key on such a
+    /// process, so Pelmet can't hide the icon reliably — the editor shows it
+    /// inactive and offers a stand-in without waiting for a failed conceal.
+    private(set) var bundlelessHosts: Set<String> = Set(
+        UserDefaults.standard.stringArray(forKey: AppState.bundlelessKey) ?? []
+    )
+    private static let bundlelessKey = "pelmet.bundlelessHosts"
+
+    func isBundlelessHost(_ id: ItemID) -> Bool {
+        id.bundleID.map { bundlelessHosts.contains($0) } ?? false
+    }
+
     func updateSnapshot(_ snap: EngineSnapshot) {
         guard snapshot?.contentEquals(snap) != true else { return }
+        let bundleless = snap.items.filter(\.hostIsBundleless).map(\.id.rawValue)
+        if bundleless != lastBundlelessIDs {
+            lastBundlelessIDs = bundleless
+            PelmetLog.log("snapshot: bundle-less hosts \(bundleless)")
+        }
+        // Remembered per bundle: the item drops out of AX while concealed
+        // and the editor must not flicker between states across reveals.
+        // Sticky and persisted: the same icon is hosted by the helper on one
+        // pass and by the main app on the next (ChatGPT Classic re-registers
+        // at runtime), and the item is invisible to AX while concealed — a
+        // mark that came and went with the reveal state was worse than none.
+        // An app that EVER draws its bar icon from a bundle-less helper can't
+        // be hidden reliably; the user clears it by fixing the app.
+        for item in snap.items {
+            if let bundle = item.id.bundleID { absentBundles.remove(bundle) }
+        }
+        let seen = snap.items.filter { $0.frame != nil && $0.hostIsBundleless }
+            .compactMap(\.id.bundleID)
+        if !seen.allSatisfy(bundlelessHosts.contains) {
+            bundlelessHosts.formUnion(seen)
+            UserDefaults.standard.set(Array(bundlelessHosts), forKey: Self.bundlelessKey)
+            PelmetLog.log("editor: bundle-less hosts \(bundlelessHosts.sorted())")
+        }
+        unhideableTracker.observe(
+            live: Set(snap.items.filter { $0.frame != nil }.map(\.id.sectionKey)),
+            concealed: Set(snap.concealed.map(\.sectionKey))
+        )
+        if unhideableTracker.confirmed != unhideableKeys {
+            unhideableKeys = unhideableTracker.confirmed
+            PelmetLog.log("snapshot: unhideable \(unhideableKeys.map(\.rawValue))")
+        }
         snapshot = snap
         clockRelay?.updateClockFrame(
             snap.items.first { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }?.frame
@@ -1049,7 +1171,7 @@ final class AppState {
             guard let frame = item.frame,
                   MenuBarGeometry.isInBand(frame),
                   frame.midX > 0, frame.midX < primaryMaxX
-            else { return ObservedItem(id: item.id, frame: nil, appName: item.appName) }
+            else { return ObservedItem(id: item.id, frame: nil, appName: item.appName, hostIsBundleless: item.hostIsBundleless) }
             return item
         }
         let draggedID: ItemID? = dragEndX.flatMap { x in
@@ -1161,6 +1283,7 @@ final class AppState {
                 separators?.apply(model: settings.sectionModel, revealed: currentRevealedSections)
             }
         case .assertionTornDown:
+            unhideableTracker.assertionLost()
             // Recovery: force a real converge. (A `.concealRequested` through
             // the rehide machine was a no-op from `.concealed` — the exact
             // state an external teardown usually finds us in.)

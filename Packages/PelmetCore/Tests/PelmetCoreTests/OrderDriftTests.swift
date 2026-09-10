@@ -54,4 +54,26 @@ struct OrderDriftTests {
         )
         #expect(out.isEmpty)
     }
+
+    @Test func ownItemOutsideItsModelSlotIsReported() {
+        let pelmet = "app.fif7y.Pelmet"
+        let comet = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.App.C0")
+        let vorssaint = ItemID(rawValue: "status:com.vorssaint.utils::Item-0")
+        let snib = ItemID(rawValue: "status:app.fif7y.Snib::Item-0")
+        var model = SectionModel()
+        for id in [comet, vorssaint, snib] { model.assignments[id.sectionKey] = .hidden }
+        model.order[.hidden] = [vorssaint.sectionKey, snib.sectionKey, comet.sectionKey]
+        // Bar: Comet, Vorssaint, Snib — Comet re-entered left of everyone.
+        let out = OrderDrift.ownItemsOutOfOrder(
+            items: [(id: comet, minX: 400), (id: vorssaint, minX: 430), (id: snib, minX: 460)],
+            model: model, pelmetBundleID: pelmet
+        )
+        #expect(out == [comet])
+        // Bar: Vorssaint, Snib, Comet — in its slot.
+        let ok = OrderDrift.ownItemsOutOfOrder(
+            items: [(id: vorssaint, minX: 400), (id: snib, minX: 430), (id: comet, minX: 460)],
+            model: model, pelmetBundleID: pelmet
+        )
+        #expect(ok.isEmpty)
+    }
 }

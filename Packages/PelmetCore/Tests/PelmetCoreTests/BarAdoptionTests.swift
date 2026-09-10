@@ -405,6 +405,31 @@ struct BarAdoptionTests {
         #expect(result?.log.contains("adopt: hidden order reconciled from bar") == true)
     }
 
+    @Test func ownItemHoldsItsModelSlotUnlessDragged() {
+        let standIn = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.App.ABCD")
+        var model = SectionModel()
+        model.assignments[velja.sectionKey] = .hidden
+        model.assignments[figma.sectionKey] = .hidden
+        model.assignments[standIn.sectionKey] = .hidden
+        model.order[.hidden] = [velja.sectionKey, figma.sectionKey, standIn.sectionKey]
+        let items: [(id: ItemID, minX: CGFloat?)] = [
+            (id: chevron, minX: 1000),
+            (id: velja, minX: 400),
+            // Re-entered layout between its neighbors — not the user's doing.
+            (id: standIn, minX: 450),
+            (id: figma, minX: 500),
+        ]
+        let zones = [velja.rawValue: Section.hidden, figma.rawValue: .hidden, standIn.rawValue: .hidden]
+        let held = BarAdoption.reconcile(
+            items: items, model: model, previousZones: zones, pelmetBundleID: pelmet
+        )
+        #expect(held?.model.order[.hidden] == [velja.sectionKey, figma.sectionKey, standIn.sectionKey])
+        let dragged = BarAdoption.reconcile(
+            items: items, model: model, previousZones: zones, pelmetBundleID: pelmet, draggedID: standIn
+        )
+        #expect(dragged?.model.order[.hidden] == [velja.sectionKey, standIn.sectionKey, figma.sectionKey])
+    }
+
     @Test func sectionChangedEntryDropsOutOfOrder() {
         var model = SectionModel()
         model.assignments[velja.sectionKey] = .hidden

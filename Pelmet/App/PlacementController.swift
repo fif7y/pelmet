@@ -257,12 +257,20 @@ final class PlacementController {
             else { return (item.id, nil) }
             return (item.id, f.minX)
         }
+        let model = appState.settings.sectionModel
+        // Zone drift for everyone, plus within-section drift for Pelmet's
+        // own items (they re-enter at the agent's remembered position and
+        // adoption holds their model slot — the bar must follow the model).
+        let misplaced = OrderDrift.misplaced(
+            items: measured, chevronMinX: chevron.minX,
+            model: model, pelmetBundleID: PelmetBundle.mainID
+        )
+        let ownOutOfOrder = OrderDrift.ownItemsOutOfOrder(
+            items: measured, model: model, pelmetBundleID: PelmetBundle.mainID
+        ).filter { !misplaced.contains($0) }
         return DriftReading(
             chevronMinX: chevron.minX,
-            misplaced: OrderDrift.misplaced(
-                items: measured, chevronMinX: chevron.minX,
-                model: appState.settings.sectionModel, pelmetBundleID: PelmetBundle.mainID
-            ),
+            misplaced: misplaced + ownOutOfOrder,
             measuredCount: measured.filter { $0.minX != nil }.count
         )
     }
@@ -330,7 +338,7 @@ final class PlacementController {
             pendingPlacements.insert(id)
             queued.append("\(id.rawValue)#\(attempts)")
         }
-        PelmetLog.log("drift: \(misplaced.map(\.rawValue)) on the wrong side of chevron@\(chevron.minX) — queued \(queued)")
+        PelmetLog.log("drift: \(misplaced.map(\.rawValue)) misplaced (chevron@\(chevron.minX)) — queued \(queued)")
     }
 
     // MARK: - Overflow rescue (items trapped in the native « overflow)

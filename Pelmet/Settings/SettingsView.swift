@@ -86,9 +86,17 @@ struct SettingsView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text(appState.settingsTab.title)
-                    .font(.system(size: 22, weight: .semibold))
-                    .padding(.bottom, 2)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(appState.settingsTab.title)
+                        .font(.system(size: 22, weight: .semibold))
+                    Spacer()
+                    // The pane's one bar-wide action rides the title row —
+                    // vertical space below belongs to the sections.
+                    if appState.settingsTab == .menuBar {
+                        TidyBarButton()
+                    }
+                }
+                .padding(.bottom, 2)
                 switch appState.settingsTab {
                 case .general: GeneralPane()
                 case .behavior: BehaviorPane()
@@ -208,6 +216,11 @@ private struct SidebarRow: View {
 
 /// De-boxed button group: soft-fill track, the selected chip carried by the
 /// brand accent — every option visible at once, no menu to open.
+/// Outbound help links. The FAQ is one page with named anchors.
+enum PelmetLinks {
+    static let faqAppStandIns = URL(string: "https://github.com/fif7y/pelmet/blob/main/docs/FAQ.md#app-stand-ins")!
+}
+
 struct PelmetSegments<T: Hashable>: View {
     @Binding var selection: T
     let options: [(T, LocalizedStringKey)]
