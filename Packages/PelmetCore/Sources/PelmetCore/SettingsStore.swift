@@ -222,6 +222,13 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     /// drops the assertion for the blink it takes the click to land, then
     /// re-acquires it (hidden icons flash in and out for ~0.5s).
     public var clockOpensNotificationCenter: Bool = true
+    /// Right-clicking an empty spot on the menu bar opens Pelmet's menu.
+    /// Off for people running an app that draws its own surface across the
+    /// bar, where the two menus compete for the same click (issue #8).
+    /// Read `barRightClickMenuActive`, never this — with the icon hidden the
+    /// stored value does not apply.
+    public var barRightClickMenu: Bool = true
+
     /// A found update posts a user notification instead of Sparkle's window
     /// interrupting whatever the user is doing. Off: only the About pane
     /// shows it. (Auto-download is Sparkle's own preference.)
@@ -252,6 +259,13 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         )
     }
 
+    /// Whether the bar's right-click menu actually opens. With the icon
+    /// hidden it is the only way back into Settings, so it stays on whatever
+    /// the stored preference says — a lockout the UI can merely discourage is
+    /// one an old blob, or turning the icon off after disabling the menu,
+    /// walks straight into. Turning the icon back on restores the choice.
+    public var barRightClickMenuActive: Bool { barRightClickMenu || !showStatusItem }
+
     public func behavior(forDisplayUUID uuid: String?) -> DisplayBehavior {
         guard let uuid else { return displayTemplate }
         return displayOverrides[uuid] ?? displayTemplate
@@ -265,7 +279,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case revealTriggers, autoRehide, rehideDelay, rehideOnClickElsewhere, revealAnimation
         case hideSystemExtras, showMediaControls, extraItems, sectionModel, separators
         case displayTemplate, displayOverrides
-        case clockOpensNotificationCenter, notifyOnUpdates
+        case clockOpensNotificationCenter, notifyOnUpdates, barRightClickMenu
         case statusIconStyle
     }
 
@@ -297,6 +311,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         displayOverrides = field([String: DisplayBehavior].self, .displayOverrides, defaults.displayOverrides)
         clockOpensNotificationCenter = field(Bool.self, .clockOpensNotificationCenter, defaults.clockOpensNotificationCenter)
         notifyOnUpdates = field(Bool.self, .notifyOnUpdates, defaults.notifyOnUpdates)
+        barRightClickMenu = field(Bool.self, .barRightClickMenu, defaults.barRightClickMenu)
         statusIconStyle = field(StatusIconStyle.self, .statusIconStyle, defaults.statusIconStyle)
     }
 

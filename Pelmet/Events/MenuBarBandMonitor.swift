@@ -301,7 +301,11 @@ final class MenuBarBandMonitor {
             }
             guard isEmptyMenuBarArea(location, on: screen) else { return }
             if event.type == .rightMouseDown {
-                // Right-click on empty bar: always-available settings entry.
+                // Right-click on empty bar: the settings entry that survives a
+                // hidden icon. Opt-out for bars shared with an app that wants
+                // the same click (#8) — a separator's right-click is
+                // unaffected, so turning this off keeps a way in.
+                guard appState.settings.barRightClickMenuActive else { return }
                 let menu = PelmetStatusItem.contextMenu(appState: appState)
                 menu.popUp(positioning: nil, at: location, in: nil)
                 return

@@ -6497,6 +6497,64 @@
         }
       }
     },
+    "Opens Pelmet's menu from an empty spot on the menu bar.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet Pelmets Menü über eine freie Stelle der Menüleiste."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre el menú de Pelmet desde un espacio vacío de la barra de menús."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvre le menu de Pelmet depuis une zone vide de la barre des menus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre il menu di Pelmet da uno spazio vuoto della barra dei menu."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーの空いている場所からPelmetのメニューを開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대의 빈 곳에서 Pelmet 메뉴를 엽니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre o menu do Pelmet a partir de um espaço vazio da barra de menus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открывает меню Pelmet с пустого места строки меню."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从菜单栏的空白处打开 Pelmet 菜单。"
+          }
+        }
+      }
+    },
     "Optional": {
       "localizations": {
         "de": {
@@ -8121,6 +8179,64 @@
         }
       }
     },
+    "Right-click menu": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechtsklick-Menü"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menú del clic derecho"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu du clic droit"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu del clic destro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右クリックメニュー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 클릭 메뉴"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu do clique direito"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Меню по правому клику"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右键菜单"
+          }
+        }
+      }
+    },
     "Runs the shortcut.": {
       "localizations": {
         "de": {
@@ -9161,6 +9277,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "开始使用 Pelmet"
+          }
+        }
+      }
+    },
+    "Stays on while the Pelmet icon is hidden — it's the way back to Settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bleibt aktiv, solange das Pelmet-Symbol ausgeblendet ist — es ist der Weg zurück zu den Einstellungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanece activo mientras el icono de Pelmet está oculto: es la forma de volver a los ajustes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reste actif tant que l’icône de Pelmet est masquée : c’est le chemin de retour vers les réglages."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resta attivo finché l’icona di Pelmet è nascosta: è la via di ritorno alle impostazioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmetのアイコンを非表示にしている間は有効のままです。設定に戻る唯一の入口です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet 아이콘을 숨긴 동안에는 켜진 상태로 유지됩니다. 설정으로 돌아가는 통로입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continua ativo enquanto o ícone do Pelmet está oculto — é o caminho de volta aos ajustes."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Остаётся включённым, пока значок Pelmet скрыт, — это путь обратно к настройкам."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Pelmet 图标隐藏期间保持开启——这是回到设置的入口。"
           }
         }
       }

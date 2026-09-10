@@ -98,6 +98,13 @@ check manually in Settings → About.
 Any of: the global shortcut (⌥⌘, by default), right-click a Pelmet separator,
 right-click empty menu bar space, or launch Pelmet again from Finder/Spotlight.
 
+**Right-clicking the menu bar opens Pelmet's menu and I don't want it to.**
+Settings → General → "Right-click menu". Turn it off
+and an empty-space right-click is left to whatever else wants it — an app that
+draws its own surface across the bar, say. Right-clicking a Pelmet separator
+still opens the menu, and the shortcut still works. The switch is locked on
+while the Pelmet icon is hidden, because then it is the way back to Settings.
+
 **Can I change the Pelmet icon?**
 Settings → General → Icon. Six styles: chevron, arrow, eye, dots, grid and
 panel. Chevron, arrow, eye and panel flip to a revealed face while the bar is

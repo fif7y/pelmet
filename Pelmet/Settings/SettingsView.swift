@@ -557,6 +557,26 @@ private struct GeneralPane: View {
                     StatusIconPicker(selection: binding(\.statusIconStyle))
                 }
             }
+            SettingToggleRow(
+                // Named, not spelled out: a sentence long enough to say the
+                // whole thing ("Right-click the menu bar for Pelmet's menu")
+                // pushed the switch onto its own line in Portuguese — in the
+                // ordinary state, not just the locked one — and broke the
+                // card's one-line rhythm. Short title, caption carries it,
+                // same shape as the Permissions and Language rows.
+                title: "Right-click menu",
+                caption: appState.settings.showStatusItem
+                    ? "Opens Pelmet's menu from an empty spot on the menu bar."
+                    : "Stays on while the Pelmet icon is hidden — it's the way back to Settings.",
+                isOn: Binding(
+                    get: { appState.settings.barRightClickMenuActive },
+                    set: { enabled in
+                        appState.settings.barRightClickMenu = enabled
+                        appState.settingsChanged()
+                    }
+                )
+            )
+            .disabled(!appState.settings.showStatusItem)
             SettingNote("Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.")
         }
 
