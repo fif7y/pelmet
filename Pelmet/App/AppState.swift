@@ -273,7 +273,10 @@ final class AppState {
     }
 
     static func relaunchPlacementKeys(for bundle: String, model: SectionModel) -> [ItemID] {
-        guard model.knownBundles.contains(bundle) else { return [] }
+        // A system host may restart before any registration pass has folded
+        // it into knownBundles (the input menu switched on, then its agent
+        // relaunched). Its assignment is the proof the user manages it.
+        guard MenuBarPolicy.isUnmanagedAppleBundle(bundle) || model.knownBundles.contains(bundle) else { return [] }
         return registrationCandidates(model.assignments.keys.filter { $0.bundleID == bundle })
     }
 
@@ -1137,19 +1140,40 @@ final class AppState {
         let candidates = Self.registrationCandidates(snap.items.map(\.id))
         var model = settings.sectionModel
         let before = model.knownBundles
-        guard model.registerObservedItems(candidates) else { return [] }
-        let added = model.knownBundles.subtracting(before)
-        PelmetLog.log(
-            before.isEmpty
-                ? "register: baseline \(model.knownBundles.count) bundle(s)"
-                : "register: new \(added.sorted().joined(separator: ", ")) → \(model.newItemsDestination.rawValue)"
-        )
+        let hosts = Self.foldSystemHosts(into: &model, candidates: candidates)
+        let registered = model.registerObservedItems(candidates)
+        guard registered || !hosts.isEmpty else { return [] }
+        if !hosts.isEmpty {
+            PelmetLog.log("register: system host(s) \(hosts.sorted().joined(separator: ", ")) known — not routed")
+        }
+        let added = model.knownBundles.subtracting(before).subtracting(hosts)
+        if registered {
+            PelmetLog.log(
+                before.isEmpty
+                    ? "register: baseline \(model.knownBundles.count) bundle(s)"
+                    : "register: new \(added.sorted().joined(separator: ", ")) → \(model.newItemsDestination.rawValue)"
+            )
+        }
         settings.sectionModel = model
         settings.save()
-        guard !before.isEmpty else { return [] }
+        guard registered, !before.isEmpty else { return [] }
         return candidates.filter {
             $0.bundleID.map(added.contains) == true
         }
+    }
+
+    /// Apple hosts (the input menu, MenuBarAgent's Sound / Battery / Clock)
+    /// were in the bar before Pelmet could manage them, so an existing install
+    /// meets them as "unknown", never as newly installed. They join
+    /// `knownBundles` as baseline instead of routing to `newItemsDestination`;
+    /// the relaunch re-slot only needs them known. A fresh install (empty set)
+    /// already baselines everything in `registerObservedItems`.
+    static func foldSystemHosts(into model: inout SectionModel, candidates: [ItemID]) -> Set<String> {
+        guard !model.knownBundles.isEmpty else { return [] }
+        let hosts = Set(candidates.compactMap(\.bundleID).filter(MenuBarPolicy.isUnmanagedAppleBundle))
+            .subtracting(model.knownBundles)
+        model.knownBundles.formUnion(hosts)
+        return hosts
     }
 
     private func adopt(from snap: EngineSnapshot, dragEndX: CGFloat? = nil) {

@@ -9,6 +9,13 @@ struct InputMenuPlacementTests {
     let bundle = "com.apple.TextInputMenuAgent"
     var input: ItemID { .status(bundle: bundle, title: "Canadian") }
 
+    @Test func assignedInputMenuQueuesBeforeAnyRegistrationPass() {
+        // Menu switched on, agent restarted before a registration pass ran.
+        let model = SectionModel(assignments: [input.sectionKey: .hidden], knownBundles: ["com.example.Other"])
+        #expect(AppState.relaunchPlacementKeys(for: bundle, model: model) == [input.sectionKey])
+        #expect(AppState.relaunchPlacementKeys(for: bundle, model: SectionModel(knownBundles: ["com.example.Other"])).isEmpty)
+    }
+
     @Test func inputMenuRegistersAndQueuesAfterRestart() {
         var model = SectionModel(assignments: [input.sectionKey: .visible])
         let candidates = AppState.registrationCandidates([input])
@@ -19,11 +26,33 @@ struct InputMenuPlacementTests {
         #expect(AppState.relaunchPlacementKeys(for: bundle, model: model) == [input.sectionKey])
     }
 
-    @Test func newInputMenuUsesNewItemDestination() {
+    /// An existing install (non-empty knownBundles, new icons → Hidden) meets
+    /// the system hosts for the first time after updating. They were in the
+    /// bar all along: known, never routed. Third-party newcomers still route.
+    @Test func existingInstallFoldsSystemHostsWithoutRouting() {
+        let clock = ItemID.status(bundle: PelmetBundle.agentID, title: "com.apple.menuextra.clock")
+        let sound = ItemID.status(bundle: PelmetBundle.agentID, title: "com.apple.menuextra.sound")
+        let velja = ItemID.status(bundle: "com.sindresorhus.Velja", title: "Item-0")
         var model = SectionModel(newItemsDestination: .hidden, knownBundles: ["com.example.Other"])
-        let registered = model.registerObservedItems(AppState.registrationCandidates([input]))
+        let candidates = AppState.registrationCandidates([clock, sound, input, velja])
+        let hosts = AppState.foldSystemHosts(into: &model, candidates: candidates)
+        #expect(hosts == [PelmetBundle.agentID, bundle])
+        let registered = model.registerObservedItems(candidates)
         #expect(registered)
-        #expect(model.section(of: input) == .hidden)
+        #expect(model.section(of: clock) == .visible)
+        #expect(model.section(of: sound) == .visible)
+        #expect(model.section(of: input) == .visible)
+        #expect(model.section(of: velja) == .hidden)
+        #expect(model.knownBundles.isSuperset(of: [PelmetBundle.agentID, bundle, "com.sindresorhus.Velja"]))
+        // Folded hosts stay eligible for the relaunch re-slot once assigned.
+        model.assignments[input.sectionKey] = .hidden
+        #expect(AppState.relaunchPlacementKeys(for: bundle, model: model) == [input.sectionKey])
+    }
+
+    @Test func freshInstallLeavesFoldingToTheBaselinePass() {
+        var model = SectionModel(newItemsDestination: .hidden)
+        #expect(AppState.foldSystemHosts(into: &model, candidates: [input]).isEmpty)
+        #expect(model.knownBundles.isEmpty)
     }
 
     @Test func unmanagedAppleAndOwnItemsStayExcluded() {
