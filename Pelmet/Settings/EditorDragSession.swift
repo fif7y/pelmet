@@ -74,6 +74,10 @@ final class EditorDragSession {
 /// LIVE ones — with the placeholder already inserted — which is what makes
 /// the rule stable: moving the placeholder past a tile shifts that tile
 /// away from the cursor, never back under it.
+///
+/// A strip packs from the END (`FlowLayout(trailing:)`), so the TOP row
+/// holds the highest indices and index 0 is the bottom row's leftmost tile.
+/// A row's base index is therefore everything BELOW it, not above.
 nonisolated enum EditorInsertion {
     static func index(at point: CGPoint, order: [ItemID], frames: [ItemID: CGRect]) -> Int {
         let placed = order.compactMap { id in frames[id].map { (id: id, frame: $0) } }
@@ -96,9 +100,9 @@ nonisolated enum EditorInsertion {
         }
         let rowIndex = rows.indices.min { distance(rows[$0]) < distance(rows[$1]) } ?? 0
         let row = rows[rowIndex].sorted { $0.frame.minX < $1.frame.minX }
-        let above = rows[..<rowIndex].reduce(0) { $0 + $1.count }
+        let below = rows[(rowIndex + 1)...].reduce(0) { $0 + $1.count }
         let within = row.firstIndex { point.x < $0.frame.midX } ?? row.count
-        return above + within
+        return below + within
     }
 }
 
