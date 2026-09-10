@@ -184,9 +184,7 @@ extension SparkleController: SPUStandardUserDriverDelegate {
     ) {
         let version = update.displayVersionString
         Task { @MainActor in
-            if handleShowingUpdate {
-                SettingsWindowController.shared.lowerForSystemPrompt()
-            } else if notifyOnUpdates() {
+            if !handleShowingUpdate, notifyOnUpdates() {
                 postUpdateNotification(version: version)
             }
         }
@@ -198,10 +196,6 @@ extension SparkleController: SPUStandardUserDriverDelegate {
 
     nonisolated func standardUserDriverWillFinishUpdateSession() {
         Task { @MainActor in clearUpdateNotification() }
-    }
-
-    nonisolated func standardUserDriverWillShowModalAlert() {
-        Task { @MainActor in SettingsWindowController.shared.lowerForSystemPrompt() }
     }
 }
 

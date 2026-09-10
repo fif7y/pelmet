@@ -615,7 +615,6 @@ private struct GeneralPane: View {
                     StatusChip(text: "Granted", symbol: "checkmark.circle.fill", tint: .green)
                 } else {
                     AccentChipButton(text: "Grant access", symbol: "hand.raised.fill") {
-                        SettingsWindowController.shared.lowerForSystemPrompt()
                         AccessibilityAccess.request()
                     }
                 }
@@ -630,7 +629,6 @@ private struct GeneralPane: View {
                     StatusChip(text: "Granted", symbol: "checkmark.circle.fill", tint: .green)
                 } else {
                     AccentChipButton(text: "Grant access", symbol: "rectangle.dashed.badge.record") {
-                        SettingsWindowController.shared.lowerForSystemPrompt()
                         ScreenRecordingAccess.request()
                     }
                 }

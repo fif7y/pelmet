@@ -18,8 +18,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         // user asked for it.
         appState.settingsTab = tab
         if let window {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate()
+            bringToFront(window)
             appState.settingsWindowVisible = true
             return
         }
@@ -37,22 +36,25 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.setContentSize(NSSize(width: 780, height: 700))
         window.minSize = NSSize(width: 720, height: 520)
         window.center()
-        // Floating: settings is used in tandem with menubar interactions that
-        // briefly activate other apps — it must never sink under their windows.
-        window.level = .floating
+        // Normal level, like any app window. It used to float permanently
+        // so editor drags (which activate the dragged icon's app) could not
+        // sink it, but a window over every other app is the worse trade.
+        // It floats only while a drag is in flight — see holdAboveDrag().
         window.collectionBehavior = [.moveToActiveSpace]
-        // Floating again once the user clicks back — pairs with
-        // lowerForSystemPrompt(), which lets system/Sparkle dialogs in front.
-        keyObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main
-        ) { _ in
-            MainActor.assumeIsolated { window.level = .floating }
-        }
         window.delegate = self
         self.window = window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        bringToFront(window)
         appState.settingsWindowVisible = true
+    }
+
+    /// Cooperative activation (macOS 14+) can refuse a status-item app
+    /// while another app is frontmost, which leaves the window ordered in
+    /// behind it. Order it regardless, then ask for activation the
+    /// non-cooperative way.
+    private func bringToFront(_ window: NSWindow) {
+        window.orderFrontRegardless()
+        window.makeKey()
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -71,16 +73,22 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// mouse-down lands outside Pelmet, so macOS deactivates us mid-edit.
     func refocus() {
         guard let window, window.isVisible else { return }
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        bringToFront(window)
     }
 
-    private var keyObserver: NSObjectProtocol?
+    /// Float for the span of a synthetic menubar drag: its mouse-down lands
+    /// outside Pelmet and the dragged icon's app wins activation, which
+    /// would sink a normal-level window. Counted, so overlapping drags
+    /// keep the window up until the last one releases.
+    private var dragHolds = 0
 
-    /// Sparkle's update window (and system dialogs) come up at normal window
-    /// level — a floating settings window buries them. Drop to normal before
-    /// triggering one; the key observer restores floating on the next click.
-    func lowerForSystemPrompt() {
-        window?.level = .normal
+    func holdAboveDrag() {
+        dragHolds += 1
+        window?.level = .floating
+    }
+
+    func releaseAfterDrag() {
+        dragHolds = max(0, dragHolds - 1)
+        if dragHolds == 0 { window?.level = .normal }
     }
 }

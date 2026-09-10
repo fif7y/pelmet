@@ -738,6 +738,11 @@ final class PlacementController {
             return false
         }
         PelmetLog.log("place: dragging \(id.rawValue) x=\(frame.midX) → \(targetX) (section \(section), \(aimedBetween ? "between" : "anchored"))")
+        // Keep the settings window above the dragged icon's app for the
+        // span of the drag; released after the refocus ladder below.
+        let holdsSettings = appState.settingsWindowVisible
+        if holdsSettings { SettingsWindowController.shared.holdAboveDrag() }
+        defer { if holdsSettings { scheduleSettingsRelease() } }
         await ItemMover.cmdDrag(
             from: CGPoint(x: frame.midX, y: 12),
             to: CGPoint(x: targetX, y: 12),
@@ -810,18 +815,21 @@ final class PlacementController {
             }
             queueRescue(id)
         }
-        // The drag clicked outside Pelmet — hand focus back to the settings
-        // window. Retried: the dragged icon's app can win an activation race
-        // hundreds of ms later and steal focus back from a single attempt.
-        if appState.settingsWindowVisible {
-            SettingsWindowController.shared.refocus()
-            Task {
-                try? await Task.sleep(for: .milliseconds(300))
-                SettingsWindowController.shared.refocus()
-                try? await Task.sleep(for: .milliseconds(500))
-                SettingsWindowController.shared.refocus()
-            }
-        }
         return placed
+    }
+
+    /// The drag clicked outside Pelmet — hand focus back to the settings
+    /// window. Retried: the dragged icon's app can win an activation race
+    /// hundreds of ms later and steal focus back from a single attempt.
+    /// The window floats for the whole ladder, then returns to normal level.
+    private func scheduleSettingsRelease() {
+        SettingsWindowController.shared.refocus()
+        Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            SettingsWindowController.shared.refocus()
+            try? await Task.sleep(for: .milliseconds(500))
+            SettingsWindowController.shared.refocus()
+            SettingsWindowController.shared.releaseAfterDrag()
+        }
     }
 }
