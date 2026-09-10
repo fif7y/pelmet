@@ -1,7 +1,8 @@
 // FlowLayout.swift
 // Wrapping row layout for the editor strips; `trailing` right-anchors each
-// row like the real menubar. Row packing is a pure static so it's testable
-// without SwiftUI.
+// row like the real menubar AND packs from the right, so a strip wraps the
+// way the bar reads: first icon top-right, overflow continues below.
+// Row packing is a pure static so it's testable without SwiftUI.
 
 import SwiftUI
 
@@ -11,27 +12,34 @@ struct FlowLayout: Layout {
 
     /// Pure row packing over measured sizes: greedy fill, wrap when the next
     /// item would overflow — but never wrap the first item of a row.
+    /// `fromEnd` packs the LAST subview first: the menu bar's first icon is
+    /// its rightmost, so a right-anchored strip has to wrap like RTL text —
+    /// the top row holds the trailing items, the leftmost ones fall through.
+    /// Rows stay in top-to-bottom order and each row in left-to-right order.
     static func computeRows(
-        sizes: [CGSize], width: CGFloat, spacing: CGFloat
+        sizes: [CGSize], width: CGFloat, spacing: CGFloat, fromEnd: Bool = false
     ) -> [[(index: Int, size: CGSize)]] {
+        let order: [(index: Int, size: CGSize)] = sizes.enumerated()
+            .map { (index: $0.offset, size: $0.element) }
         var rows: [[(index: Int, size: CGSize)]] = [[]]
         var x: CGFloat = 0
-        for (index, size) in sizes.enumerated() {
-            if x + size.width > width, x > 0 {
+        for entry in (fromEnd ? order.reversed() : order) {
+            if x + entry.size.width > width, x > 0 {
                 rows.append([])
                 x = 0
             }
-            rows[rows.count - 1].append((index, size))
-            x += size.width + spacing
+            rows[rows.count - 1].append(entry)
+            x += entry.size.width + spacing
         }
-        return rows
+        return fromEnd ? rows.map { Array($0.reversed()) } : rows
     }
 
     private func rows(width: CGFloat, subviews: Subviews) -> [[(index: Int, size: CGSize)]] {
         Self.computeRows(
             sizes: subviews.map { $0.sizeThatFits(.unspecified) },
             width: width,
-            spacing: spacing
+            spacing: spacing,
+            fromEnd: trailing
         )
     }
 
