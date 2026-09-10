@@ -577,7 +577,11 @@ private struct GeneralPane: View {
                 )
             )
             .disabled(!appState.settings.showStatusItem)
-            SettingNote("Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.")
+            // "Without it" is advice for a state you are not in while the
+            // icon is there — it belongs to the card only once it applies.
+            if !appState.settings.showStatusItem {
+                SettingNote("Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.")
+            }
         }
 
         SettingsCard(title: "Language") {
