@@ -16,19 +16,21 @@ final class PelmetStatusItem {
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.autosaveName = "Pelmet.StatusItem"
         if let button = item.button {
-            button.image = NSImage(
-                systemSymbolName: appState.settings.statusIconStyle.symbol(revealed: false),
-                accessibilityDescription: "Pelmet"
-            )
             button.target = self
             button.action = #selector(clicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             // Stable engine identity (chevron-boundary lookups key off this).
             button.setAccessibilityTitle("Pelmet.StatusItem")
         }
-        updateAccessibilityWarning(granted: appState.accessibilityGranted)
+        warning = !appState.accessibilityGranted
+        applyImage()
         showUpdateDot(SparkleController.shared.availableVersion != nil)
     }
+
+    /// Which face the glyph is showing, so the warning colour can be
+    /// re-applied without the caller re-stating it (and vice versa).
+    private var revealedFace = false
+    private var warning = false
 
     /// An available update earns a 5pt accent dot at the chevron's top
     /// right — the one surface most users ever look at. It lives until the
@@ -58,7 +60,35 @@ final class PelmetStatusItem {
     /// Without the Accessibility grant Pelmet can't see the bar, so the
     /// chevron itself carries the warning: system orange until it's back.
     func updateAccessibilityWarning(granted: Bool) {
-        item.button?.contentTintColor = granted ? nil : .systemOrange
+        guard warning == granted else { return }
+        warning = !granted
+        applyImage()
+    }
+
+    /// The glyph, in the current face and the current warning state.
+    ///
+    /// The warning colour rides the IMAGE, via a palette symbol
+    /// configuration. It used to be the button's `contentTintColor`, which
+    /// on macOS 27 never reaches a template symbol in the menu bar: the
+    /// glyph rendered flat black instead of orange — invisible on a dark
+    /// bar, so the one signal that Pelmet had lost Accessibility looked
+    /// like a broken icon (2026-09-10). A palette-configured symbol carries
+    /// its own colour and is no longer a template.
+    private func applyImage() {
+        guard let style = appState?.settings.statusIconStyle else { return }
+        let glyph = NSImage(
+            systemSymbolName: style.symbol(revealed: revealedFace),
+            accessibilityDescription: "Pelmet"
+        )
+        guard warning else {
+            item.button?.image = glyph
+            return
+        }
+        let tinted = glyph?.withSymbolConfiguration(
+            NSImage.SymbolConfiguration(paletteColors: [.systemOrange])
+        )
+        tinted?.isTemplate = false
+        item.button?.image = tinted ?? glyph
     }
 
     /// Call before releasing (deinit can't touch main-actor AppKit state under
@@ -68,11 +98,8 @@ final class PelmetStatusItem {
     }
 
     func updateSymbol(revealed: Bool) {
-        guard let style = appState?.settings.statusIconStyle else { return }
-        item.button?.image = NSImage(
-            systemSymbolName: style.symbol(revealed: revealed),
-            accessibilityDescription: "Pelmet"
-        )
+        revealedFace = revealed
+        applyImage()
     }
 
     @objc private func clicked() {
