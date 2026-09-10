@@ -273,6 +273,12 @@ final class ExtrasManager {
                     accessibilityDescription: spec.itemTitle
                 )
             }
+            // The menu bar is TALLER on the built-in (notched) display than
+            // on an external one, and AppKit clips an oversized status image
+            // instead of fitting it — a launcher's app icon rendered as a
+            // cropped square on Gab's LG (2026-09-10). Let the button shrink
+            // it to whatever box that screen's bar gives us.
+            button.imageScaling = .scaleProportionallyDown
             button.target = self
             button.action = #selector(clicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
