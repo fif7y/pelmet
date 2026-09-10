@@ -291,6 +291,11 @@ final class AppState {
     /// Bundles that are running but proven icon-less (an adoption window
     /// found no registration). Cleared the moment an item of theirs shows.
     private var absentBundles: Set<String> = []
+    /// When each canonical identity was last live or concealed. The editor
+    /// keeps a stored item's stand-in tile through a snapshot gap only while
+    /// this is fresh; a host with no registration never gets one.
+    private var lastSeenAt: [ItemID: Date] = [:]
+    private static let storedTileGrace: TimeInterval = 15
 
     private func queueRelaunchedBundlePlacement(_ bundle: String) {
         let keys = Self.relaunchPlacementKeys(for: bundle, model: settings.sectionModel)
@@ -315,8 +320,21 @@ final class AppState {
                 // fires no AX event, so nothing pruned it) and would mask the
                 // parked NEW one. A relaunched item is parked, never
                 // genuinely concealed, until an assertion-free gap adopts it.
-                let observable = await self.engine.snapshot().items.contains { $0.id.bundleID == bundle }
+                let snap = await self.engine.snapshot()
+                let observable = snap.items.contains { $0.id.bundleID == bundle }
                 if observable { return }
+                // A system host (the input menu's agent) registers through
+                // the agent's own path the moment it has an item — it never
+                // parks and never bootstraps slowly. After the first wait it
+                // is either registered and already concealed (placement
+                // waits for a reveal) or it restarted without an item (the
+                // menu switched off in System Settings). Neither needs the
+                // assertion dropped, let alone twice (2026-09-10).
+                if MenuBarPolicy.isUnmanagedAppleBundle(bundle) {
+                    let held = snap.concealed.contains { $0.bundleID == bundle }
+                    PelmetLog.log("adoptWindow: \(bundle) \(held ? "registered and concealed" : "restarted without its item") — nothing to adopt")
+                    return
+                }
                 if await self.engine.openAdoptionWindow(for: bundle) {
                     self.updateSnapshot(await self.engine.snapshot())
                     self.placement.flushPendingPlacements()
@@ -870,7 +888,8 @@ final class AppState {
             model: settings.sectionModel,
             pelmetBundleID: PelmetBundle.mainID,
             isRunning: { app($0) != nil && !absentBundles.contains($0) },
-            appName: { app($0)?.localizedName }
+            appName: { app($0)?.localizedName },
+            recentlySeen: { Date.now.timeIntervalSince(lastSeenAt[$0.sectionKey] ?? .distantPast) < Self.storedTileGrace }
         )
     }
 
@@ -1081,6 +1100,9 @@ final class AppState {
     }
 
     func updateSnapshot(_ snap: EngineSnapshot) {
+        let now = Date.now
+        for item in snap.items { lastSeenAt[item.id.sectionKey] = now }
+        for id in snap.concealed { lastSeenAt[id.sectionKey] = now }
         guard snapshot?.contentEquals(snap) != true else { return }
         let bundleless = snap.items.filter(\.hostIsBundleless).map(\.id.rawValue)
         if bundleless != lastBundlelessIDs {

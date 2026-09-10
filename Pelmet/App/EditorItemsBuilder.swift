@@ -22,7 +22,8 @@ enum EditorItemsBuilder {
         model: SectionModel,
         pelmetBundleID: String,
         isRunning: (String) -> Bool,
-        appName: (String) -> String?
+        appName: (String) -> String?,
+        recentlySeen: (ItemID) -> Bool = { _ in true }
     ) -> [ObservedItem] {
         var byID: [ItemID: ObservedItem] = [:]
         for item in snapshotItems {
@@ -62,7 +63,11 @@ enum EditorItemsBuilder {
         // Model members that are momentarily neither observable nor in the
         // engine's concealed set (mid-reveal AX latency, mid-conceal swap)
         // still belong on the board — without this the section flashed empty
-        // on every tab revisit. Quit apps stay off (bundle not running).
+        // on every tab revisit. Quit apps stay off (bundle not running), and
+        // so does anything not seen recently: a host that is running but has
+        // no registration at all (the input menu switched off in System
+        // Settings while its agent keeps running, 2026-09-10) is not in a
+        // gap, it has no icon, and its stored assignment must not draw one.
         let stored = Set(
             model.assignments.filter { $0.value == section }.map(\.key)
         ).union(model.order[section] ?? [])
@@ -75,7 +80,8 @@ enum EditorItemsBuilder {
                   bundle != pelmetBundleID,
                   !MenuBarPolicy.isUnmanagedAppleBundle(bundle)
                     || MenuBarPolicy.systemItem(for: id) != nil,
-                  isRunning(bundle)
+                  isRunning(bundle),
+                  recentlySeen(id)
             else { continue }
             byID[id] = ObservedItem(id: id, frame: nil, appName: appName(bundle))
         }

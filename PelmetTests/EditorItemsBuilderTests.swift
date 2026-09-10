@@ -25,6 +25,17 @@ struct EditorItemsBuilderTests {
         #expect(build(model: model, running: ["com.apple.TextInputMenuAgent"]).map(\.id) == [input.sectionKey])
     }
 
+    @Test func storedSystemItemNeverSeenStaysOff() {
+        // 2026-09-10: the input menu switched off in System Settings — its
+        // agent keeps running, so "running" alone kept a Canadian tile on the
+        // board for an item that no longer exists in the bar.
+        let input = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: "Canadian")
+        let model = SectionModel(assignments: [input.sectionKey: .hidden])
+        #expect(build(model: model, running: ["com.apple.TextInputMenuAgent"], recentlySeen: false).isEmpty)
+        // Concealed by Pelmet (in the engine's set) is presence, not absence.
+        #expect(build(concealed: [input], model: model, running: ["com.apple.TextInputMenuAgent"], recentlySeen: false).map(\.id) == [input])
+    }
+
     let pelmet = "app.fif7y.Pelmet"
     let velja = ItemID(rawValue: "status:com.sindresorhus.Velja::Item-0")
     let veljaTwin = ItemID(rawValue: "status:com.sindresorhus.Velja::Left arrows")
@@ -42,7 +53,8 @@ struct EditorItemsBuilderTests {
         separators: [SeparatorSpec] = [],
         model: SectionModel = SectionModel(),
         running: Set<String> = [],
-        names: [String: String] = [:]
+        names: [String: String] = [:],
+        recentlySeen: Bool = true
     ) -> [ObservedItem] {
         EditorItemsBuilder.build(
             section: section,
@@ -53,7 +65,8 @@ struct EditorItemsBuilderTests {
             model: model,
             pelmetBundleID: pelmet,
             isRunning: { running.contains($0) },
-            appName: { names[$0] }
+            appName: { names[$0] },
+            recentlySeen: { _ in recentlySeen }
         )
     }
 
