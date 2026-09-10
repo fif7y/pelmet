@@ -222,11 +222,21 @@ final class AppState {
 
     private var relaunchObserver: NSObjectProtocol?
 
+    static func relaunchPlacementKeys(for bundle: String, model: SectionModel) -> [ItemID] {
+        guard model.knownBundles.contains(bundle) else { return [] }
+        return registrationCandidates(model.assignments.keys.filter { $0.bundleID == bundle })
+    }
+
+    static func registrationCandidates(_ items: [ItemID]) -> [ItemID] {
+        items.filter {
+            guard let bundle = $0.bundleID else { return false }
+            return bundle != PelmetBundle.mainID
+                && (!MenuBarPolicy.isUnmanagedAppleBundle(bundle) || MenuBarPolicy.systemItem(for: $0) != nil)
+        }
+    }
+
     private func queueRelaunchedBundlePlacement(_ bundle: String) {
-        guard bundle != PelmetBundle.mainID,
-              !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
-              settings.sectionModel.knownBundles.contains(bundle) else { return }
-        let keys = settings.sectionModel.assignments.keys.filter { $0.bundleID == bundle }
+        let keys = Self.relaunchPlacementKeys(for: bundle, model: settings.sectionModel)
         guard !keys.isEmpty else { return }
         placement.pendingPlacements.formUnion(keys)
         PelmetLog.log("place: \(bundle) relaunched — queued \(keys.count) item(s) for re-slot")
@@ -945,11 +955,7 @@ final class AppState {
     /// model-visible newcomer flaps sides of the chevron on every reveal.
     @discardableResult
     private func registerNewItems(from snap: EngineSnapshot) -> [ItemID] {
-        let pelmetBundle = PelmetBundle.mainID
-        let candidates = snap.items.map(\.id).filter {
-            guard let bundle = $0.bundleID else { return false }
-            return bundle != pelmetBundle && !MenuBarPolicy.isUnmanagedAppleBundle(bundle)
-        }
+        let candidates = Self.registrationCandidates(snap.items.map(\.id))
         var model = settings.sectionModel
         let before = model.knownBundles
         guard model.registerObservedItems(candidates) else { return [] }

@@ -18,6 +18,20 @@ final class PlacementController {
         self.engine = engine
     }
 
+    // Input-source titles and agent registrations can change during a drag.
+    // Use the same identity for initial lookup, verification, and retries.
+    static func liveItem(for id: ItemID, in items: [ObservedItem]) -> ObservedItem? {
+        items.first { $0.id == id && $0.frame != nil }
+            ?? items.first { $0.id.sectionKey == id.sectionKey && $0.frame != nil }
+    }
+
+    static func isProtectedSystemItem(_ id: ItemID) -> Bool {
+        // The input menu is movable; it must not become the trailing clamp
+        // when the agent re-registers it to the left of the chevron.
+        if id.bundleID == PelmetBundle.textInputAgentID { return false }
+        return MenuBarPolicy.isUnmanagedAppleBundle(id.bundleID) || id.isSystemModule
+    }
+
     // MARK: - Physical placement (synthetic ⌘-drag)
 
     /// Returns true when the icon was dragged into place (or verified already
@@ -197,8 +211,7 @@ final class PlacementController {
         // editor tile) or any title-variant — resolve to the live
         // representative by section key, exact id first.
         func liveItem(in snap: EngineSnapshot) -> ObservedItem? {
-            snap.items.first(where: { $0.id == id && $0.frame != nil })
-                ?? snap.items.first(where: { $0.id.sectionKey == id.sectionKey && $0.frame != nil })
+            Self.liveItem(for: id, in: snap.items)
         }
         // Freshly-shown extras take a beat to be hosted — retry the lookup
         // briefly instead of giving up on the first stale snapshot.
@@ -314,11 +327,11 @@ final class PlacementController {
         let rightNeighbor = rightPair?.frame.map(lifted)
 
         let managedMinX = snap.items
-            .filter { !MenuBarPolicy.isUnmanagedAppleBundle($0.id.bundleID) && !$0.id.isSystemModule }
+            .filter { !Self.isProtectedSystemItem($0.id) }
             .compactMap(\.frame?.minX)
             .min()
         let systemMinX = snap.items
-            .filter { MenuBarPolicy.isUnmanagedAppleBundle($0.id.bundleID) || $0.id.isSystemModule }
+            .filter { Self.isProtectedSystemItem($0.id) }
             .compactMap(\.frame)
             .filter(inBand)
             .map(\.minX)
@@ -366,12 +379,12 @@ final class PlacementController {
         // context, and whichever assumption was wrong the first time, the
         // other target is the correct one.
         func landedInSlot(_ snap: EngineSnapshot) -> Bool {
-            guard let x = snap.items.first(where: { $0.id == liveID })?.frame?.midX else { return false }
+            guard let x = Self.liveItem(for: liveID, in: snap.items)?.frame?.midX else { return false }
             let leftMid = leftPair
-                .flatMap { l in snap.items.first { $0.id == l.id }?.frame }
+                .flatMap { l in Self.liveItem(for: l.id, in: snap.items)?.frame }
                 .flatMap { inBand($0) ? $0.midX : nil }
             let rightMid = rightPair
-                .flatMap { r in snap.items.first { $0.id == r.id }?.frame }
+                .flatMap { r in Self.liveItem(for: r.id, in: snap.items)?.frame }
                 .flatMap { inBand($0) ? $0.midX : nil }
             let ok = PlacementGeometry.inSlot(x: x, leftMidX: leftMid, rightMidX: rightMid)
             if !ok {
@@ -407,7 +420,7 @@ final class PlacementController {
         try? await Task.sleep(for: AppTiming.postDragSettle)
         var after = await engine.snapshot()
         appState.updateSnapshot(after)
-        if let newFrame = after.items.first(where: { $0.id == liveID })?.frame {
+        if let newFrame = Self.liveItem(for: liveID, in: after.items)?.frame {
             PelmetLog.log("place: landed at x=\(newFrame.midX)")
         } else {
             PelmetLog.log("place: item not observable after drag")
@@ -418,14 +431,14 @@ final class PlacementController {
         // drop most likely landed in the concealed gap. Unverified: requeue
         // for the next reveal rather than trust it.
         if isChevron, placed,
-           leftPair.flatMap({ l in after.items.first { $0.id == l.id }?.frame }).map(inBand) != true {
+           leftPair.flatMap({ l in Self.liveItem(for: l.id, in: after.items)?.frame }).map(inBand) != true {
             PelmetLog.log("place: chevron's hidden neighbor vanished mid-drag — unverified, requeued")
             return false
         }
         if !placed,
-           let retryFrame = after.items.first(where: { $0.id == liveID })?.frame,
-           let rawLeft = leftPair.flatMap({ l in after.items.first { $0.id == l.id }?.frame }),
-           let rawRight = rightPair.flatMap({ r in after.items.first { $0.id == r.id }?.frame }),
+           let retryFrame = Self.liveItem(for: liveID, in: after.items)?.frame,
+           let rawLeft = leftPair.flatMap({ l in Self.liveItem(for: l.id, in: after.items)?.frame }),
+           let rawRight = rightPair.flatMap({ r in Self.liveItem(for: r.id, in: after.items)?.frame }),
            inBand(rawLeft), inBand(rawRight),
            rawLeft.midX < rawRight.midX {
             let retryX = PlacementGeometry.rawRetryX(
@@ -441,7 +454,7 @@ final class PlacementController {
             after = await engine.snapshot()
             appState.updateSnapshot(after)
             placed = landedInSlot(after)
-            PelmetLog.log("place: retry landed at x=\(after.items.first(where: { $0.id == liveID })?.frame?.midX ?? -1) verified=\(placed)")
+            PelmetLog.log("place: retry landed at x=\(Self.liveItem(for: liveID, in: after.items)?.frame?.midX ?? -1) verified=\(placed)")
         }
         // A SINGLE trapped item can evade the duplicate-minX check (nothing
         // else at its phantom x). Fallback signature for own items: both
@@ -449,7 +462,7 @@ final class PlacementController {
         // bounce — either way a retry on the de-crowded settled bar is the
         // right recovery, so hand it to the conceal-settle rescue.
         if !placed, dragIsPelmetOwned,
-           let finalX = after.items.first(where: { $0.id == liveID })?.frame?.minX,
+           let finalX = Self.liveItem(for: liveID, in: after.items)?.frame?.minX,
            abs(finalX - frame.minX) < 0.5 {
             PelmetLog.log("place: \(id.rawValue) never moved (x=\(finalX)) — trapped or bounced")
             // Same inline «-expansion as the phantom path — a SINGLE trapped
