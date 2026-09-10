@@ -181,8 +181,12 @@ private struct SidebarRow: View {
                             .font(.system(size: 13, weight: selected ? .semibold : .regular))
                     }
                     .lineLimit(1)
-                    .fixedSize()
-                Spacer(minLength: 0)
+                    // No fixedSize: a long title (ru "О программе" beside
+                    // "Обновить") must ellipsize rather than run under the
+                    // badge and the attention dot it shares the row with.
+                    .truncationMode(.tail)
+                    .layoutPriority(1)
+                Spacer(minLength: 4)
                 if attention {
                     Circle().fill(.orange).frame(width: 7, height: 7)
                 }
@@ -218,23 +222,29 @@ private struct SidebarRow: View {
 /// brand accent — every option visible at once, no menu to open.
 /// Outbound help links. The FAQ is one page with named anchors.
 enum PelmetLinks {
-    static let faqAppStandIns = URL(string: "https://github.com/fif7y/pelmet/blob/main/docs/FAQ.md#app-stand-ins")!
+    static let faqAppLaunchers = URL(string: "https://github.com/fif7y/pelmet/blob/main/docs/FAQ.md#app-launchers")!
 }
 
 struct PelmetSegments<T: Hashable>: View {
     @Binding var selection: T
     let options: [(T, LocalizedStringKey)]
+    /// Row-sized: sits inside a card, so it needs a stronger fill to
+    /// separate from the card's own and smaller type to match row captions.
+    var compact = false
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(options, id: \.0) { value, label in
-                PelmetSegmentButton(label: label, selected: selection == value) {
+                PelmetSegmentButton(label: label, selected: selection == value, compact: compact) {
                     selection = value
                 }
             }
         }
-        .padding(3)
-        .background(RoundedRectangle(cornerRadius: 9).fill(.quaternary.opacity(0.35)))
+        .padding(compact ? 2 : 3)
+        .background(
+            RoundedRectangle(cornerRadius: compact ? 8 : 9)
+                .fill(.quaternary.opacity(compact ? 0.6 : 0.35))
+        )
         .animation(.spring(duration: 0.22), value: selection)
     }
 }
@@ -242,16 +252,17 @@ struct PelmetSegments<T: Hashable>: View {
 private struct PelmetSegmentButton: View {
     let label: LocalizedStringKey
     let selected: Bool
+    var compact = false
     let action: () -> Void
     @State private var hovered = false
 
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.system(size: 12, weight: selected ? .semibold : .regular))
+                .font(.system(size: compact ? 11 : 12, weight: selected ? .semibold : .regular))
                 .foregroundStyle(selected ? PelmetAccent.accent : .secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
+                .padding(.horizontal, compact ? 9 : 10)
+                .padding(.vertical, compact ? 3 : 4)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
                         .fill(selected
@@ -290,6 +301,40 @@ struct SettingsCard<Content: View>: View {
 }
 
 /// Title + optional caption on the left, any control on the right.
+/// A menu that sizes to the SELECTED value, not to its widest option.
+/// SwiftUI's `.pickerStyle(.menu)` reserves room for the longest entry, so
+/// one long translation inflated the closed control and squeezed the row's
+/// own label into a ragged column (French "Afficher lorsque la barre est
+/// déployée" made the closed "Toujours masqués" ~280pt wide).
+struct PelmetMenuPicker<Value: Hashable>: View {
+    @Binding var selection: Value
+    let options: [(Value, LocalizedStringKey)]
+
+    private var currentLabel: LocalizedStringKey {
+        options.first { $0.0 == selection }?.1 ?? ""
+    }
+
+    var body: some View {
+        Menu {
+            // Toggles carry the native checkmark; a Label's symbol is
+            // dropped by macOS menus.
+            ForEach(options, id: \.0) { value, label in
+                Toggle(label, isOn: Binding(
+                    get: { selection == value },
+                    set: { if $0 { selection = value } }
+                ))
+            }
+        } label: {
+            Text(currentLabel)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.bordered)
+        .fixedSize()
+    }
+}
+
 struct SettingRow<Control: View>: View {
     let title: Text
     var caption: LocalizedStringKey? = nil
@@ -308,18 +353,34 @@ struct SettingRow<Control: View>: View {
         self.control = control()
     }
 
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                title
-                if let caption {
-                    Text(caption)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+    private var label: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            title
+            if let caption {
+                Text(caption)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            Spacer(minLength: 16)
-            control
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    var body: some View {
+        // A long title beside a fixed-width control (a menu Picker sizes to
+        // its widest option) squeezed the text into a ragged column —
+        // French "Lecture en cours, commandes de caméra, AirDrop,
+        // Concentration" wrapped to four lines beside its own caption.
+        // Side by side while both fit, control below when they don't.
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 12) {
+                label
+                Spacer(minLength: 16)
+                control
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                label
+                HStack { Spacer(minLength: 0); control }
+            }
         }
     }
 }
@@ -423,7 +484,12 @@ struct SettingSliderRow: View {
                     .font(.callout)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
-                    .frame(width: 48, alignment: .trailing)
+                    .lineLimit(1)
+                    // "Instant" is 48pt in English and ~72 in French; the
+                    // box may grow, it must not clip the value it exists
+                    // to show.
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(minWidth: 48, alignment: .trailing)
             }
         }
     }
@@ -592,13 +658,13 @@ private struct BehaviorPane: View {
                 title: "Now Playing, camera controls, AirDrop, Focus",
                 caption: "macOS hides these whenever any icons are concealed — they can only appear while the whole bar is revealed."
             ) {
-                Picker("", selection: binding(\.hideSystemExtras)) {
-                    Text("Always hidden").tag(true)
-                    Text("Show while revealed").tag(false)
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .fixedSize()
+                PelmetMenuPicker(
+                    selection: binding(\.hideSystemExtras),
+                    options: [
+                        (true, LocalizedStringKey("Always hidden")),
+                        (false, LocalizedStringKey("Show while revealed")),
+                    ]
+                )
             }
         }
 
@@ -659,7 +725,7 @@ private struct DisplayRow: View {
                         .padding(.vertical, 2)
                         .background(.quaternary, in: Capsule())
                 }
-                Picker("", selection: Binding(
+                PelmetMenuPicker(selection: Binding(
                     get: { appState.settings.behavior(forDisplayUUID: uuid) },
                     set: { behavior in
                         if let uuid {
@@ -668,13 +734,10 @@ private struct DisplayRow: View {
                             appState.displayBehaviorEdited()
                         }
                     }
-                )) {
-                    Text("Collapse").tag(DisplayBehavior.collapse)
-                    Text("Expanded").tag(DisplayBehavior.alwaysShowAll)
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .fixedSize()
+                ), options: [
+                    (DisplayBehavior.collapse, LocalizedStringKey("Collapse")),
+                    (DisplayBehavior.alwaysShowAll, LocalizedStringKey("Expanded")),
+                ])
             }
         }
     }

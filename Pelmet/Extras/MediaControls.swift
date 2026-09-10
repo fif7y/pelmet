@@ -1,6 +1,6 @@
 // MediaControls.swift — Pelmet items ("extras"): Pelmet-owned proxies for the
 // system extras that macOS collateral-hides under any assertion, user
-// shortcut buttons, and app stand-ins (a Pelmet icon that opens an app).
+// shortcut buttons, and app launchers (a Pelmet icon that opens an app).
 // Because Pelmet owns these NSStatusItems, hiding is plain `isVisible` per
 // assigned section — no assertion involvement (asserting away Pelmet's bundle
 // would take the chevron too).
@@ -60,7 +60,7 @@ final class ExtrasManager {
     private var lastCameraIndicatorVisible = false
     /// Debounces the activation edge before queuing the placement walk.
     private var cameraPlacementDebounce: Task<Void, Never>?
-    /// App stand-ins with the "while running" rule: the running edge (not the
+    /// App launchers with the "while running" rule: the running edge (not the
     /// section reveal edge) is what re-enters layout and needs a placement.
     private var lastRunning: [UUID: Bool] = [:]
     /// Menu-bar agent apps post no launch notification; KVO on the running
@@ -98,7 +98,7 @@ final class ExtrasManager {
             if items[spec.id] == nil {
                 items[spec.id] = makeItem(for: spec)
             }
-            if spec.kind == .appStandIn, spec.symbol == nil,
+            if spec.kind == .appLauncher, spec.symbol == nil,
                let icon = Self.appIcon(for: spec, size: 20) {
                 ItemImageCache.registerPelmetItem(title: spec.itemTitle, image: icon)
             } else {
@@ -106,13 +106,13 @@ final class ExtrasManager {
                     title: spec.itemTitle, symbol: Self.symbol(for: spec)
                 )
             }
-            // The glyph is editable (stand-in icon picker), so refresh the
+            // The glyph is editable (launcher icon picker), so refresh the
             // existing button too — sync only builds the item once.
-            if spec.kind == .appStandIn, let button = items[spec.id]?.button {
-                button.image = Self.standInImage(for: spec, size: 18)
+            if spec.kind == .appLauncher, let button = items[spec.id]?.button {
+                button.image = Self.launcherImage(for: spec, size: 18)
             }
         }
-        let needsRunningObserver = newSpecs.contains { $0.kind == .appStandIn }
+        let needsRunningObserver = newSpecs.contains { $0.kind == .appLauncher }
         if needsRunningObserver, runningAppsObservation == nil {
             runningAppsObservation = NSWorkspace.shared.observe(
                 \.runningApplications, options: [.new]
@@ -199,7 +199,7 @@ final class ExtrasManager {
                 } else if !visible, lastVisible[id] == true {
                     appState?.cancelDynamicExtraPlacement(itemID)
                 }
-            case .appStandIn:
+            case .appLauncher:
                 // "While running" mirrors the app's own icon; "Always" is a
                 // launcher and hides purely by section, like AirDrop.
                 let running = Self.isRunning(spec)
@@ -265,7 +265,7 @@ final class ExtrasManager {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.autosaveName = spec.itemTitle
         if let button = item.button {
-            if spec.kind == .appStandIn, let icon = Self.standInImage(for: spec, size: 18) {
+            if spec.kind == .appLauncher, let icon = Self.launcherImage(for: spec, size: 18) {
                 button.image = icon
             } else {
                 button.image = NSImage(
@@ -289,18 +289,18 @@ final class ExtrasManager {
         case .cameraMicIndicator: "video.fill"
         case .airdrop: Self.airdropSymbol
         case .shortcut: spec.symbol ?? "bolt.fill"
-        case .appStandIn: spec.symbol ?? "app.dashed"
+        case .appLauncher: spec.symbol ?? "app.dashed"
         }
     }
 
-    // MARK: App stand-ins
+    // MARK: App launchers
 
-    /// A stand-in's bar glyph: the SF Symbol the user picked (template, so
+    /// A launcher's bar glyph: the SF Symbol the user picked (template, so
     /// the bar tints it like any other icon), else the app's own icon.
     /// Symbols draw a couple of points smaller than the app-icon box — a
     /// glyph fills its frame edge to edge where an app icon has its own
     /// padding, so equal box sizes read as a bigger icon (Gab, 2026-09-09).
-    static func standInImage(for spec: ExtraItemSpec, size: CGFloat) -> NSImage? {
+    static func launcherImage(for spec: ExtraItemSpec, size: CGFloat) -> NSImage? {
         if let symbol = spec.symbol {
             let image = NSImage(
                 systemSymbolName: symbol, accessibilityDescription: spec.appName
@@ -311,10 +311,10 @@ final class ExtrasManager {
         return appIcon(for: spec, size: size)
     }
 
-    /// Glyphs offered by the stand-in icon picker, filtered to what this
+    /// Glyphs offered by the launcher icon picker, filtered to what this
     /// system can actually draw (a missing symbol would render an empty
     /// cell). Ordered loosely by kind — neutral shapes first, then objects.
-    static let standInSymbols: [String] = [
+    static let launcherSymbols: [String] = [
         "star.fill", "heart.fill", "bolt.fill", "flame.fill", "sparkles", "moon.fill",
         "sun.max.fill", "cloud.fill", "drop.fill", "leaf.fill", "circle.fill", "square.fill",
         "triangle.fill", "diamond.fill", "hexagon.fill", "seal.fill", "app.fill", "capsule.fill",
@@ -331,7 +331,7 @@ final class ExtrasManager {
 
     /// The app's real icon (installed copy, running or not), sized for the
     /// bar or the editor tile. nil when the app is gone — the dashed-app
-    /// symbol stands in for the stand-in.
+    /// symbol stands in for it.
     static func appIcon(for spec: ExtraItemSpec, size: CGFloat) -> NSImage? {
         guard let url = appURL(for: spec) else { return nil }
         let icon = NSWorkspace.shared.icon(forFile: url.path)
@@ -471,7 +471,7 @@ final class ExtrasManager {
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.message = String(localized: "Choose an app to stand in for")
+        panel.message = String(localized: "Choose an app to launch")
         guard panel.runModal() == .OK, let url = panel.url,
               let bundle = Bundle(url: url), let bundleID = bundle.bundleIdentifier
         else { return nil }
@@ -548,7 +548,7 @@ final class ExtrasManager {
             if let name = spec.shortcutName {
                 runShortcut(named: name)
             }
-        case .appStandIn:
+        case .appLauncher:
             if rightClick, Self.isRunning(spec), let bundleID = spec.bundleID {
                 let menu = NSMenu()
                 let quit = NSMenuItem(

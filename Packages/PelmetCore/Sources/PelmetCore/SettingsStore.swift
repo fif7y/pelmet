@@ -90,19 +90,22 @@ public enum ExtraKind: String, Codable, CaseIterable, Sendable {
     case cameraMicIndicator
     case airdrop
     case shortcut
-    /// A Pelmet-drawn icon standing in for another app: click opens the app.
-    /// Made for apps whose own icon Pelmet can't hide (hosted by a bundle-less
-    /// helper the assertion allowlist can never match — ChatGPT Classic,
-    /// 2026-09-09) and, as a bonus, a launcher for any app.
-    case appStandIn
+    /// A Pelmet-drawn icon for another app: click opens it. Made for apps
+    /// whose own icon Pelmet can't hide (hosted by a bundle-less helper the
+    /// assertion allowlist can never match — ChatGPT Classic, 2026-09-09)
+    /// and, for everything else, a plain launcher.
+    /// Raw value predates the 2026-09-10 rename (was "app stand-in") — kept
+    /// so pre-release settings still decode.
+    case appLauncher = "appStandIn"
 }
 
-/// When an app stand-in exists in the bar.
-public enum StandInShowRule: String, Codable, CaseIterable, Sendable {
+/// When an app launcher sits in the bar.
+public enum LauncherShowRule: String, Codable, CaseIterable, Sendable {
+    /// A launcher: present whether or not the app runs. The default — a
+    /// launcher you can't click when the app is closed isn't a launcher.
+    case always
     /// Mirrors the app's own icon: present only while the app runs.
     case whileRunning
-    /// A launcher: present whether or not the app runs.
-    case always
 }
 
 public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
@@ -112,12 +115,12 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
     public var shortcutName: String?
     /// SF Symbol for shortcut items.
     public var symbol: String?
-    /// App stand-ins: the app's bundle id — identity, icon, and what a click opens.
+    /// App launchers: the app's bundle id — identity, icon, and what a click opens.
     public var bundleID: String?
-    /// App stand-ins: display name captured at add time (the app may be quit).
+    /// App launchers: display name captured at add time (the app may be quit).
     public var appName: String?
-    /// App stand-ins: nil reads as `.whileRunning`.
-    public var showRule: StandInShowRule?
+    /// App launchers: nil reads as `.always`.
+    public var showRule: LauncherShowRule?
 
     public init(
         id: UUID = UUID(),
@@ -126,7 +129,7 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
         symbol: String? = nil,
         bundleID: String? = nil,
         appName: String? = nil,
-        showRule: StandInShowRule? = nil
+        showRule: LauncherShowRule? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -137,7 +140,7 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
         self.showRule = showRule
     }
 
-    public var resolvedShowRule: StandInShowRule { showRule ?? .whileRunning }
+    public var resolvedShowRule: LauncherShowRule { showRule ?? .always }
 
     /// Stable ItemID title. Singleton kinds keep fixed titles (section
     /// assignments survive re-toggling); shortcut items key by UUID.
@@ -147,7 +150,7 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
         case .cameraMicIndicator: "Pelmet.CameraMic"
         case .airdrop: "Pelmet.AirDrop"
         case .shortcut: "Pelmet.Shortcut.\(id.uuidString)"
-        case .appStandIn: "Pelmet.App.\(id.uuidString)"
+        case .appLauncher: "Pelmet.App.\(id.uuidString)"
         }
     }
 }

@@ -265,7 +265,7 @@ final class AppState {
         } else {
             // Running, assigned, and still no registration with the
             // assertion dropped: the app has no bar icon right now (its
-            // "show in menu bar" is off — the stand-in flow's last step).
+            // "show in menu bar" is off — the launcher flow's last step).
             // The editor's no-flash guard must not keep a ghost tile for it.
             absentBundles.insert(bundle)
             PelmetLog.log("editor: \(bundle) has no menu bar item — off the board")
@@ -659,8 +659,8 @@ final class AppState {
     /// Updates assignment + explicit order, then physically places the icon
     /// via a synthetic ⌘-drag (no agent restart).
     /// Bundles with an icon on the editor board (live or concealed) that
-    /// Pelmet can actually manage — a stand-in would be a duplicate. Icons
-    /// marked incompatible are NOT here: those are exactly what stand-ins
+    /// Pelmet can actually manage — a launcher would be a duplicate. Icons
+    /// marked incompatible are NOT here: those are exactly what launchers
     /// are for, and the user picks them before turning the original off.
     var manageableBarBundles: Set<String> {
         guard let snapshot else { return [] }
@@ -678,20 +678,20 @@ final class AppState {
         )
     }
 
-    /// A third-party item whose app the user gave a stand-in.
-    func hasAppStandIn(for id: ItemID) -> Bool {
+    /// A third-party item whose app the user gave a launcher.
+    func hasAppLauncher(for id: ItemID) -> Bool {
         guard let bundle = id.bundleID, bundle != PelmetBundle.mainID else { return false }
-        return settings.extraItems.contains { $0.kind == .appStandIn && $0.bundleID == bundle }
+        return settings.extraItems.contains { $0.kind == .appLauncher && $0.bundleID == bundle }
     }
 
-    /// Adds a Pelmet stand-in for an app, one per bundle. `section` pre-assigns
-    /// it (the editor's "Add a stand-in" puts it where the user put the icon it
+    /// Adds a Pelmet launcher for an app, one per bundle. `section` pre-assigns
+    /// it (the editor's "Add a launcher" puts it where the user put the icon it
     /// replaces); nil routes it like any new menu bar icon — it is one.
     @discardableResult
-    func addAppStandIn(bundleID: String, name: String, in section: PelmetCore.Section? = nil) -> Bool {
-        guard !settings.extraItems.contains(where: { $0.kind == .appStandIn && $0.bundleID == bundleID })
+    func addAppLauncher(bundleID: String, name: String, in section: PelmetCore.Section? = nil) -> Bool {
+        guard !settings.extraItems.contains(where: { $0.kind == .appLauncher && $0.bundleID == bundleID })
         else { return false }
-        let spec = ExtraItemSpec(kind: .appStandIn, bundleID: bundleID, appName: name)
+        let spec = ExtraItemSpec(kind: .appLauncher, bundleID: bundleID, appName: name)
         settings.extraItems.append(spec)
         let target = section ?? settings.sectionModel.newItemsDestination
         let key = ExtrasManager.itemID(for: spec).sectionKey
@@ -701,7 +701,7 @@ final class AppState {
             settings.sectionModel.assignments[key] = target
         }
         settings.sectionModel.order[target, default: []].append(key)
-        PelmetLog.log("extras: add stand-in \(bundleID) → \(target)")
+        PelmetLog.log("extras: add launcher \(bundleID) → \(target)")
         settingsChanged()
         return true
     }
@@ -760,7 +760,7 @@ final class AppState {
     }
 
     /// An own item that just (re-)entered a REVEALED bar sits at the agent's
-    /// slot, not the model's — a stand-in whose app launched mid-reveal
+    /// slot, not the model's — a launcher whose app launched mid-reveal
     /// surfaced at the end of Always Hidden (ChatGPT Classic, 2026-09-09).
     /// Place it now, same beat as a freshly added extra; the reveal-settle
     /// queue would only catch the next reveal.
@@ -1070,7 +1070,7 @@ final class AppState {
     /// Bundles whose bar item is hosted by a bundle-less process (ChatGPT
     /// Classic's helper): the assertion allowlist can't key on such a
     /// process, so Pelmet can't hide the icon reliably — the editor shows it
-    /// inactive and offers a stand-in without waiting for a failed conceal.
+    /// inactive and offers a launcher without waiting for a failed conceal.
     private(set) var bundlelessHosts: Set<String> = Set(
         UserDefaults.standard.stringArray(forKey: AppState.bundlelessKey) ?? []
     )

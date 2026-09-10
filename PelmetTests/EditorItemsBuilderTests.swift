@@ -162,22 +162,22 @@ struct EditorItemsBuilderTests {
     }
 
     @Test func appStandInCarriesItsAppNameAndBundlelessHostSurvives() {
-        let standIn = ExtraItemSpec(kind: .appStandIn, bundleID: "com.openai.chat", appName: "ChatGPT")
+        let launcher = ExtraItemSpec(kind: .appLauncher, bundleID: "com.openai.chat", appName: "ChatGPT")
         let helperItem = ItemID(rawValue: "status:com.openai.chat::Item-0")
         var model = SectionModel()
-        model.assignments[ExtrasManager.itemID(for: standIn)] = .hidden
+        model.assignments[ExtrasManager.itemID(for: launcher)] = .hidden
         model.assignments[helperItem.sectionKey] = .hidden
         let result = build(
             items: [
                 ObservedItem(id: helperItem, frame: frame(x: 100), appName: "ChatGPT", hostIsBundleless: true),
                 // Live in AX, named after its host — the spec's name wins.
-                ObservedItem(id: ExtrasManager.itemID(for: standIn), frame: frame(x: 140), appName: "Pelmet"),
+                ObservedItem(id: ExtrasManager.itemID(for: launcher), frame: frame(x: 140), appName: "Pelmet"),
             ],
-            extras: [standIn],
+            extras: [launcher],
             model: model,
             running: ["com.openai.chat"]
         )
-        let tile = result.first { $0.id == ExtrasManager.itemID(for: standIn) }
+        let tile = result.first { $0.id == ExtrasManager.itemID(for: launcher) }
         #expect(tile?.appName == "ChatGPT")
         #expect(tile?.frame != nil)
         #expect(result.first { $0.id == helperItem }?.hostIsBundleless == true)

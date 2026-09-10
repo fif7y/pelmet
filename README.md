@@ -61,9 +61,9 @@ seconds) or the moment you click somewhere else.
 - **Built-in replacements.** Media controls, AirDrop, camera/mic indicator
   and Shortcuts items that survive hiding, since macOS temporarily removes
   its own extras while hiding is active.
-- **App stand-ins.** A Pelmet icon for any app: click opens it, and it hides
+- **App launchers.** A Pelmet icon for any app: click opens it, and it hides
   like everything else. The fix for apps whose own icon can't be hidden (see
-  the [FAQ](docs/FAQ.md#app-stand-ins)), and a launcher for the rest.
+  the [FAQ](docs/FAQ.md#app-launchers)), and a handy launcher for the rest.
 - **Separators.** Visual dividers that behave like icons, with adjustable
   opacity. ⌘-drag them anywhere in the bar.
 - **Nothing to phone home about.** No account, no analytics, no server.

@@ -291,64 +291,6 @@
         }
       }
     },
-    "A stand-in fixes that: a Pelmet shortcut that opens %@ and works like any other menu bar item.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Stellvertreter löst das: eine Pelmet-Verknüpfung, die %@ öffnet und sich wie jedes andere Menüleistenelement verhält."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un sustituto lo arregla: un acceso de Pelmet que abre %@ y funciona como cualquier otro elemento de la barra de menús."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un substitut règle ça : un raccourci Pelmet qui ouvre %@ et se comporte comme n’importe quel autre élément de la barre des menus."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un sostituto risolve: una scorciatoia Pelmet che apre %@ e funziona come qualsiasi altro elemento della barra dei menu."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "代役で解決できます。%@ を開くPelmetのショートカットで、ほかのメニューバー項目と同じように使えます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대역이 해결합니다. %@을(를) 여는 Pelmet 바로가기로, 다른 메뉴 막대 항목처럼 작동합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Um substituto resolve: um atalho do Pelmet que abre %@ e funciona como qualquer outro item da barra de menus."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Заместитель это решает: ярлык Pelmet, который открывает %@ и работает, как любой другой элемент строки меню."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "替身可以解决：一个能打开 %@ 的 Pelmet 快捷方式，像其他菜单栏项目一样工作。"
-          }
-        }
-      }
-    },
     "A star helps more people find Pelmet.": {
       "localizations": {
         "de": {
@@ -871,118 +813,176 @@
         }
       }
     },
-    "Add a stand-in": {
+    "Add a launcher": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stellvertreter hinzufügen"
+            "value": "Starter hinzufügen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir un sustituto"
+            "value": "Añadir un lanzador"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter un substitut"
+            "value": "Ajouter un lanceur"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aggiungi un sostituto"
+            "value": "Aggiungi un avvio app"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "代役を追加"
+            "value": "ランチャーを追加"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "대역 추가"
+            "value": "실행기 추가"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adicionar um substituto"
+            "value": "Adicionar um atalho"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Добавить заместитель"
+            "value": "Добавить запуск"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加替身"
+            "value": "添加启动器"
           }
         }
       }
     },
-    "Add a stand-in for %@": {
+    "Add a launcher for %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stellvertreter für %@ hinzufügen"
+            "value": "Starter für %@ hinzufügen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir un sustituto para %@"
+            "value": "Añadir un lanzador para %@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter un substitut pour %@"
+            "value": "Ajouter un lanceur pour %@"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aggiungi un sostituto per %@"
+            "value": "Aggiungi un avvio per %@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ の代役を追加"
+            "value": "%@ のランチャーを追加"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 대역 추가"
+            "value": "%@ 실행기 추가"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adicionar um substituto para %@"
+            "value": "Adicionar um atalho para %@"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Добавить заместитель для %@"
+            "value": "Добавить запуск для %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "为 %@ 添加替身"
+            "value": "为 %@ 添加启动器"
+          }
+        }
+      }
+    },
+    "Add a new app launcher": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuen App-Starter hinzufügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir un lanzador de app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un lanceur d’app"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un avvio app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリランチャーを追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 실행기 추가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar um atalho de app"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить запуск приложения"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加应用启动器"
           }
         }
       }
@@ -1335,60 +1335,118 @@
         }
       }
     },
-    "Always shows — opens the app": {
+    "Always shows": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Immer sichtbar — öffnet die App"
+            "value": "Immer sichtbar"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Siempre visible — abre la app"
+            "value": "Siempre visible"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toujours visible — ouvre l’app"
+            "value": "Toujours visible"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sempre visibile — apre l’app"
+            "value": "Sempre visibile"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "常に表示 — アプリを開きます"
+            "value": "常に表示"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "항상 표시 — 앱을 엽니다"
+            "value": "항상 표시"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sempre visível — abre o app"
+            "value": "Sempre visível"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Всегда показывается — открывает приложение"
+            "value": "Всегда виден"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "始终显示 — 打开应用"
+            "value": "始终显示"
+          }
+        }
+      }
+    },
+    "An app launcher fixes that: a Pelmet icon that opens %@ and works like any other menu bar item.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein App-Starter löst das: ein Pelmet-Symbol, das %@ öffnet und sich wie jedes andere Menüleistenelement verhält."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un lanzador de app lo arregla: un icono de Pelmet que abre %@ y funciona como cualquier otro elemento de la barra de menús."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un lanceur d’app règle ça : une icône Pelmet qui ouvre %@ et se comporte comme n’importe quel autre élément de la barre des menus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un avvio app risolve: un’icona Pelmet che apre %@ e funziona come qualsiasi altro elemento della barra dei menu."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリランチャーで解決できます。%@ を開くPelmetのアイコンで、ほかのメニューバー項目と同じように使えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 실행기가 해결합니다. %@을(를) 여는 Pelmet 아이콘으로, 다른 메뉴 막대 항목처럼 작동합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um atalho de app resolve: um ícone do Pelmet que abre %@ e funciona como qualquer outro item da barra de menus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запуск приложения это решает: значок Pelmet, который открывает %@ и работает, как любой другой элемент строки меню."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用启动器可以解决：一个能打开 %@ 的 Pelmet 图标，像其他菜单栏项目一样工作。"
           }
         }
       }
@@ -1567,60 +1625,60 @@
         }
       }
     },
-    "App stand-ins": {
+    "App launchers": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "App-Stellvertreter"
+            "value": "App-Starter"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sustitutos de app"
+            "value": "Lanzadores de apps"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Substituts d’app"
+            "value": "Lanceurs d’apps"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sostituti di app"
+            "value": "Avvio app"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アプリの代役"
+            "value": "アプリランチャー"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "앱 대역"
+            "value": "앱 실행기"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Substitutos de app"
+            "value": "Atalhos de apps"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Заместители приложений"
+            "value": "Запуск приложений"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "应用替身"
+            "value": "应用启动器"
           }
         }
       }
@@ -2379,60 +2437,60 @@
         }
       }
     },
-    "Choose an app to stand in for": {
+    "Choose an app to launch": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "App auswählen, die vertreten werden soll"
+            "value": "App zum Öffnen auswählen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elige la app que quieres sustituir"
+            "value": "Elige la app que quieres abrir"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisissez l’app à remplacer"
+            "value": "Choisissez l’app à ouvrir"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scegli l’app da sostituire"
+            "value": "Scegli l’app da aprire"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "代役を立てるアプリを選択"
+            "value": "開くアプリを選択"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "대역을 만들 앱 선택"
+            "value": "열 앱 선택"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escolha o app a substituir"
+            "value": "Escolha o app a abrir"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Выберите приложение для заместителя"
+            "value": "Выберите приложение для запуска"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择要替身的应用"
+            "value": "选择要打开的应用"
           }
         }
       }
@@ -3539,64 +3597,6 @@
         }
       }
     },
-    "For apps whose own icon won't hide: add its stand-in, then turn that icon off in the app.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für Apps, deren eigenes Symbol sich nicht ausblenden lässt: Stellvertreter hinzufügen, dann das Symbol in der App ausschalten."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para apps cuyo icono no se oculta: añade su sustituto y luego desactiva ese icono en la app."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pour les apps dont l’icône ne se masque pas : ajoutez son substitut, puis désactivez cette icône dans l’app."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Per le app la cui icona non si nasconde: aggiungi il sostituto, poi disattiva quell’icona nell’app."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アイコンが隠せないアプリには：代役を追加してから、アプリ側でそのアイコンをオフにしてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아이콘이 숨겨지지 않는 앱의 경우: 대역을 추가한 뒤 앱에서 그 아이콘을 끄세요."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para apps cujo ícone não se oculta: adicione o substituto e depois desative esse ícone no app."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для приложений, чей значок не скрывается: добавьте заместитель, затем отключите этот значок в приложении."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对于无法隐藏图标的应用：添加替身，然后在应用中关闭该图标。"
-          }
-        }
-      }
-    },
     "Found a bug?": {
       "localizations": {
         "de": {
@@ -4525,6 +4525,64 @@
         }
       }
     },
+    "Incompatible app not showing up in the menu bar? Add an app launcher.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inkompatible App taucht nicht in der Menüleiste auf? Füge einen App-Starter hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Una app incompatible no aparece en la barra de menús? Añade un lanzador de app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une app incompatible n’apparaît pas dans la barre des menus ? Ajoutez un lanceur d’app."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un’app incompatibile non compare nella barra dei menu? Aggiungi un avvio app."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非対応のアプリがメニューバーに出てきませんか？アプリランチャーを追加しましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "호환되지 않는 앱이 메뉴 막대에 나타나지 않나요? 앱 실행기를 추가하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um app incompatível não aparece na barra de menus? Adicione um atalho de app."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Несовместимое приложение не появляется в строке меню? Добавьте запуск приложения."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不兼容的应用没有出现在菜单栏？添加一个应用启动器。"
+          }
+        }
+      }
+    },
     "Input Source": {
       "localizations": {
         "de": {
@@ -4815,60 +4873,60 @@
         }
       }
     },
-    "Its stand-in is ready": {
+    "Its launcher is ready": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Stellvertreter ist bereit"
+            "value": "Der Starter ist bereit"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Su sustituto está listo"
+            "value": "Su lanzador está listo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Son substitut est prêt"
+            "value": "Son lanceur est prêt"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il suo sostituto è pronto"
+            "value": "Il suo avvio app è pronto"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "代役の準備ができました"
+            "value": "ランチャーの準備ができました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "대역이 준비되었습니다"
+            "value": "실행기가 준비되었습니다"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O substituto está pronto"
+            "value": "O atalho está pronto"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Заместитель готов"
+            "value": "Запуск готов"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "替身已就绪"
+            "value": "启动器已就绪"
           }
         }
       }
@@ -5101,6 +5159,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "登录时启动"
+          }
+        }
+      }
+    },
+    "Launcher added — now turn this icon off in %@'s settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starter hinzugefügt — schalte dieses Symbol jetzt in den Einstellungen von %@ aus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lanzador añadido — ahora desactiva este icono en los ajustes de %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lanceur ajouté — désactivez maintenant cette icône dans les réglages de %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvio app aggiunto — ora disattiva questa icona nelle impostazioni di %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ランチャーを追加しました — 次に %@ の設定でこのアイコンをオフにしてください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행기를 추가했습니다 — 이제 %@ 설정에서 이 아이콘을 끄세요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atalho adicionado — agora desative este ícone nos ajustes de %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запуск добавлен — теперь отключите этот значок в настройках %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已添加启动器 — 现在请在 %@ 的设置中关闭此图标"
           }
         }
       }
@@ -6207,6 +6323,64 @@
         }
       }
     },
+    "Only while app is running": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur wenn die App läuft"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo si la app está abierta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seulement si l’app est ouverte"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se l’app è in esecuzione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリの実行中のみ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 실행 중에만"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Só com o app aberto"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Только когда приложение запущено"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅在应用运行时"
+          }
+        }
+      }
+    },
     "Open Pelmet at login": {
       "localizations": {
         "de": {
@@ -6729,6 +6903,64 @@
         }
       }
     },
+    "Pelmet app launcher — click opens the app; hides like any Pelmet item": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet-App-Starter — Klick öffnet die App; lässt sich wie jedes Pelmet-Element ausblenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lanzador de app de Pelmet — un clic abre la app; se oculta como cualquier elemento de Pelmet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lanceur d’app Pelmet — un clic ouvre l’app ; se masque comme tout élément Pelmet"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvio app Pelmet — un clic apre l’app; si nasconde come ogni elemento Pelmet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmetのアプリランチャー — クリックでアプリを開きます。ほかのPelmet項目と同じように隠せます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet 앱 실행기 — 클릭하면 앱이 열립니다. 다른 Pelmet 항목처럼 숨겨집니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atalho de app do Pelmet — um clique abre o app; oculta-se como qualquer item do Pelmet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запуск приложения Pelmet — клик открывает приложение; скрывается, как любой элемент Pelmet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet 应用启动器 — 点击打开应用；可像任何 Pelmet 项目一样隐藏"
+          }
+        }
+      }
+    },
     "Pelmet is free. It stays that way.": {
       "localizations": {
         "de": {
@@ -6899,64 +7131,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pelmet 让每个图标悬停即现，而那些你从不需要的，则藏于视线之外。"
-          }
-        }
-      }
-    },
-    "Pelmet stand-in — click opens the app; hides like any Pelmet item": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet-Stellvertreter — Klick öffnet die App; lässt sich wie jedes Pelmet-Element ausblenden"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sustituto de Pelmet — un clic abre la app; se oculta como cualquier elemento de Pelmet"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Substitut Pelmet — un clic ouvre l’app ; se masque comme tout élément Pelmet"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sostituto Pelmet — un clic apre l’app; si nasconde come ogni elemento Pelmet"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmetの代役 — クリックでアプリを開きます。ほかのPelmet項目と同じように隠せます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet 대역 — 클릭하면 앱이 열립니다. 다른 Pelmet 항목처럼 숨길 수 있습니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Substituto do Pelmet — um clique abre o app; oculta-se como qualquer item do Pelmet"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Заместитель Pelmet — клик открывает приложение; скрывается, как любой элемент Pelmet"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet 替身 — 点击打开应用；可像任何 Pelmet 项目一样隐藏"
           }
         }
       }
@@ -8759,64 +8933,6 @@
         }
       }
     },
-    "Shows while the app runs": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erscheint, solange die App läuft"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se muestra mientras la app está abierta"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Visible tant que l’app tourne"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Appare finché l’app è in esecuzione"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アプリの実行中に表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱이 실행 중일 때 표시"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aparece enquanto o app está aberto"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показывается, пока приложение запущено"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "应用运行时显示"
-          }
-        }
-      }
-    },
     "Smooth": {
       "localizations": {
         "de": {
@@ -8929,64 +9045,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "在 GitHub 上赞助"
-          }
-        }
-      }
-    },
-    "Stand-in added — now turn this icon off in %@'s settings": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stellvertreter hinzugefügt — schalte dieses Symbol jetzt in den Einstellungen von %@ aus"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sustituto añadido — ahora desactiva este icono en los ajustes de %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Substitut ajouté — désactivez maintenant cette icône dans les réglages de %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sostituto aggiunto — ora disattiva questa icona nelle impostazioni di %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "代役を追加しました — 次に %@ の設定でこのアイコンをオフにしてください"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대역을 추가했습니다 — 이제 %@ 설정에서 이 아이콘을 끄세요"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Substituto adicionado — agora desative este ícone nos ajustes de %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Заместитель добавлен — теперь отключите этот значок в настройках %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已添加替身 — 现在请在 %@ 的设置中关闭此图标"
           }
         }
       }
@@ -9803,60 +9861,60 @@
         }
       }
     },
-    "Turn this icon off in %@'s settings. The stand-in takes over from there.": {
+    "Turn this icon off in %@'s settings. The launcher takes over from there.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schalte dieses Symbol in den Einstellungen von %@ aus. Ab dann übernimmt der Stellvertreter."
+            "value": "Schalte dieses Symbol in den Einstellungen von %@ aus. Ab dann übernimmt der Starter."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Desactiva este icono en los ajustes de %@. A partir de ahí, el sustituto se encarga."
+            "value": "Desactiva este icono en los ajustes de %@. A partir de ahí, el lanzador se encarga."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Désactivez cette icône dans les réglages de %@. Le substitut prend le relais."
+            "value": "Désactivez cette icône dans les réglages de %@. Le lanceur prend le relais."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Disattiva questa icona nelle impostazioni di %@. Da lì in poi ci pensa il sostituto."
+            "value": "Disattiva questa icona nelle impostazioni di %@. Da lì in poi ci pensa l’avvio app."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ の設定でこのアイコンをオフにしてください。あとは代役が引き継ぎます。"
+            "value": "%@ の設定でこのアイコンをオフにしてください。あとはランチャーが引き継ぎます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 설정에서 이 아이콘을 끄세요. 그 뒤로는 대역이 맡습니다."
+            "value": "%@ 설정에서 이 아이콘을 끄세요. 그 뒤로는 실행기가 맡습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Desative este ícone nos ajustes de %@. A partir daí, o substituto assume."
+            "value": "Desative este ícone nos ajustes de %@. A partir daí, o atalho assume."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Отключите этот значок в настройках %@. Дальше всё возьмёт на себя заместитель."
+            "value": "Отключите этот значок в настройках %@. Дальше всё возьмёт на себя запуск приложения."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在 %@ 的设置中关闭此图标。之后由替身接管。"
+            "value": "在 %@ 的设置中关闭此图标。之后由启动器接管。"
           }
         }
       }

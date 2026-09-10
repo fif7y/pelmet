@@ -80,6 +80,24 @@ struct MenuBarTab: View {
     @Environment(AppState.self) private var appState
     @State private var dragSession = EditorDragSession()
 
+    private var newItemsLabel: some View {
+        Text("New menu bar icons go to").font(.callout)
+    }
+
+    private var newItemsSegments: some View {
+        PelmetSegments(selection: Binding(
+            get: { appState.settings.sectionModel.newItemsDestination },
+            set: { destination in
+                appState.settings.sectionModel.newItemsDestination = destination
+                appState.settingsChanged()
+            }
+        ), options: [
+            (.visible, "Visible"),
+            (.hidden, "Hidden"),
+            (.alwaysHidden, "Always hidden"),
+        ])
+    }
+
     var body: some View {
         // No own ScrollView — the settings shell provides scrolling + padding.
         // Generous section rhythm — whitespace is structure, not waste.
@@ -114,24 +132,22 @@ struct MenuBarTab: View {
 
                 // The "New" chip above is the same setting made draggable —
                 // this row is its discoverable, labeled twin.
-                HStack(spacing: 10) {
-                    Text("New menu bar icons go to")
-                        .font(.callout)
-                    PelmetSegments(selection: Binding(
-                        get: { appState.settings.sectionModel.newItemsDestination },
-                        set: { destination in
-                            appState.settings.sectionModel.newItemsDestination = destination
-                            appState.settingsChanged()
-                        }
-                    ), options: [
-                        (.visible, "Visible"),
-                        (.hidden, "Hidden"),
-                        (.alwaysHidden, "Always hidden"),
-                    ])
-                    Spacer()
+                // Label + three segments is ~550pt in German against a
+                // 468pt floor at the minimum window, and segments can't
+                // wrap. Side by side while it fits, stacked when it doesn't.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        newItemsLabel
+                        newItemsSegments
+                        Spacer()
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        newItemsLabel
+                        newItemsSegments
+                    }
                 }
 
-                AppStandInsStrip()
+                AppLaunchersStrip()
 
                 PelmetItemsStrip()
 
@@ -222,10 +238,16 @@ private struct EditorSectionView: View {
                     .foregroundStyle(.secondary)
                 Text(title)
                     .font(.headline)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                // Italian runs 93 chars here and this caption is the only
+                // place the ⌘-drag shortcut is taught — let it wrap rather
+                // than squeeze the title beside it.
                 Text(caption)
                     .font(.caption)
                     .foregroundStyle(.tertiary)
-                Spacer()
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
             }
 
             // Right-anchored like the real bar — icons cluster at the
@@ -388,30 +410,30 @@ private struct ItemTile: View {
         MenuBarPolicy.systemItem(for: item.id) != nil
     }
 
-    /// One of Pelmet's app stand-ins — same icon and name as the app it
+    /// One of Pelmet's app launchers — same icon and name as the app it
     /// stands in for, so the tile says which one it is.
-    private var isAppStandIn: Bool {
+    private var isAppLauncher: Bool {
         item.id.rawValue.contains("::Pelmet.App.")
     }
 
-    private var hasStandIn: Bool {
+    private var hasLauncher: Bool {
         guard let bundle = item.id.bundleID else { return false }
-        return appState.settings.extraItems.contains { $0.kind == .appStandIn && $0.bundleID == bundle }
+        return appState.settings.extraItems.contains { $0.kind == .appLauncher && $0.bundleID == bundle }
     }
 
     /// The bar kept this icon after Pelmet concealed it (observed, not
     /// inferred — see UnhideableTracker).
     private var isUnhideable: Bool {
-        !isAppStandIn && (
+        !isAppLauncher && (
             appState.unhideableKeys.contains(item.id.sectionKey)
                 || appState.isBundlelessHost(item.id)
         )
     }
 
-    /// The app's own icon, still in the bar after the user added a stand-in
-    /// for it. Reads as inactive: the stand-in is the one that counts now.
+    /// The app's own icon, still in the bar after the user added a launcher
+    /// for it. Reads as inactive: the launcher is the one that counts now.
     private var isSuperseded: Bool {
-        hasStandIn && !isAppStandIn
+        hasLauncher && !isAppLauncher
     }
 
     private func scheduleCard() {
@@ -475,14 +497,14 @@ private struct ItemTile: View {
                         .padding(2)
                         .background(Circle().fill(.background))
                         .offset(x: 4, y: -4)
-                } else if isAppStandIn {
+                } else if isAppLauncher {
                     Image(systemName: "sparkles")
                         .font(.system(size: 7, weight: .bold))
                         .foregroundStyle(.secondary)
                         .padding(2)
                         .background(Circle().fill(.background))
                         .offset(x: 4, y: -4)
-                        .help("Pelmet stand-in — click opens the app; hides like any Pelmet item")
+                        .help("Pelmet app launcher — click opens the app; hides like any Pelmet item")
                 } else if hasBundleSiblings {
                     Image(systemName: "link")
                         .font(.system(size: 7, weight: .bold))
@@ -506,8 +528,12 @@ private struct ItemTile: View {
                 .font(.system(size: 9))
                 .foregroundStyle(hovered ? .secondary : .tertiary)
                 .lineLimit(1)
+                .truncationMode(.tail)
                 .frame(maxWidth: 52)
         }
+        // 52pt is ~11 Latin characters — anything longer (and every label
+        // at a larger text size) needs a way back to the full name.
+        .help(displayName)
         .opacity(isSuperseded || isUnhideable ? 0.4 : 1)
         .onHover { over in
             hovered = over
@@ -516,10 +542,10 @@ private struct ItemTile: View {
         .popover(isPresented: $cardShown, arrowEdge: .top) {
             InactiveIconCard(
                 name: displayName,
-                hasStandIn: hasStandIn,
+                hasLauncher: hasLauncher,
                 helperHosted: appState.isBundlelessHost(item.id),
-                addStandIn: item.id.bundleID.map { bundle in
-                    { appState.addAppStandIn(bundleID: bundle, name: displayName, in: section) }
+                addLauncher: item.id.bundleID.map { bundle in
+                    { appState.addAppLauncher(bundleID: bundle, name: displayName, in: section) }
                 }
             )
             .onHover { over in
@@ -535,37 +561,48 @@ private struct ItemTile: View {
         }
         .contextMenu {
             if isUnhideable || isSuperseded, let bundle = item.id.bundleID {
-                if hasStandIn {
-                    Text("Stand-in added — now turn this icon off in \(displayName)'s settings")
+                if hasLauncher {
+                    Text("Launcher added — now turn this icon off in \(displayName)'s settings")
                 } else {
-                    Button("Add a stand-in for \(displayName)") {
-                        appState.addAppStandIn(bundleID: bundle, name: displayName, in: section)
+                    Button("Add a launcher for \(displayName)") {
+                        appState.addAppLauncher(bundleID: bundle, name: displayName, in: section)
                     }
                 }
-                Link("Why can't Pelmet hide this?", destination: PelmetLinks.faqAppStandIns)
+                Link("Why can't Pelmet hide this?", destination: PelmetLinks.faqAppLaunchers)
             }
         }
     }
 }
 
 /// Hover card for an icon Pelmet can't hide: what is going on, and the one
-/// thing to do about it. Two states — no stand-in yet (offer one) and
-/// stand-in exists (turn the app's own icon off). No border, soft fill,
+/// thing to do about it. Two states — no launcher yet (offer one) and
+/// launcher exists (turn the app's own icon off). No border, soft fill,
 /// one primary action.
 private struct InactiveIconCard: View {
     let name: String
-    let hasStandIn: Bool
+    let hasLauncher: Bool
     /// The icon's host is a bundle-less helper — the one cause Pelmet can
     /// name; otherwise the bar simply kept the icon when asked to hide it.
     let helperHosted: Bool
-    let addStandIn: (() -> Void)?
+    let addLauncher: (() -> Void)?
+
+    @ViewBuilder
+    private var cardActions: some View {
+        if !hasLauncher, let addLauncher {
+            Button("Add a launcher", action: addLauncher)
+                .buttonStyle(.borderedProminent)
+                .tint(PelmetAccent.accent)
+        }
+        Link("Learn more", destination: PelmetLinks.faqAppLaunchers)
+            .foregroundStyle(PelmetAccent.accent)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if hasStandIn {
-                Text("Its stand-in is ready")
+            if hasLauncher {
+                Text("Its launcher is ready")
                     .font(.headline)
-                Text("Turn this icon off in \(name)'s settings. The stand-in takes over from there.")
+                Text("Turn this icon off in \(name)'s settings. The launcher takes over from there.")
             } else {
                 Text("Incompatible app")
                     .font(.headline)
@@ -574,19 +611,17 @@ private struct InactiveIconCard: View {
                 } else {
                     Text("macOS kept it in the bar when Pelmet asked to hide it.")
                 }
-                Text("A stand-in fixes that: a Pelmet shortcut that opens \(name) and works like any other menu bar item.")
+                Text("An app launcher fixes that: a Pelmet icon that opens \(name) and works like any other menu bar item.")
             }
-            HStack(spacing: 12) {
-                if !hasStandIn, let addStandIn {
-                    Button("Add a stand-in", action: addStandIn)
-                        .buttonStyle(.borderedProminent)
-                        .tint(PelmetAccent.accent)
-                }
-                Link("Learn more", destination: PelmetLinks.faqAppStandIns)
-                    .foregroundStyle(PelmetAccent.accent)
+            // Fixed-width card: a German or Italian button label pushed
+            // "Learn more" — the only route to the FAQ — past the edge.
+            // Side by side while both fit, stacked otherwise.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { cardActions }
+                VStack(alignment: .leading, spacing: 8) { cardActions }
             }
             .padding(.top, 2)
-            if !hasStandIn {
+            if !hasLauncher {
                 Text("Then turn the original off in \(name)'s settings.")
                     .foregroundStyle(.tertiary)
             }
@@ -709,12 +744,18 @@ private struct PelmetItemRow: View {
             Image(systemName: symbol)
                 .frame(width: 18)
                 .foregroundStyle(.secondary)
+            // The title holds its line; the caption is what wraps. Italian
+            // captions run 105 chars against a 440pt card, and without this
+            // the title wrapped mid-phrase beside its own caption.
             Text(title)
                 .font(.callout)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             Text(caption)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
-            Spacer()
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 8)
             Toggle("", isOn: Binding(get: { isOn }, set: onToggle))
                 .toggleStyle(.switch)
                 .controlSize(.mini)
@@ -724,29 +765,29 @@ private struct PelmetItemRow: View {
     }
 }
 
-// MARK: - App stand-ins
+// MARK: - App launchers
 
 /// A Pelmet icon that opens an app. The answer for apps whose own icon Pelmet
 /// can never hide (bundle-less helper hosts — ChatGPT Classic), and a launcher
 /// for anything else. Mirrors the Pelmet-items card: same header, same
 /// borderless "+" picker, same row shape.
-private struct AppStandInsStrip: View {
+private struct AppLaunchersStrip: View {
     @Environment(AppState.self) private var appState
 
-    private var standIns: [ExtraItemSpec] {
-        appState.settings.extraItems.filter { $0.kind == .appStandIn }
+    private var launchers: [ExtraItemSpec] {
+        appState.settings.extraItems.filter { $0.kind == .appLauncher }
     }
 
     private func showPicker() {
-        // Out of the list: apps that already have a stand-in, and apps whose
-        // real icon the editor can already manage (a stand-in would just
+        // Out of the list: apps that already have a launcher, and apps whose
+        // real icon the editor can already manage (a launcher would just
         // duplicate it). Incompatible icons stay — that is the whole point.
         let menu = ExtrasManager.appPickerMenu(
             barBundles: Set(appState.bundleCounts.keys),
-            excluding: Set(standIns.compactMap(\.bundleID))
+            excluding: Set(launchers.compactMap(\.bundleID))
                 .union(appState.manageableBarBundles)
         ) { app in
-            appState.addAppStandIn(bundleID: app.bundleID, name: app.name)
+            appState.addAppLauncher(bundleID: app.bundleID, name: app.name)
         }
         PelmetLog.log("extras: app picker (\(menu.items.count) items)")
         // Off the button's own event turn: popping synchronously inside a
@@ -757,32 +798,44 @@ private struct AppStandInsStrip: View {
         }
     }
 
+    private var guidance: some View {
+        Text("Incompatible app not showing up in the menu bar? Add an app launcher.")
+            .foregroundStyle(.tertiary)
+    }
+
+    private var learnMore: some View {
+        Link("Learn more", destination: PelmetLinks.faqAppLaunchers)
+            .foregroundStyle(PelmetAccent.accent)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // No header trigger: the add row below is the same door, and a
+            // nav yields to the CTA it duplicates.
             CardHeader(
-                symbol: "app.dashed", title: "App stand-ins",
+                symbol: "app.dashed", title: "App launchers",
                 caption: "A Pelmet icon that opens an app — hides like any icon"
-            ) {
-                // AppKit menu behind a SwiftUI-styled trigger (SwiftUI's Menu
-                // drops custom images on macOS).
-                Button(action: showPicker) { AddTrigger(title: "App") }
-                    .buttonStyle(.plain)
-            }
+            ) { EmptyView() }
 
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(standIns) { spec in
-                    AppStandInRow(spec: spec)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(launchers.enumerated()), id: \.element.id) { index, spec in
+                    if index > 0 { RowDivider() }
+                    AppLauncherRow(spec: spec)
                 }
-                // Always-on guidance, not an empty state: the one thing a
-                // user must know is that the app's OWN icon has to go.
-                HStack(spacing: 6) {
-                    Text("For apps whose own icon won't hide: add its stand-in, then turn that icon off in the app.")
-                        .foregroundStyle(.tertiary)
-                    Link("Learn more", destination: PelmetLinks.faqAppStandIns)
-                        .foregroundStyle(PelmetAccent.accent)
-                    Spacer()
+                if !launchers.isEmpty { RowDivider() }
+                // The list's own add row — the entry point, and the whole
+                // card when nothing is added yet.
+                AddLauncherRow(action: showPicker)
+                // Always-on guidance: the one thing a user must know is why
+                // this feature exists at all.
+                // The sentence alone is ~470pt in French against 440pt of
+                // card, so the link can't share its line unconditionally.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) { guidance; learnMore; Spacer() }
+                    VStack(alignment: .leading, spacing: 3) { guidance; learnMore }
                 }
                 .font(.caption)
+                .padding(.top, 9)
             }
             .padding(14)
             .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.35)))
@@ -790,14 +843,65 @@ private struct AppStandInsStrip: View {
     }
 }
 
-private struct AppStandInRow: View {
+/// Hairline between rows inside a card — a separator between siblings,
+/// not a border around anything (de-box).
+private struct RowDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(.quaternary.opacity(0.5))
+            .frame(height: 1)
+    }
+}
+
+/// The add entry point, shaped like a row so it reads as "the next one goes
+/// here" — and the whole card in the empty state. Dashed tile = a slot, not
+/// an item: the same language as the editor's "New" chip above.
+private struct AddLauncherRow: View {
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: "plus")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(PelmetAccent.accent)
+                    .frame(width: 26, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7)
+                            .fill(PelmetAccent.accent.opacity(hovered ? 0.14 : 0))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7)
+                            .strokeBorder(
+                                hovered ? PelmetAccent.accent.opacity(0.6) : Color.secondary.opacity(0.35),
+                                style: StrokeStyle(lineWidth: 1, dash: [3.5, 3])
+                            )
+                    )
+                Text("Add a new app launcher")
+                    .font(.callout)
+                    .foregroundStyle(PelmetAccent.accent)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(PelmetAccent.accent.opacity(0.75))
+                Spacer()
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+    }
+}
+
+private struct AppLauncherRow: View {
     @Environment(AppState.self) private var appState
     let spec: ExtraItemSpec
 
     @State private var pickingIcon = false
     @State private var iconHovered = false
 
-    private func setRule(_ rule: StandInShowRule) {
+    private func setRule(_ rule: LauncherShowRule) {
         guard let index = appState.settings.extraItems.firstIndex(where: { $0.id == spec.id }) else { return }
         appState.settings.extraItems[index].showRule = rule
         appState.settingsChanged()
@@ -809,10 +913,35 @@ private struct AppStandInRow: View {
         appState.settingsChanged()
     }
 
-    private static func label(_ rule: StandInShowRule) -> LocalizedStringKey {
+    private var ruleBinding: Binding<LauncherShowRule> {
+        Binding(get: { spec.resolvedShowRule }, set: { setRule($0) })
+    }
+
+    /// The narrow fallback: the current rule as a label, the full choice one
+    /// click away. Toggles render the native checkmark (a Label's symbol is
+    /// dropped by macOS menus).
+    private var ruleMenu: some View {
+        Menu {
+            ForEach(LauncherShowRule.allCases, id: \.self) { rule in
+                Toggle(Self.label(rule), isOn: Binding(
+                    get: { rule == spec.resolvedShowRule },
+                    set: { if $0 { setRule(rule) } }
+                ))
+            }
+        } label: {
+            Text(Self.label(spec.resolvedShowRule))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .menuStyle(.borderlessButton)
+    }
+
+    private static func label(_ rule: LauncherShowRule) -> LocalizedStringKey {
         switch rule {
-        case .whileRunning: "Shows while the app runs"
-        case .always: "Always shows — opens the app"
+        case .whileRunning: "Only while app is running"
+        case .always: "Always shows"
         }
     }
 
@@ -822,7 +951,7 @@ private struct AppStandInRow: View {
             // idiom as the rule menu beside it, brighter on hover.
             Button { pickingIcon = true } label: {
                 HStack(spacing: 3) {
-                    StandInGlyph(spec: spec, size: 18)
+                    LauncherGlyph(spec: spec, size: 18)
                         .frame(width: 26, height: 26)
                         .background(
                             RoundedRectangle(cornerRadius: 7)
@@ -838,29 +967,31 @@ private struct AppStandInRow: View {
             .onHover { iconHovered = $0 }
             .help("Change icon")
             .popover(isPresented: $pickingIcon, arrowEdge: .bottom) {
-                StandInIconPicker(spec: spec, choose: setSymbol)
+                LauncherIconPicker(spec: spec, choose: setSymbol)
             }
             Text(spec.appName ?? spec.bundleID ?? "?")
                 .font(.callout)
-            // The row's caption IS the rule: a quiet menu, not a segmented
-            // control per row.
-            Menu {
-                // Toggles render the native checkmark on the current rule
-                // (a Label's symbol is dropped by macOS menus).
-                ForEach(StandInShowRule.allCases, id: \.self) { rule in
-                    Toggle(Self.label(rule), isOn: Binding(
-                        get: { rule == spec.resolvedShowRule },
-                        set: { if $0 { setRule(rule) } }
-                    ))
-                }
-            } label: {
-                Text(Self.label(spec.resolvedShowRule))
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 10)
+            // Two options, so show both: a segmented control reads without a
+            // click where the old menu label read as caption text. The app's
+            // own segmented idiom, one size down for a card row.
+            //
+            // ViewThatFits, not a width budget on the translations: the pair
+            // is ~330pt in Russian against 556pt of card, but a long app
+            // name, a larger accessibility text size or a narrower window
+            // can still squeeze it. When it no longer fits, one degrading
+            // step to the menu — same choice, one click deeper — instead of
+            // a clipped control.
+            ViewThatFits(in: .horizontal) {
+                PelmetSegments(
+                    selection: ruleBinding,
+                    options: LauncherShowRule.allCases.map { ($0, Self.label($0)) },
+                    compact: true
+                )
+                ruleMenu
             }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            Spacer()
             Button {
                 appState.settings.extraItems.removeAll { $0.id == spec.id }
                 appState.settingsChanged()
@@ -870,13 +1001,13 @@ private struct AppStandInRow: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
     }
 }
 
-/// A stand-in's glyph as it appears in the bar: the picked SF Symbol, else
+/// A launcher's glyph as it appears in the bar: the picked SF Symbol, else
 /// the app's own icon, else a dashed placeholder for an app that is gone.
-private struct StandInGlyph: View {
+private struct LauncherGlyph: View {
     let spec: ExtraItemSpec
     let size: CGFloat
 
@@ -895,10 +1026,10 @@ private struct StandInGlyph: View {
     }
 }
 
-/// Glyph chooser for a stand-in. Every option renders the real thing at bar
+/// Glyph chooser for a launcher. Every option renders the real thing at bar
 /// size — the app's own icon first (the default), then the symbol set.
 /// Selected = accent ring over a soft fill, never a 1px cage.
-private struct StandInIconPicker: View {
+private struct LauncherIconPicker: View {
     let spec: ExtraItemSpec
     let choose: (String?) -> Void
     @State private var query = ""
@@ -910,7 +1041,7 @@ private struct StandInIconPicker: View {
     /// catalog, ranked by SymbolCatalog.search.
     private var symbols: [String] {
         query.trimmingCharacters(in: .whitespaces).isEmpty
-            ? ExtrasManager.standInSymbols
+            ? ExtrasManager.launcherSymbols
             : SymbolCatalog.search(query)
     }
 
@@ -945,14 +1076,17 @@ private struct StandInIconPicker: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Menu bar icon")
                 .font(.headline)
-            cell(symbol: nil)
-                .overlay(alignment: .trailing) {
-                    Text("App icon")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .fixedSize()
-                        .offset(x: 58)
-                }
+            // Laid out, not nudged: a hardcoded offset pinned the label's
+            // right edge and grew it leftward over the tile in every
+            // language longer than English (ru "Значок приложения").
+            HStack(spacing: 8) {
+                cell(symbol: nil)
+                Text("App icon")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
             Divider()
             // Soft capsule, no border (de-box); the field's own focus ring
             // is off with the rest of the card.
