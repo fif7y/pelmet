@@ -49,6 +49,23 @@ bothers you, turn the permission off and keep going.
 macOS protects a small set of system items (Clock, Control Center, Siri). Pelmet
 shows them locked in the editor rather than pretending.
 
+<a name="app-stand-ins"></a>
+**One app's icon won't hide, and the editor marks it with a "!".**
+A few apps draw their menu bar icon from a helper program that isn't a
+registered app (ChatGPT Classic, Little Snitch's monitor, some iStat helpers).
+macOS hides icons by the app that owns them, and a helper like that has no app
+identity to hide, so Pelmet can move the icon but never conceal it. The fix is
+a stand-in: turn the icon off in the app's own settings (usually a "Show in
+menu bar" switch), then go to Settings → Menu Bar → App stand-ins and add the
+app. Pelmet draws its own icon for it, which hides like anything else, and a
+click opens the app. "Shows while the app runs" mirrors what the app's icon
+did; "Always shows" keeps it as a launcher. Right-click a stand-in to quit the
+app. Shortcut: right-click the marked icon in the editor and choose "Add a
+stand-in", it lands in the same section.
+
+Stand-ins work for any app, not only problem ones. A hidden-section stand-in
+makes a tidy launcher.
+
 **Can I have different layouts on each display?**
 macOS mirrors the same items on every display, so layouts are global. What
 *is* per-display is behavior. Set a display to "always show" or "collapse",

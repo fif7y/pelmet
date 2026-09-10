@@ -1,8 +1,9 @@
 // MediaControls.swift — Pelmet items ("extras"): Pelmet-owned proxies for the
-// system extras that macOS collateral-hides under any assertion, plus user
-// shortcut buttons. Because Pelmet owns these NSStatusItems, hiding is plain
-// `isVisible` per assigned section — no assertion involvement (asserting away
-// Pelmet's bundle would take the chevron too).
+// system extras that macOS collateral-hides under any assertion, user
+// shortcut buttons, and app stand-ins (a Pelmet icon that opens an app).
+// Because Pelmet owns these NSStatusItems, hiding is plain `isVisible` per
+// assigned section — no assertion involvement (asserting away Pelmet's bundle
+// would take the chevron too).
 
 import AppKit
 import AVFoundation
@@ -10,6 +11,7 @@ import CoreAudio
 import CoreMediaIO
 import PelmetCore
 import PelmetEngine
+import UniformTypeIdentifiers
 
 // MARK: - Media keys
 
@@ -58,6 +60,13 @@ final class ExtrasManager {
     private var lastCameraIndicatorVisible = false
     /// Debounces the activation edge before queuing the placement walk.
     private var cameraPlacementDebounce: Task<Void, Never>?
+    /// App stand-ins with the "while running" rule: the running edge (not the
+    /// section reveal edge) is what re-enters layout and needs a placement.
+    private var lastRunning: [UUID: Bool] = [:]
+    /// Menu-bar agent apps post no launch notification; KVO on the running
+    /// list sees every activation policy (same lesson as AppState's relaunch
+    /// observer, 2026-09-09).
+    private var runningAppsObservation: NSKeyValueObservation?
 
     init(appState: AppState) {
         self.appState = appState
@@ -82,15 +91,36 @@ final class ExtrasManager {
             items.removeValue(forKey: id)
             specs.removeValue(forKey: id)
             lastVisible.removeValue(forKey: id)
+            lastRunning.removeValue(forKey: id)
         }
         for spec in newSpecs {
             specs[spec.id] = spec
             if items[spec.id] == nil {
                 items[spec.id] = makeItem(for: spec)
             }
-            ItemImageCache.registerPelmetItem(
-                title: spec.itemTitle, symbol: Self.symbol(for: spec)
-            )
+            if spec.kind == .appStandIn, spec.symbol == nil,
+               let icon = Self.appIcon(for: spec, size: 20) {
+                ItemImageCache.registerPelmetItem(title: spec.itemTitle, image: icon)
+            } else {
+                ItemImageCache.registerPelmetItem(
+                    title: spec.itemTitle, symbol: Self.symbol(for: spec)
+                )
+            }
+            // The glyph is editable (stand-in icon picker), so refresh the
+            // existing button too — sync only builds the item once.
+            if spec.kind == .appStandIn, let button = items[spec.id]?.button {
+                button.image = Self.standInImage(for: spec, size: 18)
+            }
+        }
+        let needsRunningObserver = newSpecs.contains { $0.kind == .appStandIn }
+        if needsRunningObserver, runningAppsObservation == nil {
+            runningAppsObservation = NSWorkspace.shared.observe(
+                \.runningApplications, options: [.new]
+            ) { [weak self] _, _ in
+                Task { @MainActor [weak self] in self?.applyCurrent() }
+            }
+        } else if !needsRunningObserver {
+            runningAppsObservation = nil
         }
         let needsCameraMonitor = newSpecs.contains {
             $0.kind == .cameraMicIndicator || $0.kind == .mediaControls
@@ -169,6 +199,30 @@ final class ExtrasManager {
                 } else if !visible, lastVisible[id] == true {
                     appState?.cancelDynamicExtraPlacement(itemID)
                 }
+            case .appStandIn:
+                // "While running" mirrors the app's own icon; "Always" is a
+                // launcher and hides purely by section, like AirDrop.
+                let running = Self.isRunning(spec)
+                if spec.resolvedShowRule == .whileRunning {
+                    visible = visible && running
+                    // The running edge re-enters layout at the agent's slot,
+                    // not the model's — same hazard as the media button.
+                    // Visible right now (section revealed): place at once,
+                    // the user launched the app and is looking at the bar.
+                    // Concealed: the next reveal settle places it. Section
+                    // reveals themselves don't queue: those ride the reflow.
+                    let itemID = Self.itemID(for: spec)
+                    if running, lastRunning[id] != true {
+                        if visible {
+                            appState?.placeOwnItemSoon(itemID)
+                        } else {
+                            appState?.queueDynamicExtraPlacement(itemID)
+                        }
+                    } else if !running, lastRunning[id] == true {
+                        appState?.cancelDynamicExtraPlacement(itemID)
+                    }
+                }
+                lastRunning[id] = running
             case .airdrop, .shortcut:
                 break
             }
@@ -211,10 +265,14 @@ final class ExtrasManager {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.autosaveName = spec.itemTitle
         if let button = item.button {
-            button.image = NSImage(
-                systemSymbolName: Self.symbol(for: spec),
-                accessibilityDescription: spec.itemTitle
-            )
+            if spec.kind == .appStandIn, let icon = Self.standInImage(for: spec, size: 18) {
+                button.image = icon
+            } else {
+                button.image = NSImage(
+                    systemSymbolName: Self.symbol(for: spec),
+                    accessibilityDescription: spec.itemTitle
+                )
+            }
             button.target = self
             button.action = #selector(clicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -231,7 +289,198 @@ final class ExtrasManager {
         case .cameraMicIndicator: "video.fill"
         case .airdrop: Self.airdropSymbol
         case .shortcut: spec.symbol ?? "bolt.fill"
+        case .appStandIn: spec.symbol ?? "app.dashed"
         }
+    }
+
+    // MARK: App stand-ins
+
+    /// A stand-in's bar glyph: the SF Symbol the user picked (template, so
+    /// the bar tints it like any other icon), else the app's own icon.
+    /// Symbols draw a couple of points smaller than the app-icon box — a
+    /// glyph fills its frame edge to edge where an app icon has its own
+    /// padding, so equal box sizes read as a bigger icon (Gab, 2026-09-09).
+    static func standInImage(for spec: ExtraItemSpec, size: CGFloat) -> NSImage? {
+        if let symbol = spec.symbol {
+            let image = NSImage(
+                systemSymbolName: symbol, accessibilityDescription: spec.appName
+            )?.withSymbolConfiguration(.init(pointSize: size * 0.82, weight: .regular))
+            image?.isTemplate = true
+            return image
+        }
+        return appIcon(for: spec, size: size)
+    }
+
+    /// Glyphs offered by the stand-in icon picker, filtered to what this
+    /// system can actually draw (a missing symbol would render an empty
+    /// cell). Ordered loosely by kind — neutral shapes first, then objects.
+    static let standInSymbols: [String] = [
+        "star.fill", "heart.fill", "bolt.fill", "flame.fill", "sparkles", "moon.fill",
+        "sun.max.fill", "cloud.fill", "drop.fill", "leaf.fill", "circle.fill", "square.fill",
+        "triangle.fill", "diamond.fill", "hexagon.fill", "seal.fill", "app.fill", "capsule.fill",
+        "bell.fill", "flag.fill", "tag.fill", "bookmark.fill", "pin.fill", "paperclip",
+        "link", "key.fill", "lock.fill", "shield.fill", "gearshape.fill", "hammer.fill",
+        "wrench.and.screwdriver.fill", "slider.horizontal.3", "terminal.fill", "cpu", "network", "wifi",
+        "antenna.radiowaves.left.and.right", "globe", "message.fill", "envelope.fill", "phone.fill", "video.fill",
+        "camera.fill", "mic.fill", "headphones", "music.note", "play.fill", "waveform",
+        "folder.fill", "doc.fill", "tray.fill", "archivebox.fill", "externaldrive.fill", "cart.fill",
+        "creditcard.fill", "chart.bar.fill", "calendar", "clock.fill", "eye.fill", "magnifyingglass",
+        "person.fill", "brain.head.profile", "paintbrush.fill", "paintpalette.fill", "wand.and.stars", "scissors",
+        "pencil", "checkmark.circle.fill", "command", "option",
+    ].filter { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil }
+
+    /// The app's real icon (installed copy, running or not), sized for the
+    /// bar or the editor tile. nil when the app is gone — the dashed-app
+    /// symbol stands in for the stand-in.
+    static func appIcon(for spec: ExtraItemSpec, size: CGFloat) -> NSImage? {
+        guard let url = appURL(for: spec) else { return nil }
+        let icon = NSWorkspace.shared.icon(forFile: url.path)
+        let sized = icon.copy() as! NSImage
+        sized.size = NSSize(width: size, height: size)
+        sized.isTemplate = false
+        return sized
+    }
+
+    static func appURL(for spec: ExtraItemSpec) -> URL? {
+        guard let bundleID = spec.bundleID else { return nil }
+        if let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first,
+           let url = running.bundleURL {
+            return url
+        }
+        return NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+    }
+
+    static func isRunning(_ spec: ExtraItemSpec) -> Bool {
+        guard let bundleID = spec.bundleID else { return false }
+        return !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty
+    }
+
+    /// Open = what clicking the app's own icon or Dock tile does: launches a
+    /// quit app, activates and reopens a running one.
+    private func openApp(_ spec: ExtraItemSpec) {
+        guard let url = Self.appURL(for: spec) else { return }
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    @objc private func quitApp(_ sender: NSMenuItem) {
+        guard let bundleID = sender.representedObject as? String else { return }
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID) {
+            app.terminate()
+        }
+    }
+
+    /// A pickable app: running, user-facing (a regular app or a menu-bar
+    /// agent the user installed), not Pelmet itself.
+    struct PickableApp: Identifiable {
+        let bundleID: String
+        let name: String
+        let icon: NSImage
+        var id: String { bundleID }
+    }
+
+    /// Running apps for the "+ App" picker, by name. Menu-bar-only agents
+    /// (`.accessory`) are the whole point — that's where the icons Pelmet
+    /// can't hide come from — and they must stay pickable AFTER the user
+    /// turns the app's own icon off (the flow the card asks for), so the
+    /// filter is "an app the user installed": regular apps, anything that
+    /// owns a bar icon, or an agent living in /Applications. Background
+    /// agents elsewhere (an updater, a sync helper) are noise.
+    static func pickableRunningApps(barBundles: Set<String>) -> [PickableApp] {
+        var seen: Set<String> = []
+        var apps: [PickableApp] = []
+        for app in NSWorkspace.shared.runningApplications {
+            guard let bundleID = app.bundleIdentifier,
+                  bundleID != PelmetBundle.mainID,
+                  !seen.contains(bundleID),
+                  let url = app.bundleURL, isUserFacingApp(url),
+                  app.activationPolicy == .regular
+                    || barBundles.contains(bundleID)
+                    || isInstalledApp(url),
+                  let name = app.localizedName, !name.isEmpty,
+                  let icon = app.icon?.copy() as? NSImage
+            else { continue }
+            seen.insert(bundleID)
+            icon.size = NSSize(width: 16, height: 16)
+            apps.append(PickableApp(bundleID: bundleID, name: name, icon: icon))
+        }
+        return apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private static func isInstalledApp(_ url: URL) -> Bool {
+        let path = url.path
+        return path.hasPrefix("/Applications/")
+            || path.hasPrefix(NSHomeDirectory() + "/Applications/")
+    }
+
+    private static func isUserFacingApp(_ url: URL) -> Bool {
+        guard url.pathExtension == "app" else { return false }
+        let path = url.path
+        // /System/Library holds the OS's own agents; /System/Applications
+        // holds Music, Notes… which are fair launchers.
+        if path.hasPrefix("/System/Library/") { return false }
+        // Nested inside another app bundle = a helper, not an app.
+        return !url.deletingLastPathComponent().path.contains(".app/")
+    }
+
+    /// The "+ App" picker as an AppKit menu: the running apps under one
+    /// section label, then the open panel. Icons are set but macOS 27 b8 draws no NSMenuItem images
+    /// at all (verified standalone, SF Symbols included).
+    static func appPickerMenu(
+        barBundles: Set<String>,
+        excluding added: Set<String>,
+        onPick: @escaping (PickableApp) -> Void
+    ) -> NSMenu {
+        let menu = NSMenu()
+        let apps = pickableRunningApps(barBundles: barBundles).filter { !added.contains($0.bundleID) }
+        func add(_ app: PickableApp) {
+            let item = NSMenuItem(title: app.name, action: #selector(MenuAction.fire), keyEquivalent: "")
+            item.image = app.icon
+            let action = MenuAction { onPick(app) }
+            item.representedObject = action
+            item.target = action
+            menu.addItem(item)
+        }
+        if !apps.isEmpty {
+            menu.addItem(.sectionHeader(title: String(localized: "Active applications")))
+        }
+        apps.forEach(add)
+        if !apps.isEmpty { menu.addItem(.separator()) }
+        let choose = NSMenuItem(title: String(localized: "Choose an app…"), action: #selector(MenuAction.fire), keyEquivalent: "")
+        let chooseAction = MenuAction {
+            if let app = pickInstalledApp() { onPick(app) }
+        }
+        choose.representedObject = chooseAction
+        choose.target = chooseAction
+        menu.addItem(choose)
+        return menu
+    }
+
+    /// Closure target for NSMenuItems (retained via `representedObject`).
+    private final class MenuAction: NSObject {
+        let body: () -> Void
+        init(_ body: @escaping () -> Void) { self.body = body }
+        @objc func fire() { body() }
+    }
+
+    /// Any installed app, via the open panel — for apps that aren't running
+    /// right now (an "Always" launcher).
+    static func pickInstalledApp() -> PickableApp? {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.message = String(localized: "Choose an app to stand in for")
+        guard panel.runModal() == .OK, let url = panel.url,
+              let bundle = Bundle(url: url), let bundleID = bundle.bundleIdentifier
+        else { return nil }
+        let name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+            ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
+            ?? url.deletingPathExtension().lastPathComponent
+        let icon = NSWorkspace.shared.icon(forFile: url.path)
+        icon.size = NSSize(width: 16, height: 16)
+        return PickableApp(bundleID: bundleID, name: name, icon: icon)
     }
 
     /// SF Symbols has a real "airdrop" glyph on current systems; fall back to
@@ -298,6 +547,21 @@ final class ExtrasManager {
         case .shortcut:
             if let name = spec.shortcutName {
                 runShortcut(named: name)
+            }
+        case .appStandIn:
+            if rightClick, Self.isRunning(spec), let bundleID = spec.bundleID {
+                let menu = NSMenu()
+                let quit = NSMenuItem(
+                    title: String(localized: "Quit \(spec.appName ?? bundleID)"),
+                    action: #selector(quitApp(_:)),
+                    keyEquivalent: ""
+                )
+                quit.target = self
+                quit.representedObject = bundleID
+                menu.items = [quit]
+                popUp(menu, on: statusItem.value)
+            } else {
+                openApp(spec)
             }
         }
     }

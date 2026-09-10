@@ -42,4 +42,36 @@ public enum OrderDrift {
             }
         }
     }
+
+    /// Pelmet-owned items (extras, stand-ins, separators) measured outside
+    /// the slot their section order gives them: left of their nearest
+    /// measured left neighbor, or right of their nearest measured right one.
+    /// Own items re-enter layout at the agent's remembered POSITION on every
+    /// reveal, and adoption holds their model slot, so without a physical
+    /// correction the bar and the editor disagree for good (a Comet stand-in
+    /// sat left of Vorssaint while the model had it after Snib, 2026-09-09).
+    public static func ownItemsOutOfOrder(
+        items: [(id: ItemID, minX: CGFloat?)],
+        model: SectionModel,
+        pelmetBundleID: String
+    ) -> [ItemID] {
+        let x: [ItemID: CGFloat] = items.reduce(into: [:]) {
+            guard let minX = $1.minX else { return }
+            let key = $1.id.sectionKey
+            $0[key] = min($0[key] ?? .greatestFiniteMagnitude, minX)
+        }
+        return items.compactMap { entry in
+            guard let minX = entry.minX,
+                  entry.id.bundleID == pelmetBundleID,
+                  MenuBarPolicy.isPelmetExtraID(entry.id)
+            else { return nil }
+            let order = model.order[model.section(of: entry.id)] ?? []
+            guard let index = order.firstIndex(of: entry.id.sectionKey) else { return nil }
+            let left = order[..<index].reversed().lazy.compactMap { x[$0] }.first
+            let right = order[(index + 1)...].lazy.compactMap { x[$0] }.first
+            if let left, minX < left { return entry.id }
+            if let right, minX > right { return entry.id }
+            return nil
+        }
+    }
 }

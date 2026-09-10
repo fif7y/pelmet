@@ -617,7 +617,7 @@ public actor EngineGoldenGate: MenuBarEngine {
         let raw = await enumerator.snapshotItems()
         let previousIDs = lastSnapshot.map { Set($0.items.map(\.id)) }
         let snapshot = EngineSnapshot(
-            items: raw.map { ObservedItem(id: $0.id, frame: $0.frame, appName: $0.appName) },
+            items: raw.map { ObservedItem(id: $0.id, frame: $0.frame, appName: $0.appName, hostIsBundleless: $0.hostIsBundleless) },
             concealed: lastSnapshot?.concealed ?? [],
             takenAt: Date()
         )
