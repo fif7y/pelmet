@@ -73,11 +73,15 @@ enum PlacementGeometry {
         return true
     }
 
-    /// Retry target from RAW (unlifted) neighbor frames: the midpoint of the
-    /// neighbors' CENTERS, valid even when packed icons leave no edge gap —
-    /// the drop only needs to land between the mids for the agent to slot
-    /// between them. Same corner clamps.
-    static func rawRetryX(left: CGRect, right: CGRect, screenMaxX: CGFloat) -> CGFloat {
+    /// Primary target when both slot bounds are live: the midpoint of the
+    /// bounds' CENTERS, from raw (unlifted) frames. Valid even when packed
+    /// icons leave no edge gap — the drop only needs to land between the
+    /// mids for the agent to slot between them. Promoted from retry to first
+    /// attempt 2026-09-09: over a day of placements every anchored first
+    /// drag missed (the system-cluster clamp aimed Media controls at 1493 for
+    /// a slot at 1574) and every between-centers retry landed. Same corner
+    /// clamps as `targetX`.
+    static func betweenCentersX(left: CGRect, right: CGRect, screenMaxX: CGFloat) -> CGFloat {
         min(max((left.midX + right.midX) / 2, 200), screenMaxX - 60)
     }
 }

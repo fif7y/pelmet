@@ -19,6 +19,9 @@ public enum BarAdoption {
         /// Where each measured item sat this pass — an item that moved
         /// since the last pass was dragged, whatever the chevron did.
         public let positions: [String: CGFloat]
+        /// Zone readings that disagreed with the baseline this pass and wait
+        /// for the next pass to agree before they adopt.
+        public let pendingZones: [String: Section]
         public let changed: Bool
         public let log: [String]
     }
@@ -53,6 +56,7 @@ public enum BarAdoption {
         previousZones: [String: Section],
         previousChevronX: CGFloat? = nil,
         previousPositions: [String: CGFloat] = [:],
+        pendingZones: [String: Section] = [:],
         userDragged: Bool = false,
         pelmetBundleID: String,
         draggedID: ItemID? = nil
@@ -66,6 +70,7 @@ public enum BarAdoption {
 
         var log: [String] = []
         var zones = previousZones
+        var pending = pendingZones
         var model = startModel
         var changed = false
         let isFirstPass = previousZones.isEmpty
@@ -179,6 +184,20 @@ public enum BarAdoption {
             // into the baseline there would eat the adoption (previousZone
             // would already equal the drag-end reading).
             let boundaryOnly = chevronMoved && !itemMoved(item.id, x)
+            // A zone change without a user drag needs two agreeing passes.
+            // A pass that lands while a full reveal collapses reads the
+            // always-hidden cluster's edge from whichever members are still
+            // present — three hidden items adopted into Always Hidden in one
+            // pass and flapped back over the next two (2026-09-09). The
+            // baseline stays put until the next pass reads the same zone.
+            let awaitingConfirmation = confident && !isFirstPass && !boundaryOnly
+                && item.id != draggedID && previousZone != nil && previousZone != zone && zone != current
+            if awaitingConfirmation, pending[item.id.rawValue] != zone {
+                pending[item.id.rawValue] = zone
+                log.append("adopt: \(item.id.rawValue) reads \(zone) — confirming on the next pass")
+                continue
+            }
+            if !awaitingConfirmation { pending.removeValue(forKey: item.id.rawValue) }
             if confident, chevronX != nil || zone == current {
                 zones[item.id.rawValue] = zone
             } else if boundaryOnly {
@@ -216,6 +235,7 @@ public enum BarAdoption {
             // The accepted zone IS the new baseline (the chevron-less store
             // above skipped it because it disagreed with the pre-drag model).
             zones[item.id.rawValue] = zone
+            pending.removeValue(forKey: item.id.rawValue)
             changed = true
         }
         // Within-section order: the editor treats the explicit stored order as
@@ -256,6 +276,6 @@ public enum BarAdoption {
                 changed = true
             }
         }
-        return Result(model: model, zones: zones, chevronX: chevronX, positions: positions, changed: changed, log: log)
+        return Result(model: model, zones: zones, chevronX: chevronX, positions: positions, pendingZones: pending, changed: changed, log: log)
     }
 }

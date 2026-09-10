@@ -102,10 +102,10 @@ struct PlacementGeometryTests {
         #expect(PlacementGeometry.inSlot(x: 390, leftMidX: nil, rightMidX: nil))
     }
 
-    @Test func rawRetryUsesMidpointWithCornerClamps() {
-        #expect(PlacementGeometry.rawRetryX(left: rect(400), right: rect(500), screenMaxX: maxX)
+    @Test func betweenCentersUsesMidpointWithCornerClamps() {
+        #expect(PlacementGeometry.betweenCentersX(left: rect(400), right: rect(500), screenMaxX: maxX)
             == 465)
-        #expect(PlacementGeometry.rawRetryX(left: rect(40), right: rect(120), screenMaxX: maxX)
+        #expect(PlacementGeometry.betweenCentersX(left: rect(40), right: rect(120), screenMaxX: maxX)
             == 200)
     }
 }

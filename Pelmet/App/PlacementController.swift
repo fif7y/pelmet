@@ -20,9 +20,12 @@ final class PlacementController {
 
     // Input-source titles and agent registrations can change during a drag.
     // Use the same identity for initial lookup, verification, and retries.
-    static func liveItem(for id: ItemID, in items: [ObservedItem]) -> ObservedItem? {
-        items.first { $0.id == id && $0.frame != nil }
-            ?? items.first { $0.id.sectionKey == id.sectionKey && $0.frame != nil }
+    static func liveItem(
+        for id: ItemID, in items: [ObservedItem], matchingFrame: (CGRect) -> Bool = { _ in true }
+    ) -> ObservedItem? {
+        let variants = items.filter { $0.id.sectionKey == id.sectionKey }
+        return variants.first { $0.id == id && $0.frame.map(matchingFrame) == true }
+            ?? variants.first { $0.frame.map(matchingFrame) == true }
     }
 
     static func isProtectedSystemItem(_ id: ItemID) -> Bool {
@@ -81,15 +84,32 @@ final class PlacementController {
     func flushPendingPlacements() {
         guard !pendingPlacements.isEmpty, !flushingPlacements else { return }
         flushingPlacements = true
-        let flushed = pendingPlacements
-        pendingPlacements.removeAll()
         Task { [weak self] in
             guard let self else { return }
             defer { self.flushingPlacements = false }
-            PelmetLog.log("place: placing \(flushed.count) queued newcomer(s)")
-            for id in flushed {
+            // Drain: items queued WHILE this flush runs (a drift correction
+            // found at the same settle) are taken in the same pass. Each id
+            // gets one attempt per flush — a requeued id waits for the next.
+            var attempted = Set<ItemID>()
+            while let id = pendingPlacements.subtracting(attempted).sorted(by: { $0.rawValue < $1.rawValue }).first {
+                attempted.insert(id)
+                pendingPlacements.remove(id)
                 guard let appState else { return }
                 let section = appState.settings.sectionModel.section(of: id)
+                // Held for the hidden cluster to materialize (see the
+                // hidden-zone rule in physicallyPlaceNow): don't burn a
+                // lookup wait on it until a reveal makes the drag safe.
+                if deferredForReveal.contains(id),
+                   !appState.currentRevealedSections.contains(.hidden) {
+                    pendingPlacements.insert(id)
+                    continue
+                }
+                if let after = framelessRetryAfter[id], after > .now {
+                    pendingPlacements.insert(id)
+                    continue
+                }
+                // Logged per attempt, not per flush: a concealed section's
+                // items ride every flush until their reveal, silently.
                 // itemsChanged fires this flush mid-conceal too (a rescue's
                 // restore is itself an itemsChanged) — placing a concealed
                 // section's item there measures fading frames. Hold until
@@ -103,11 +123,28 @@ final class PlacementController {
                     pendingPlacements.insert(id)
                     continue
                 }
+                PelmetLog.log("place: attempting \(id.rawValue) (section \(section))")
                 let placed = await physicallyPlace(id, in: section)
                 if placed {
                     // A verified reveal-time placement ends any rescue
                     // ping-pong — the item is truly in its slot.
                     rescueAttempts.removeValue(forKey: id)
+                    frameless.removeValue(forKey: id)
+                    framelessRetryAfter.removeValue(forKey: id)
+                } else if let since = frameless[id] {
+                    // No frame at all. If its section is on screen right now
+                    // the registration is parked — ask for an adoption
+                    // window (rate-limited per bundle), and retry slowly.
+                    framelessRetryAfter[id] = .now.addingTimeInterval(Self.framelessRetryInterval)
+                    let onScreen = section == .visible || appState.currentRevealedSections.contains(section)
+                    if onScreen, let bundle = id.bundleID, bundle != PelmetBundle.mainID,
+                       Date.now.timeIntervalSince(since) > 2,
+                       (readoptRequested[bundle].map { Date.now.timeIntervalSince($0) > Self.readoptInterval } ?? true) {
+                        readoptRequested[bundle] = .now
+                        PelmetLog.log("place: \(id.rawValue) has had no frame for \(Int(Date.now.timeIntervalSince(since)))s while its section is on screen — asking for an adoption window")
+                        let state = appState
+                        Task { await state.reopenAdoption(for: bundle) }
+                    }
                 }
                 // Still unmeasurable (section concealed again, no frame) —
                 // requeue for the next reveal settle. Trapped items moved to
@@ -117,7 +154,9 @@ final class PlacementController {
                 // its section when it next shows, so a standing placement
                 // would only re-run the lookup wait at every flush.
                 if !placed, !pendingRescues.contains(id) {
-                    if MenuBarPolicy.isPelmetExtraID(id), !id.rawValue.contains("Separator") {
+                    if deferredForReveal.contains(id) {
+                        pendingPlacements.insert(id)
+                    } else if MenuBarPolicy.isPelmetExtraID(id), !id.rawValue.contains("Separator") {
                         PelmetLog.log("place: \(id.rawValue) not hosted — dropped from the queue")
                     } else {
                         pendingPlacements.insert(id)
@@ -125,6 +164,173 @@ final class PlacementController {
                 }
             }
         }
+    }
+
+    /// Items whose last attempt found no frame at all, with the time of the
+    /// first such miss. Retried on a slow clock, and once the item should be
+    /// visible (its section revealed) the app is asked to re-adopt it.
+    private var frameless: [ItemID: Date] = [:]
+    private var framelessRetryAfter: [ItemID: Date] = [:]
+    private var readoptRequested: [String: Date] = [:]
+    private static let framelessRetryInterval: TimeInterval = 30
+    private static let readoptInterval: TimeInterval = 120
+
+    /// Placements held until the hidden cluster is materialized: their drag
+    /// would touch the hidden zone while its items are absent. Stay queued
+    /// (extras included) and try again at the next reveal settle.
+    private var deferredForReveal: Set<ItemID> = []
+
+    // MARK: - Order supervisor (wrong side of the chevron)
+
+    /// Per-item correction budget. A correction is a drag under a reveal;
+    /// an item that will not stay put after a few of them is left alone for
+    /// a while rather than dragged on every hover.
+    private var driftAttempts: [ItemID: Int] = [:]
+    private var driftCoolOffUntil: [ItemID: Date] = [:]
+    private static let maxDriftAttempts = 3
+    private static let driftCoolOff: TimeInterval = 8 * 60
+
+    /// Reveal-settle check: every live item on the wrong side of the
+    /// chevron for its model section is queued for a corrective placement
+    /// under this reveal. The judgement is `OrderDrift.misplaced`; this
+    /// adds the budget and the moments to stay out of the way (a synthetic
+    /// drag in flight, a transition, a user ⌘-drag adoption still landing).
+    // MARK: - Parked registrations (in the model, absent from the bar)
+
+    /// Bundles already given an adoption window in their current process
+    /// lifetime. One window per launch: an app that legitimately drops its
+    /// icon while running must not have the assertion dropped every reveal.
+    private var readoptedPIDs: [String: pid_t] = [:]
+    /// Bundles seen missing at the previous reveal settle. A reveal's
+    /// "settled" callback runs while the agent is still materializing the
+    /// cluster (Snib and OpenClip read missing 23ms after a settle,
+    /// 2026-09-09), so one sighting is not evidence.
+    private var missingAtLastSettle: Set<String> = []
+
+    /// A model item whose app is running but which is neither live nor
+    /// concealed while its section is on screen has re-registered under the
+    /// assertion and parked (ChatGPT Classic re-creates its status item at
+    /// runtime, 2026-09-09). Same remedy as a relaunch: an adoption window.
+    func readoptMissing(in snap: EngineSnapshot) {
+        guard let appState else { return }
+        let revealed = appState.currentRevealedSections
+        let present = Set(snap.items.map(\.id.sectionKey)).union(snap.concealed.map(\.sectionKey))
+        var running: [String: pid_t] = [:]
+        for app in NSWorkspace.shared.runningApplications {
+            if let b = app.bundleIdentifier { running[b] = app.processIdentifier }
+        }
+        var missingNow: Set<String> = []
+        for (key, section) in appState.settings.sectionModel.assignments {
+            guard section == .visible || revealed.contains(section),
+                  let bundle = key.bundleID, bundle != PelmetBundle.mainID,
+                  !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
+                  let pid = running[bundle],
+                  !present.contains(key.sectionKey)
+            else { continue }
+            missingNow.insert(bundle)
+            guard missingAtLastSettle.contains(bundle), readoptedPIDs[bundle] != pid else { continue }
+            readoptedPIDs[bundle] = pid
+            PelmetLog.log("readopt: \(bundle) is running and assigned \(section) but had no registration at two reveals — opening an adoption window")
+            let state = appState
+            Task { await state.reopenAdoption(for: bundle) }
+        }
+        missingAtLastSettle = missingNow
+    }
+
+    /// One measurement: the chevron's x and the wrong-side ids, or nil when
+    /// the chevron has no in-band frame.
+    private struct DriftReading: Equatable {
+        let chevronMinX: CGFloat
+        let misplaced: [ItemID]
+        let measuredCount: Int
+    }
+
+    private func readDrift(_ snap: EngineSnapshot) -> DriftReading? {
+        guard let appState,
+              let chevron = appState.pelmetChevronItem(in: snap)?.frame,
+              MenuBarGeometry.isInBand(chevron)
+        else { return nil }
+        let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        let measured: [(id: ItemID, minX: CGFloat?)] = snap.items.map { item in
+            guard let f = item.frame, MenuBarGeometry.isInBand(f),
+                  abs(f.midY - chevron.midY) < 30, f.midX > 0, f.midX < primaryMaxX
+            else { return (item.id, nil) }
+            return (item.id, f.minX)
+        }
+        return DriftReading(
+            chevronMinX: chevron.minX,
+            misplaced: OrderDrift.misplaced(
+                items: measured, chevronMinX: chevron.minX,
+                model: appState.settings.sectionModel, pelmetBundleID: PelmetBundle.mainID
+            ),
+            measuredCount: measured.filter { $0.minX != nil }.count
+        )
+    }
+
+    /// A verdict needs two agreeing reads: a reveal that follows a conceal
+    /// within the same reflow measured the chevron at 1329 and, a second
+    /// later, at 1421 (2026-09-09). One read mid-reflow would drag items
+    /// that are only passing through.
+    private static let driftConfirmDelay: Duration = .milliseconds(400)
+
+    func correctDrift() async {
+        guard let appState, !syntheticDragInFlight, !appState.isTransitioning,
+              appState.currentRevealedSections.contains(.hidden)
+        else { return }
+        if let ended = appState.lastUserDragEndedAt, Date.now.timeIntervalSince(ended) < 8 {
+            PelmetLog.log("drift: skipped — user ⌘-drag landed \(Int(Date.now.timeIntervalSince(ended)))s ago")
+            return
+        }
+        let first = await engine.snapshot()
+        appState.updateSnapshot(first)
+        guard let a = readDrift(first) else { return }
+        defer {
+            // Absence is judged on a later read than presence: the settle
+            // callback leads the agent's materialization by a few hundred ms.
+            Task { [weak self] in
+                try? await Task.sleep(for: Self.driftConfirmDelay)
+                guard let self, let appState = self.appState,
+                      !appState.isTransitioning, appState.currentRevealedSections.contains(.hidden) else { return }
+                self.readoptMissing(in: await self.engine.snapshot())
+            }
+        }
+        if a.misplaced.isEmpty {
+            for id in driftAttempts.keys { driftAttempts.removeValue(forKey: id) }
+            PelmetLog.log("drift: none (chevron@\(a.chevronMinX), \(a.measuredCount) measured)")
+            return
+        }
+        try? await Task.sleep(for: Self.driftConfirmDelay)
+        guard !syntheticDragInFlight, !appState.isTransitioning,
+              appState.currentRevealedSections.contains(.hidden) else { return }
+        let second = await engine.snapshot()
+        appState.updateSnapshot(second)
+        guard let b = readDrift(second) else { return }
+        guard abs(a.chevronMinX - b.chevronMinX) <= 3, a.misplaced == b.misplaced else {
+            PelmetLog.log("drift: unsettled — \(a.misplaced.map(\.rawValue)) at chevron@\(a.chevronMinX), then \(b.misplaced.map(\.rawValue)) at chevron@\(b.chevronMinX) — skipped")
+            return
+        }
+        let misplaced = b.misplaced
+        let chevron = CGRect(x: b.chevronMinX, y: 0, width: 0, height: 0)
+        // Anything now on its side has earned its budget back.
+        for id in driftAttempts.keys where !misplaced.contains(id) {
+            driftAttempts.removeValue(forKey: id)
+        }
+        var queued: [String] = []
+        for id in misplaced {
+            if let until = driftCoolOffUntil[id], until > .now { continue }
+            driftCoolOffUntil.removeValue(forKey: id)
+            let attempts = driftAttempts[id, default: 0] + 1
+            driftAttempts[id] = attempts
+            if attempts > Self.maxDriftAttempts {
+                driftCoolOffUntil[id] = .now.addingTimeInterval(Self.driftCoolOff)
+                driftAttempts.removeValue(forKey: id)
+                PelmetLog.log("drift: \(id.rawValue) would not stay on its side after \(Self.maxDriftAttempts) corrections — leaving it for \(Int(Self.driftCoolOff / 60)) min")
+                continue
+            }
+            pendingPlacements.insert(id)
+            queued.append("\(id.rawValue)#\(attempts)")
+        }
+        PelmetLog.log("drift: \(misplaced.map(\.rawValue)) on the wrong side of chevron@\(chevron.minX) — queued \(queued)")
     }
 
     // MARK: - Overflow rescue (items trapped in the native « overflow)
@@ -201,6 +407,39 @@ final class PlacementController {
         }
     }
 
+    /// The main-display frame of an item under any of its id variants.
+    static func primaryBandFrame(of key: ItemID, in snap: EngineSnapshot) -> CGRect? {
+        let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        return snap.items.lazy
+            .filter { $0.id.sectionKey == key.sectionKey }
+            .compactMap(\.frame)
+            .first { MenuBarGeometry.isInBand($0) && $0.midX > 0 && $0.midX < primaryMaxX }
+    }
+
+    /// Post-drag read that waits for the dragged item to stop moving: floor
+    /// wait, then re-read until its frame repeats, bounded by the cap. A
+    /// single fixed-delay read judged mid-animation frames as misses.
+    private func quiescedSnapshot(watching id: ItemID) async -> EngineSnapshot {
+        try? await Task.sleep(for: AppTiming.postDragSettleFloor)
+        let started = ContinuousClock.now
+        var snap = await engine.snapshot()
+        var matches = 0
+        var reads = 1
+        while matches < AppTiming.postDragQuiesceMatches,
+              started.duration(to: .now) < AppTiming.postDragQuiesceCap {
+            try? await Task.sleep(for: AppTiming.postDragQuiescePoll)
+            let next = await engine.snapshot()
+            reads += 1
+            let before = Self.primaryBandFrame(of: id, in: snap)
+            let now = Self.primaryBandFrame(of: id, in: next)
+            matches = (before == now) ? matches + 1 : 0
+            snap = next
+        }
+        let ms = Int(started.duration(to: .now) / .milliseconds(1))
+        PelmetLog.log("place: quiesced \(id.rawValue) after \(reads) read(s), \(ms)ms\(matches < AppTiming.postDragQuiesceMatches ? " (cap)" : "")")
+        return snap
+    }
+
     /// `allowExpansion` bounds the retry-after-«-expansion to depth one.
     private func physicallyPlaceNow(
         _ id: ItemID, in section: PelmetCore.Section, allowExpansion: Bool = true
@@ -210,8 +449,21 @@ final class PlacementController {
         // The payload can be a canonical `bundle:` id (stored/concealed
         // editor tile) or any title-variant — resolve to the live
         // representative by section key, exact id first.
+        // An item can appear under several ids (title variants) and, per
+        // id, with another display's frame when the main copy is missing
+        // from the walk (Sconce: `::Item-0` at x=-614/y=-119 on the left
+        // display while `::Sconce` sat on the main bar, 2026-09-09 — every
+        // editor drop of Sconce skipped, and Bitwarden aimed past it). Only
+        // a primary-band frame is a frame we can drag or aim at.
+        let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        func isPrimary(_ f: CGRect) -> Bool {
+            MenuBarGeometry.isInBand(f) && f.midX > 0 && f.midX < primaryMaxX
+        }
+        func primaryFrame(of key: ItemID, in snap: EngineSnapshot) -> CGRect? {
+            Self.liveItem(for: key, in: snap.items, matchingFrame: isPrimary)?.frame
+        }
         func liveItem(in snap: EngineSnapshot) -> ObservedItem? {
-            Self.liveItem(for: id, in: snap.items)
+            Self.liveItem(for: id, in: snap.items, matchingFrame: isPrimary)
         }
         // Freshly-shown extras take a beat to be hosted — retry the lookup
         // briefly instead of giving up on the first stale snapshot.
@@ -228,8 +480,10 @@ final class PlacementController {
             let frame = item.frame
         else {
             PelmetLog.log("place: no frame for \(id.rawValue) — skipping physical move (concealed?)")
+            if frameless[id] == nil { frameless[id] = .now }
             return false
         }
+        frameless.removeValue(forKey: id)
         // In flight from HERE: the pre-settle and the frame lookup above are
         // ~2s of waiting with no synthetic events, and counting them held
         // the rehide (3s deferral) and swallowed hover reveals after every
@@ -321,10 +575,41 @@ final class PlacementController {
         // assumption is not reliable at cluster boundaries (verified: a
         // one-slot boundary drag bounced back — target fell inside the raw
         // footprint of the left neighbor).
-        let leftPair = globalOrder[..<index].reversed().first(where: { $0.frame.map(inBand) == true })
-        let rightPair = globalOrder[(min(index + 1, globalOrder.count))...].first(where: { $0.frame.map(inBand) == true })
+        let leftIdx = globalOrder[..<index].lastIndex(where: { primaryFrame(of: $0.id, in: snap).map(inBand) == true })
+        let rightIdx = globalOrder[(min(index + 1, globalOrder.count))...].firstIndex(where: { primaryFrame(of: $0.id, in: snap).map(inBand) == true })
+        let leftPair = leftIdx.map { globalOrder[$0] }
+        let rightPair = rightIdx.map { globalOrder[$0] }
         let leftNeighbor = leftPair?.frame.map(lifted)
         let rightNeighbor = rightPair?.frame.map(lifted)
+        // The desired order has no chevron in it, so a LAST-of-Hidden item's
+        // right neighbor is the first Visible one — and "between Snib and
+        // Sound" holds on BOTH sides of the chevron. The raw retry then aimed
+        // at their midpoint (1479, chevron at 1459) and verified true on the
+        // wrong side (Figma, 2026-09-09). At the hidden/visible boundary the
+        // live chevron caps the slot instead. Mirror for first-of-Visible.
+        let alwaysHiddenEnd = appState.editorItems(in: .alwaysHidden).count
+        let hiddenEnd = alwaysHiddenEnd + appState.editorItems(in: .hidden).count
+        let chevronCapsRight = !isChevron && chevronFrame != nil
+            && index >= alwaysHiddenEnd && index < hiddenEnd
+            && (rightIdx.map { $0 >= hiddenEnd } ?? true)
+        let chevronCapsLeft = !isChevron && chevronFrame != nil
+            && index >= hiddenEnd
+            && (leftIdx.map { $0 < hiddenEnd } ?? true)
+        func liveChevron(_ snap: EngineSnapshot) -> CGRect? {
+            appState.pelmetChevronItem(in: snap)?.frame.flatMap { inBand($0) ? $0 : nil }
+        }
+        // The slot's live bounds in a given snapshot: the neighbor from the
+        // desired order, or the chevron where it caps the section boundary.
+        func leftBound(in snap: EngineSnapshot) -> CGRect? {
+            chevronCapsLeft
+                ? liveChevron(snap)
+                : leftPair.flatMap { primaryFrame(of: $0.id, in: snap) }.flatMap { inBand($0) ? $0 : nil }
+        }
+        func rightBound(in snap: EngineSnapshot) -> CGRect? {
+            chevronCapsRight
+                ? liveChevron(snap)
+                : rightPair.flatMap { primaryFrame(of: $0.id, in: snap) }.flatMap { inBand($0) ? $0 : nil }
+        }
 
         let managedMinX = snap.items
             .filter { !Self.isProtectedSystemItem($0.id) }
@@ -336,7 +621,12 @@ final class PlacementController {
             .filter(inBand)
             .map(\.minX)
             .min()
-        guard let targetX = PlacementGeometry.targetX(
+        // Two ways to aim. Between-centers from raw bound frames is the
+        // primary whenever both bounds are live (it is what the retry used
+        // to do, and it is the one that lands). The anchored estimate —
+        // lifted frames, one-sided offsets, zone fallbacks, cluster clamps —
+        // covers one-sided and no-neighbor cases and serves as the retry.
+        let anchoredX = PlacementGeometry.targetX(
             leftNeighbor: leftNeighbor,
             rightNeighbor: rightNeighbor,
             chevron: chevronFrame,
@@ -344,7 +634,13 @@ final class PlacementController {
             managedMinX: managedMinX,
             systemMinX: systemMinX,
             screenMaxX: screen.frame.maxX
-        ) else {
+        )
+        let betweenX: CGFloat? = {
+            guard let l = leftBound(in: snap), let r = rightBound(in: snap), l.midX < r.midX else { return nil }
+            return PlacementGeometry.betweenCentersX(left: l, right: r, screenMaxX: screen.frame.maxX)
+        }()
+        let aimedBetween = betweenX != nil
+        guard let targetX = betweenX ?? anchoredX else {
             let rawLeft = globalOrder[..<index].reversed().first(where: { $0.frame != nil })
             let rawRight = globalOrder[(min(index + 1, globalOrder.count))...].first(where: { $0.frame != nil })
             PelmetLog.log("place: no live neighbors and no chevron for \(id.rawValue) — skipping (frame=\(frame) index=\(index)/\(globalOrder.count) rawLeft=\(rawLeft?.id.rawValue ?? "nil") \(rawLeft?.frame.map(String.init(describing:)) ?? "") rawRight=\(rawRight?.id.rawValue ?? "nil") \(rawRight?.frame.map(String.init(describing:)) ?? ""))")
@@ -357,7 +653,17 @@ final class PlacementController {
         // fallback, and chasing it exactly just bounces (rescue drags at
         // conceal hopped 30pt into the chevron and reverted every time).
         let fallbackTarget = leftNeighbor == nil && rightNeighbor == nil
-        let alreadyPlaced = abs(frame.midX - targetX) < (fallbackTarget ? 40 : 10)
+        // With both bounds live the slot is an ORDER: strictly between the
+        // bound centers is placed, whatever the x estimate says. Strict, with
+        // a margin — a freshly hosted own item can report the very x of its
+        // neighbor (Media controls at Sound's 1554, 2026-09-09), and that one
+        // must still be dragged. Without both bounds fall back to x proximity.
+        let alreadyPlaced: Bool = {
+            if let l = leftBound(in: snap), let r = rightBound(in: snap), l.midX < r.midX {
+                return l.midX + 2 < frame.midX && frame.midX < r.midX - 2
+            }
+            return abs(frame.midX - targetX) < (fallbackTarget ? 40 : 10)
+        }()
         guard !alreadyPlaced else {
             PelmetLog.log("place: \(id.rawValue) already at slot (x=\(frame.midX), target=\(targetX))")
             return true
@@ -379,20 +685,32 @@ final class PlacementController {
         // context, and whichever assumption was wrong the first time, the
         // other target is the correct one.
         func landedInSlot(_ snap: EngineSnapshot) -> Bool {
-            guard let x = Self.liveItem(for: liveID, in: snap.items)?.frame?.midX else { return false }
-            let leftMid = leftPair
-                .flatMap { l in Self.liveItem(for: l.id, in: snap.items)?.frame }
-                .flatMap { inBand($0) ? $0.midX : nil }
-            let rightMid = rightPair
-                .flatMap { r in Self.liveItem(for: r.id, in: snap.items)?.frame }
-                .flatMap { inBand($0) ? $0.midX : nil }
+            guard let x = primaryFrame(of: liveID, in: snap)?.midX else { return false }
+            let leftMid = leftBound(in: snap)?.midX
+            let rightMid = rightBound(in: snap)?.midX
             let ok = PlacementGeometry.inSlot(x: x, leftMidX: leftMid, rightMidX: rightMid)
             if !ok {
                 // A verification miss costs a whole second drag — say why.
-                PelmetLog.log("place: verify x=\(x) left=\(leftPair?.id.rawValue ?? "nil")@\(leftMid.map { "\($0)" } ?? "-") right=\(rightPair?.id.rawValue ?? "nil")@\(rightMid.map { "\($0)" } ?? "-")")
+                PelmetLog.log("place: verify x=\(x) left=\(chevronCapsLeft ? "chevron" : leftPair?.id.rawValue ?? "nil")@\(leftMid.map { "\($0)" } ?? "-") right=\(chevronCapsRight ? "chevron" : rightPair?.id.rawValue ?? "nil")@\(rightMid.map { "\($0)" } ?? "-")")
             }
             return ok
         }
+        // The hidden zone is untouchable while its items are absent. The
+        // agent keeps a concealed item's place as a remembered position; a
+        // drag that starts or ends left of the chevron then shifts the
+        // chevron (or a neighbor) past that position, and the item comes
+        // back on the visible side at the next reveal (Snib, 2026-09-09,
+        // after an own-item drag across the chevron). Hold such placements
+        // for a reveal, where every item is present and the drag reflows
+        // real frames. The chevron's own walk already runs under one.
+        if !isChevron, let chevron = chevronFrame,
+           !appState.currentRevealedSections.contains(.hidden),
+           frame.midX < chevron.midX || targetX < chevron.midX {
+            PelmetLog.log("place: \(id.rawValue) touches the hidden zone while it is concealed (x=\(frame.midX) → \(targetX), chevron@\(chevron.midX)) — waiting for a reveal")
+            deferredForReveal.insert(id)
+            return false
+        }
+        deferredForReveal.remove(id)
         // The chevron's slot is an ORDER, not an x: with both boundary
         // neighbors live, sitting between them is the whole job. The x
         // target is a 13pt-off estimate that dragged it every launch and
@@ -411,16 +729,15 @@ final class PlacementController {
             PelmetLog.log("place: chevron has no live hidden neighbor — waiting for a reveal")
             return false
         }
-        PelmetLog.log("place: dragging \(id.rawValue) x=\(frame.midX) → \(targetX) (section \(section))")
+        PelmetLog.log("place: dragging \(id.rawValue) x=\(frame.midX) → \(targetX) (section \(section), \(aimedBetween ? "between" : "anchored"))")
         await ItemMover.cmdDrag(
             from: CGPoint(x: frame.midX, y: 12),
             to: CGPoint(x: targetX, y: 12),
             ownItem: dragIsPelmetOwned
         )
-        try? await Task.sleep(for: AppTiming.postDragSettle)
-        var after = await engine.snapshot()
+        var after = await quiescedSnapshot(watching: liveID)
         appState.updateSnapshot(after)
-        if let newFrame = Self.liveItem(for: liveID, in: after.items)?.frame {
+        if let newFrame = primaryFrame(of: liveID, in: after) {
             PelmetLog.log("place: landed at x=\(newFrame.midX)")
         } else {
             PelmetLog.log("place: item not observable after drag")
@@ -431,30 +748,42 @@ final class PlacementController {
         // drop most likely landed in the concealed gap. Unverified: requeue
         // for the next reveal rather than trust it.
         if isChevron, placed,
-           leftPair.flatMap({ l in Self.liveItem(for: l.id, in: after.items)?.frame }).map(inBand) != true {
+           leftPair.flatMap({ primaryFrame(of: $0.id, in: after) }).map(inBand) != true {
             PelmetLog.log("place: chevron's hidden neighbor vanished mid-drag — unverified, requeued")
             return false
         }
+        // One retry with the OTHER aim. A between-centers miss re-aims
+        // between the bounds as they sit after the reflow; an anchored miss
+        // (one-sided or fallback first drag) tries between-centers if both
+        // bounds have appeared since, else the anchored estimate again.
         if !placed,
-           let retryFrame = Self.liveItem(for: liveID, in: after.items)?.frame,
-           let rawLeft = leftPair.flatMap({ l in Self.liveItem(for: l.id, in: after.items)?.frame }),
-           let rawRight = rightPair.flatMap({ r in Self.liveItem(for: r.id, in: after.items)?.frame }),
-           inBand(rawLeft), inBand(rawRight),
-           rawLeft.midX < rawRight.midX {
-            let retryX = PlacementGeometry.rawRetryX(
-                left: rawLeft, right: rawRight, screenMaxX: screen.frame.maxX
-            )
-            PelmetLog.log("place: retry with raw frames \(id.rawValue) x=\(retryFrame.midX) → \(retryX)")
-            await ItemMover.cmdDrag(
-                from: CGPoint(x: retryFrame.midX, y: 12),
-                to: CGPoint(x: retryX, y: 12),
-                ownItem: dragIsPelmetOwned
-            )
-            try? await Task.sleep(for: AppTiming.postDragSettle)
-            after = await engine.snapshot()
-            appState.updateSnapshot(after)
-            placed = landedInSlot(after)
-            PelmetLog.log("place: retry landed at x=\(Self.liveItem(for: liveID, in: after.items)?.frame?.midX ?? -1) verified=\(placed)")
+           let retryFrame = primaryFrame(of: liveID, in: after) {
+            let retryX: CGFloat?
+            let aim: String
+            if let l = leftBound(in: after), let r = rightBound(in: after), l.midX < r.midX {
+                retryX = PlacementGeometry.betweenCentersX(left: l, right: r, screenMaxX: screen.frame.maxX)
+                aim = "between"
+            } else if !aimedBetween, let anchoredX {
+                retryX = anchoredX
+                aim = "anchored"
+            } else {
+                retryX = nil
+                aim = "none"
+            }
+            if let retryX, abs(retryX - retryFrame.midX) > 4 {
+                PelmetLog.log("place: retry (\(aim)) \(id.rawValue) x=\(retryFrame.midX) → \(retryX)")
+                await ItemMover.cmdDrag(
+                    from: CGPoint(x: retryFrame.midX, y: 12),
+                    to: CGPoint(x: retryX, y: 12),
+                    ownItem: dragIsPelmetOwned
+                )
+                after = await quiescedSnapshot(watching: liveID)
+                appState.updateSnapshot(after)
+                placed = landedInSlot(after)
+                PelmetLog.log("place: retry landed at x=\(primaryFrame(of: liveID, in: after)?.midX ?? -1) verified=\(placed)")
+            } else {
+                PelmetLog.log("place: no retry aim for \(id.rawValue) (\(aim))")
+            }
         }
         // A SINGLE trapped item can evade the duplicate-minX check (nothing
         // else at its phantom x). Fallback signature for own items: both
@@ -462,7 +791,7 @@ final class PlacementController {
         // bounce — either way a retry on the de-crowded settled bar is the
         // right recovery, so hand it to the conceal-settle rescue.
         if !placed, dragIsPelmetOwned,
-           let finalX = Self.liveItem(for: liveID, in: after.items)?.frame?.minX,
+           let finalX = primaryFrame(of: liveID, in: after)?.minX,
            abs(finalX - frame.minX) < 0.5 {
             PelmetLog.log("place: \(id.rawValue) never moved (x=\(finalX)) — trapped or bounced")
             // Same inline «-expansion as the phantom path — a SINGLE trapped

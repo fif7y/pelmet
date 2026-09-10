@@ -70,4 +70,18 @@ struct InputMenuPlacementTests {
             section: .visible, managedMinX: nil, systemMinX: systemMinX, screenMaxX: 1728
         ) == 644)
     }
+    @Test func placementUsesMainDisplayAliasWhenExactIDIsOnAnotherDisplay() {
+        let alias = ItemID.status(bundle: bundle, title: "Item-0")
+        let mainFrame = CGRect(x: 600, y: 0, width: 30, height: 24)
+        let items = [
+            ObservedItem(id: input, frame: CGRect(x: -600, y: -119, width: 30, height: 24), appName: "Canadian"),
+            ObservedItem(id: alias, frame: mainFrame, appName: "Input Source")
+        ]
+        let match = PlacementController.liveItem(for: input, in: items) {
+            MenuBarGeometry.isInBand($0) && $0.midX > 0 && $0.midX < 1728
+        }
+        #expect(match?.id == alias)
+        #expect(match?.frame == mainFrame)
+    }
+
 }

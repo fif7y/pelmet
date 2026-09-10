@@ -274,19 +274,28 @@ struct BarAdoptionTests {
         #expect(result?.model.assignments.isEmpty == true)
     }
 
+    /// A non-dragged zone change adopts on the second agreeing pass.
+    func twoPasses(items: [(id: ItemID, minX: CGFloat?)], model: SectionModel, previousZones: [String: Section]) -> BarAdoption.Result? {
+        let first = BarAdoption.reconcile(items: items, model: model, previousZones: previousZones, pelmetBundleID: pelmet)
+        return BarAdoption.reconcile(
+            items: items, model: model,
+            previousZones: first?.zones ?? previousZones, pendingZones: first?.pendingZones ?? [:],
+            pelmetBundleID: pelmet
+        )
+    }
+
     @Test func zoneChangeAdoptsIntoHidden() {
         var model = SectionModel()
         model.assignments[anchor.sectionKey] = .hidden
-        let result = BarAdoption.reconcile(
-            items: [
-                (id: chevron, minX: 1000),
-                (id: anchor, minX: 400),
-                (id: velja, minX: 500),
-            ],
-            model: model,
+        let items: [(id: ItemID, minX: CGFloat?)] = [(chevron, 1000), (anchor, 400), (velja, 500)]
+        let first = BarAdoption.reconcile(
+            items: items, model: model,
             previousZones: [velja.rawValue: .visible, anchor.rawValue: .hidden],
             pelmetBundleID: pelmet
         )
+        #expect(first?.changed == false)
+        #expect(first?.pendingZones[velja.rawValue] == .hidden)
+        let result = twoPasses(items: items, model: model, previousZones: [velja.rawValue: .visible, anchor.rawValue: .hidden])
         #expect(result?.changed == true)
         #expect(result?.model.assignments[velja.sectionKey] == .hidden)
         #expect(result?.zones[velja.rawValue] == .hidden)
@@ -295,11 +304,9 @@ struct BarAdoptionTests {
     @Test func zoneChangeAdoptsBackToVisible() {
         var model = SectionModel()
         model.assignments[velja.sectionKey] = .hidden
-        let result = BarAdoption.reconcile(
-            items: [(id: chevron, minX: 1000), (id: velja, minX: 1200)],
-            model: model,
-            previousZones: [velja.rawValue: .hidden],
-            pelmetBundleID: pelmet
+        let result = twoPasses(
+            items: [(chevron, 1000), (velja, 1200)], model: model,
+            previousZones: [velja.rawValue: .hidden]
         )
         #expect(result?.changed == true)
         #expect(result?.model.assignments[velja.sectionKey] == nil)
@@ -430,5 +437,45 @@ struct BarAdoptionTests {
         )
         #expect(result?.changed == true)
         #expect(result?.model.order[.hidden] == [figma.sectionKey, velja.sectionKey])
+    }
+}
+
+extension BarAdoptionTests {
+    @Test func zoneChangeWithoutDragNeedsTwoAgreeingPasses() {
+        // 2026-09-09: a pass that landed while a full reveal collapsed read
+        // three hidden items inside the always-hidden cluster and adopted
+        // them in one go. A non-dragged change now waits for the next pass.
+        var model = SectionModel()
+        model.assignments[anchor.sectionKey] = .alwaysHidden
+        model.assignments[velja.sectionKey] = .hidden
+        model.order[.alwaysHidden] = [anchor.sectionKey]
+        model.order[.hidden] = [velja.sectionKey]
+        // Velja reads inside the always-hidden cluster (left of its member).
+        let items = [(id: anchor, minX: CGFloat(1200)), (id: velja, minX: CGFloat(1180)), (id: chevron, minX: CGFloat(1421))]
+        let first = BarAdoption.reconcile(
+            items: items, model: model,
+            previousZones: [velja.rawValue: .hidden, anchor.rawValue: .alwaysHidden],
+            pelmetBundleID: pelmet
+        )
+        #expect(first?.model.assignments[velja.sectionKey] == .hidden)
+        #expect(first?.pendingZones[velja.rawValue] == .alwaysHidden)
+        #expect(first?.zones[velja.rawValue] == .hidden)
+        // The reading flips back: nothing adopts, the candidate is dropped.
+        let flipped = BarAdoption.reconcile(
+            items: [(id: anchor, minX: 1200), (id: velja, minX: 1300), (id: chevron, minX: 1421)],
+            model: model,
+            previousZones: first!.zones, pendingZones: first!.pendingZones,
+            pelmetBundleID: pelmet
+        )
+        #expect(flipped?.model.assignments[velja.sectionKey] == .hidden)
+        #expect(flipped?.pendingZones[velja.rawValue] == nil)
+        // Two agreeing passes adopt.
+        let second = BarAdoption.reconcile(
+            items: items, model: model,
+            previousZones: first!.zones, pendingZones: first!.pendingZones,
+            pelmetBundleID: pelmet
+        )
+        #expect(second?.model.assignments[velja.sectionKey] == .alwaysHidden)
+        #expect(second?.pendingZones[velja.rawValue] == nil)
     }
 }
