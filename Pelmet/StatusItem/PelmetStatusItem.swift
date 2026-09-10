@@ -15,6 +15,17 @@ final class PelmetStatusItem {
         self.appState = appState
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.autosaveName = "Pelmet.StatusItem"
+        // AppKit restores an item's visibility from `NSStatusItem VisibleCC
+        // <autosaveName>`, stored in our OWN defaults domain — so a
+        // preferences blob captured while the bar was concealed (a Time
+        // Machine restore, Migration Assistant, any backup of the whole
+        // domain) can bring the chevron back marked invisible. Extras and
+        // separators heal themselves: their next reveal runs the show path,
+        // which sets isVisible. Nothing ever sets it on the chevron, so a
+        // stale false was permanent, with Settings still reading ON and no
+        // way for the user to see why. Whether the chevron exists at all is
+        // AppState's call (showStatusItem), never a stale autosave's.
+        item.isVisible = true
         if let button = item.button {
             button.target = self
             button.action = #selector(clicked)
@@ -75,7 +86,11 @@ final class PelmetStatusItem {
     /// like a broken icon (2026-09-10). A palette-configured symbol carries
     /// its own colour and is no longer a template.
     private func applyImage() {
-        guard let style = appState?.settings.statusIconStyle else { return }
+        // Never return without setting one: this is the only code path that
+        // draws the icon, so bailing here leaves an empty square in the bar.
+        // The style is only a preference — losing the weak appState is not a
+        // reason to show nothing.
+        let style = appState?.settings.statusIconStyle ?? .chevron
         let glyph = NSImage(
             systemSymbolName: style.symbol(revealed: revealedFace),
             accessibilityDescription: "Pelmet"
