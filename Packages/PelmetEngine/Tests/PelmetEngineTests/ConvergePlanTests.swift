@@ -4,6 +4,22 @@ import PelmetCore
 @testable import PelmetEngine
 
 @Suite struct ConvergePlanTests {
+    @Test func inputSourceSwitchKeepsKeyboardHiddenUntilReveal() {
+        let weType = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: "微信输入法")
+        let abc = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: "ABC")
+        for revealed in [Set<PelmetCore.Section>(), Set<PelmetCore.Section>([.hidden])] {
+            let plan = ConvergePlan.compute(
+                model: model([weType.sectionKey: .hidden]),
+                liveIDs: [abc], carriedConcealed: [],
+                runningBundles: ["com.apple.TextInputMenuAgent"],
+                revealedSections: revealed, steadyExtras: true, exemptBundles: exempt
+            )
+            #expect(plan.hiddenSystem.contains(.keyboard) == revealed.isEmpty)
+            #expect(plan.allowedSystem.contains(.keyboard) == !revealed.isEmpty)
+            #expect(plan.concealed.contains(abc) == revealed.isEmpty)
+        }
+    }
+
     let velja = ItemID(rawValue: "status:com.sindresorhus.Velja::Item-0")
     let veljaDrifted = ItemID(rawValue: "status:com.sindresorhus.Velja::Left and right arrows in a filled circle")
     let otterkeep = ItemID(rawValue: "status:com.example.otterkeep::Item-0")

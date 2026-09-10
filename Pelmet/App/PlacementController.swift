@@ -18,6 +18,23 @@ final class PlacementController {
         self.engine = engine
     }
 
+    // Input-source titles and agent registrations can change during a drag.
+    // Use the same identity for initial lookup, verification, and retries.
+    static func liveItem(
+        for id: ItemID, in items: [ObservedItem], matchingFrame: (CGRect) -> Bool = { _ in true }
+    ) -> ObservedItem? {
+        let variants = items.filter { $0.id.sectionKey == id.sectionKey }
+        return variants.first { $0.id == id && $0.frame.map(matchingFrame) == true }
+            ?? variants.first { $0.frame.map(matchingFrame) == true }
+    }
+
+    static func isProtectedSystemItem(_ id: ItemID) -> Bool {
+        // The input menu is movable; it must not become the trailing clamp
+        // when the agent re-registers it to the left of the chevron.
+        if id.bundleID == PelmetBundle.textInputAgentID { return false }
+        return MenuBarPolicy.isUnmanagedAppleBundle(id.bundleID) || id.isSystemModule
+    }
+
     // MARK: - Physical placement (synthetic ⌘-drag)
 
     /// Returns true when the icon was dragged into place (or verified already
@@ -451,15 +468,10 @@ final class PlacementController {
             MenuBarGeometry.isInBand(f) && f.midX > 0 && f.midX < primaryMaxX
         }
         func primaryFrame(of key: ItemID, in snap: EngineSnapshot) -> CGRect? {
-            snap.items.lazy
-                .filter { $0.id.sectionKey == key.sectionKey }
-                .compactMap(\.frame)
-                .first(where: isPrimary)
+            Self.liveItem(for: key, in: snap.items, matchingFrame: isPrimary)?.frame
         }
         func liveItem(in snap: EngineSnapshot) -> ObservedItem? {
-            let variants = snap.items.filter { $0.id.sectionKey == id.sectionKey }
-            return variants.first(where: { $0.id == id && $0.frame.map(isPrimary) == true })
-                ?? variants.first(where: { $0.frame.map(isPrimary) == true })
+            Self.liveItem(for: id, in: snap.items, matchingFrame: isPrimary)
         }
         // Freshly-shown extras take a beat to be hosted — retry the lookup
         // briefly instead of giving up on the first stale snapshot.
@@ -608,11 +620,11 @@ final class PlacementController {
         }
 
         let managedMinX = snap.items
-            .filter { !MenuBarPolicy.isUnmanagedAppleBundle($0.id.bundleID) && !$0.id.isSystemModule }
+            .filter { !Self.isProtectedSystemItem($0.id) }
             .compactMap(\.frame?.minX)
             .min()
         let systemMinX = snap.items
-            .filter { MenuBarPolicy.isUnmanagedAppleBundle($0.id.bundleID) || $0.id.isSystemModule }
+            .filter { Self.isProtectedSystemItem($0.id) }
             .compactMap(\.frame)
             .filter(inBand)
             .map(\.minX)
@@ -744,7 +756,7 @@ final class PlacementController {
         // drop most likely landed in the concealed gap. Unverified: requeue
         // for the next reveal rather than trust it.
         if isChevron, placed,
-           leftPair.flatMap({ l in after.items.first { $0.id == l.id }?.frame }).map(inBand) != true {
+           leftPair.flatMap({ primaryFrame(of: $0.id, in: after) }).map(inBand) != true {
             PelmetLog.log("place: chevron's hidden neighbor vanished mid-drag — unverified, requeued")
             return false
         }

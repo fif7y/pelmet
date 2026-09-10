@@ -8,6 +8,18 @@ import Testing
 import PelmetCore
 
 struct BarAdoptionTests {
+    @Test func weTypeDraggedLeftOfChevronAdoptsHidden() {
+        let input = ItemID.status(bundle: "com.apple.TextInputMenuAgent", title: "微信输入法")
+        let result = BarAdoption.reconcile(
+            items: [(id: anchor, minX: 2480), (id: input, minX: 2516), (id: chevron, minX: 2560)],
+            model: SectionModel(assignments: [anchor.sectionKey: .hidden]),
+            previousZones: [input.rawValue: .visible],
+            pelmetBundleID: pelmet,
+            draggedID: input
+        )
+        #expect(result?.model.section(of: input) == .hidden)
+    }
+
     let pelmet = "app.fif7y.Pelmet"
     let chevron = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.StatusItem")
     let velja = ItemID(rawValue: "status:com.sindresorhus.Velja::Item-0")

@@ -11,6 +11,7 @@ public enum PelmetBundle {
     /// Pelmet's bundle id where Bundle.main has none (unit tests, probes).
     public static let fallbackID = "app.fif7y.Pelmet"
     public static let agentID = "com.apple.MenuBarAgent"
+    public static let textInputAgentID = "com.apple.TextInputMenuAgent"
     /// The one canonical "Pelmet's own bundle id" (A10): Bundle.main's, with
     /// the fallback for hosts that have none. Use this — never hand-roll the
     /// `??` (or forget it, as one comparison site did).
@@ -42,6 +43,9 @@ public enum MenuBarPolicy {
     /// Core system items ARE controllable via the assertion's system-item
     /// allowlist — map their menuextra identifiers to MBSystemItemIdentifier.
     public static func systemItem(for id: ItemID) -> SystemItem? {
+        // The input menu is hosted separately and titled with the active
+        // input source (e.g. 微信输入法), not a com.apple.menuextra identifier.
+        if id.bundleID == PelmetBundle.textInputAgentID { return .keyboard }
         let raw = id.rawValue
         guard raw.contains("::com.apple.menuextra.") else { return nil }
         if raw.hasSuffix(".sound") { return .volume }

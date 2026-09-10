@@ -361,6 +361,9 @@ private struct ItemTile: View {
     @State private var cardWork: Task<Void, Never>?
 
     private var displayName: String {
+        if item.id.bundleID == PelmetBundle.textInputAgentID {
+            return InputSourcePresentation.shared.name
+        }
         if item.id.rawValue.contains("Pelmet.Separator") {
             return String(localized: "Separator")
         }
