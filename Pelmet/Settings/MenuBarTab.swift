@@ -198,13 +198,15 @@ private struct EditorSectionView: View {
     /// Where the placeholder sits: under the cursor while this strip is the
     /// target; at the lifted tile's home slot while the cursor is over no
     /// strip (so the row doesn't collapse the moment the drag leaves it).
-    private var placeholderIndex: Int? {
+    /// Takes the tile count rather than reading `tiles` — every read of it
+    /// rebuilds the board (see `slots(_:)`).
+    private func placeholderIndex(tileCount: Int) -> Int? {
         switch session.payload {
         case .item(_, let home, let homeIndex):
             if let target = session.target {
-                return target.section == section ? min(target.index, tiles.count) : nil
+                return target.section == section ? min(target.index, tileCount) : nil
             }
-            return home == section ? min(homeIndex, tiles.count) : nil
+            return home == section ? min(homeIndex, tileCount) : nil
         default:
             return nil
         }
@@ -222,16 +224,24 @@ private struct EditorSectionView: View {
         }
     }
 
-    private var slots: [Slot] {
+    /// `tiles` walks `AppState.editorItems`, which rebuilds the whole board
+    /// (LaunchServices lookups included) on every call. One body pass used
+    /// to make two — `slots` and `placeholderIndex` each asked — across
+    /// three strips. Build it once and hand it down.
+    private func slots(_ tiles: [ObservedItem]) -> [Slot] {
         var slots = tiles.map(Slot.tile)
-        if let index = placeholderIndex { slots.insert(.placeholder, at: index) }
+        if let index = placeholderIndex(tileCount: tiles.count) {
+            slots.insert(.placeholder, at: index)
+        }
         return slots
     }
 
     private var coordinateSpace: String { "pelmet.strip.\(section.rawValue)" }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let tiles = self.tiles
+        let placedSlots = slots(tiles)
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: symbol)
                     .font(.caption)
@@ -258,7 +268,7 @@ private struct EditorSectionView: View {
                 if appState.settings.sectionModel.newItemsDestination == section {
                     NewItemsChip()
                 }
-                ForEach(Array(slots.enumerated()), id: \.element.id) { index, slot in
+                ForEach(Array(placedSlots.enumerated()), id: \.element.id) { index, slot in
                     switch slot {
                     case .tile(let item):
                         ItemTile(item: item, section: section, index: index)
@@ -269,7 +279,7 @@ private struct EditorSectionView: View {
                         SlotPlaceholder()
                     }
                 }
-                if slots.isEmpty {
+                if placedSlots.isEmpty {
                     Text("Drop icons here")
                         .font(.callout)
                         .foregroundStyle(.tertiary)
@@ -287,7 +297,7 @@ private struct EditorSectionView: View {
             .onDrop(of: [.text], delegate: StripDropDelegate(
                 section: section,
                 session: session,
-                order: { tiles.map(\.id) },
+                order: { self.tiles.map(\.id) },
                 frames: { frames },
                 onDrop: handleDrop
             ))
@@ -386,18 +396,13 @@ private struct ItemTile: View {
         if item.id.bundleID == PelmetBundle.textInputAgentID {
             return InputSourcePresentation.shared.name
         }
-        if item.id.rawValue.contains("Pelmet.Separator") {
-            return String(localized: "Separator")
-        }
-        // Pelmet's own extras: name the thing, not the app that hosts it.
-        if item.id.rawValue.contains("Pelmet.MediaControls") {
-            return String(localized: "Media")
-        }
-        if item.id.rawValue.contains("Pelmet.CameraMic") {
-            return String(localized: "Camera")
-        }
-        if item.id.rawValue.contains("Pelmet.AirDrop") {
-            return String(localized: "AirDrop")
+        // Pelmet's own items: name the thing, not the app that hosts it.
+        switch item.id.pelmetItem {
+        case .separator: return String(localized: "Separator")
+        case .mediaControls: return String(localized: "Media")
+        case .cameraMic: return String(localized: "Camera")
+        case .airdrop: return String(localized: "AirDrop")
+        default: break
         }
         if item.id.rawValue.contains("::com.apple.menuextra.") {
             let suffix = item.id.rawValue.components(separatedBy: ".").last ?? String(localized: "System")
@@ -413,7 +418,7 @@ private struct ItemTile: View {
     /// One of Pelmet's app launchers — same icon and name as the app it
     /// stands in for, so the tile says which one it is.
     private var isAppLauncher: Bool {
-        item.id.rawValue.contains("::Pelmet.App.")
+        item.id.isPelmetAppLauncher
     }
 
     private var hasLauncher: Bool {
@@ -714,20 +719,15 @@ private struct PelmetItemsStrip: View {
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                         Spacer()
-                        Button {
+                        RemoveRowButton {
                             appState.settings.extraItems.removeAll { $0.id == spec.id }
                             appState.settingsChanged()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
                         }
-                        .buttonStyle(.plain)
                     }
                     .padding(.vertical, 2)
                 }
             }
-            .padding(14)
-            .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.35)))
+            .pelmetCardSurface()
         }
     }
 }
@@ -837,14 +837,27 @@ private struct AppLaunchersStrip: View {
                 .font(.caption)
                 .padding(.top, 9)
             }
-            .padding(14)
-            .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.35)))
+            .pelmetCardSurface()
         }
     }
 }
 
 /// Hairline between rows inside a card — a separator between siblings,
 /// not a border around anything (de-box).
+/// The "take this row away" affordance — same glyph, same weight, wherever
+/// a card row can be removed.
+private struct RemoveRowButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark.circle.fill")
+                .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 private struct RowDivider: View {
     var body: some View {
         Rectangle()
@@ -918,24 +931,13 @@ private struct AppLauncherRow: View {
     }
 
     /// The narrow fallback: the current rule as a label, the full choice one
-    /// click away. Toggles render the native checkmark (a Label's symbol is
-    /// dropped by macOS menus).
+    /// click away — the app's own menu-sizes-to-its-selection control.
     private var ruleMenu: some View {
-        Menu {
-            ForEach(LauncherShowRule.allCases, id: \.self) { rule in
-                Toggle(Self.label(rule), isOn: Binding(
-                    get: { rule == spec.resolvedShowRule },
-                    set: { if $0 { setRule(rule) } }
-                ))
-            }
-        } label: {
-            Text(Self.label(spec.resolvedShowRule))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        .menuStyle(.borderlessButton)
+        PelmetMenuPicker(
+            selection: ruleBinding,
+            options: LauncherShowRule.allCases.map { ($0, Self.label($0)) },
+            borderless: true
+        )
     }
 
     private static func label(_ rule: LauncherShowRule) -> LocalizedStringKey {
@@ -992,14 +994,10 @@ private struct AppLauncherRow: View {
                 )
                 ruleMenu
             }
-            Button {
+            RemoveRowButton {
                 appState.settings.extraItems.removeAll { $0.id == spec.id }
                 appState.settingsChanged()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
         }
         .padding(.vertical, 4)
     }
@@ -1269,9 +1267,3 @@ private struct SeparatorChip: View {
         }
     }
 }
-
-// MARK: - Flow layout
-
-/// Minimal wrapping layout for icon tiles. `trailing` anchors each row to the
-/// right edge (reading order unchanged) — the editor sections use it so they
-/// mirror the real bar, which grows from the right side of the screen.

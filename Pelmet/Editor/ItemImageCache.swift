@@ -45,13 +45,16 @@ enum ItemImageCache {
             if let cached = appIcons[bundleID] {
                 return cached
             }
-            let icon = NSRunningApplication
-                .runningApplications(withBundleIdentifier: bundleID).first?.icon
-            if let icon {
-                icon.size = NSSize(width: 20, height: 20)
-                appIcons[bundleID] = icon
-            }
-            return icon
+            // Copy before sizing: `NSRunningApplication.icon` hands back the
+            // app's own image, and setting `size` on it mutates what every
+            // other AppKit consumer of that instance draws.
+            guard let icon = NSRunningApplication
+                .runningApplications(withBundleIdentifier: bundleID).first?.icon,
+                let sized = icon.copy() as? NSImage
+            else { return nil }
+            sized.size = NSSize(width: 20, height: 20)
+            appIcons[bundleID] = sized
+            return sized
         }
         return nil
     }

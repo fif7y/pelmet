@@ -85,6 +85,7 @@ final class ExtrasManager {
     }
 
     func sync(with newSpecs: [ExtraItemSpec]) {
+        Self.iconCache.removeAll(keepingCapacity: true)
         let wanted = Set(newSpecs.map(\.id))
         for (id, item) in items where !wanted.contains(id) {
             NSStatusBar.system.removeStatusItem(item)
@@ -112,7 +113,13 @@ final class ExtrasManager {
                 button.image = Self.launcherImage(for: spec, size: 18)
             }
         }
-        let needsRunningObserver = newSpecs.contains { $0.kind == .appLauncher }
+        // Only a "while running" launcher depends on the running list; an
+        // "always" launcher hides purely by section. This KVO fires for
+        // every app launch and quit on the machine, so don't hold it for
+        // launchers that would ignore it.
+        let needsRunningObserver = newSpecs.contains {
+            $0.kind == .appLauncher && $0.resolvedShowRule == .whileRunning
+        }
         if needsRunningObserver, runningAppsObservation == nil {
             runningAppsObservation = NSWorkspace.shared.observe(
                 \.runningApplications, options: [.new]
@@ -335,15 +342,28 @@ final class ExtrasManager {
         "pencil", "checkmark.circle.fill", "command", "option",
     ].filter { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil }
 
+    /// Rendered app icons, keyed by bundle id and point size. Both the
+    /// launcher row and every cell of the icon picker ask for one from a
+    /// SwiftUI body, and each miss was a LaunchServices lookup plus a
+    /// disk-backed icon read — per render, not per change. Cleared by
+    /// `sync`, so an edit still re-reads at the same granularity as before.
+    private static var iconCache: [String: NSImage] = [:]
+
     /// The app's real icon (installed copy, running or not), sized for the
     /// bar or the editor tile. nil when the app is gone — the dashed-app
     /// symbol stands in for it.
     static func appIcon(for spec: ExtraItemSpec, size: CGFloat) -> NSImage? {
+        guard let bundleID = spec.bundleID else { return nil }
+        let key = "\(bundleID)@\(size)"
+        if let cached = iconCache[key] { return cached }
         guard let url = appURL(for: spec) else { return nil }
         let icon = NSWorkspace.shared.icon(forFile: url.path)
-        let sized = icon.copy() as! NSImage
+        // Never resize the returned instance in place: AppKit hands back a
+        // shared image for a path, and the size is a property of the object.
+        guard let sized = icon.copy() as? NSImage else { return nil }
         sized.size = NSSize(width: size, height: size)
         sized.isTemplate = false
+        iconCache[key] = sized
         return sized
     }
 

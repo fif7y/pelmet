@@ -55,4 +55,48 @@ struct EditorInsertionTests {
         #expect(EditorInsertion.index(at: CGPoint(x: 18, y: 20), order: ids, frames: partial) == 3)
         #expect(EditorInsertion.index(at: .zero, order: ids, frames: [:]) == 0)
     }
+
+    // MARK: - The layout and the drop slot must agree
+
+    /// `FlowLayout` packs from the end and `EditorInsertion` counts the rows
+    /// BELOW the cursor; those two facts only work together, and until now
+    /// each was asserted against hand-written frames — change the wrap
+    /// direction alone and both suites still passed. This derives the frames
+    /// from the layout itself, so the pair is locked.
+    @MainActor
+    @Test func dropSlotAgreesWithTheRowsTheLayoutPacks() {
+        let spacing: CGFloat = 6
+        let width: CGFloat = 130
+        let sizes = Array(repeating: CGSize(width: 34, height: 48), count: 5)
+        let rows = FlowLayout.computeRows(
+            sizes: sizes, width: width, spacing: spacing, fromEnd: true
+        )
+
+        // Mirrors FlowLayout.placeSubviews: rows top to bottom, each one
+        // right-anchored, tiles left to right within a row.
+        var frames: [ItemID: CGRect] = [:]
+        var y: CGFloat = 0
+        for row in rows {
+            let rowWidth = row.map(\.size.width).reduce(0, +)
+                + spacing * CGFloat(max(row.count - 1, 0))
+            var x = max(width - rowWidth, 0)
+            for (index, size) in row {
+                frames[ids[index]] = CGRect(origin: CGPoint(x: x, y: y), size: size)
+                x += size.width + spacing
+            }
+            y += (row.map(\.size.height).max() ?? 0) + spacing
+        }
+        #expect(frames.count == ids.count)
+
+        // Every tile's own slot is recoverable from where it was drawn: just
+        // inside its leading edge inserts AT it, just inside its trailing
+        // edge inserts AFTER it.
+        for (index, id) in ids.enumerated() {
+            let frame = frames[id]!
+            let leading = CGPoint(x: frame.minX + 1, y: frame.midY)
+            let trailing = CGPoint(x: frame.maxX - 1, y: frame.midY)
+            #expect(EditorInsertion.index(at: leading, order: ids, frames: frames) == index)
+            #expect(EditorInsertion.index(at: trailing, order: ids, frames: frames) == index + 1)
+        }
+    }
 }

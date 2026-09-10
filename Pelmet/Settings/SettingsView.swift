@@ -279,6 +279,19 @@ private struct PelmetSegmentButton: View {
 
 // MARK: - Card + rows
 
+/// The card's own surface — soft fill, no outline (de-box). Used by the
+/// Menu Bar tab's item cards, which set their own row rhythm and each had
+/// the inset, radius and fill typed out by hand. `SettingsCard` keeps its
+/// inline chain: it needs `.frame(maxWidth:)` BETWEEN the inset and the
+/// fill, and modifier order is geometry here, not style.
+extension View {
+    func pelmetCardSurface(cornerRadius: CGFloat = 12) -> some View {
+        self
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: cornerRadius).fill(.quaternary.opacity(0.35)))
+    }
+}
+
 /// Borderless grouping card: soft fill, no outline (de-box).
 struct SettingsCard<Content: View>: View {
     var title: LocalizedStringKey? = nil
@@ -309,6 +322,9 @@ struct SettingsCard<Content: View>: View {
 struct PelmetMenuPicker<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [(Value, LocalizedStringKey)]
+    /// Row-sized: a caption-weight label with no button chrome, for a menu
+    /// that sits inside a card row rather than beside a setting.
+    var borderless = false
 
     private var currentLabel: LocalizedStringKey {
         options.first { $0.0 == selection }?.1 ?? ""
@@ -329,9 +345,28 @@ struct PelmetMenuPicker<Value: Hashable>: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
-        .menuStyle(.button)
-        .buttonStyle(.bordered)
-        .fixedSize()
+        .modifier(MenuPickerChrome(borderless: borderless))
+    }
+}
+
+/// The two chromes are different view types, so the branch lives in a
+/// modifier SwiftUI can resolve statically. Nothing outside the borderless
+/// branch touches the bordered picker's appearance.
+private struct MenuPickerChrome: ViewModifier {
+    let borderless: Bool
+
+    func body(content: Content) -> some View {
+        if borderless {
+            content
+                .menuStyle(.borderlessButton)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else {
+            content
+                .menuStyle(.button)
+                .buttonStyle(.bordered)
+                .fixedSize()
+        }
     }
 }
 

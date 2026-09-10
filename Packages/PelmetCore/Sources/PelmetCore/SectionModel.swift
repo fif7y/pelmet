@@ -45,7 +45,8 @@ public struct ItemID: RawRepresentable, Hashable, Codable, Sendable {
             return ItemID(rawValue: "bundle:\(PelmetBundle.textInputAgentID)")
         }
         guard let bundle = bundleID,
-              bundle != "app.fif7y.Pelmet",
+              bundle != PelmetBundle.mainID,
+              bundle != PelmetBundle.fallbackID,
               !bundle.hasPrefix("com.apple.")
         else { return self }
         return ItemID(rawValue: "bundle:\(bundle)")

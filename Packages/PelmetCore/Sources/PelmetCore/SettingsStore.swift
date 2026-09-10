@@ -74,6 +74,11 @@ public struct SeparatorSpec: Codable, Equatable, Identifiable, Sendable {
         self.opacity = opacity
     }
 
+    /// Stable ItemID title, the separator's twin of `ExtraItemSpec.itemTitle`.
+    /// It was interpolated at four sites in SeparatorManager; a title the
+    /// model keys on belongs with the spec that owns it.
+    public var itemTitle: String { "Pelmet.Separator.\(id.uuidString)" }
+
     // Resilient decode: specs saved before `opacity` existed keep the old look.
     private enum CodingKeys: String, CodingKey { case id, style, opacity }
 

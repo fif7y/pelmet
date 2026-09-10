@@ -145,11 +145,11 @@ public actor ItemEnumerator {
             AXUIElementGetPid(child, &pid)
             guard pid > 0, pid != agentPID else { continue }
             if let item = describeLeaf(child, frame: frame) {
-                logOnce("enumerate: fallback — role=\(role(of: child) ?? "?") → \(item.id.rawValue)", pid: pid)
+                logOnce("enumerate: fallback — role=\(roleLabel(child)) → \(item.id.rawValue)", pid: pid)
                 return item
             }
         }
-        logDrop("unrecognized children \(kids.map { role(of: $0) ?? "?" })", pid: nil, role: nil)
+        logDrop("unrecognized children \(kids.map { roleLabel($0) })", pid: nil, role: nil)
         return nil
     }
 
@@ -197,9 +197,12 @@ public actor ItemEnumerator {
     }
 
     private func executableURL(ofPID pid: pid_t) -> URL? {
-        var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
-        guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { return nil }
-        return URL(fileURLWithPath: String(cString: buffer))
+        var buffer = [UInt8](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        // proc_pidpath returns the byte count it wrote, excluding the
+        // terminator — decode exactly that rather than the whole buffer.
+        let written = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        guard written > 0 else { return nil }
+        return URL(fileURLWithPath: String(decoding: buffer[..<Int(written)], as: UTF8.self))
     }
 
     /// Each distinct drop is logged once per process lifetime: the walk runs
@@ -250,6 +253,13 @@ public actor ItemEnumerator {
 
     private func role(of element: AXUIElement) -> String {
         copyAttribute(element, kAXRoleAttribute) as? String ?? ""
+    }
+
+    /// `role(of:)` reports a missing role as "", so the `?? "?"` the log
+    /// sites used was dead and they printed `role=` with nothing after it.
+    private func roleLabel(_ element: AXUIElement) -> String {
+        let role = role(of: element)
+        return role.isEmpty ? "?" : role
     }
 
     private func frame(of element: AXUIElement) -> CGRect? {

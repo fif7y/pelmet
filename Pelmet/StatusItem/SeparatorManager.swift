@@ -26,7 +26,7 @@ final class SeparatorManager {
     static func itemID(for spec: SeparatorSpec) -> ItemID {
         .status(
             bundle: PelmetBundle.mainID,
-            title: "Pelmet.Separator.\(spec.id.uuidString)"
+            title: spec.itemTitle
         )
     }
 
@@ -78,7 +78,7 @@ final class SeparatorManager {
                 items[spec.id] = makeItem(for: spec)
             }
             ItemImageCache.registerPelmetItem(
-                title: "Pelmet.Separator.\(spec.id.uuidString)",
+                title: spec.itemTitle,
                 image: Self.glyphImage(for: spec.style)
             )
         }
@@ -89,8 +89,8 @@ final class SeparatorManager {
         let item = NSStatusBar.system.statusItem(
             withLength: spec.style == .space ? 14 : NSStatusItem.variableLength
         )
-        item.autosaveName = "Pelmet.Separator.\(spec.id.uuidString)"
-        item.button?.setAccessibilityTitle("Pelmet.Separator.\(spec.id.uuidString)")
+        item.autosaveName = spec.itemTitle
+        item.button?.setAccessibilityTitle(spec.itemTitle)
         configure(item.button, spec: spec)
         return item
     }

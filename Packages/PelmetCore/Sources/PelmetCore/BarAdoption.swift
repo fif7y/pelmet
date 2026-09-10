@@ -62,9 +62,7 @@ public enum BarAdoption {
         draggedID: ItemID? = nil
     ) -> Result? {
         let chevron = items.first(where: {
-            $0.id.bundleID == pelmetBundleID
-                && !MenuBarPolicy.isPelmetExtraID($0.id)
-                && !$0.id.rawValue.contains("Separator")
+            MenuBarPolicy.isChevronID($0.id, pelmetBundleID: pelmetBundleID)
         })
         let chevronX = chevron?.minX
 

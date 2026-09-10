@@ -70,9 +70,16 @@ public enum MenuBarPolicy {
     /// section-manageable through their own visibility. Separators included —
     /// they live in sections and hide with them, extras-style.
     public static func isPelmetExtraID(_ id: ItemID) -> Bool {
-        let raw = id.rawValue
-        return raw.contains("::Pelmet.")
-            && !raw.contains("Pelmet.StatusItem")
+        guard let item = id.pelmetItem else { return false }
+        return item != .chevron
+    }
+
+    /// Pelmet's chevron itself. Two call sites reconstructed this from
+    /// `isPelmetExtraID` plus a `contains("Separator")` clause that could
+    /// never fire (separators ARE extras, so the first clause already
+    /// excluded them) — one predicate, one meaning.
+    public static func isChevronID(_ id: ItemID, pelmetBundleID: String) -> Bool {
+        id.bundleID == pelmetBundleID && id.isPelmetChevron
     }
 
     /// Apple bundle that is NOT manageable as a third-party item — only the

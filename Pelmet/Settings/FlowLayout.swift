@@ -34,28 +34,52 @@ struct FlowLayout: Layout {
         return fromEnd ? rows.map { Array($0.reversed()) } : rows
     }
 
-    private func rows(width: CGFloat, subviews: Subviews) -> [[(index: Int, size: CGSize)]] {
-        Self.computeRows(
-            sizes: subviews.map { $0.sizeThatFits(.unspecified) },
+    /// SwiftUI calls `sizeThatFits` and then `placeSubviews` for the same
+    /// pass, and each one used to re-measure every subview — an editor strip
+    /// re-rendered on hover, drag and every model change, so the tiles were
+    /// measured twice per pass for nothing. The cache keeps the measurements
+    /// and the packed rows, and only re-packs when the width changes.
+    struct Cache {
+        var sizes: [CGSize]
+        var width: CGFloat
+        var rows: [[(index: Int, size: CGSize)]]
+    }
+
+    func makeCache(subviews: Subviews) -> Cache {
+        Cache(sizes: subviews.map { $0.sizeThatFits(.unspecified) }, width: .nan, rows: [])
+    }
+
+    func updateCache(_ cache: inout Cache, subviews: Subviews) {
+        cache.sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        cache.width = .nan
+        cache.rows = []
+    }
+
+    private func rows(width: CGFloat, cache: inout Cache) -> [[(index: Int, size: CGSize)]] {
+        if cache.width == width { return cache.rows }
+        cache.rows = Self.computeRows(
+            sizes: cache.sizes,
             width: width,
             spacing: spacing,
             fromEnd: trailing
         )
+        cache.width = width
+        return cache.rows
     }
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
         let width = proposal.width ?? 400
         var height: CGFloat = 0
-        for (rowIndex, row) in rows(width: width, subviews: subviews).enumerated() {
+        for (rowIndex, row) in rows(width: width, cache: &cache).enumerated() {
             if rowIndex > 0 { height += spacing }
             height += row.map(\.size.height).max() ?? 0
         }
         return CGSize(width: width, height: height)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
         var y = bounds.minY
-        for row in rows(width: bounds.width, subviews: subviews) {
+        for row in rows(width: bounds.width, cache: &cache) {
             let rowWidth = row.map(\.size.width).reduce(0, +)
                 + spacing * CGFloat(max(row.count - 1, 0))
             var x = trailing ? max(bounds.maxX - rowWidth, bounds.minX) : bounds.minX

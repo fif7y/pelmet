@@ -41,12 +41,25 @@ enum SymbolCatalog {
         }
     }()
 
+    /// Last answered query. `search` is called from a SwiftUI body (the
+    /// launcher icon picker), so it re-ran the full ~7k-entry scan on every
+    /// re-render — a hover or a focus change, not just a keystroke.
+    @MainActor private static var lastSearch: (query: String, limit: Int, result: [String])?
+
     /// As-you-type search: name prefix, then a dotted component prefix
     /// ("star" → "circle.star"), then name substring, then the search terms.
     /// Order within a tier is the catalog's own.
+    @MainActor
     static func search(_ query: String, limit: Int = 240) -> [String] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return [] }
+        if let last = lastSearch, last.query == q, last.limit == limit { return last.result }
+        let result = scan(q, limit: limit)
+        lastSearch = (q, limit, result)
+        return result
+    }
+
+    private static func scan(_ q: String, limit: Int) -> [String] {
         var tiers: [[String]] = [[], [], [], []]
         for entry in all {
             let name = entry.name

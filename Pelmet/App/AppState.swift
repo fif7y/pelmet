@@ -813,9 +813,7 @@ final class AppState {
     func pelmetChevronItem(in snap: EngineSnapshot) -> ObservedItem? {
         let pelmetBundle = PelmetBundle.mainID
         let copies = snap.items.filter {
-            $0.id.bundleID == pelmetBundle
-                && !MenuBarPolicy.isPelmetExtraID($0.id)
-                && !$0.id.rawValue.contains("Separator")
+            MenuBarPolicy.isChevronID($0.id, pelmetBundleID: pelmetBundle)
         }
         // The chevron registers once per display; only the main-band copy
         // is a boundary anything can be measured against.

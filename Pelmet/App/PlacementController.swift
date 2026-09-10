@@ -156,7 +156,7 @@ final class PlacementController {
                 if !placed, !pendingRescues.contains(id) {
                     if deferredForReveal.contains(id) {
                         pendingPlacements.insert(id)
-                    } else if MenuBarPolicy.isPelmetExtraID(id), !id.rawValue.contains("Separator") {
+                    } else if MenuBarPolicy.isPelmetExtraID(id), !id.isPelmetSeparator {
                         PelmetLog.log("place: \(id.rawValue) not hosted — dropped from the queue")
                     } else {
                         pendingPlacements.insert(id)
