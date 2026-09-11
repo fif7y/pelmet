@@ -12,10 +12,10 @@
 </p>
 
 Pelmet hides the icons you don't need until you do. Hover, click or press a
-shortcut and they slide back in. Apple rebuilt the menu bar from the ground
-up in macOS 27, and Pelmet is written for that new architecture from day one,
-which is why hiding feels like part of the system: no overlay windows, no
-fake bars, no icons jumping when the bar reflows. Free and open source.
+shortcut and they slide back in. Small on purpose (three sections, an editor,
+⌘-drag in the bar) and native all the way down. macOS does the hiding. Built
+for the menu bar Apple rebuilt in macOS 27. Free, open source, no account,
+no analytics.
 
 <p align="center">
   <img src="docs/assets/bar-anim.svg" alt="The menu bar: hidden icons tuck away behind the chevron, then return on hover" width="575"><br>
