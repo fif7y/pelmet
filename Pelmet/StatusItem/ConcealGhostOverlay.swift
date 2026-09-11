@@ -135,7 +135,7 @@ final class ConcealGhostOverlay {
     static func snapshotSet(of rect: CGRect?) async -> [BarSnapshot] {
         guard let rect, rect.width > 8 else { return [] }
         guard ScreenRecordingAccess.isGranted else {
-            ScreenRecordingAccess.request()
+            ScreenRecordingAccess.promptOnce()
             return []
         }
         guard let primary = NSScreen.screens.first else { return [] }

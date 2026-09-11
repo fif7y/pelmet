@@ -15,6 +15,8 @@ public struct RawItem: Equatable, Sendable {
     public let appName: String?
     /// See `ObservedItem.hostIsBundleless`.
     public let hostIsBundleless: Bool
+    /// See `ObservedItem.pid`.
+    public let pid: pid_t
 }
 
 /// Bundle attribution of an item's owning process.
@@ -112,7 +114,8 @@ public actor ItemEnumerator {
                     id: .status(bundle: host.id, title: title),
                     frame: frame,
                     appName: appName,
-                    hostIsBundleless: host.bundleless
+                    hostIsBundleless: host.bundleless,
+                    pid: appPID
                 )
             case "AXGroup":
                 // System item: AXGroup wrapping an AXMenuBarItem.
@@ -124,7 +127,8 @@ public actor ItemEnumerator {
                         id: .status(bundle: Self.agentBundleID, title: identifier),
                         frame: frame,
                         appName: nil,
-                        hostIsBundleless: false
+                        hostIsBundleless: false,
+                        pid: agentPID
                     )
                 }
             case "AXButton":
@@ -172,7 +176,8 @@ public actor ItemEnumerator {
             id: .status(bundle: host.id, title: title),
             frame: frame,
             appName: NSRunningApplication(processIdentifier: pid)?.localizedName,
-            hostIsBundleless: host.bundleless
+            hostIsBundleless: host.bundleless,
+            pid: pid
         )
     }
 

@@ -16,12 +16,16 @@ public struct ObservedItem: Equatable, Sendable {
     /// ChatGPTHelper). Pelmet files it under the enclosing app's bundle, but
     /// the assertion allowlist keys on the process and can never hide it.
     public let hostIsBundleless: Bool
+    /// The process that owns the item (0 when unknown). A bundle id alone
+    /// cannot tell a relaunch from a sibling process reusing the id.
+    public let pid: pid_t
 
-    public init(id: ItemID, frame: CGRect?, appName: String?, hostIsBundleless: Bool = false) {
+    public init(id: ItemID, frame: CGRect?, appName: String?, hostIsBundleless: Bool = false, pid: pid_t = 0) {
         self.id = id
         self.frame = frame
         self.appName = appName
         self.hostIsBundleless = hostIsBundleless
+        self.pid = pid
     }
 }
 

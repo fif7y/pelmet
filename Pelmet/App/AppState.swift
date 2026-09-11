@@ -232,6 +232,7 @@ final class AppState {
     private var relaunchObserver: NSObjectProtocol?
     private var runningAppsObservation: NSKeyValueObservation?
     private var lastRelaunchQueue: [String: Date] = [:]
+    private var siblingLaunchLogged: Set<String> = []
 
     /// Menu-bar agent apps (LSUIElement / background-only) post no launch
     /// notification — Snib, OpenClip and Sconce relaunched all afternoon
@@ -296,6 +297,11 @@ final class AppState {
     /// this is fresh; a host with no registration never gets one.
     private var lastSeenAt: [ItemID: Date] = [:]
     private static let storedTileGrace: TimeInterval = 15
+    /// The process that last owned each bundle's live item. A launch
+    /// notification names a bundle, not a process: while this pid still
+    /// runs, the item it owns is merely concealed and the "relaunch" is a
+    /// sibling reusing the id.
+    private var lastSeenPID: [String: pid_t] = [:]
 
     private func queueRelaunchedBundlePlacement(_ bundle: String) {
         let keys = Self.relaunchPlacementKeys(for: bundle, model: settings.sectionModel)
@@ -323,6 +329,20 @@ final class AppState {
                 let snap = await self.engine.snapshot()
                 let observable = snap.items.contains { $0.id.bundleID == bundle }
                 if observable { return }
+                // The owner of the bundle's item is still running, so the
+                // item is concealed, not parked: nothing relaunched. Proton
+                // Drive ships a launchd KeepAlive agent that respawns a
+                // second "Proton Drive" every 10s which quits on sight of
+                // the first — each spawn dropped the assertion and flashed
+                // every hidden icon (issue #12). Checked after the delay,
+                // not at queue time: a self-relaunching app's old process
+                // can outlive its successor's launch notification.
+                if let pid = self.lastSeenPID[bundle], kill(pid, 0) == 0 {
+                    if self.siblingLaunchLogged.insert(bundle).inserted {
+                        PelmetLog.log("adoptWindow: \(bundle) owner pid=\(pid) still running — sibling launch, nothing to adopt (logged once)")
+                    }
+                    return
+                }
                 // A system host (the input menu's agent) registers through
                 // the agent's own path the moment it has an item — it never
                 // parks and never bootstraps slowly. After the first wait it
@@ -1099,7 +1119,10 @@ final class AppState {
 
     func updateSnapshot(_ snap: EngineSnapshot) {
         let now = Date.now
-        for item in snap.items { lastSeenAt[item.id.sectionKey] = now }
+        for item in snap.items {
+            lastSeenAt[item.id.sectionKey] = now
+            if item.pid > 0, let bundle = item.id.bundleID { lastSeenPID[bundle] = item.pid }
+        }
         for id in snap.concealed { lastSeenAt[id.sectionKey] = now }
         guard snapshot?.contentEquals(snap) != true else { return }
         let bundleless = snap.items.filter(\.hostIsBundleless).map(\.id.rawValue)

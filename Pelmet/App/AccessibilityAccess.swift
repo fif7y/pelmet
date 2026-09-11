@@ -118,22 +118,39 @@ enum AccessibilityAccess {
 }
 
 /// Screen Recording is optional: it feeds the hide/reveal covers (icons fade
-/// and slide instead of popping). One system prompt per launch — the OS shows
-/// its dialog at most once per app anyway; a repeat press, or a press after
-/// an earlier Deny, opens the Screen & System Audio Recording pane instead.
+/// and slide instead of popping). The cover path asks in passing ONCE, ever:
+/// a dismissed dialog is an answer, and the pre-capture wants a cover at every
+/// launch, so a per-launch ask nags at each start. Only a BUTTON press
+/// escalates to the Screen & System Audio Recording pane: someone who said no
+/// must not get System Settings thrown at them on every reveal (issue #11 —
+/// it opened on each hover after the first prompt).
 enum ScreenRecordingAccess {
     static var isGranted: Bool { CGPreflightScreenCaptureAccess() }
 
-    @MainActor private static var prompted = false
+    private static let promptedKey = "pelmet.screenRecordingPrompted"
+    @MainActor private static var prompted: Bool {
+        get { UserDefaults.standard.bool(forKey: promptedKey) }
+        set { UserDefaults.standard.set(newValue, forKey: promptedKey) }
+    }
 
-    /// True when this call raised the system dialog (vs. opening Settings).
+    /// Contextual ask, from the cover path: the system dialog once, then
+    /// silence (the General tab's row stays for a change of mind).
+    @MainActor
+    static func promptOnce() {
+        guard !isGranted, !prompted else { return }
+        prompted = true
+        CGRequestScreenCaptureAccess()
+        PelmetLog.log("screen: recording access prompted (grant needs a relaunch)")
+    }
+
+    /// Explicit ask, from a Grant button: the system dialog if it never
+    /// showed, otherwise the Settings pane. True when this call raised the
+    /// system dialog (vs. opening Settings).
     @MainActor @discardableResult
     static func request() -> Bool {
         guard !isGranted else { return false }
         if !prompted {
-            prompted = true
-            CGRequestScreenCaptureAccess()
-            PelmetLog.log("screen: recording access prompted (grant needs a relaunch)")
+            promptOnce()
             return true
         }
         openSystemSettings()
