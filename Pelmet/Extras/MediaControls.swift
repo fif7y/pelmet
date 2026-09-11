@@ -49,6 +49,9 @@ final class ExtrasManager {
     private var items: [UUID: NSStatusItem] = [:]
     private var specs: [UUID: ExtraItemSpec] = [:]
     private var lastVisible: [UUID: Bool] = [:]
+    /// Attached ahead of an uncovered swap (see `preattach`): the companion's
+    /// show only fades them, and a pending layout drop must leave them be.
+    private var preattached: Set<UUID> = []
     private var cameraMicMonitor: CameraMicMonitor?
     /// Play/pause state the media glyph shows. Click intent drives it (players
     /// keep the output device open while paused, so DeviceIsRunningSomewhere
@@ -237,24 +240,61 @@ final class ExtrasManager {
         }
     }
 
+    /// Section-governed items about to be revealed UNCOVERED join the layout
+    /// now, invisible, so the swap changes no layout and the third-party
+    /// icons fade in place (see `StatusItemFader.attach`). The companion's
+    /// `apply` then only runs their fade. Returns what it attached so the
+    /// caller can wait for the agent to place them.
+    func preattach(model: SectionModel, revealing: Set<PelmetCore.Section>) -> [NSStatusItem] {
+        var attached: [NSStatusItem] = []
+        for (id, item) in items {
+            guard let spec = specs[id], lastVisible[id] != true else { continue }
+            switch spec.kind {
+            case .airdrop, .shortcut: break
+            case .appLauncher:
+                // The running edge has its own placement walk; only a plain
+                // launcher (or one already running) rides the section.
+                guard spec.resolvedShowRule != .whileRunning || Self.isRunning(spec) else { continue }
+            case .cameraMicIndicator, .mediaControls: continue  // hardware-driven
+            }
+            guard revealing.contains(model.section(of: Self.itemID(for: spec))) else { continue }
+            StatusItemFader.attach(item, shownLength: NSStatusItem.squareLength)
+            preattached.insert(id)
+            attached.append(item)
+        }
+        return attached
+    }
+
     /// Two-phase hide: width-collapse rides the same bar reflow as the
     /// assertion (matched animation), then after the reflow settles the item
     /// leaves layout entirely — zero-length items still reserve their built-in
     /// spacing, which reads as a dead gap next to the chevron.
     private func setVisible(_ visible: Bool, for id: UUID, item: NSStatusItem) {
+        if !visible, lastVisible[id] != true, preattached.remove(id) != nil {
+            // Attached ahead of a reveal that never came: leave layout again, unseen.
+            item.isVisible = false
+            return
+        }
         guard lastVisible[id] != visible else { return }
         lastVisible[id] = visible
-        PelmetLog.log("extras: \(specs[id]?.itemTitle ?? "?") → \(visible ? "show" : "hide (ghost)")")
+        let wasPreattached = preattached.remove(id) != nil
+        PelmetLog.log("extras: \(specs[id]?.itemTitle ?? "?") → \(visible ? (wasPreattached ? "fade (attached ahead)" : "show") : "hide (ghost)")")
         // Runs as the engine's reflow companion, so timing coincides with the
         // assertion swap — choreography and constants live in StatusItemFader.
+        let stillCurrent: @MainActor () -> Bool = { [weak self] in
+            self?.lastVisible[id] == visible && self?.preattached.contains(id) != true
+        }
+        if visible, wasPreattached {
+            StatusItemFader.fadeInAfterGlide(item, shownAlpha: 1, stillCurrent: stillCurrent)
+            return
+        }
         StatusItemFader.setVisible(
             visible,
             item: item,
             shownLength: NSStatusItem.squareLength,
-            shownAlpha: 1
-        ) { [weak self] in
-            self?.lastVisible[id] == visible
-        }
+            shownAlpha: 1,
+            stillCurrent: stillCurrent
+        )
     }
 
     private func applyCurrent() {

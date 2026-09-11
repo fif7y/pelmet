@@ -30,6 +30,11 @@ enum AppTiming {
     /// Minimum time the reveal pictures stay up: the agent's slide-in is
     /// ~300ms and Pelmet's separators attach in the same reflow.
     static let entranceCoverHold: TimeInterval = 0.45
+    /// Uncovered reveal: own items attach this long before the swap so the
+    /// agent has laid them out by the time it runs the reveal (measured
+    /// 2026-09-11: placed within a frame of the attach; the lead only needs
+    /// to clear that).
+    static let ownItemAttachLead: Duration = .milliseconds(50)
     /// Minimum time the empty-bar cover stays over a conceal: the agent's
     /// own fade of the concealed items runs ~300ms past the swap.
     static let exitCoverHold: TimeInterval = 0.42

@@ -41,6 +41,8 @@ final class SeparatorManager {
     /// separator: a conceal's companion apply mid-rescue would re-hide it
     /// under the running drag (seen live on the first rescue).
     private var forcedID: UUID?
+    /// Attached ahead of an uncovered swap (see `preattach`).
+    private var preattached: Set<UUID> = []
 
     func forceShow(_ target: ItemID) -> Bool {
         guard
@@ -113,18 +115,49 @@ final class SeparatorManager {
         )
     }
 
+    /// Extras-style pre-attach for an uncovered reveal — see
+    /// `ExtrasManager.preattach`.
+    func preattach(model: SectionModel, revealing: Set<PelmetCore.Section>) -> [NSStatusItem] {
+        var attached: [NSStatusItem] = []
+        for (id, item) in items {
+            guard let spec = specsByID[id], id != forcedID, lastVisible[id] != true,
+                  revealing.contains(model.section(of: Self.itemID(for: spec))) else { continue }
+            StatusItemFader.attach(item, shownLength: Self.shownLength(for: spec))
+            preattached.insert(id)
+            attached.append(item)
+        }
+        return attached
+    }
+
+    private static func shownLength(for spec: SeparatorSpec) -> CGFloat {
+        spec.style == .space ? 14 : NSStatusItem.variableLength
+    }
+
     private func setVisible(_ visible: Bool, for id: UUID, item: NSStatusItem, spec: SeparatorSpec) {
+        if !visible, lastVisible[id] != true, preattached.remove(id) != nil {
+            // Attached ahead of a reveal that never came: leave layout again, unseen.
+            item.isVisible = false
+            return
+        }
         guard lastVisible[id] != visible else { return }
         lastVisible[id] = visible
-        PelmetLog.log("separator: \(spec.style.displayName) → \(visible ? "show" : "hide")")
+        let wasPreattached = preattached.remove(id) != nil
+        PelmetLog.log("separator: \(spec.style.displayName) → \(visible ? (wasPreattached ? "fade (attached ahead)" : "show") : "hide")")
+        let stillCurrent: @MainActor () -> Bool = { [weak self] in
+            self?.lastVisible[id] == visible && self?.preattached.contains(id) != true
+        }
+        let shownAlpha: CGFloat = spec.style == .space ? 0 : spec.opacity
+        if visible, wasPreattached {
+            StatusItemFader.fadeInAfterGlide(item, shownAlpha: shownAlpha, stillCurrent: stillCurrent)
+            return
+        }
         StatusItemFader.setVisible(
             visible,
             item: item,
-            shownLength: spec.style == .space ? 14 : NSStatusItem.variableLength,
-            shownAlpha: spec.style == .space ? 0 : spec.opacity
-        ) { [weak self] in
-            self?.lastVisible[id] == visible
-        }
+            shownLength: Self.shownLength(for: spec),
+            shownAlpha: shownAlpha,
+            stillCurrent: stillCurrent
+        )
     }
 
     private func configure(_ button: NSStatusBarButton?, spec: SeparatorSpec) {

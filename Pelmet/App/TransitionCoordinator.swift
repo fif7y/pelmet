@@ -144,6 +144,11 @@ final class TransitionCoordinator {
                 cover?.dismiss()
                 cover = nil
             }
+            if cover == nil {
+                // Nothing hides the agent's slide-in: own items join the
+                // layout first so it animates around them.
+                await appState.preattachOwnItems(revealing: sections)
+            }
             PelmetLog.log("effect reveal \(sections) → engine (anim=\(style.rawValue), cover=\(cover != nil), finished=\(finished != nil))")
             await engine.reveal(sections)
             appState.updateSnapshot(await engine.snapshot())

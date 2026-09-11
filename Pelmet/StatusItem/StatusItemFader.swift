@@ -45,18 +45,8 @@ enum StatusItemFader {
         stillCurrent: @escaping @MainActor () -> Bool
     ) {
         if visible {
-            // Attach silently at FULL width right at companion time — Pelmet
-            // items are pinned leftmost in their section, so the width lands
-            // in empty left-edge space and displaces nothing.
-            item.isVisible = true
-            item.length = shownLength
-            item.button?.alphaValue = 0
-            DispatchQueue.main.asyncAfter(deadline: .now() + attachDelay) { [weak item] in
-                guard stillCurrent(), let button = item?.button else { return }
-                AlphaFade.run(button, to: shownAlpha, duration: fadeDuration, controlPoints: showCurve) {
-                    button.alphaValue = shownAlpha  // re-sync the view property
-                }
-            }
+            attach(item, shownLength: shownLength)
+            fadeIn(item, shownAlpha: shownAlpha, stillCurrent: stillCurrent)
         } else {
             showFadingGhost(for: item)
             item.button?.alphaValue = 0
@@ -70,6 +60,56 @@ enum StatusItemFader {
             }
         }
     }
+
+    /// Attach silently at FULL width — Pelmet items are pinned leftmost in
+    /// their section, so the width lands in empty left-edge space and
+    /// displaces nothing. Normally at companion time; an UNCOVERED reveal
+    /// runs it a beat before the swap instead (`preattach` on the managers).
+    /// An assertion swap alone fades the revealed icons in place (~130ms);
+    /// an item joining the layout in the same pass turns it into an animated
+    /// layout pass, and every revealed icon slides in from the chevron
+    /// (~200ms) and drifts another ~300ms — the choppy uncovered reveal
+    /// (60fps burst, 2026-09-11). Attached ahead, the swap changes no layout.
+    static func attach(_ item: NSStatusItem, shownLength: CGFloat) {
+        item.isVisible = true
+        item.length = shownLength
+        item.button?.alphaValue = 0
+    }
+
+    /// The show fade, in step with the agent fading in the revealed items.
+    static func fadeIn(
+        _ item: NSStatusItem, shownAlpha: CGFloat, stillCurrent: @escaping @MainActor () -> Bool
+    ) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + attachDelay) { [weak item] in
+            guard stillCurrent(), let button = item?.button else { return }
+            AlphaFade.run(button, to: shownAlpha, duration: fadeDuration, controlPoints: showCurve) {
+                button.alphaValue = shownAlpha  // re-sync the view property
+            }
+        }
+    }
+
+    /// The show fade for an item attached AHEAD of the swap: it was placed
+    /// against the collapsed section (right by the chevron) and the swap
+    /// glides it 33pt to its real slot on the agent's side over ~250ms, from
+    /// under the neighbor that un-concealed there; the client-side frame
+    /// reads final within 120ms, so the settle cannot be polled (60fps
+    /// burst, 2026-09-11). Fade only once the glide is over, so the icon
+    /// appears in place, a beat after the third-party icons. A stand-in
+    /// picture fading at the slot in step with them was tried and dropped:
+    /// the cached button draws its glyph ~17% larger than the bar does, so
+    /// the handover popped.
+    static func fadeInAfterGlide(
+        _ item: NSStatusItem, shownAlpha: CGFloat, stillCurrent: @escaping @MainActor () -> Bool
+    ) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + glideDelay) { [weak item] in
+            guard stillCurrent(), let button = item?.button else { return }
+            AlphaFade.run(button, to: shownAlpha, duration: fadeDuration, controlPoints: showCurve) {
+                button.alphaValue = shownAlpha
+            }
+        }
+    }
+    /// The agent's glide of an attached-ahead item is over by ~250ms.
+    private static let glideDelay: TimeInterval = 0.3
 
     /// Snapshot the button and fade the snapshot at its old screen position.
     static func showFadingGhost(for item: NSStatusItem) {

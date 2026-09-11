@@ -525,6 +525,20 @@ final class AppState {
 
     /// Bounded poll until the engine reports swap-quiet for `interval` — the
     /// agent animates each swap, so quiet means the bar has stopped moving.
+    /// Uncovered reveal: put the sections' own items (launchers, separators)
+    /// into the layout before the swap, invisible, and give the agent a beat
+    /// to place them — so its slide-in animates the third-party icons into
+    /// slots around them instead of shifting everything once more when they
+    /// settle later (see `StatusItemFader.attach`).
+    func preattachOwnItems(revealing sections: Set<PelmetCore.Section>) async {
+        let model = settings.sectionModel
+        var attached = extras?.preattach(model: model, revealing: sections) ?? []
+        attached += separators?.preattach(model: model, revealing: sections) ?? []
+        guard !attached.isEmpty else { return }
+        try? await Task.sleep(for: AppTiming.ownItemAttachLead)
+        PelmetLog.log("preattach: \(attached.count) own item(s) in layout ahead of the swap")
+    }
+
     func waitUntilQuiesced(
         interval: TimeInterval, deadline: TimeInterval, poll: Duration
     ) async {
