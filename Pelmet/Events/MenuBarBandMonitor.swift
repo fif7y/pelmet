@@ -414,7 +414,16 @@ final class MenuBarBandMonitor {
             width: screen.frame.width,
             height: bandHeight
         )
-        return NSMouseInRect(point, band, false)
+        guard NSMouseInRect(point, band, false) else { return false }
+        // The hardware cutout is never the bar: nothing draws there, so the
+        // window hit-test finds no overlay and read a pointer crossing it as
+        // a bar hover — on the way to Sconce's notch surface, the hidden
+        // icons came back (2026-09-12).
+        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea,
+           point.x > left.maxX, point.x < right.minX {
+            return false
+        }
+        return true
     }
 
     /// Empty = the AX element under the pointer belongs to the menubar host
