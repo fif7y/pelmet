@@ -108,6 +108,33 @@ final class ConcealGhostOverlay {
         return cachedDisplays[id]
     }
 
+    /// Other processes' surfaces drawn IN the bar over `rect` (CG global,
+    /// top-left origin): at or above the bar's own level, taller than the
+    /// band, reaching its top half. Never a status item (band-height), never
+    /// the bar itself, never the Dock's layer-20 full-screen backstop
+    /// (below the bar), never a panel whose top edge merely grazes the
+    /// band's last rows.
+    static func foreignBandWindows(
+        intersecting rect: CGRect, bandHeight: CGFloat
+    ) -> [(id: CGWindowID, owner: String)] {
+        guard let list = CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
+        ) as? [[String: Any]] else { return [] }
+        let me = ProcessInfo.processInfo.processIdentifier
+        let barLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
+        return list.compactMap { w in
+            guard let pid = w[kCGWindowOwnerPID as String] as? Int32, pid != me,
+                  let id = (w[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
+                  let layer = w[kCGWindowLayer as String] as? Int, layer >= barLevel,
+                  let b = w[kCGWindowBounds as String] as? [String: CGFloat],
+                  let x = b["X"], let y = b["Y"], let width = b["Width"], let height = b["Height"],
+                  height > bandHeight + 1, y < rect.minY + bandHeight / 2,
+                  CGRect(x: x, y: y, width: width, height: height).intersects(rect)
+            else { return nil }
+            return (id, w[kCGWindowOwnerName as String] as? String ?? "pid \(pid)")
+        }
+    }
+
     private let window: NSWindow
     private let imageView: NSImageView
     private var finished = false
@@ -163,12 +190,34 @@ final class ConcealGhostOverlay {
             // Right-anchored translation onto this display, padded so the
             // snapshot's background is continuous with the bar around it.
             let translatedX = rect.minX + (screen.frame.maxX - primary.frame.maxX)
-            let globalX = max(bounds.minX, translatedX - 6)
-            let width = min(rect.width + 12, bounds.maxX - globalX)
+            var globalX = max(bounds.minX, translatedX - 6)
+            // Never picture the notch: nothing Pelmet manages lives in the
+            // cutout, and a notch overlay app's surface hugs it inside the
+            // band (Sconce's rest halo baked into the empty-bar picture and
+            // floated over every hover reveal for 15 minutes, 2026-09-12).
+            if let cutoutRight = screen.auxiliaryTopRightArea?.minX {
+                globalX = max(globalX, cutoutRight + 2)
+            }
+            let width = min(rect.maxX + (screen.frame.maxX - primary.frame.maxX) + 6 - globalX, bounds.maxX - globalX)
             guard width > 8, bandHeight > 0 else { continue }
             // sourceRect is display-local top-left; the bar spans the top band.
             let capture = CGRect(x: globalX - bounds.minX, y: 0, width: width, height: bandHeight)
-            let filter = SCContentFilter(display: display, excludingWindows: [])
+            // Another app's surface over the band (a notch panel wider than
+            // the cutout, a HUD) is not the bar — leave it out of the picture.
+            // The SCWindow lookup is the slow call, so only pay it on a hit.
+            let foreign = foreignBandWindows(
+                intersecting: CGRect(x: globalX, y: bounds.minY, width: width, height: bandHeight),
+                bandHeight: bandHeight
+            )
+            var excluded: [SCWindow] = []
+            if !foreign.isEmpty {
+                let ids = Set(foreign.map(\.id))
+                if let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true) {
+                    excluded = content.windows.filter { ids.contains($0.windowID) }
+                }
+                PelmetLog.log("ghost: capture leaves out \(foreign.map(\.owner).joined(separator: ", ")) (\(excluded.count) window(s))")
+            }
+            let filter = SCContentFilter(display: display, excludingWindows: excluded)
             let config = SCStreamConfiguration()
             config.sourceRect = capture
             // The display's own scale — a hardcoded ×2 half-sized the strip
@@ -356,10 +405,26 @@ final class ConcealGhostOverlay {
     /// Float pre-captured snapshots — synchronous, zero capture latency.
     static func begin(from snaps: [BarSnapshot], safety: TimeInterval = 0.5, startHidden: Bool = false) -> GhostSet? {
         guard !snaps.isEmpty else { return nil }
-        return GhostSet(overlays: snaps.map { ConcealGhostOverlay(snapshot: $0, safety: safety, startHidden: startHidden) })
+        // A cover orders in above every window at the bar's level, another
+        // app's surface included: Sconce's notch glass lost its top 39pt
+        // behind Pelmet's picture of the bar while it opened (2026-09-12).
+        // With a foreign surface over the strip the cover slips in BELOW it
+        // — the bar's own animation is still hidden, the surface still
+        // draws on top. Per display: a notchless external carries Sconce's
+        // rest bar at top center, permanently.
+        let primaryMaxY = NSScreen.screens.first?.frame.maxY ?? 0
+        return GhostSet(overlays: snaps.map { snap in
+            let f = snap.windowFrame
+            let cg = CGRect(x: f.minX, y: primaryMaxY - f.maxY, width: f.width, height: f.height)
+            let foreign = foreignBandWindows(intersecting: cg, bandHeight: f.height)
+            if !foreign.isEmpty {
+                PelmetLog.log("ghost: cover under \(foreign.map(\.owner).joined(separator: ", ")) @x=\(Int(f.minX))")
+            }
+            return ConcealGhostOverlay(snapshot: snap, safety: safety, startHidden: startHidden, beneath: foreign.first?.id)
+        })
     }
 
-    private init(snapshot: BarSnapshot, safety: TimeInterval, startHidden: Bool = false) {
+    private init(snapshot: BarSnapshot, safety: TimeInterval, startHidden: Bool = false, beneath: CGWindowID? = nil) {
         let frame = snapshot.windowFrame
         let shot = snapshot.image
         window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
@@ -375,7 +440,11 @@ final class ConcealGhostOverlay {
         imageView.wantsLayer = true
         if startHidden { imageView.layer?.opacity = 0 }
         window.contentView = imageView
-        window.orderFrontRegardless()
+        if let beneath {
+            window.order(.below, relativeTo: Int(beneath))
+        } else {
+            window.orderFrontRegardless()
+        }
         window.displayIfNeeded()
         Self.activeStripCount += 1
         PelmetLog.log("ghost: strip up \(Int(frame.width))×\(Int(frame.height)) @x=\(Int(frame.minX))")
