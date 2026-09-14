@@ -583,8 +583,17 @@ final class PlacementController {
         // assumption is not reliable at cluster boundaries (verified: a
         // one-slot boundary drag bounced back — target fell inside the raw
         // footprint of the left neighbor).
-        let leftIdx = globalOrder[..<index].lastIndex(where: { primaryFrame(of: $0.id, in: snap).map(inBand) == true })
-        let rightIdx = globalOrder[(min(index + 1, globalOrder.count))...].firstIndex(where: { primaryFrame(of: $0.id, in: snap).map(inBand) == true })
+        func isLive(_ item: ObservedItem) -> Bool {
+            primaryFrame(of: item.id, in: snap).map(inBand) == true
+        }
+        // The trailing system cluster never moves and nothing drops right of
+        // it, so a system member is no LEFT bound: an own item ordered
+        // "after the clock" (Media controls on a bar whose Visible section
+        // is battery/wifi/clock, #13) aimed at clock.maxX, verified against
+        // the clock's x, failed, and re-dragged at every conceal settle.
+        // Left of one is a real slot, so it still bounds on the right.
+        let leftIdx = globalOrder[..<index].lastIndex(where: { isLive($0) && !Self.isProtectedSystemItem($0.id) })
+        let rightIdx = globalOrder[(min(index + 1, globalOrder.count))...].firstIndex(where: isLive)
         let leftPair = leftIdx.map { globalOrder[$0] }
         let rightPair = rightIdx.map { globalOrder[$0] }
         let leftNeighbor = leftPair?.frame.map(lifted)
@@ -623,10 +632,13 @@ final class PlacementController {
             .filter { !Self.isProtectedSystemItem($0.id) }
             .compactMap(\.frame?.minX)
             .min()
+        // Only members right of the chevron are the trailing cluster: Now
+        // Playing hosted LEFT of it clamped a Visible target into the hidden
+        // zone (1158 with the chevron at 1233, #13's log).
         let systemMinX = snap.items
             .filter { Self.isProtectedSystemItem($0.id) }
             .compactMap(\.frame)
-            .filter(inBand)
+            .filter { f in inBand(f) && (chevronFrame.map { f.minX > $0.midX } ?? true) }
             .map(\.minX)
             .min()
         // Two ways to aim. Between-centers from raw bound frames is the

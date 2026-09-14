@@ -193,6 +193,22 @@ final class AppState {
         for spec in settings.extraItems {
             repaired = settings.sectionModel.enroll(ExtrasManager.itemID(for: spec).sectionKey) || repaired
         }
+        // The other side of the invariant: a removed extra left its order
+        // key behind (twenty dead launcher keys in one blob). Separators
+        // have their own manager and stay.
+        let liveExtraKeys = Set(settings.extraItems.map { ExtrasManager.itemID(for: $0).sectionKey })
+        for (section, order) in settings.sectionModel.order {
+            let kept = order.filter {
+                !MenuBarPolicy.isPelmetExtraID($0) || $0.isPelmetSeparator || liveExtraKeys.contains($0)
+            }
+            if kept.count != order.count {
+                settings.sectionModel.order[section] = kept
+                for key in order where !kept.contains(key) {
+                    settings.sectionModel.assignments.removeValue(forKey: key)
+                }
+                repaired = true
+            }
+        }
         if repaired {
             PelmetLog.log("extras: order slots repaired")
             settings.save()
