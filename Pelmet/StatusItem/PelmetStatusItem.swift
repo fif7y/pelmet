@@ -10,6 +10,8 @@ import PelmetEngine
 final class PelmetStatusItem {
     private let item: NSStatusItem
     private weak var appState: AppState?
+    private var removalObservation: NSKeyValueObservation?
+    private var removed = false
 
     init(appState: AppState) {
         self.appState = appState
@@ -26,6 +28,20 @@ final class PelmetStatusItem {
         // way for the user to see why. Whether the chevron exists at all is
         // AppState's call (showStatusItem), never a stale autosave's.
         item.isVisible = true
+        // Removable: a ⌘-drag off the bar of a NON-removable item disallows
+        // the whole app in MenuBarAgent on macOS 27 (2026-09-14). Dragged
+        // off, the chevron becomes the icon-hidden mode the toggle offers.
+        item.behavior = .removalAllowed
+        removalObservation = item.observe(\.isVisible, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                guard let self, !self.item.isVisible, !self.removed,
+                      let appState = self.appState, appState.settings.showStatusItem
+                else { return }
+                PelmetLog.log("status: chevron dragged off the bar → hide Pelmet icon")
+                appState.settings.showStatusItem = false
+                appState.settingsChanged()
+            }
+        }
         if let button = item.button {
             button.target = self
             button.action = #selector(clicked)
@@ -109,6 +125,8 @@ final class PelmetStatusItem {
     /// Call before releasing (deinit can't touch main-actor AppKit state under
     /// strict concurrency).
     func remove() {
+        removed = true
+        removalObservation = nil
         NSStatusBar.system.removeStatusItem(item)
     }
 

@@ -17,6 +17,7 @@ final class SeparatorManager {
     private var items: [UUID: NSStatusItem] = [:]
     private var specsByID: [UUID: SeparatorSpec] = [:]
     private var lastVisible: [UUID: Bool] = [:]
+    private var removalObservations: [UUID: NSKeyValueObservation] = [:]
     private weak var appState: AppState?
 
     init(appState: AppState) {
@@ -67,6 +68,7 @@ final class SeparatorManager {
     func sync(with specs: [SeparatorSpec]) {
         let wanted = Set(specs.map(\.id))
         for (id, item) in items where !wanted.contains(id) {
+            removalObservations.removeValue(forKey: id)
             NSStatusBar.system.removeStatusItem(item)
             items.removeValue(forKey: id)
             specsByID.removeValue(forKey: id)
@@ -94,7 +96,30 @@ final class SeparatorManager {
         item.autosaveName = spec.itemTitle
         item.button?.setAccessibilityTitle(spec.itemTitle)
         configure(item.button, spec: spec)
+        // Removable, like launchers: on macOS 27 a ⌘-drag off the bar of a
+        // NON-removable item disallows the whole app in MenuBarAgent and
+        // every Pelmet item stops being hosted (2026-09-14). Removable, the
+        // drag just hides this one — and we drop the spec to match.
+        item.behavior = .removalAllowed
+        observeRemoval(of: item, for: spec)
         return item
+    }
+
+    /// The native ⌘-drag off the bar hides the item (`isVisible` false).
+    /// Pelmet's own hides flip `lastVisible` first, so a false arriving while
+    /// it still reads true is the user's hand: drop the spec like the
+    /// editor's Remove button does (see `ExtrasManager.observeRemoval`).
+    private func observeRemoval(of item: NSStatusItem, for spec: SeparatorSpec) {
+        removalObservations[spec.id] = item.observe(\.isVisible, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                guard let self, let item = self.items[spec.id], !item.isVisible,
+                      self.lastVisible[spec.id] == true,
+                      let appState = self.appState else { return }
+                PelmetLog.log("separator: \(spec.style.displayName) dragged off the bar → remove")
+                appState.settings.separators.removeAll { $0.id == spec.id }
+                appState.settingsChanged()
+            }
+        }
     }
 
     /// Section visibility, extras-style: width-collapse in the same reflow as
