@@ -252,16 +252,39 @@ final class TransitionCoordinator {
     /// right zone is fixed) and the pre-captured empty-bar still is no use
     /// here: it stops at the strip, right where the extras reappear.
     func beginClockBlinkCover() async -> ConcealGhostOverlay.GhostSet? {
-        guard let items = appState?.snapshot?.items, !items.isEmpty,
-              let clock = items.first(where: { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") })?.frame,
+        let isClock: (ObservedItem) -> Bool = { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }
+        guard let appState, let items = appState.snapshot?.items, !items.isEmpty,
+              let clock = items.first(where: isClock)?.frame,
               let leftmost = items.compactMap { $0.frame?.minX }.min(),
               let band = lastConcealedStripRect ?? items.compactMap(\.frame).first
         else { return nil }
         let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24
-        let rect = CGRect(x: minX, y: band.minY, width: clock.minX - 2 - minX, height: band.height)
+        func rect(clockMinX: CGFloat) -> CGRect {
+            CGRect(x: minX, y: band.minY, width: clockMinX - 2 - minX, height: band.height)
+        }
         let started = Date()
-        let cover = await ConcealGhostOverlay.begin(over: rect, safety: AppTiming.transitionCoverSafety)
-        PelmetLog.log("clock: blink cover \(cover == nil ? "none" : "up") \(Int(rect.minX))..\(Int(rect.maxX)) captured in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+        // The capture itself lights the screen-capture indicator at the
+        // bar's right end and the whole cluster shifts left to make room
+        // (8pt, 2026-09-14) — the first picture is stale the moment it
+        // exists, and the clock slid under the cover's edge. Walk again
+        // until the clock has moved (or is already in its shifted place)
+        // and retake the picture, so cover and bar agree for the cover's
+        // life: the indicator outlives it by seconds.
+        var snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clock.minX))
+        var clockNow = clock.minX
+        var walks = 0
+        while walks < 4 {
+            walks += 1
+            let fresh = await appState.engine.freshSnapshot()
+            guard let now = fresh.items.first(where: isClock)?.frame?.minX else { break }
+            if now != clock.minX { clockNow = now; break }
+            try? await Task.sleep(for: .milliseconds(40))
+        }
+        if clockNow != clock.minX {
+            snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clockNow))
+        }
+        let cover = ConcealGhostOverlay.begin(from: snaps, safety: AppTiming.transitionCoverSafety)
+        PelmetLog.log("clock: blink cover \(cover == nil ? "none" : "up") \(Int(minX))..\(Int(clockNow) - 2) clock \(Int(clock.minX))→\(Int(clockNow)) after \(walks) walk(s), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
         return cover
     }
 

@@ -604,6 +604,11 @@ public actor EngineGoldenGate: MenuBarEngine {
     /// live assertion conceals is still in the agent's tree. The bundle set,
     /// not the snapshot's stamped ids: a converge that lost its epoch to a
     /// hover reveal leaves the stamp stale (2026-09-14).
+    /// A fresh AX walk, bypassing the snapshot cache.
+    public func freshSnapshot() async -> EngineSnapshot {
+        await refreshSnapshot()
+    }
+
     public func concealedItemsStillVisible() async -> Bool {
         guard let concealable = activeConcealable, !concealable.isEmpty else { return false }
         let snap = await refreshSnapshot()
