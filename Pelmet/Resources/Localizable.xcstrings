@@ -10847,60 +10847,60 @@
         }
       }
     },
-    "macOS blocks that click while any icons are hidden. Pelmet shows everything for a blink so it gets through.": {
+    "macOS blocks that click while any icons are hidden. Pelmet lets it through behind a picture of the bar, so nothing shows.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS blockiert diesen Klick, solange irgendein Symbol verborgen ist. Pelmet zeigt alles für einen Augenblick, damit er durchkommt."
+            "value": "macOS blockiert diesen Klick, solange Symbole ausgeblendet sind. Pelmet lässt ihn hinter einem Bild der Menüleiste durch, sodass nichts zu sehen ist."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS bloquea ese clic mientras haya algún icono oculto. Pelmet muestra todo por un instante para que llegue."
+            "value": "macOS bloquea ese clic mientras haya iconos ocultos. Pelmet lo deja pasar tras una imagen de la barra, así no se ve nada."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS bloque ce clic tant qu’une icône est masquée. Pelmet affiche tout l’espace d’un instant pour le laisser passer."
+            "value": "macOS bloque ce clic tant que des icônes sont masquées. Pelmet le laisse passer derrière une image de la barre, rien n’apparaît."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS blocca quel clic finché un’icona è nascosta. Pelmet mostra tutto per un istante per farlo passare."
+            "value": "macOS blocca quel clic finché ci sono icone nascoste. Pelmet lo fa passare dietro un’immagine della barra, così non si vede nulla."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アイコンが1つでも隠れているとmacOSはこのクリックをブロックします。Pelmetは一瞬すべてを表示してクリックを通します。"
+            "value": "アイコンが隠れている間、macOS はこのクリックを拒否します。Pelmet はメニューバーの画像の裏でクリックを通すため、何も表示されません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "아이콘이 하나라도 숨겨져 있으면 macOS가 이 클릭을 막습니다. Pelmet이 잠깐 모두 표시해 클릭이 전달되게 합니다."
+            "value": "아이콘이 숨겨져 있는 동안 macOS는 이 클릭을 막습니다. Pelmet은 메뉴 막대 그림 뒤로 클릭을 통과시켜 아무것도 보이지 않게 합니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O macOS bloqueia esse clique enquanto algum ícone estiver oculto. O Pelmet mostra tudo por um instante para ele passar."
+            "value": "O macOS bloqueia esse clique enquanto houver ícones ocultos. O Pelmet o deixa passar atrás de uma imagem da barra, sem mostrar nada."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS блокирует этот щелчок, пока скрыт хотя бы один значок. Pelmet на миг показывает всё, чтобы он прошёл."
+            "value": "macOS блокирует этот щелчок, пока скрыты значки. Pelmet пропускает его за изображением строки меню, и ничего не показывается."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "只要有任何图标被隐藏，macOS 就会拦截这次点击。Pelmet 会短暂显示全部图标，让点击生效。"
+            "value": "有图标隐藏时，macOS 会拦截这次点击。Pelmet 让它在菜单栏的一张图片后面通过，什么都不会显示。"
           }
         }
       }

@@ -242,16 +242,27 @@ final class TransitionCoordinator {
     }
 
     /// Clock blink (see AppState.clockClicked): the assertion drops for the
-    /// click and the agent slides every hidden icon in for ~0.5s before the
-    /// re-acquire lands, whatever the re-acquire delay. The empty-bar still
-    /// floated over the strip for that window hides the whole round trip;
-    /// nothing beneath ever paints. Only while fully concealed — the still is
-    /// a picture of the concealed bar and would cover live icons otherwise.
-    /// The clock itself never moves during the blink (right zone fixed), so
-    /// the strip rect is the whole cover. Lifts with the exit-cover hold.
-    func beginClockBlinkCover() -> ConcealGhostOverlay.GhostSet? {
-        guard let appState, appState.currentRevealedSections.isEmpty else { return nil }
-        return ConcealGhostOverlay.begin(from: freshEmptyBarSnapshots(), safety: AppTiming.transitionCoverSafety)
+    /// click and, until the re-acquire lands, the agent slides every hidden
+    /// icon in AND brings back the system extras the assertion keeps out
+    /// (Now Playing lands in the visible cluster, shifting the chevron).
+    /// A live picture of the bar from its leftmost item to the clock's left
+    /// edge, floated before the drop, hides the whole round trip in either
+    /// state — concealed or hover-revealed — since it is the bar as it
+    /// looks right now. The clock stays uncovered (it never moves: the
+    /// right zone is fixed) and the pre-captured empty-bar still is no use
+    /// here: it stops at the strip, right where the extras reappear.
+    func beginClockBlinkCover() async -> ConcealGhostOverlay.GhostSet? {
+        guard let items = appState?.snapshot?.items, !items.isEmpty,
+              let clock = items.first(where: { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") })?.frame,
+              let leftmost = items.compactMap { $0.frame?.minX }.min(),
+              let band = lastConcealedStripRect ?? items.compactMap(\.frame).first
+        else { return nil }
+        let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24
+        let rect = CGRect(x: minX, y: band.minY, width: clock.minX - 2 - minX, height: band.height)
+        let started = Date()
+        let cover = await ConcealGhostOverlay.begin(over: rect, safety: AppTiming.transitionCoverSafety)
+        PelmetLog.log("clock: blink cover \(cover == nil ? "none" : "up") \(Int(rect.minX))..\(Int(rect.maxX)) captured in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+        return cover
     }
 
     /// Lift the blink cover once the re-acquire's reflow is over beneath it.

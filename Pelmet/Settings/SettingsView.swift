@@ -728,7 +728,7 @@ private struct BehaviorPane: View {
         SettingsCard(title: "Notification Center") {
             SettingToggleRow(
                 title: "Clicking the clock opens Notification Center",
-                caption: "macOS blocks that click while any icons are hidden. Pelmet shows everything for a blink so it gets through.",
+                caption: "macOS blocks that click while any icons are hidden. Pelmet lets it through behind a picture of the bar, so nothing shows.",
                 isOn: binding(\.clockOpensNotificationCenter)
             )
         }

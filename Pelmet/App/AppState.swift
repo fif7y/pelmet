@@ -631,11 +631,10 @@ final class AppState {
     /// the bar is quiet beneath it. With nothing held the click just replays.
     private func clockClicked(at point: CGPoint) {
         Task { @MainActor in
-            let cover = transitions.beginClockBlinkCover()
+            let cover = await transitions.beginClockBlinkCover()
             let blinked = await engine.beginClockBlink()
             ClockClickRelay.postClick(at: point)
             guard blinked else { cover?.dismiss(); return }
-            PelmetLog.log("clock: blink cover=\(cover != nil)")
             try? await Task.sleep(for: AppTiming.clockBlinkReacquire)
             await engine.endClockBlink()
             if let cover { transitions.endClockBlinkCover(cover) }
