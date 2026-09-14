@@ -13,6 +13,9 @@ enum AppTiming {
     /// R=0/100/250ms all measured ~0.5s); it only keeps the click ahead.
     static let clockReplayHold: TimeInterval = 0.06
     static let clockBlinkReacquire: Duration = .milliseconds(120)
+    /// Longest the blink cover waits for the concealed items to leave the
+    /// AX tree after the re-acquire before lifting anyway.
+    static let clockBlinkCoverDeadline: TimeInterval = 1.5
     /// Adoption deferral while a transition is in flight.
     static let adoptDeferralDelay: Duration = .milliseconds(300)
     static let adoptMaxDeferrals = 10

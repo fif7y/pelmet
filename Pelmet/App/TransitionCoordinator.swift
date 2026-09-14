@@ -265,14 +265,25 @@ final class TransitionCoordinator {
         return cover
     }
 
-    /// Lift the blink cover once the re-acquire's reflow is over beneath it.
+    /// Lift the blink cover once the re-acquire has taken beneath it. Swap-
+    /// quiet is not enough: the agent finishes the drop's reveal slide
+    /// before it applies the re-acquire, so the concealed items were still
+    /// fading out when a hold-only lift came (Gab, 2026-09-14: "all apps at
+    /// the very end"). Poll a fresh AX walk until the concealed items have
+    /// left the tree, then hold for the agent's fade.
     func endClockBlinkCover(_ cover: ConcealGhostOverlay.GhostSet) {
-        let liftAt = Date().addingTimeInterval(AppTiming.exitCoverHold)
         Task { @MainActor in
-            await appState?.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
-            let remaining = liftAt.timeIntervalSinceNow
-            if remaining > 0 { try? await Task.sleep(for: .seconds(remaining)) }
+            guard let appState else { cover.dismiss(); return }
+            let started = Date()
+            await appState.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
+            let deadline = Date().addingTimeInterval(AppTiming.clockBlinkCoverDeadline)
+            while Date() < deadline, await appState.engine.concealedItemsStillVisible() {
+                try? await Task.sleep(for: .milliseconds(60))
+            }
+            let gone = Int(-started.timeIntervalSinceNow * 1000)
+            try? await Task.sleep(for: .seconds(AppTiming.exitCoverHold))
             cover.dismiss()
+            PelmetLog.log("clock: blink cover down — concealed gone at \(gone)ms, lifted at \(Int(-started.timeIntervalSinceNow * 1000))ms")
         }
     }
 

@@ -599,6 +599,17 @@ public actor EngineGoldenGate: MenuBarEngine {
         await converge()
     }
 
+    /// Visibility oracle for the blink cover: a fresh AX walk (the cached
+    /// snapshot is up to 0.5s old) — true while any item of a bundle the
+    /// live assertion conceals is still in the agent's tree. The bundle set,
+    /// not the snapshot's stamped ids: a converge that lost its epoch to a
+    /// hover reveal leaves the stamp stale (2026-09-14).
+    public func concealedItemsStillVisible() async -> Bool {
+        guard let concealable = activeConcealable, !concealable.isEmpty else { return false }
+        let snap = await refreshSnapshot()
+        return snap.items.contains { $0.id.bundleID.map(concealable.contains) ?? false }
+    }
+
     private func invalidateAssertion() {
         if assertion != nil {
             // Dropping an assertion reflows the bar exactly like a swap —
