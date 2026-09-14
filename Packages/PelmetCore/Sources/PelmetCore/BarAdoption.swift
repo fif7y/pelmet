@@ -84,6 +84,10 @@ public enum BarAdoption {
             guard let chevronX, let previousChevronX, draggedID != chevron?.id else { return false }
             return abs(chevronX - previousChevronX) > 4
         }()
+        // The inputs, before any rule runs: both #13 logs ended on
+        // `adopt: pass` with nothing after it. One line here turns the next
+        // trap into a five-minute read.
+        log.append("adopt: order=\(model.order.mapValues { $0.map(\.rawValue) }) live=\(items.compactMap { $0.minX != nil ? $0.id.sectionKey.rawValue : nil })")
         log.append("adopt: chevronX=\(chevronX.map { "\($0)" } ?? "none") firstPass=\(isFirstPass) trackedZones=\(previousZones.count)\(chevronMoved ? " boundaryMoved(from \(previousChevronX!)) — only moved items adopt" : "")")
         var positions: [String: CGFloat] = [:]
         for item in items { if let x = item.minX { positions[item.id.rawValue] = x } }
@@ -259,19 +263,27 @@ public enum BarAdoption {
         for (section, order) in model.order {
             var newOrder = order.filter { model.section(of: $0) == section }
             let liveSlots = newOrder.indices.filter { liveX[newOrder[$0]] != nil }
-            let sortedLive = liveSlots.map { newOrder[$0] }.sorted { liveX[$0]! < liveX[$1]! }
+            let sortedLive = liveSlots.map { newOrder[$0] }
+                .sorted { liveX[$0, default: .infinity] < liveX[$1, default: .infinity] }
             for (offset, slot) in liveSlots.enumerated() { newOrder[slot] = sortedLive[offset] }
             var known = Set(newOrder)
-            let missing = items.filter {
-                $0.minX != nil && !known.contains($0.id.sectionKey)
-                    && model.section(of: $0.id) == section
-                    && MenuBarPolicy.isZoneAdoptable($0.id, pelmetBundleID: pelmetBundleID)
+            // A member with no order entry yet slots in by X. Pelmet's own
+            // items are absent from `liveX` by design (above), yet an extra
+            // toggled on gets a spec and no order entry — its first bar X is
+            // the only slot there is. Looking it up in `liveX` force-unwrapped
+            // nil: a trap on the first adopt pass of every launch (#13).
+            var slotX = liveX
+            let missing: [(key: ItemID, x: CGFloat)] = items.compactMap {
+                guard let minX = $0.minX, !known.contains($0.id.sectionKey),
+                      model.section(of: $0.id) == section,
+                      MenuBarPolicy.isZoneAdoptable($0.id, pelmetBundleID: pelmetBundleID)
+                else { return nil }
+                return ($0.id.sectionKey, liveX[$0.id.sectionKey] ?? minX)
             }
-            for item in missing.sorted(by: { liveX[$0.id.sectionKey]! < liveX[$1.id.sectionKey]! }) {
-                let key = item.id.sectionKey
+            for (key, x) in missing.sorted(by: { $0.x < $1.x }) {
                 guard known.insert(key).inserted else { continue }
-                let x = liveX[key]!
-                let insertAfter = newOrder.lastIndex { liveX[$0].map { $0 < x } == true }
+                slotX[key] = x
+                let insertAfter = newOrder.lastIndex { slotX[$0].map { $0 < x } == true }
                 newOrder.insert(key, at: insertAfter.map { $0 + 1 } ?? 0)
             }
             if newOrder != order {

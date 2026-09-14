@@ -503,4 +503,34 @@ extension BarAdoptionTests {
         #expect(second?.model.assignments[velja.sectionKey] == .alwaysHidden)
         #expect(second?.pendingZones[velja.rawValue] == nil)
     }
+
+    @Test func ownExtraAbsentFromOrderFoldsInByBarX() {
+        // #13 (2026-09-14): media controls toggled on never entered
+        // order[.visible] (the toggle appends the spec, not its key — only
+        // launchers do both), so the fold-in listed it as missing and looked
+        // it up in `liveX`, which keeps Pelmet's own items out on purpose:
+        // a force-unwrapped nil, a trap on the first adopt pass of every
+        // launch. Two such extras exercise the sort comparator as well.
+        let media = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.MediaControls")
+        let camera = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.CameraMic")
+        let battery = ItemID(rawValue: "status:com.apple.MenuBarAgent::com.apple.menuextra.battery")
+        let clock = ItemID(rawValue: "status:com.apple.MenuBarAgent::com.apple.menuextra.clock")
+        var model = SectionModel()
+        model.order[.visible] = [battery.sectionKey, clock.sectionKey]
+        let result = BarAdoption.reconcile(
+            items: [
+                (id: camera, minX: 1170),
+                (id: media, minX: 1195),
+                (id: chevron, minX: 1233),
+                (id: battery, minX: 1241),
+                (id: clock, minX: 1403),
+            ],
+            model: model,
+            previousZones: [:],
+            pelmetBundleID: pelmet
+        )
+        #expect(result?.changed == true)
+        #expect(result?.model.order[.visible]
+            == [camera.sectionKey, media.sectionKey, battery.sectionKey, clock.sectionKey])
+    }
 }

@@ -154,6 +154,31 @@ public struct SectionModel: Codable, Equatable, Sendable {
         }
     }
 
+    /// Gives `key` a home: `section` (nil keeps whatever the model says) and
+    /// an order slot at the end of that section if it has none. The one way
+    /// to add one of Pelmet's own items — three toggle sites appended the
+    /// spec and skipped the order, and the adoption fold-in trapped on the
+    /// first pass of every launch (#13). Returns true if the model changed.
+    @discardableResult
+    public mutating func enroll(_ key: ItemID, in section: Section? = nil) -> Bool {
+        let target = section ?? self.section(of: key)
+        var changed = false
+        if target == .visible {
+            changed = assignments.removeValue(forKey: key) != nil
+        } else if assignments[key] != target {
+            assignments[key] = target
+            changed = true
+        }
+        if changed {
+            for home in order.keys where home != target { order[home]?.removeAll { $0 == key } }
+        }
+        if order[target]?.contains(key) != true {
+            order[target, default: []].append(key)
+            changed = true
+        }
+        return changed
+    }
+
     /// Bundles pinned on screen for the given reveal state: any observed item
     /// in `.visible` or a revealed section pins its whole bundle (hiding is
     /// per-bundle). Items absent from `assignments` are visible by default.

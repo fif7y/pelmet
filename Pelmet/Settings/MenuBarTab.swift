@@ -654,7 +654,7 @@ private struct PelmetItemsStrip: View {
 
     private func toggleKind(_ kind: ExtraKind, on: Bool) {
         if on, !hasKind(kind) {
-            appState.settings.extraItems.append(ExtraItemSpec(kind: kind))
+            appState.addExtra(ExtraItemSpec(kind: kind))
         } else if !on {
             appState.settings.extraItems.removeAll { $0.kind == kind }
         }
@@ -673,7 +673,7 @@ private struct PelmetItemsStrip: View {
                     }
                     ForEach(shortcutNames, id: \.self) { name in
                         Button(name) {
-                            appState.settings.extraItems.append(
+                            appState.addExtra(
                                 ExtraItemSpec(kind: .shortcut, shortcutName: name, symbol: "bolt.fill")
                             )
                             appState.settingsChanged()

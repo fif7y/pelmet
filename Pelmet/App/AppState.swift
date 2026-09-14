@@ -183,8 +183,18 @@ final class AppState {
         separators?.sync(with: settings.separators)
         // Migration: early builds had a bare media-controls bool.
         if settings.showMediaControls, !settings.extraItems.contains(where: { $0.kind == .mediaControls }) {
-            settings.extraItems.append(ExtraItemSpec(kind: .mediaControls))
             settings.showMediaControls = false
+            addExtra(ExtraItemSpec(kind: .mediaControls))
+        }
+        // Repair: blobs written by builds that appended a spec without an
+        // order slot (#13). Every extra gets one where the model already
+        // places it — nothing moves.
+        var repaired = false
+        for spec in settings.extraItems {
+            repaired = settings.sectionModel.enroll(ExtrasManager.itemID(for: spec).sectionKey) || repaired
+        }
+        if repaired {
+            PelmetLog.log("extras: order slots repaired")
             settings.save()
         }
         extras = ExtrasManager(appState: self)
@@ -744,18 +754,21 @@ final class AppState {
         guard !settings.extraItems.contains(where: { $0.kind == .appLauncher && $0.bundleID == bundleID })
         else { return false }
         let spec = ExtraItemSpec(kind: .appLauncher, bundleID: bundleID, appName: name)
-        settings.extraItems.append(spec)
-        let target = section ?? settings.sectionModel.newItemsDestination
-        let key = ExtrasManager.itemID(for: spec).sectionKey
-        if target == .visible {
-            settings.sectionModel.assignments.removeValue(forKey: key)
-        } else {
-            settings.sectionModel.assignments[key] = target
-        }
-        settings.sectionModel.order[target, default: []].append(key)
-        PelmetLog.log("extras: add launcher \(bundleID) → \(target)")
+        addExtra(spec, in: section ?? settings.sectionModel.newItemsDestination)
         settingsChanged()
         return true
+    }
+
+    /// The one way to add a Pelmet item: the spec AND its model slot
+    /// together (`SectionModel.enroll`). `section` nil keeps the model's
+    /// word for the key — visible by default. Callers still call
+    /// `settingsChanged()`; the boot migration runs before it exists.
+    func addExtra(_ spec: ExtraItemSpec, in section: PelmetCore.Section? = nil) {
+        settings.extraItems.append(spec)
+        let key = ExtrasManager.itemID(for: spec).sectionKey
+        settings.sectionModel.enroll(key, in: section)
+        PelmetLog.log("extras: add \(spec.itemTitle) → \(settings.sectionModel.section(of: key))")
+        settings.save()
     }
 
     func moveItem(_ id: ItemID, to section: PelmetCore.Section, before beforeID: ItemID?) {

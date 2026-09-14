@@ -137,3 +137,31 @@ import Testing
         #expect(model == once)
     }
 }
+
+@Suite struct SectionModelEnrollTests {
+    let media = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.MediaControls")
+    let battery = ItemID(rawValue: "status:com.apple.MenuBarAgent::com.apple.menuextra.battery")
+
+    @Test func enrollAppendsMissingSlotWithoutMoving() {
+        // #13: a spec with no order slot. Visible stays visible, slot appended.
+        var model = SectionModel(order: [.visible: [battery.sectionKey]])
+        let changed = model.enroll(media.sectionKey)
+        #expect(changed)
+        #expect(model.assignments[media.sectionKey] == nil)
+        #expect(model.order[.visible] == [battery.sectionKey, media.sectionKey])
+        let again = model.enroll(media.sectionKey)
+        #expect(!again)
+    }
+
+    @Test func enrollIntoSectionAssignsAndRehomes() {
+        var model = SectionModel(order: [.visible: [media.sectionKey]])
+        let changed = model.enroll(media.sectionKey, in: .hidden)
+        #expect(changed)
+        #expect(model.assignments[media.sectionKey] == .hidden)
+        #expect(model.order[.visible] == [])
+        #expect(model.order[.hidden] == [media.sectionKey])
+        let again = model.enroll(media.sectionKey, in: .hidden)
+        #expect(!again)
+    }
+}
+
