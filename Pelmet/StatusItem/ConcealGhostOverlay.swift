@@ -159,6 +159,10 @@ final class ConcealGhostOverlay {
     /// cover is actually wanted (once per launch, see ScreenRecordingAccess);
     /// the General tab's Permissions card carries the row for anyone who
     /// dismissed it (issue #6).
+    /// Points the capture extends past the requested rect on each side so
+    /// the picture's background is continuous with the bar around it.
+    static let capturePadding: CGFloat = 6
+
     static func snapshotSet(of rect: CGRect?) async -> [BarSnapshot] {
         guard let rect, rect.width > 8 else { return [] }
         guard ScreenRecordingAccess.isGranted else {
@@ -190,7 +194,7 @@ final class ConcealGhostOverlay {
             // Right-anchored translation onto this display, padded so the
             // snapshot's background is continuous with the bar around it.
             let translatedX = rect.minX + (screen.frame.maxX - primary.frame.maxX)
-            var globalX = max(bounds.minX, translatedX - 6)
+            var globalX = max(bounds.minX, translatedX - capturePadding)
             // Never picture the notch: nothing Pelmet manages lives in the
             // cutout, and a notch overlay app's surface hugs it inside the
             // band (Sconce's rest halo baked into the empty-bar picture and
@@ -198,7 +202,7 @@ final class ConcealGhostOverlay {
             if let cutoutRight = screen.auxiliaryTopRightArea?.minX {
                 globalX = max(globalX, cutoutRight + 2)
             }
-            let width = min(rect.maxX + (screen.frame.maxX - primary.frame.maxX) + 6 - globalX, bounds.maxX - globalX)
+            let width = min(rect.maxX + (screen.frame.maxX - primary.frame.maxX) + capturePadding - globalX, bounds.maxX - globalX)
             guard width > 8, bandHeight > 0 else { continue }
             // sourceRect is display-local top-left; the bar spans the top band.
             let capture = CGRect(x: globalX - bounds.minX, y: 0, width: width, height: bandHeight)

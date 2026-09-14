@@ -259,8 +259,12 @@ final class TransitionCoordinator {
               let band = lastConcealedStripRect ?? items.compactMap(\.frame).first
         else { return nil }
         let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24
+        // The capture pads 6pt past the rect on both sides (continuous
+        // background); the right edge must land short of the clock AFTER
+        // that padding or the picture eats the date's first letter.
         func rect(clockMinX: CGFloat) -> CGRect {
-            CGRect(x: minX, y: band.minY, width: clockMinX - 2 - minX, height: band.height)
+            let maxX = clockMinX - 2 - ConcealGhostOverlay.capturePadding
+            return CGRect(x: minX, y: band.minY, width: maxX - minX, height: band.height)
         }
         let started = Date()
         // The capture itself lights the screen-capture indicator at the
@@ -284,7 +288,7 @@ final class TransitionCoordinator {
             snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clockNow))
         }
         let cover = ConcealGhostOverlay.begin(from: snaps, safety: AppTiming.transitionCoverSafety)
-        PelmetLog.log("clock: blink cover \(cover == nil ? "none" : "up") \(Int(minX))..\(Int(clockNow) - 2) clock \(Int(clock.minX))→\(Int(clockNow)) after \(walks) walk(s), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+        PelmetLog.log("clock: blink cover \(cover == nil ? "none" : "up") \(Int(minX))..\(Int(clockNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) clock \(Int(clock.minX))→\(Int(clockNow)) after \(walks) walk(s), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
         return cover
     }
 
