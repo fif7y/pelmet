@@ -2553,64 +2553,6 @@
         }
       }
     },
-    "Clicking the clock opens Notification Center": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klick auf die Uhr öffnet die Mitteilungszentrale"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hacer clic en el reloj abre el centro de notificaciones"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un clic sur l’horloge ouvre le centre de notifications"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il clic sull’orologio apre Centro Notifiche"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "時計をクリックで通知センターを開く"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시계를 클릭하면 알림 센터 열기"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clicar no relógio abre a Central de Notificações"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Щелчок по часам открывает Центр уведомлений"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "点击时钟打开通知中心"
-          }
-        }
-      }
-    },
     "Collapse": {
       "localizations": {
         "de": {
@@ -6029,64 +5971,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "刘海"
-          }
-        }
-      }
-    },
-    "Notification Center": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mitteilungszentrale"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Centro de notificaciones"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Centre de notifications"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Centro Notifiche"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通知センター"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "알림 센터"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Central de Notificações"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Центр уведомлений"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通知中心"
           }
         }
       }
@@ -10843,64 +10727,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的菜单栏，\n收纳整齐。"
-          }
-        }
-      }
-    },
-    "macOS blocks that click while any icons are hidden. Pelmet lets it through behind a picture of the bar, so nothing shows.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS blockiert diesen Klick, solange Symbole ausgeblendet sind. Pelmet lässt ihn hinter einem Bild der Menüleiste durch, sodass nichts zu sehen ist."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS bloquea ese clic mientras haya iconos ocultos. Pelmet lo deja pasar tras una imagen de la barra, así no se ve nada."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS bloque ce clic tant que des icônes sont masquées. Pelmet le laisse passer derrière une image de la barre, rien n’apparaît."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS blocca quel clic finché ci sono icone nascoste. Pelmet lo fa passare dietro un’immagine della barra, così non si vede nulla."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アイコンが隠れている間、macOS はこのクリックを拒否します。Pelmet はメニューバーの画像の裏でクリックを通すため、何も表示されません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아이콘이 숨겨져 있는 동안 macOS는 이 클릭을 막습니다. Pelmet은 메뉴 막대 그림 뒤로 클릭을 통과시켜 아무것도 보이지 않게 합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O macOS bloqueia esse clique enquanto houver ícones ocultos. O Pelmet o deixa passar atrás de uma imagem da barra, sem mostrar nada."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS блокирует этот щелчок, пока скрыты значки. Pelmet пропускает его за изображением строки меню, и ничего не показывается."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有图标隐藏时，macOS 会拦截这次点击。Pelmet 让它在菜单栏的一张图片后面通过，什么都不会显示。"
           }
         }
       }

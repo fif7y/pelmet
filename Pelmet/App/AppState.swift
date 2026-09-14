@@ -226,7 +226,7 @@ final class AppState {
         let clockRelay = ClockClickRelay { [weak self] point in
             self?.clockClicked(at: point)
         }
-        clockRelay.setEnabled(settings.clockOpensNotificationCenter)
+        clockRelay.setEnabled(true)
         self.clockRelay = clockRelay
 
         let hotkey = HotkeyManager { [weak self] in
@@ -611,7 +611,7 @@ final class AppState {
         PelmetLog.log("ax: trusted=\(granted)")
         statusItem?.updateAccessibilityWarning(granted: granted)
         guard granted else { return }
-        clockRelay?.setEnabled(settings.clockOpensNotificationCenter)
+        clockRelay?.setEnabled(true)
         Task {
             updateSnapshot(await engine.snapshot())
             await engine.setModel(settings.sectionModel)
@@ -646,7 +646,6 @@ final class AppState {
 
     func settingsChanged() {
         rehide.policy = settings.rehidePolicy
-        clockRelay?.setEnabled(settings.clockOpensNotificationCenter)
         var newOwnIDs: Set<ItemID> = []
         if settings.showStatusItem, statusItem == nil {
             statusItem = PelmetStatusItem(appState: self)

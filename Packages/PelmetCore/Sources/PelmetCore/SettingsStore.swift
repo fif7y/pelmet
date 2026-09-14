@@ -217,11 +217,6 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     /// consistently hidden instead of jumping in and out on every transition.
     public var hideSystemExtras: Bool = SettingsDefaults.hideSystemExtras
 
-    /// Clicking the clock opens Notification Center even while icons are
-    /// hidden. macOS refuses the click under any hide assertion, so Pelmet
-    /// drops the assertion for the blink it takes the click to land, then
-    /// re-acquires it (hidden icons flash in and out for ~0.5s).
-    public var clockOpensNotificationCenter: Bool = true
     /// Right-clicking an empty spot on the menu bar opens Pelmet's menu.
     /// Off for people running an app that draws its own surface across the
     /// bar, where the two menus compete for the same click (issue #8).
@@ -279,7 +274,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case revealTriggers, autoRehide, rehideDelay, rehideOnClickElsewhere, revealAnimation
         case hideSystemExtras, showMediaControls, extraItems, sectionModel, separators
         case displayTemplate, displayOverrides
-        case clockOpensNotificationCenter, notifyOnUpdates, barRightClickMenu
+        case notifyOnUpdates, barRightClickMenu
         case statusIconStyle
     }
 
@@ -309,7 +304,6 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         separators = field([SeparatorSpec].self, .separators, defaults.separators)
         displayTemplate = field(DisplayBehavior.self, .displayTemplate, defaults.displayTemplate)
         displayOverrides = field([String: DisplayBehavior].self, .displayOverrides, defaults.displayOverrides)
-        clockOpensNotificationCenter = field(Bool.self, .clockOpensNotificationCenter, defaults.clockOpensNotificationCenter)
         notifyOnUpdates = field(Bool.self, .notifyOnUpdates, defaults.notifyOnUpdates)
         barRightClickMenu = field(Bool.self, .barRightClickMenu, defaults.barRightClickMenu)
         statusIconStyle = field(StatusIconStyle.self, .statusIconStyle, defaults.statusIconStyle)

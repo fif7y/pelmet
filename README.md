@@ -50,7 +50,7 @@ and how it ends, either auto-rehide after a delay you set (instant to 5
 seconds) or the moment you click somewhere else.
 
 <p align="center">
-  <img src="docs/assets/screenshot-settings.png" alt="Behavior settings: Instant/Smooth/Fade animation cards with a live preview, reveal on hover with a stepped delay slider, click and double-click reveals, auto-rehide after a stepped delay, system extras, clock click opens Notification Center" width="640"><br>
+  <img src="docs/assets/screenshot-settings.png" alt="Behavior settings: Instant/Smooth/Fade animation cards with a live preview, reveal on hover with a stepped delay slider, click and double-click reveals, auto-rehide after a stepped delay, system extras" width="640"><br>
   <sub>Your rules for revealing, and for putting everything back.</sub>
 </p>
 

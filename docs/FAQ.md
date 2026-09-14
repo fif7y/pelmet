@@ -22,9 +22,7 @@ refuses the clock's click to open Notification Center (the same lockdown exam
 mode relies on), and nothing else can open it from outside. So Pelmet lets
 everything show for the blink it takes the click to land, then hides again,
 with a picture of the empty bar held over the strip so the hidden icons never
-paint. Turn it off in Settings → Menu Bar → Notification Center if you'd
-rather use the two-finger swipe from the right edge of the trackpad, which
-always works.
+paint. The two-finger swipe from the right edge of the trackpad always works too.
 
 **Why does Pelmet ask for Accessibility?**
 It's how Pelmet sees the menu bar's items and their positions, and how clicking
