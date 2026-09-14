@@ -49,6 +49,9 @@ final class ExtrasManager {
     private var items: [UUID: NSStatusItem] = [:]
     private var specs: [UUID: ExtraItemSpec] = [:]
     private var lastVisible: [UUID: Bool] = [:]
+    /// Launchers allow the native ⌘-drag off the bar; AppKit reports it as an
+    /// `isVisible` flip (see `observeRemoval`).
+    private var removalObservations: [UUID: NSKeyValueObservation] = [:]
     /// Attached ahead of an uncovered swap (see `preattach`): the companion's
     /// show only fades them, and a pending layout drop must leave them be.
     private var preattached: Set<UUID> = []
@@ -96,6 +99,7 @@ final class ExtrasManager {
             specs.removeValue(forKey: id)
             lastVisible.removeValue(forKey: id)
             lastRunning.removeValue(forKey: id)
+            removalObservations.removeValue(forKey: id)
         }
         for spec in newSpecs {
             specs[spec.id] = spec
@@ -333,7 +337,30 @@ final class ExtrasManager {
             // enumerator falls back to "Item-0" and every Pelmet item collides.
             button.setAccessibilityTitle(spec.itemTitle)
         }
+        if spec.kind == .appLauncher {
+            item.behavior = .removalAllowed
+            observeRemoval(of: item, for: spec)
+        }
         return item
+    }
+
+    /// The native ⌘-drag off the bar: AppKit hides the item (`isVisible`
+    /// false) and persists that under its autosave name — with nothing
+    /// listening the launcher stayed in Settings and healed back on the next
+    /// reveal (Comet, 2026-09-14). Pelmet's own hides flip `lastVisible`
+    /// first, so a false arriving while it still reads true is the user's
+    /// hand: drop the spec like the editor's Remove button does.
+    private func observeRemoval(of item: NSStatusItem, for spec: ExtraItemSpec) {
+        removalObservations[spec.id] = item.observe(\.isVisible, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                guard let self, let item = self.items[spec.id], !item.isVisible,
+                      self.lastVisible[spec.id] == true,
+                      let appState = self.appState else { return }
+                PelmetLog.log("extras: \(spec.itemTitle) dragged off the bar → remove launcher \(spec.bundleID ?? "?")")
+                appState.settings.extraItems.removeAll { $0.id == spec.id }
+                appState.settingsChanged()
+            }
+        }
     }
 
     static func symbol(for spec: ExtraItemSpec) -> String {
