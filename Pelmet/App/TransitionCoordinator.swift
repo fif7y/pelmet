@@ -241,6 +241,30 @@ final class TransitionCoordinator {
         }
     }
 
+    /// Clock blink (see AppState.clockClicked): the assertion drops for the
+    /// click and the agent slides every hidden icon in for ~0.5s before the
+    /// re-acquire lands, whatever the re-acquire delay. The empty-bar still
+    /// floated over the strip for that window hides the whole round trip;
+    /// nothing beneath ever paints. Only while fully concealed — the still is
+    /// a picture of the concealed bar and would cover live icons otherwise.
+    /// The clock itself never moves during the blink (right zone fixed), so
+    /// the strip rect is the whole cover. Lifts with the exit-cover hold.
+    func beginClockBlinkCover() -> ConcealGhostOverlay.GhostSet? {
+        guard let appState, appState.currentRevealedSections.isEmpty else { return nil }
+        return ConcealGhostOverlay.begin(from: freshEmptyBarSnapshots(), safety: AppTiming.transitionCoverSafety)
+    }
+
+    /// Lift the blink cover once the re-acquire's reflow is over beneath it.
+    func endClockBlinkCover(_ cover: ConcealGhostOverlay.GhostSet) {
+        let liftAt = Date().addingTimeInterval(AppTiming.exitCoverHold)
+        Task { @MainActor in
+            await appState?.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
+            let remaining = liftAt.timeIntervalSinceNow
+            if remaining > 0 { try? await Task.sleep(for: .seconds(remaining)) }
+            cover.dismiss()
+        }
+    }
+
     /// The empty-bar capture from the last conceal settle, if it is recent
     /// enough to stand in for the bar as it looks now (static wallpaper).
     private func freshEmptyBarSnapshots() -> [ConcealGhostOverlay.BarSnapshot] {

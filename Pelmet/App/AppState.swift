@@ -626,15 +626,19 @@ final class AppState {
     /// bits apply immediately; the save and the engine converge are debounced
     /// — slider drags call this per tick, and each un-debounced tick paid a
     /// JSON save plus a full AX-walking converge that concluded "no-op".
-    /// Clock blink (see ClockClickRelay): drop the assertion, replay the
-    /// swallowed click, re-acquire. With nothing held the click just replays.
+    /// Clock blink (see ClockClickRelay): cover the strip, drop the
+    /// assertion, replay the swallowed click, re-acquire, lift the cover once
+    /// the bar is quiet beneath it. With nothing held the click just replays.
     private func clockClicked(at point: CGPoint) {
         Task { @MainActor in
+            let cover = transitions.beginClockBlinkCover()
             let blinked = await engine.beginClockBlink()
             ClockClickRelay.postClick(at: point)
-            guard blinked else { return }
+            guard blinked else { cover?.dismiss(); return }
+            PelmetLog.log("clock: blink cover=\(cover != nil)")
             try? await Task.sleep(for: AppTiming.clockBlinkReacquire)
             await engine.endClockBlink()
+            if let cover { transitions.endClockBlinkCover(cover) }
         }
     }
 
