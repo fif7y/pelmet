@@ -76,6 +76,7 @@ final class AppState {
     func start() {
         wireTransitionSettleCallbacks()
         runOneShotMigrations()
+        startHelperSpike()
         applyPolicyAndStartUpdater()
         presentOnboardingIfNeeded()
         buildBarItems()
@@ -396,6 +397,43 @@ final class AppState {
             guard let events = self?.engine.events else { return }
             for await event in events {
                 self?.handle(engineEvent: event)
+            }
+        }
+    }
+
+    // MARK: - M1 helper spike (docs/HELPER-PROCESS-PLAN.md)
+
+    /// `defaults write app.fif7y.Pelmet pelmet.spike.helper -bool YES`:
+    /// launch the nested PelmetItems-Hidden.app (its own bundle id, one
+    /// hard-coded separator) and home that separator in Hidden, so the
+    /// converge log shows whether the assertion hides a nested helper's item.
+    static let helperSpikeBundleID = "app.fif7y.Pelmet.items.hidden"
+    static let helperSpikeItemID = ItemID.status(bundle: helperSpikeBundleID, title: "Pelmet.Separator.SPIKE")
+
+    private func startHelperSpike() {
+        guard UserDefaults.standard.bool(forKey: "pelmet.spike.helper") else { return }
+        let url = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/PelmetItems-Hidden.app")
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            PelmetLog.log("spike: helper missing at \(url.path)")
+            return
+        }
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = false
+        config.environment = ["PELMET_PARENT_PID": "\(ProcessInfo.processInfo.processIdentifier)"]
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { app, error in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let error {
+                    PelmetLog.log("spike: helper launch failed — \(error)")
+                    return
+                }
+                PelmetLog.log("spike: helper launched pid=\(app?.processIdentifier ?? 0) bundle=\(app?.bundleIdentifier ?? "?")")
+                try? await Task.sleep(for: .seconds(3))
+                if self.settings.sectionModel.enroll(Self.helperSpikeItemID.sectionKey, in: .hidden) {
+                    PelmetLog.log("spike: enrolled \(Self.helperSpikeItemID.rawValue) in hidden")
+                    self.settingsChanged()
+                }
             }
         }
     }

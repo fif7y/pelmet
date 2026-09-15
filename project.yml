@@ -32,6 +32,12 @@ targets:
         product: PelmetEngine
       - package: Sparkle
         product: Sparkle
+      - target: PelmetItems
+        embed: true
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
     info:
       path: Pelmet/Info.plist
       properties:
@@ -58,6 +64,38 @@ targets:
         SWIFT_EMIT_LOC_STRINGS: "YES"
         ENABLE_HARDENED_RUNTIME: "YES"
         ENABLE_APP_SANDBOX: "NO"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: YW9UY68SQ7
+  # M1 spike helper (docs/HELPER-PROCESS-PLAN.md): a separate bundle id the
+  # assertion can exclude, hosting one separator.
+  PelmetItems:
+    type: application
+    platform: macOS
+    sources:
+      - PelmetItems
+    info:
+      path: PelmetItems/Info.plist
+      properties:
+        CFBundleName: Pelmet Items
+        CFBundleDisplayName: Pelmet Items
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        LSUIElement: true
+        LSBackgroundOnly: false
+        NSPrincipalClass: NSApplication
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.fif7y.Pelmet.items.hidden
+        PRODUCT_NAME: PelmetItems-Hidden
+        MARKETING_VERSION: "0.2.28"
+        CURRENT_PROJECT_VERSION: "35"
+        SWIFT_VERSION: "6.0"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: "YES"
+        ENABLE_HARDENED_RUNTIME: "YES"
+        ENABLE_APP_SANDBOX: "NO"
+        SKIP_INSTALL: "YES"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: YW9UY68SQ7
   PelmetTests:
