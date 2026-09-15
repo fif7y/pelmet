@@ -58,24 +58,16 @@ import Testing
         #expect(HotkeySpec.default.display == "⌥⌘,")
     }
 
-    /// Blobs written before the default existed have no `hotkey` key at all
-    /// (or a nil that was never written): they pick the default up.
-    @Test func missingKeyMeansNeverSetAndTakesTheDefault() throws {
+    /// Blobs written before the default existed have no `hotkey` key, and a
+    /// dev build briefly wrote an explicit null: both take the default.
+    @Test func missingOrNullShortcutTakesTheDefault() throws {
         var blob = try json(SettingsStore())
         blob.removeValue(forKey: "hotkey")
-        let decoded = try JSONDecoder().decode(SettingsStore.self, from: JSONSerialization.data(withJSONObject: blob))
+        var decoded = try JSONDecoder().decode(SettingsStore.self, from: JSONSerialization.data(withJSONObject: blob))
         #expect(decoded.hotkey == .default)
-    }
-
-    /// The user removed it: the null is written out and survives a reload.
-    @Test func clearedShortcutStaysClearedAcrossSaveAndLoad() throws {
-        var store = SettingsStore()
-        store.hotkey = nil
-        let blob = try json(store)
-        #expect(blob.keys.contains("hotkey"))
-        #expect(blob["hotkey"] is NSNull)
-        let decoded = try JSONDecoder().decode(SettingsStore.self, from: JSONEncoder().encode(store))
-        #expect(decoded.hotkey == nil)
+        blob["hotkey"] = NSNull()
+        decoded = try JSONDecoder().decode(SettingsStore.self, from: JSONSerialization.data(withJSONObject: blob))
+        #expect(decoded.hotkey == .default)
     }
 
     @Test func recordedShortcutRoundTripsWithItsDisplay() throws {

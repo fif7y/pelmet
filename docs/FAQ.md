@@ -95,8 +95,8 @@ Pelmet checks a signed appcast and offers updates in-app (Sparkle). You can
 check manually in Settings → About.
 
 **Is there a keyboard shortcut?**
-⌥⌘, shows and hides the hidden icons from any app. Record a different one, or
-remove it, in Settings → General.
+⌥⌘, shows and hides the hidden icons from any app. Record a different one in
+Settings → General (⌫ in the recorder brings ⌥⌘, back).
 
 **How do I open Settings if I turned the Pelmet icon off?**
 Any of: right-click a Pelmet separator, right-click empty menu bar space, or

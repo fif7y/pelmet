@@ -239,8 +239,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     public var launchAtLogin: Bool = false
     public var showStatusItem: Bool = true
     public var statusIconStyle: StatusIconStyle = .chevron
-    /// nil = the user removed it (encoded as an explicit null so a reload
-    /// keeps it off); a missing key means "never set" and takes the default.
+    /// Never off: a missing, null or unreadable value takes the default.
     public var hotkey: HotkeySpec? = .default
 
     public var revealTriggers = RevealTriggers()
@@ -329,16 +328,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         onboardingCompleted = field(Bool.self, .onboardingCompleted, defaults.onboardingCompleted)
         launchAtLogin = field(Bool.self, .launchAtLogin, defaults.launchAtLogin)
         showStatusItem = field(Bool.self, .showStatusItem, defaults.showStatusItem)
-        if c.contains(.hotkey) {
-            // Explicit null means cleared; garbage falls back to the default.
-            if (try? c.decodeNil(forKey: .hotkey)) == true {
-                hotkey = nil
-            } else {
-                hotkey = (try? c.decode(HotkeySpec.self, forKey: .hotkey)) ?? defaults.hotkey
-            }
-        } else {
-            hotkey = defaults.hotkey
-        }
+        hotkey = field(HotkeySpec?.self, .hotkey, defaults.hotkey) ?? defaults.hotkey
         revealTriggers = field(RevealTriggers.self, .revealTriggers, defaults.revealTriggers)
         autoRehide = field(Bool.self, .autoRehide, defaults.autoRehide)
         rehideDelay = field(TimeInterval.self, .rehideDelay, defaults.rehideDelay)
@@ -354,32 +344,6 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         notifyOnUpdates = field(Bool.self, .notifyOnUpdates, defaults.notifyOnUpdates)
         barRightClickMenu = field(Bool.self, .barRightClickMenu, defaults.barRightClickMenu)
         statusIconStyle = field(StatusIconStyle.self, .statusIconStyle, defaults.statusIconStyle)
-    }
-
-    /// Synthesized encoding drops a nil optional, which would turn a cleared
-    /// shortcut back into the default on the next load — write every key,
-    /// `hotkey` as an explicit null when off.
-    public func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(onboardingCompleted, forKey: .onboardingCompleted)
-        try c.encode(launchAtLogin, forKey: .launchAtLogin)
-        try c.encode(showStatusItem, forKey: .showStatusItem)
-        try c.encode(hotkey, forKey: .hotkey)
-        try c.encode(revealTriggers, forKey: .revealTriggers)
-        try c.encode(autoRehide, forKey: .autoRehide)
-        try c.encode(rehideDelay, forKey: .rehideDelay)
-        try c.encode(rehideOnClickElsewhere, forKey: .rehideOnClickElsewhere)
-        try c.encode(revealAnimation, forKey: .revealAnimation)
-        try c.encode(hideSystemExtras, forKey: .hideSystemExtras)
-        try c.encode(showMediaControls, forKey: .showMediaControls)
-        try c.encode(extraItems, forKey: .extraItems)
-        try c.encode(sectionModel, forKey: .sectionModel)
-        try c.encode(separators, forKey: .separators)
-        try c.encode(displayTemplate, forKey: .displayTemplate)
-        try c.encode(displayOverrides, forKey: .displayOverrides)
-        try c.encode(notifyOnUpdates, forKey: .notifyOnUpdates)
-        try c.encode(barRightClickMenu, forKey: .barRightClickMenu)
-        try c.encode(statusIconStyle, forKey: .statusIconStyle)
     }
 
     // MARK: - Persistence

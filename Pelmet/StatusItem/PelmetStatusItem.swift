@@ -164,7 +164,9 @@ final class PelmetStatusItem {
         )
         let settings = NSMenuItem(
             title: String(localized: "Pelmet Settings…"),
-            action: #selector(AppMenuTarget.openSettings), keyEquivalent: ","
+            // No key equivalent: it only fires while this menu is open, and read
+            // as a global shortcut that never worked (2026-09-15).
+            action: #selector(AppMenuTarget.openSettings), keyEquivalent: ""
         )
         let quit = NSMenuItem(
             title: String(localized: "Quit Pelmet"),

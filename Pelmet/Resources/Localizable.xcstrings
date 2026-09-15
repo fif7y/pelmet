@@ -2611,60 +2611,60 @@
         }
       }
     },
-    "Click, then press the new shortcut. ⎋ cancels, ⌫ removes it.": {
+    "Click, then press the new shortcut. ⎋ cancels, ⌫ restores ⌥⌘,.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Klicken, dann das neue Kürzel drücken. ⎋ bricht ab, ⌫ entfernt es."
+            "value": "Klicken, dann das neue Kürzel drücken. ⎋ bricht ab, ⌫ stellt ⌥⌘, wieder her."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haz clic y pulsa el nuevo atajo. ⎋ cancela, ⌫ lo elimina."
+            "value": "Haz clic y pulsa el nuevo atajo. ⎋ cancela, ⌫ restaura ⌥⌘,."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cliquez, puis tapez le nouveau raccourci. ⎋ annule, ⌫ le supprime."
+            "value": "Cliquez, puis tapez le nouveau raccourci. ⎋ annule, ⌫ rétablit ⌥⌘,."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fai clic, poi premi la nuova scorciatoia. ⎋ annulla, ⌫ la rimuove."
+            "value": "Fai clic, poi premi la nuova scorciatoia. ⎋ annulla, ⌫ ripristina ⌥⌘,."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クリックしてから新しいショートカットを押します。⎋ でキャンセル、⌫ で削除。"
+            "value": "クリックしてから新しいショートカットを押します。⎋ でキャンセル、⌫ で ⌥⌘, に戻します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "클릭한 뒤 새 단축키를 누르세요. ⎋ 취소, ⌫ 제거."
+            "value": "클릭한 뒤 새 단축키를 누르세요. ⎋ 취소, ⌫ 는 ⌥⌘, 로 되돌립니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Clique e pressione o novo atalho. ⎋ cancela, ⌫ remove."
+            "value": "Clique e pressione o novo atalho. ⎋ cancela, ⌫ restaura ⌥⌘,."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нажмите, затем введите новое сочетание. ⎋ отменяет, ⌫ удаляет."
+            "value": "Нажмите, затем введите новое сочетание. ⎋ отменяет, ⌫ возвращает ⌥⌘,."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "点击后按下新快捷键。⎋ 取消，⌫ 移除。"
+            "value": "点击后按下新快捷键。⎋ 取消，⌫ 恢复为 ⌥⌘,。"
           }
         }
       }

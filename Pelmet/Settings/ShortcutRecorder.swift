@@ -1,7 +1,7 @@
 // ShortcutRecorder.swift
 // Click-to-record global shortcut. A local keyDown monitor inside our own
 // settings window, so recording needs no extra permission. ⎋ cancels,
-// ⌫ removes the shortcut (nil = off, and it stays off across relaunches).
+// ⌫ puts the default back — the shortcut is never off (Gab, 2026-09-15).
 
 import Carbon.HIToolbox
 import PelmetCore
@@ -41,7 +41,7 @@ struct ShortcutRecorder: View {
         }
         .buttonStyle(.plain)
         .focusEffectDisabled()
-        .help("Click, then press the new shortcut. ⎋ cancels, ⌫ removes it.")
+        .help("Click, then press the new shortcut. ⎋ cancels, ⌫ restores ⌥⌘,.")
         .onDisappear(perform: stopRecording)
     }
 
@@ -73,7 +73,7 @@ struct ShortcutRecorder: View {
             stopRecording()
             return true
         case kVK_Delete:
-            commit(nil)
+            commit(.default)
             return true
         default:
             break
@@ -92,7 +92,7 @@ struct ShortcutRecorder: View {
         return true
     }
 
-    private func commit(_ new: HotkeySpec?) {
+    private func commit(_ new: HotkeySpec) {
         shortcut = new
         stopRecording()
     }
