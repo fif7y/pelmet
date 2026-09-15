@@ -238,9 +238,12 @@ final class ConcealGhostOverlay {
             config.width = Int(capture.width * scale)
             config.height = Int(capture.height * scale)
             config.showsCursor = false
-            guard let shot = try? await SCScreenshotManager.captureImage(
-                contentFilter: filter, configuration: config
-            ) else {
+            config.pixelFormat = kCVPixelFormatType_32BGRA
+            // Flattened like the still: composited with alpha, the stream's
+            // band came back ~0.5 luma brighter across the board (rounding
+            // through the transparent bar); opaque it matches byte for byte.
+            config.shouldBeOpaque = true
+            guard let shot = await captureFrame(filter: filter, configuration: config) else {
                 PelmetLog.log("ghost: strip capture failed on display \(displayID) — it runs uncovered")
                 continue
             }
@@ -254,6 +257,34 @@ final class ConcealGhostOverlay {
             ))
         }
         return shots
+    }
+
+    /// One frame from an SCStream, the display as it is shown. A
+    /// `SCScreenshotManager` still composites the band WITHOUT the shadow
+    /// the key window casts up into the bar's bottom rows (nor the window's
+    /// top edge under the bar's last row), in every configuration tried,
+    /// so its picture floated over the live bar read lighter or darker
+    /// across the strip's bottom 12pt for the cover's whole hold (#25,
+    /// measured 2026-09-15: +4 luma, +40 on the edge row; a stream frame
+    /// matched a `screencapture` still to the pixel). ~90ms end to end
+    /// against ~45ms for the still; the reveal's picture is precaptured, so
+    /// none of it lands on the hover path.
+    private static let captureQueue = DispatchQueue(label: "app.fif7y.Pelmet.ghost.capture")
+
+    private static func captureFrame(filter: SCContentFilter, configuration: SCStreamConfiguration) async -> CGImage? {
+        let stream = SCStream(filter: filter, configuration: configuration, delegate: nil)
+        let sink = FirstFrameSink()
+        do {
+            try stream.addStreamOutput(sink, type: .screen, sampleHandlerQueue: captureQueue)
+            try await stream.startCapture()
+        } catch {
+            PelmetLog.log("ghost: stream capture failed to start — \(error.localizedDescription)")
+            return nil
+        }
+        let image = await sink.firstImage(timeout: .milliseconds(600))
+        // The stop is ~20ms the caller never needs to wait for.
+        Task { try? await stream.stopCapture() }
+        return image
     }
 
     /// The Smooth exit slides the icons alone. SCK cannot hand them over
@@ -550,5 +581,81 @@ final class ConcealGhostOverlay {
             window.orderOut(nil)
             self.standDown()
         }
+    }
+}
+
+/// Hands the first complete frame to one waiter, copied out of the
+/// pixel buffer byte for byte, tagged with the buffer's own colour space
+/// (the display profile) so it draws unmanaged, as the still did. Top-level
+/// on purpose: nested in the @MainActor overlay it inherited the actor and
+/// SCK's callback on the capture queue tripped the isolation check, and
+/// the target's MainActor default isolation did the same for a top-level
+/// class until `nonisolated`.
+nonisolated private final class FirstFrameSink: NSObject, SCStreamOutput, @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<CGImage?, Never>?
+    private var pending: CGImage?
+    private var done = false
+
+    func firstImage(timeout: Duration) async -> CGImage? {
+        await withCheckedContinuation { cont in
+            lock.lock()
+            if let pending {
+                lock.unlock()
+                cont.resume(returning: pending)
+                return
+            }
+            continuation = cont
+            lock.unlock()
+            Task { try? await Task.sleep(for: timeout); self.finish(nil) }
+        }
+    }
+
+    private func finish(_ image: CGImage?) {
+        lock.lock()
+        guard !done else { lock.unlock(); return }
+        if let cont = continuation {
+            done = true
+            continuation = nil
+            lock.unlock()
+            cont.resume(returning: image)
+        } else {
+            if pending == nil { pending = image }
+            lock.unlock()
+        }
+    }
+
+    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
+        guard type == .screen, let buffer = sampleBuffer.imageBuffer else { return }
+        if let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
+           let raw = attachments.first?[.status] as? Int,
+           let status = SCFrameStatus(rawValue: raw),
+           status != .complete, status != .idle {
+            return
+        }
+        finish(Self.cgImage(from: buffer))
+    }
+
+    private static func cgImage(from buffer: CVPixelBuffer) -> CGImage? {
+        guard CVPixelBufferGetPixelFormatType(buffer) == kCVPixelFormatType_32BGRA else { return nil }
+        CVPixelBufferLockBaseAddress(buffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
+        guard let base = CVPixelBufferGetBaseAddress(buffer) else { return nil }
+        let width = CVPixelBufferGetWidth(buffer)
+        let height = CVPixelBufferGetHeight(buffer)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(buffer)
+        let data = Data(bytes: base, count: bytesPerRow * height)
+        guard let provider = CGDataProvider(data: data as CFData) else { return nil }
+        // The frame is tagged with the display's own profile ("Color LCD");
+        // the picture must carry the same tag or AppKit matches it as
+        // device/sRGB on the way to the window (+6 red, +4 blue, measured).
+        let space = (CVBufferCopyAttachment(buffer, kCVImageBufferCGColorSpaceKey, nil) as! CGColorSpace?)
+            ?? CGColorSpaceCreateDeviceRGB()
+        return CGImage(
+            width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: bytesPerRow,
+            space: space,
+            bitmapInfo: [.byteOrder32Little, CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue)],
+            provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent
+        )
     }
 }
