@@ -118,7 +118,7 @@ public enum MenuBarPolicy {
     /// but not movable — the editor shows one tile for the whole host and
     /// says so. Its items key by bundle (see `ItemID.sectionKey`).
     public static func isBundleHideableAppleHost(_ bundle: String?) -> Bool {
-        bundle == PelmetBundle.systemUIServerID
+        bundle == PelmetBundle.systemUIServerID || bundle == "com.apple.KerberosMenuExtra"
     }
 
     /// Eligible for a section: third-party bundles, the individually

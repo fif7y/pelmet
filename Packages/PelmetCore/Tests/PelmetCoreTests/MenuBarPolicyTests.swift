@@ -70,6 +70,12 @@ struct MenuBarPolicyTests {
         #expect(!MenuBarPolicy.isUnmanagedAppleBundle(nil))
     }
 
+    @Test func kerberosMenuExtraIsSectionManageable() {
+        let item = ItemID.status(bundle: "com.apple.KerberosMenuExtra", title: "Item-0")
+        #expect(MenuBarPolicy.isSectionManageable(item))
+        #expect(MenuBarPolicy.systemItem(for: item) == nil)
+    }
+
     @Test func bandPredicateAcceptsMainBarBandOnly() {
         #expect(MenuBarGeometry.isInBand(CGRect(x: 100, y: 0, width: 30, height: 24)))
         #expect(!MenuBarGeometry.isInBand(CGRect(x: 100, y: 800, width: 30, height: 24)))
