@@ -170,6 +170,8 @@ T = {
     "Shortcut": dict(de="Kurzbefehl", fr="Raccourci", es="Atajo", it="Comando rapido", pt="Atalho", ja="ショートカット", zh="快捷指令", ko="단축어", ru="Быстрая команда"),
     "Media controls": dict(de="Mediensteuerung", fr="Commandes multimédias", es="Controles multimedia", it="Controlli multimediali", pt="Controles de mídia", ja="メディアコントロール", zh="媒体控制", ko="미디어 제어", ru="Управление воспроизведением"),
     "Camera & mic indicator": dict(de="Kamera- & Mikrofonanzeige", fr="Indicateur caméra et micro", es="Indicador de cámara y micro", it="Indicatore fotocamera e microfono", pt="Indicador de câmera e microfone", ja="カメラ＆マイクのインジケータ", zh="相机和麦克风指示器", ko="카메라 및 마이크 표시기", ru="Индикатор камеры и микрофона"),
+    "Static": dict(de="Statisch", fr="Statique", es="Estático", it="Statico", pt="Estático", ja="静止", zh="静态", ko="정적", ru="Статичный"),
+    "Animated": dict(de="Animiert", fr="Animé", es="Animado", it="Animato", pt="Animado", ja="アニメーション", zh="动态", ko="애니메이션", ru="Анимированный"),
     "AirDrop": dict(de="AirDrop", fr="AirDrop", es="AirDrop", it="AirDrop", pt="AirDrop", ja="AirDrop", zh="隔空投送", ko="AirDrop", ru="AirDrop"),
     "Separators": dict(de="Trenner", fr="Séparateurs", es="Separadores", it="Separatori", pt="Separadores", ja="区切り", zh="分隔符", ko="구분선", ru="Разделители"),
     "Separator opacity in the menu bar": dict(de="Deckkraft des Trenners in der Menüleiste", fr="Opacité du séparateur dans la barre des menus", es="Opacidad del separador en la barra de menús", it="Opacità del separatore nella barra dei menu", pt="Opacidade do separador na barra de menus", ja="メニューバーでの区切りの不透明度", zh="分隔符在菜单栏中的不透明度", ko="메뉴 막대에서 구분선의 불투명도", ru="Непрозрачность разделителя в строке меню"),

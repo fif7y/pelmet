@@ -28,6 +28,11 @@ enum ItemImageCache {
         pelmetItemImages[title] = image
     }
 
+    /// Back to the symbol registration (a media button switched to static).
+    static func unregisterPelmetItemImage(title: String) {
+        pelmetItemImages.removeValue(forKey: title)
+    }
+
     static func icon(for item: ItemID) -> NSImage? {
         if item.bundleID == PelmetBundle.textInputAgentID {
             return InputSourcePresentation.shared.icon

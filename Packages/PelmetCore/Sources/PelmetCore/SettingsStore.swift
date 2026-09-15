@@ -113,9 +113,21 @@ public enum LauncherShowRule: String, Codable, CaseIterable, Sendable {
     case whileRunning
 }
 
+/// How a Pelmet item draws its glyph: the SF Symbol still (the shipped
+/// look) or a natively drawn glyph that moves while the item's hardware
+/// is live — bars while audio plays, a breathing camera, a filling mic,
+/// AirDrop's rings radiating during a transfer. Nil on old blobs = static.
+public enum ExtraStyle: String, Codable, CaseIterable, Sendable {
+    case `static`
+    case animated
+}
+
 public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
     public var kind: ExtraKind
+    /// Glyph style for the hardware-driven kinds (media, camera & mic,
+    /// AirDrop); launchers and shortcuts ignore it. Nil reads as `.static`.
+    public var style: ExtraStyle?
     /// Shortcuts-app shortcut name (kind == .shortcut).
     public var shortcutName: String?
     /// SF Symbol for shortcut items.
@@ -134,10 +146,12 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
         symbol: String? = nil,
         bundleID: String? = nil,
         appName: String? = nil,
-        showRule: LauncherShowRule? = nil
+        showRule: LauncherShowRule? = nil,
+        style: ExtraStyle? = nil
     ) {
         self.id = id
         self.kind = kind
+        self.style = style
         self.shortcutName = shortcutName
         self.symbol = symbol
         self.bundleID = bundleID
@@ -146,6 +160,7 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
     }
 
     public var resolvedShowRule: LauncherShowRule { showRule ?? .always }
+    public var resolvedStyle: ExtraStyle { style ?? .static }
 
     /// Stable ItemID title. Singleton kinds keep fixed titles (section
     /// assignments survive re-toggling); shortcut items key by UUID.

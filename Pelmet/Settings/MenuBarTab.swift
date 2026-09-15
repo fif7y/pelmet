@@ -652,6 +652,18 @@ private struct PelmetItemsStrip: View {
         appState.settings.extraItems.contains { $0.kind == kind }
     }
 
+    /// The glyph style of a singleton kind (media, camera & mic, AirDrop).
+    private func styleBinding(_ kind: ExtraKind) -> Binding<ExtraStyle> {
+        Binding(
+            get: { appState.settings.extraItems.first { $0.kind == kind }?.resolvedStyle ?? .static },
+            set: { style in
+                guard let index = appState.settings.extraItems.firstIndex(where: { $0.kind == kind }) else { return }
+                appState.settings.extraItems[index].style = style
+                appState.settingsChanged()
+            }
+        )
+    }
+
     private func toggleKind(_ kind: ExtraKind, on: Bool) {
         if on, !hasKind(kind) {
             appState.addExtra(ExtraItemSpec(kind: kind))
@@ -696,17 +708,20 @@ private struct PelmetItemsStrip: View {
                 PelmetItemRow(
                     symbol: "playpause.fill", title: "Media controls",
                     caption: "Shows while audio plays. Click to play or pause, right-click for tracks.",
-                    isOn: hasKind(.mediaControls)
+                    isOn: hasKind(.mediaControls),
+                    style: styleBinding(.mediaControls)
                 ) { toggleKind(.mediaControls, on: $0) }
                 PelmetItemRow(
                     symbol: "video.fill", title: "Camera & mic indicator",
                     caption: "Appears while a camera or mic is live.",
-                    isOn: hasKind(.cameraMicIndicator)
+                    isOn: hasKind(.cameraMicIndicator),
+                    style: styleBinding(.cameraMicIndicator)
                 ) { toggleKind(.cameraMicIndicator, on: $0) }
                 PelmetItemRow(
-                    symbol: ExtrasManager.airdropSymbol, title: "AirDrop",
+                    symbol: "", image: ExtraGlyph.airdrop(t: 0, radiating: false), title: "AirDrop",
                     caption: "Opens AirDrop in Finder.",
-                    isOn: hasKind(.airdrop)
+                    isOn: hasKind(.airdrop),
+                    style: styleBinding(.airdrop)
                 ) { toggleKind(.airdrop, on: $0) }
                 ForEach(appState.settings.extraItems.filter { $0.kind == .shortcut }) { spec in
                     HStack(spacing: 8) {
@@ -734,16 +749,27 @@ private struct PelmetItemsStrip: View {
 
 private struct PelmetItemRow: View {
     let symbol: String
+    /// A drawn glyph in place of the symbol (AirDrop's mark).
+    var image: NSImage? = nil
     let title: LocalizedStringKey
     let caption: LocalizedStringKey
     let isOn: Bool
+    /// Static or animated glyph, offered once the item is on — the same
+    /// in-row borderless menu the launcher rows use for their show rule.
+    var style: Binding<ExtraStyle>? = nil
     let onToggle: (Bool) -> Void
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: symbol)
-                .frame(width: 18)
-                .foregroundStyle(.secondary)
+            Group {
+                if let image {
+                    Image(nsImage: image).renderingMode(.template)
+                } else {
+                    Image(systemName: symbol)
+                }
+            }
+            .frame(width: 18)
+            .foregroundStyle(.secondary)
             // The title holds its line; the caption is what wraps. Italian
             // captions run 105 chars against a 440pt card, and without this
             // the title wrapped mid-phrase beside its own caption.
@@ -756,6 +782,13 @@ private struct PelmetItemRow: View {
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 8)
+            if isOn, let style {
+                PelmetMenuPicker(
+                    selection: style,
+                    options: [(.static, "Static"), (.animated, "Animated")],
+                    borderless: true
+                )
+            }
             Toggle("", isOn: Binding(get: { isOn }, set: onToggle))
                 .toggleStyle(.switch)
                 .controlSize(.mini)

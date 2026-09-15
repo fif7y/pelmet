@@ -56,6 +56,10 @@ final class ExtrasManager {
     /// show only fades them, and a pending layout drop must leave them be.
     private var preattached: Set<UUID> = []
     private var cameraMicMonitor: CameraMicMonitor?
+    /// One clock per item drawing the animated glyph set (see ExtraGlyphs).
+    private var animators: [UUID: ExtraAnimator] = [:]
+    /// Polls awdl0 only while an animated AirDrop item exists.
+    private var airdropMonitor: AirDropActivityMonitor?
     /// Play/pause state the media glyph shows. Click intent drives it (players
     /// keep the output device open while paused, so DeviceIsRunningSomewhere
     /// alone can't see a pause); real audio EDGES reconcile it when they do
@@ -100,19 +104,38 @@ final class ExtrasManager {
             lastVisible.removeValue(forKey: id)
             lastRunning.removeValue(forKey: id)
             removalObservations.removeValue(forKey: id)
+            animators[id]?.stop()
+            animators.removeValue(forKey: id)
         }
         for spec in newSpecs {
+            let styleChanged = specs[spec.id].map { $0.style != spec.style } ?? false
             specs[spec.id] = spec
             if items[spec.id] == nil {
                 items[spec.id] = makeItem(for: spec)
             }
+            // The editor board shows the real glyph: the drawn AirDrop mark
+            // always, the bars when media is animated, the symbol otherwise.
             if spec.kind == .appLauncher, spec.symbol == nil,
                let icon = Self.appIcon(for: spec, size: 20) {
                 ItemImageCache.registerPelmetItem(title: spec.itemTitle, image: icon)
+            } else if spec.kind == .airdrop {
+                ItemImageCache.registerPelmetItem(
+                    title: spec.itemTitle, image: ExtraGlyph.airdrop(t: 0, radiating: false)
+                )
+            } else if spec.kind == .mediaControls, spec.resolvedStyle == .animated {
+                ItemImageCache.registerPelmetItem(
+                    title: spec.itemTitle, image: ExtraGlyph.mediaBars(t: 0, level: 1, animated: false)
+                )
             } else {
+                ItemImageCache.unregisterPelmetItemImage(title: spec.itemTitle)
                 ItemImageCache.registerPelmetItem(
                     title: spec.itemTitle, symbol: Self.symbol(for: spec)
                 )
+            }
+            if styleChanged, let item = items[spec.id] {
+                animators[spec.id]?.stop()
+                animators.removeValue(forKey: spec.id)
+                refreshGlyph(item, spec: spec)
             }
             // The glyph is editable (launcher icon picker), so refresh the
             // existing button too — sync only builds the item once.
@@ -124,6 +147,15 @@ final class ExtrasManager {
         // "always" launcher hides purely by section. This KVO fires for
         // every app launch and quit on the machine, so don't hold it for
         // launchers that would ignore it.
+        let needsAirDropMonitor = newSpecs.contains {
+            $0.kind == .airdrop && $0.resolvedStyle == .animated
+        }
+        if needsAirDropMonitor, airdropMonitor == nil {
+            airdropMonitor = AirDropActivityMonitor { [weak self] in self?.applyCurrent() }
+        } else if !needsAirDropMonitor, let monitor = airdropMonitor {
+            monitor.stop()
+            airdropMonitor = nil
+        }
         let needsRunningObserver = newSpecs.contains {
             $0.kind == .appLauncher && $0.resolvedShowRule == .whileRunning
         }
@@ -172,7 +204,7 @@ final class ExtrasManager {
                 // to the system pill when that one is on screen.
                 let active = cameraMicMonitor?.isActive ?? false
                 visible = active && !systemCameraPillVisible
-                updateCameraSymbol(item, monitor: cameraMicMonitor)
+                updateCameraSymbol(item, spec: spec)
                 // Re-entering layout (isVisible flip) parks the item wherever
                 // the agent decides, not at its model slot. Never drag here:
                 // the activation is app-driven (Sconce opening the camera,
@@ -203,7 +235,7 @@ final class ExtrasManager {
                     lastAudioOutputActive = audioActive
                     mediaPlaying = audioActive
                 }
-                updateMediaSymbol(item, title: spec.itemTitle)
+                updateMediaSymbol(item, spec: spec)
                 // Same re-entry hazard as the camera pill: audio starting
                 // (or the linger expiring and resuming) puts the item back
                 // in layout at the agent's slot, not the model's.
@@ -237,10 +269,14 @@ final class ExtrasManager {
                     }
                 }
                 lastRunning[id] = running
-            case .airdrop, .shortcut:
+            case .airdrop:
+                updateAirDropGlyph(item, spec: spec)
+            case .shortcut:
                 break
             }
             setVisible(visible, for: id, item: item)
+            // A hidden glyph keeps its last frame and stops ticking.
+            animators[id]?.paused = !visible
         }
     }
 
@@ -318,6 +354,8 @@ final class ExtrasManager {
         if let button = item.button {
             if spec.kind == .appLauncher, let icon = Self.launcherImage(for: spec, size: 18) {
                 button.image = icon
+            } else if spec.kind == .airdrop {
+                button.image = ExtraGlyph.airdrop(t: 0, radiating: false)
             } else {
                 button.image = NSImage(
                     systemSymbolName: Self.symbol(for: spec),
@@ -584,18 +622,90 @@ final class ExtrasManager {
             : "dot.radiowaves.left.and.right"
     }()
 
-    /// Play when idle (click plays), pause while audio is running (click
-    /// pauses) — the button shows the action a click will take.
-    private func updateMediaSymbol(_ item: NSStatusItem, title: String) {
-        item.button?.image = NSImage(
+    /// Reduce Motion: the animated set renders one still "live" frame.
+    private static var reduceMotion: Bool {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    }
+
+    private func animator(for spec: ExtraItemSpec, button: NSStatusBarButton) -> ExtraAnimator {
+        if let animator = animators[spec.id] { return animator }
+        let animator = ExtraAnimator(button: button)
+        animators[spec.id] = animator
+        return animator
+    }
+
+    /// Redraws one item's glyph for its current style and state; no
+    /// placement side effects, safe from `sync`.
+    private func refreshGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
+        switch spec.kind {
+        case .mediaControls: updateMediaSymbol(item, spec: spec)
+        case .cameraMicIndicator: updateCameraSymbol(item, spec: spec)
+        case .airdrop: updateAirDropGlyph(item, spec: spec)
+        case .shortcut, .appLauncher: break
+        }
+    }
+
+    /// Static: play when idle (click plays), pause while audio is running
+    /// (click pauses) — the button shows the action a click will take.
+    /// Animated: the bars wave while playing and settle to a resting stack
+    /// when paused, Sconce's tell.
+    private func updateMediaSymbol(_ item: NSStatusItem, spec: ExtraItemSpec) {
+        guard let button = item.button else { return }
+        if spec.resolvedStyle == .animated {
+            let animator = animator(for: spec, button: button)
+            animator.targetLevel = mediaPlaying ? 1 : 0
+            if Self.reduceMotion {
+                animator.stop()
+                button.image = ExtraGlyph.mediaBars(t: 0, level: mediaPlaying ? 1 : 0, animated: false)
+            } else {
+                animator.run(tag: "bars", fps: 30) { t, level in
+                    ExtraGlyph.mediaBars(t: t, level: level, animated: true)
+                }
+            }
+            return
+        }
+        animators[spec.id]?.stop()
+        button.image = NSImage(
             systemSymbolName: mediaPlaying ? "pause.fill" : "play.fill",
-            accessibilityDescription: title
+            accessibilityDescription: spec.itemTitle
         )
     }
 
-    private func updateCameraSymbol(_ item: NSStatusItem, monitor: CameraMicMonitor?) {
+    /// The drawn AirDrop mark; animated, its rings radiate while awdl0
+    /// carries a transfer.
+    private func updateAirDropGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
+        guard let button = item.button else { return }
+        let transferring = spec.resolvedStyle == .animated && (airdropMonitor?.isTransferring ?? false)
+        if transferring, !Self.reduceMotion {
+            animator(for: spec, button: button).run(tag: "airdrop", fps: 20) { t, _ in
+                ExtraGlyph.airdrop(t: t, radiating: true)
+            }
+            return
+        }
+        animators[spec.id]?.stop()
+        button.image = ExtraGlyph.airdrop(t: 0, radiating: false)
+    }
+
+    private func updateCameraSymbol(_ item: NSStatusItem, spec: ExtraItemSpec) {
+        let monitor = cameraMicMonitor
         let camera = monitor?.cameraActive ?? false
         let mic = monitor?.micActive ?? false
+        if spec.resolvedStyle == .animated, camera || mic, let button = item.button {
+            // Camera wins when both are live, like the static set.
+            button.contentTintColor = nil
+            if Self.reduceMotion {
+                animators[spec.id]?.stop()
+                button.image = camera ? ExtraGlyph.cameraLive(t: 0, animated: false)
+                                      : ExtraGlyph.micLive(t: 0, animated: false)
+            } else {
+                animator(for: spec, button: button).run(tag: camera ? "camera" : "mic", fps: 20) { t, _ in
+                    camera ? ExtraGlyph.cameraLive(t: t, animated: true)
+                           : ExtraGlyph.micLive(t: t, animated: true)
+                }
+            }
+            return
+        }
+        animators[spec.id]?.stop()
         let symbol = camera ? "video.fill" : (mic ? "mic.fill" : "video.fill")
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: String(localized: "Camera & Mic"))
         if camera || mic {
@@ -628,7 +738,7 @@ final class ExtrasManager {
             } else {
                 MediaKey.playPause.send()
                 mediaPlaying.toggle()
-                updateMediaSymbol(statusItem.value, title: spec.itemTitle)
+                updateMediaSymbol(statusItem.value, spec: spec)
             }
         case .cameraMicIndicator:
             // Informational; click opens Privacy settings for a quick audit.
