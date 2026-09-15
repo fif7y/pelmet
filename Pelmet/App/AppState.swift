@@ -1197,6 +1197,10 @@ final class AppState {
         UserDefaults.standard.stringArray(forKey: AppState.bundlelessKey) ?? []
     ).subtracting([PelmetBundle.mainID])
     private static let bundlelessKey = "pelmet.bundlelessHosts"
+    /// Consecutive snapshots a host must read the same (dis)agreeing way
+    /// before the sticky mark flips.
+    private static let bundlelessConfirmations = 3
+    private var bundlelessStreak: [String: Int] = [:]
 
     func isBundlelessHost(_ id: ItemID) -> Bool {
         id.bundleID.map { bundlelessHosts.contains($0) } ?? false
@@ -1226,14 +1230,31 @@ final class AppState {
         for item in snap.items {
             if let bundle = item.id.bundleID { absentBundles.remove(bundle) }
         }
-        // Never Pelmet itself: one walk read a launcher's host (our own
-        // process) as bundle-less and the sticky mark greyed every own tile
-        // with the incompatible card (2026-09-14).
-        let seen = snap.items.filter { $0.frame != nil && $0.hostIsBundleless }
-            .compactMap(\.id.bundleID)
-            .filter { !PelmetBundle.ownIDs.contains($0) }
-        if !seen.allSatisfy(bundlelessHosts.contains) {
-            bundlelessHosts.formUnion(seen)
+        // One sighting is not evidence: a walk that lands mid-relaunch finds
+        // a pid LaunchServices has no record of yet and reads a perfectly
+        // normal app as bundle-less (Sconce and a Pelmet launcher, both
+        // 2026-09-14; the read cleared 75ms later). A real bundle-less host
+        // (ChatGPT Classic's helper) reads that way on every walk. So: mark
+        // after `bundlelessConfirmations` consecutive live sightings, and
+        // unmark a host that reads fine that many times in a row — the
+        // "fix the app" recovery happens on its own. Never Pelmet's bundles.
+        var readings: [String: Bool] = [:]
+        for item in snap.items where item.frame != nil {
+            guard let bundle = item.id.bundleID, !PelmetBundle.ownIDs.contains(bundle) else { continue }
+            readings[bundle] = (readings[bundle] ?? false) || item.hostIsBundleless
+        }
+        var changed = false
+        for (bundle, bundleless) in readings {
+            let marked = bundlelessHosts.contains(bundle)
+            guard bundleless != marked else { bundlelessStreak.removeValue(forKey: bundle); continue }
+            let streak = (bundlelessStreak[bundle] ?? 0) + 1
+            bundlelessStreak[bundle] = streak
+            guard streak >= Self.bundlelessConfirmations else { continue }
+            bundlelessStreak.removeValue(forKey: bundle)
+            if bundleless { bundlelessHosts.insert(bundle) } else { bundlelessHosts.remove(bundle) }
+            changed = true
+        }
+        if changed {
             UserDefaults.standard.set(Array(bundlelessHosts), forKey: Self.bundlelessKey)
             PelmetLog.log("editor: bundle-less hosts \(bundlelessHosts.sorted())")
         }
