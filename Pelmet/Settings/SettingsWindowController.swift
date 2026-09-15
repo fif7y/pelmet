@@ -59,6 +59,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         appState?.settingsWindowVisible = false
+        // Let the window go: kept alive, its SwiftUI tree kept running the
+        // Behavior showcase loop and the About icon's keyframes off screen
+        // (27% CPU after close, #20). A fresh window is built on next show.
+        window = nil
         // Hand activation back: an agent app with no window left stays
         // active until the user clicks elsewhere, and while it is active
         // its own menubar events never reach the band monitor's global
