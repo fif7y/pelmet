@@ -6323,60 +6323,60 @@
         }
       }
     },
-    "Now Playing, camera controls, AirDrop, Focus": {
+    "Now Playing, camera controls, AirDrop, Focus, Timer": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jetzt läuft, Kamerasteuerung, AirDrop, Fokus"
+            "value": "Jetzt läuft, Kamerasteuerung, AirDrop, Fokus, Timer"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ahora suena, controles de cámara, AirDrop, Modos de concentración"
+            "value": "Ahora suena, controles de cámara, AirDrop, Modos de concentración, Temporizador"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lecture en cours, commandes de caméra, AirDrop, Concentration"
+            "value": "Lecture en cours, commandes de caméra, AirDrop, Concentration, Minuteur"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "In riproduzione, controlli fotocamera, AirDrop, Full immersion"
+            "value": "In riproduzione, controlli fotocamera, AirDrop, Full immersion, Timer"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "再生中、カメラコントロール、AirDrop、集中モード"
+            "value": "再生中、カメラコントロール、AirDrop、集中モード、タイマー"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "지금 재생 중, 카메라 제어, AirDrop, 집중 모드"
+            "value": "지금 재생 중, 카메라 제어, AirDrop, 집중 모드, 타이머"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tocando agora, controles de câmera, AirDrop, Foco"
+            "value": "Tocando agora, controles de câmera, AirDrop, Foco, Timer"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сейчас играет, управление камерой, AirDrop, Фокусирование"
+            "value": "Сейчас играет, управление камерой, AirDrop, Фокусирование, Таймер"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "现在播放、相机控制、隔空投送、专注模式"
+            "value": "现在播放、相机控制、隔空投送、专注模式、计时器"
           }
         }
       }

@@ -736,7 +736,7 @@ private struct BehaviorPane: View {
 
         SettingsCard(title: "System extras") {
             SettingRow(
-                title: "Now Playing, camera controls, AirDrop, Focus",
+                title: "Now Playing, camera controls, AirDrop, Focus, Timer",
                 caption: "macOS hides these whenever any icons are concealed — they can only appear while the whole bar is revealed."
             ) {
                 PelmetMenuPicker(

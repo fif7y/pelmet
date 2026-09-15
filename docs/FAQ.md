@@ -10,7 +10,7 @@ macOS hides items per *app*, not per icon. If an app puts several icons in the
 menu bar, they share one visibility setting. The layout editor shows these as
 a grouped "moves together" badge.
 
-**An icon I didn't hide disappeared (AirDrop, Focus, fast user switching).**
+**An icon I didn't hide disappeared (AirDrop, Focus, a running Timer, fast user switching).**
 While hiding is active, macOS itself temporarily removes a few of its own
 extras. Pelmet can't exempt them individually, they come back the moment hiding
 is off. Pelmet ships its own replacements for the common ones (media controls,
