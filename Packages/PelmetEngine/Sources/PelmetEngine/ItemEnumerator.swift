@@ -109,7 +109,7 @@ public actor ItemEnumerator {
                     logDrop("no bundle id for AXApplication", pid: appPID, role: "AXApplication")
                     return nil
                 }
-                let title = statusItemTitle(in: child) ?? "Item-0"
+                let title = statusItemTitle(in: child, groupFrame: frame) ?? "Item-0"
                 return RawItem(
                     id: .status(bundle: host.id, title: title),
                     frame: frame,
@@ -231,25 +231,30 @@ public actor ItemEnumerator {
         PelmetLog.log(line)
     }
 
-    /// Best-effort title of the app's status item button (used in the agent
-    /// tag). An app node exposes both its MAIN menu bar (wide: Apple, File,
-    /// Edit…) and its status-extras bar (narrow) — pick the narrowest bar so
-    /// we never read "Apple" off the main menu. Falls back to Item-0.
-    private func statusItemTitle(in appNode: AXUIElement) -> String? {
-        let menuBars = children(of: appNode).filter { role(of: $0) == "AXMenuBar" }
-        let extrasBar = menuBars.min { lhs, rhs in
-            (frame(of: lhs)?.width ?? .greatestFiniteMagnitude)
-                < (frame(of: rhs)?.width ?? .greatestFiniteMagnitude)
-        }
-        guard let extrasBar, let width = frame(of: extrasBar)?.width, width < 500 else {
-            return nil
-        }
-        for item in children(of: extrasBar) {
-            if let title = copyAttribute(item, kAXTitleAttribute) as? String, !title.isEmpty {
-                return title
+    /// Use AX's explicit menu roles and the hosted item's geometry. Width
+    /// alone cannot distinguish a long status title from Apple/File/Edit.
+    private func statusItemTitle(in appNode: AXUIElement, groupFrame: CGRect) -> String? {
+        let main = elementAttribute(appNode, kAXMenuBarAttribute)
+        let extras = elementAttribute(appNode, kAXExtrasMenuBarAttribute)
+        var bars = children(of: appNode).filter { role(of: $0) == "AXMenuBar" }
+        if let extras, !bars.contains(where: { CFEqual($0, extras) }) { bars.append(extras) }
+        let candidates = bars.flatMap { bar -> [StatusItemTitle.Candidate] in
+            let isExtras = extras.map { CFEqual(bar, $0) } ?? false
+            if !isExtras, let main, CFEqual(bar, main) { return [] }
+            return children(of: bar).map {
+                StatusItemTitle.Candidate(
+                    title: copyAttribute($0, kAXTitleAttribute) as? String,
+                    frame: frame(of: $0), isExtrasBar: isExtras
+                )
             }
         }
-        return nil
+        return StatusItemTitle.resolve(candidates, groupFrame: groupFrame)
+    }
+
+    private func elementAttribute(_ element: AXUIElement, _ name: String) -> AXUIElement? {
+        guard let value = copyAttribute(element, name),
+              CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return (value as! AXUIElement)
     }
 
     private func children(of element: AXUIElement) -> [AXUIElement] {
