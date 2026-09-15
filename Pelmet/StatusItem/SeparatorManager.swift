@@ -3,10 +3,11 @@
 // stable autosave names — natively ⌘-draggable, right-click opens Pelmet's menu
 // (an always-available settings entry point in iconless mode).
 //
-// Separators are section-managed like Pelmet's extras: hiding is their OWN
-// visibility (asserting away Pelmet's bundle would take the chevron too), and
-// the width-collapse rides the engine's reflow companion so their motion
-// matches the assertion items'.
+// Visible-section separators live here as plain NSStatusItems. Hidden and
+// always-hidden ones are hosted by the section helpers (HelperHosts), whose
+// bundle the assertion excludes — so they hide and reveal natively. The
+// fader/width-collapse path below only ever runs for main-hosted items
+// during a section change (docs/HELPER-PROCESS-PLAN.md).
 
 import AppKit
 import PelmetCore
@@ -66,27 +67,62 @@ final class SeparatorManager {
     }
 
     func sync(with specs: [SeparatorSpec]) {
-        let wanted = Set(specs.map(\.id))
-        for (id, item) in items where !wanted.contains(id) {
-            removalObservations.removeValue(forKey: id)
-            NSStatusBar.system.removeStatusItem(item)
-            items.removeValue(forKey: id)
-            specsByID.removeValue(forKey: id)
-            lastVisible.removeValue(forKey: id)
-        }
+        let model = appState?.settings.sectionModel ?? SectionModel()
+        var helperItems: [PelmetCore.Section: [HostedItem]] = [.hidden: [], .alwaysHidden: []]
+        var mainSpecs: [SeparatorSpec] = []
         for spec in specs {
-            specsByID[spec.id] = spec
-            if let existing = items[spec.id] {
-                configure(existing.button, spec: spec)
+            let section = model.section(of: Self.itemID(for: spec))
+            if section == .visible {
+                mainSpecs.append(spec)
             } else {
-                items[spec.id] = makeItem(for: spec)
+                helperItems[section, default: []].append(Self.hostedItem(for: spec))
             }
+            specsByID[spec.id] = spec
             ItemImageCache.registerPelmetItem(
                 title: spec.itemTitle,
                 image: Self.glyphImage(for: spec.style)
             )
         }
+        let stale = Set(specsByID.keys).subtracting(specs.map(\.id))
+        for id in stale { specsByID.removeValue(forKey: id) }
+        for (section, hosted) in helperItems {
+            appState?.helperHosts?.set(hosted, for: section, source: "separators")
+        }
+        syncMainHosted(mainSpecs)
+    }
+
+    /// What a helper draws for a separator.
+    static func hostedItem(for spec: SeparatorSpec) -> HostedItem {
+        HostedItem(
+            title: spec.itemTitle,
+            kind: .separator,
+            text: spec.style == .space ? "" : spec.style.rawValue,
+            length: spec.style == .space ? 14 : nil,
+            alpha: spec.style == .space ? 0 : spec.opacity
+        )
+    }
+
+    private func syncMainHosted(_ specs: [SeparatorSpec]) {
+        let wanted = Set(specs.map(\.id))
+        for (id, item) in items where !wanted.contains(id) {
+            removalObservations.removeValue(forKey: id)
+            NSStatusBar.system.removeStatusItem(item)
+            items.removeValue(forKey: id)
+            lastVisible.removeValue(forKey: id)
+        }
+        for spec in specs {
+            if let existing = items[spec.id] {
+                configure(existing.button, spec: spec)
+            } else {
+                items[spec.id] = makeItem(for: spec)
+            }
+        }
         applyCurrent()
+    }
+
+    /// The spec a helper event names, by its minted title.
+    func spec(titled title: String) -> SeparatorSpec? {
+        specsByID.values.first { $0.itemTitle == title }
     }
 
     private func makeItem(for spec: SeparatorSpec) -> NSStatusItem {

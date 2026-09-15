@@ -49,6 +49,13 @@ public struct ItemID: RawRepresentable, Hashable, Codable, Sendable {
               bundle != PelmetBundle.fallbackID,
               !bundle.hasPrefix("com.apple.")
         else { return self }
+        // An own item hosted by a section helper keys as if the main app
+        // hosted it: the model never learns which process draws it, so a
+        // section move is a re-host, not a key rewrite.
+        if PelmetBundle.helperIDs.contains(bundle),
+           case .status(_, let title) = parsed, title.hasPrefix("Pelmet.") {
+            return .status(bundle: PelmetBundle.mainID, title: title)
+        }
         return ItemID(rawValue: "bundle:\(bundle)")
     }
 }

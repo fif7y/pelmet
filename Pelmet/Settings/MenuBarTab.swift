@@ -460,7 +460,7 @@ private struct ItemTile: View {
     private var hasBundleSiblings: Bool {
         // Pelmet's own items (extras, separators) hide individually.
         guard !isSystemIcon, let bundle = item.id.bundleID,
-              bundle != PelmetBundle.mainID else { return false }
+              !PelmetBundle.ownIDs.contains(bundle) else { return false }
         // A live tile with a same-bundle sibling means count > 1; a concealed
         // tile with a live twin never reaches here (editorItems drops it).
         return (appState.bundleCounts[bundle] ?? 0) > 1

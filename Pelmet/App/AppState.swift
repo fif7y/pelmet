@@ -53,6 +53,10 @@ final class AppState {
     private var rehideDeferLogged = false
     private var statusItem: PelmetStatusItem?
     private var separators: SeparatorManager?
+    private(set) var helperHosts: HelperHosts?
+    /// Set once the first converge has run: helper registrations before it
+    /// are covered by the boot wait, later ones need an adoption window.
+    private var engineStarted = false
     private var extras: ExtrasManager?
     private var bandMonitor: MenuBarBandMonitor?
     private var clockRelay: ClockClickRelay?
@@ -76,7 +80,6 @@ final class AppState {
     func start() {
         wireTransitionSettleCallbacks()
         runOneShotMigrations()
-        startHelperSpike()
         applyPolicyAndStartUpdater()
         presentOnboardingIfNeeded()
         buildBarItems()
@@ -180,6 +183,7 @@ final class AppState {
             statusItem = PelmetStatusItem(appState: self)
         }
         ConcealGhostOverlay.prewarmDisplay()
+        helperHosts = HelperHosts(appState: self)
         separators = SeparatorManager(appState: self)
         separators?.sync(with: settings.separators)
         // Migration: early builds had a bare media-controls bool.
@@ -311,7 +315,7 @@ final class AppState {
     static func registrationCandidates(_ items: [ItemID]) -> [ItemID] {
         items.filter {
             guard let bundle = $0.bundleID else { return false }
-            return bundle != PelmetBundle.mainID
+            return !PelmetBundle.ownIDs.contains(bundle)
                 && (!MenuBarPolicy.isUnmanagedAppleBundle(bundle) || MenuBarPolicy.systemItem(for: $0) != nil)
         }
     }
@@ -401,43 +405,6 @@ final class AppState {
         }
     }
 
-    // MARK: - M1 helper spike (docs/HELPER-PROCESS-PLAN.md)
-
-    /// `defaults write app.fif7y.Pelmet pelmet.spike.helper -bool YES`:
-    /// launch the nested PelmetItems-Hidden.app (its own bundle id, one
-    /// hard-coded separator) and home that separator in Hidden, so the
-    /// converge log shows whether the assertion hides a nested helper's item.
-    static let helperSpikeBundleID = "app.fif7y.Pelmet.items.hidden"
-    static let helperSpikeItemID = ItemID.status(bundle: helperSpikeBundleID, title: "Pelmet.Separator.SPIKE")
-
-    private func startHelperSpike() {
-        guard UserDefaults.standard.bool(forKey: "pelmet.spike.helper") else { return }
-        let url = Bundle.main.bundleURL
-            .appendingPathComponent("Contents/Helpers/PelmetItems-Hidden.app")
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            PelmetLog.log("spike: helper missing at \(url.path)")
-            return
-        }
-        let config = NSWorkspace.OpenConfiguration()
-        config.activates = false
-        config.environment = ["PELMET_PARENT_PID": "\(ProcessInfo.processInfo.processIdentifier)"]
-        NSWorkspace.shared.openApplication(at: url, configuration: config) { app, error in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                if let error {
-                    PelmetLog.log("spike: helper launch failed — \(error)")
-                    return
-                }
-                PelmetLog.log("spike: helper launched pid=\(app?.processIdentifier ?? 0) bundle=\(app?.bundleIdentifier ?? "?")")
-                try? await Task.sleep(for: .seconds(3))
-                if self.settings.sectionModel.enroll(Self.helperSpikeItemID.sectionKey, in: .hidden) {
-                    PelmetLog.log("spike: enrolled \(Self.helperSpikeItemID.rawValue) in hidden")
-                    self.settingsChanged()
-                }
-            }
-        }
-    }
-
     private func bootEngine() {
         Task {
             // The agent DEFERS adopting newly registered status items while
@@ -446,8 +413,10 @@ final class AppState {
             // instantly). Pelmet's own items re-register at every launch, and
             // the first converge would assert before adoption lands — parking
             // them for the whole session.
+            await helperHosts?.waitUntilHosted()
             await waitForOwnItemAdoption()
             await engine.start()
+            engineStarted = true
             // Extras change size inside the same agent reflow as assertion
             // swaps — the only way their motion matches everything else's.
             await engine.setReflowCompanion { [weak self] revealed in
@@ -676,6 +645,39 @@ final class AppState {
             try? await Task.sleep(for: AppTiming.clockBlinkReacquire)
             await engine.endClockBlink()
             if let cover { transitions.endClockBlinkCover(cover) }
+        }
+    }
+
+    // MARK: - Section helper events (HelperHosts)
+
+    /// A helper registered an item. Mid-session that registration sits
+    /// under an active assertion, which defers its adoption — open the
+    /// window the way a relaunched app gets one, and queue its placement.
+    func helperHosted(title: String, bundle: String) {
+        let id = ItemID.status(bundle: PelmetBundle.mainID, title: title)
+        guard engineStarted else { return }
+        placement.queuePlacement(id)
+        Task {
+            if await engine.openAdoptionWindow(for: bundle) {
+                updateSnapshot(await engine.snapshot())
+            }
+            placement.flushPendingPlacements()
+        }
+    }
+
+    func helperItemClicked(title: String, rightButton: Bool, at point: NSPoint) {
+        guard rightButton || separators?.spec(titled: title) != nil else { return }
+        // Separators: either button opens Pelmet's menu (an always-available
+        // settings entry point in iconless mode).
+        let menu = PelmetStatusItem.contextMenu(appState: self)
+        menu.popUp(positioning: nil, at: point, in: nil)
+    }
+
+    func helperItemDraggedOff(title: String) {
+        if let spec = separators?.spec(titled: title) {
+            PelmetLog.log("separator: \(spec.style.displayName) dragged off the bar → remove")
+            settings.separators.removeAll { $0.id == spec.id }
+            settingsChanged()
         }
     }
 
@@ -1229,7 +1231,7 @@ final class AppState {
         // with the incompatible card (2026-09-14).
         let seen = snap.items.filter { $0.frame != nil && $0.hostIsBundleless }
             .compactMap(\.id.bundleID)
-            .filter { $0 != PelmetBundle.mainID }
+            .filter { !PelmetBundle.ownIDs.contains($0) }
         if !seen.allSatisfy(bundlelessHosts.contains) {
             bundlelessHosts.formUnion(seen)
             UserDefaults.standard.set(Array(bundlelessHosts), forKey: Self.bundlelessKey)

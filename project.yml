@@ -20,6 +20,33 @@ schemes:
     test:
       targets:
         - PelmetTests
+targetTemplates:
+  SectionHelper:
+    type: application
+    platform: macOS
+    sources:
+      - PelmetItems
+    dependencies:
+      - package: PelmetCore
+    info:
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        LSUIElement: true
+        NSPrincipalClass: NSApplication
+    settings:
+      base:
+        MARKETING_VERSION: "0.2.28"
+        CURRENT_PROJECT_VERSION: "35"
+        SWIFT_VERSION: "6.0"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: "YES"
+        ENABLE_HARDENED_RUNTIME: "YES"
+        ENABLE_APP_SANDBOX: "NO"
+        SKIP_INSTALL: "YES"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: YW9UY68SQ7
 targets:
   Pelmet:
     type: application
@@ -32,7 +59,13 @@ targets:
         product: PelmetEngine
       - package: Sparkle
         product: Sparkle
-      - target: PelmetItems
+      - target: PelmetItemsHidden
+        embed: true
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
+      - target: PelmetItemsAlwaysHidden
         embed: true
         codeSign: true
         copy:
@@ -66,38 +99,31 @@ targets:
         ENABLE_APP_SANDBOX: "NO"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: YW9UY68SQ7
-  # M1 spike helper (docs/HELPER-PROCESS-PLAN.md): a separate bundle id the
-  # assertion can exclude, hosting one separator.
-  PelmetItems:
-    type: application
-    platform: macOS
-    sources:
-      - PelmetItems
+  # Section helpers (docs/HELPER-PROCESS-PLAN.md): one bundle id per
+  # concealable section so the per-bundle assertion can hide their items.
+  # Same source, two bundles.
+  PelmetItemsHidden:
+    templates: [SectionHelper]
     info:
-      path: PelmetItems/Info.plist
+      path: PelmetItems/Info-Hidden.plist
       properties:
         CFBundleName: Pelmet Items
         CFBundleDisplayName: Pelmet Items
-        CFBundleShortVersionString: $(MARKETING_VERSION)
-        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
-        LSUIElement: true
-        LSBackgroundOnly: false
-        NSPrincipalClass: NSApplication
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.fif7y.Pelmet.items.hidden
         PRODUCT_NAME: PelmetItems-Hidden
-        MARKETING_VERSION: "0.2.28"
-        CURRENT_PROJECT_VERSION: "35"
-        SWIFT_VERSION: "6.0"
-        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
-        SWIFT_APPROACHABLE_CONCURRENCY: "YES"
-        ENABLE_HARDENED_RUNTIME: "YES"
-        ENABLE_APP_SANDBOX: "NO"
-        SKIP_INSTALL: "YES"
-        CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: YW9UY68SQ7
+  PelmetItemsAlwaysHidden:
+    templates: [SectionHelper]
+    info:
+      path: PelmetItems/Info-AlwaysHidden.plist
+      properties:
+        CFBundleName: Pelmet Items
+        CFBundleDisplayName: Pelmet Items
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.fif7y.Pelmet.items.alwaysHidden
+        PRODUCT_NAME: PelmetItems-AlwaysHidden
   PelmetTests:
     type: bundle.unit-test
     platform: macOS

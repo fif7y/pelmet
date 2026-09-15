@@ -50,10 +50,10 @@ struct MenuBarPolicyTests {
         #expect(MenuBarPolicy.systemItem(for: .bundleKey("com.example.App")) == nil)
     }
 
-    @Test func exemptBundlesArePelmetAndAgent() {
+    @Test func exemptBundlesArePelmetItsHelpersAndAgent() {
         #expect(
             MenuBarPolicy.identityExemptBundles(pelmetBundleID: "app.fif7y.Pelmet")
-                == ["app.fif7y.Pelmet", PelmetBundle.agentID]
+                == PelmetBundle.helperIDs.union(["app.fif7y.Pelmet", PelmetBundle.agentID])
         )
     }
 

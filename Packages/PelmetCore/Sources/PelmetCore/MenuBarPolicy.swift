@@ -16,6 +16,24 @@ public enum PelmetBundle {
     /// the fallback for hosts that have none. Use this — never hand-roll the
     /// `??` (or forget it, as one comparison site did).
     public static let mainID = Bundle.main.bundleIdentifier ?? fallbackID
+    /// Helper bundles hosting the concealable sections' own items, so the
+    /// per-bundle assertion can hide them (docs/HELPER-PROCESS-PLAN.md).
+    /// One host per section: the main app hosts Visible.
+    public static let hiddenHostID = "app.fif7y.Pelmet.items.hidden"
+    public static let alwaysHiddenHostID = "app.fif7y.Pelmet.items.alwaysHidden"
+    public static let helperIDs: Set<String> = [hiddenHostID, alwaysHiddenHostID]
+    /// Every process that hosts a Pelmet-owned item.
+    public static var ownIDs: Set<String> { helperIDs.union([mainID, fallbackID]) }
+    /// Mach port name the main app listens on for helper events.
+    public static let mainLinkPort = "app.fif7y.Pelmet.link"
+
+    public static func host(for section: Section) -> String {
+        switch section {
+        case .visible: mainID
+        case .hidden: hiddenHostID
+        case .alwaysHidden: alwaysHiddenHostID
+        }
+    }
 }
 
 /// The 9 system items macOS 27's assessment configuration can individually
@@ -63,7 +81,7 @@ public enum MenuBarPolicy {
     /// to tag-drift pruning (Pelmet's own items; the agent's per-identifier
     /// system items).
     public static func identityExemptBundles(pelmetBundleID: String) -> Set<String> {
-        [pelmetBundleID, PelmetBundle.agentID]
+        PelmetBundle.helperIDs.union([pelmetBundleID, PelmetBundle.agentID])
     }
 
     /// True for Pelmet-owned proxy/extra items (NOT the chevron): they're

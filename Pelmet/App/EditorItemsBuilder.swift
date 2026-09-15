@@ -26,15 +26,28 @@ enum EditorItemsBuilder {
         recentlySeen: (ItemID) -> Bool = { _ in true }
     ) -> [ObservedItem] {
         var byID: [ItemID: ObservedItem] = [:]
+        // An own item hosted by a section helper is observed under the
+        // helper's bundle; the board keys it as the main-app item its spec
+        // names (sectionKey folds it), or the spec loops below would draw a
+        // second, frameless tile beside it.
+        func canonical(_ id: ItemID) -> ItemID {
+            id.bundleID.map(PelmetBundle.helperIDs.contains) == true ? id.sectionKey : id
+        }
         for item in snapshotItems {
-            byID[item.id] = item
+            let id = canonical(item.id)
+            byID[id] = id == item.id ? item : ObservedItem(
+                id: id, frame: item.frame, appName: item.appName,
+                hostIsBundleless: item.hostIsBundleless, pid: item.pid
+            )
         }
         // The engine's concealed set is "as of the last converge" — an app that
         // quits while concealed (or while a reveal keeps converge quiet) stays
         // in it, and without the running check its stand-in tile outlived the
         // app in the editor (Bitwarden quit, 2026-08-31). Same guard as the
         // stored path below; nil-bundle IDs stay (system modules filter later).
-        for id in concealed where byID[id] == nil {
+        for raw in concealed {
+            let id = canonical(raw)
+            guard byID[id] == nil else { continue }
             if let bundle = id.bundleID, bundle != pelmetBundleID, !isRunning(bundle) { continue }
             byID[id] = ObservedItem(id: id, frame: nil, appName: id.bundleID.flatMap(appName))
         }

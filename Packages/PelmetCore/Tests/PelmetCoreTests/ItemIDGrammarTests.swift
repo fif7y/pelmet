@@ -44,6 +44,15 @@ struct ItemIDGrammarTests {
         }
     }
 
+    @Test func helperHostedOwnItemsKeyAsMainAppItems() {
+        let hosted = ItemID.status(bundle: PelmetBundle.hiddenHostID, title: "Pelmet.Separator.X")
+        #expect(hosted.sectionKey == ItemID.status(bundle: PelmetBundle.mainID, title: "Pelmet.Separator.X"))
+        #expect(hosted.bundleID == PelmetBundle.hiddenHostID)
+        // A helper's non-Pelmet title (never minted) is not folded.
+        let stray = ItemID.status(bundle: PelmetBundle.alwaysHiddenHostID, title: "Item-0")
+        #expect(stray.sectionKey == ItemID.bundleKey(PelmetBundle.alwaysHiddenHostID))
+    }
+
     @Test func sectionKeyCollapsesOnlyThirdPartyStatusTags() {
         #expect(
             ItemID.status(bundle: "com.sindresorhus.Velja", title: "Item-0").sectionKey
