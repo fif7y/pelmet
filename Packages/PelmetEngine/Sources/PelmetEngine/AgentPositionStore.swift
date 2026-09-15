@@ -61,16 +61,4 @@ enum AgentPositionStore {
         CFPreferencesSynchronize(domain as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
         return positions
     }
-
-    /// Applies pending position writes by restarting the agent. launchd
-    /// relaunches it immediately; the bar blinks once. Only call from an
-    /// explicit, user-initiated converge.
-    static func restartAgent() {
-        let running = NSRunningApplication.runningApplications(
-            withBundleIdentifier: PelmetBundle.agentID
-        )
-        for app in running {
-            kill(app.processIdentifier, SIGKILL)
-        }
-    }
 }

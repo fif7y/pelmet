@@ -8,17 +8,6 @@ import Foundation
 enum EngineTiming {
     /// snapshot() cache TTL — sub-500ms repeat reads reuse the last AX walk.
     static let snapshotTTL: TimeInterval = 0.5
-    /// Initial wait after SIGKILLing the agent before checking on the respawn.
-    static let agentRestartSettle: TimeInterval = 1.5
-    /// launchd THROTTLES respawns when two restarts land close together (the
-    /// re-mint second pass) — the agent can stay dead for ~7s. Poll for the
-    /// new process + a walkable AX tree up to this deadline before pulsing.
-    static let agentRespawnDeadline: TimeInterval = 12
-    static let agentRespawnPoll: Duration = .milliseconds(200)
-    /// applyOrder re-slot pulse: cap, swap-quiet threshold, and poll interval.
-    static let reSlotPulseDeadline: TimeInterval = 1.5
-    static let reSlotPulseQuiesce: TimeInterval = 0.3
-    static let reSlotPulsePoll: Duration = .milliseconds(100)
     /// AX messaging timeouts — a stuck agent/app must never wedge a walk.
     static let axAgentTimeout: Float = 0.25
     static let axAppTimeout: Float = 0.5
