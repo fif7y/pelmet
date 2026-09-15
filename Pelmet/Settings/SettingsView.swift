@@ -549,7 +549,7 @@ private struct GeneralPane: View {
             SettingToggleRow(
                 title: "Show Pelmet icon in the menu bar",
                 isOn: binding(\.showStatusItem, onSet: { enabled in
-                    if !enabled { Self.showIconlessHint() }
+                    if !enabled { showIconlessHint() }
                 })
             )
             if appState.settings.showStatusItem {
@@ -563,7 +563,15 @@ private struct GeneralPane: View {
                     ? "Held by another app — record a different one."
                     : "Toggles the hidden icons from anywhere."
             ) {
-                ShortcutRecorder(shortcut: binding(\.hotkey))
+                ShortcutRecorder(shortcut: binding(\.hotkey), fallback: .default)
+            }
+            SettingRow(
+                title: "Open Settings",
+                caption: appState.settingsHotkeyConflict
+                    ? "Held by another app — record a different one."
+                    : "Opens Pelmet Settings from anywhere."
+            ) {
+                ShortcutRecorder(shortcut: binding(\.settingsHotkey), fallback: .settingsDefault)
             }
             SettingToggleRow(
                 // Named, not spelled out: a sentence long enough to say the
@@ -588,7 +596,7 @@ private struct GeneralPane: View {
             // "Without it" is advice for a state you are not in while the
             // icon is there — it belongs to the card only once it applies.
             if !appState.settings.showStatusItem {
-                SettingNote("Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.")
+                SettingNote("Without it: press \(settingsShortcut), reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.")
             }
         }
 
@@ -666,11 +674,15 @@ private struct GeneralPane: View {
         )
     }
 
+    private var settingsShortcut: String {
+        appState.settings.settingsHotkey?.display ?? HotkeySpec.settingsDefault.display
+    }
+
     /// One-time orientation when the user goes iconless.
-    static func showIconlessHint() {
+    func showIconlessHint() {
         let alert = NSAlert()
         alert.messageText = String(localized: "Pelmet stays a click away")
-        alert.informativeText = String(localized: "You can always open Pelmet Settings by:\n\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar")
+        alert.informativeText = String(localized: "You can always open Pelmet Settings by:\n\n•  Pressing \(settingsShortcut)\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar")
         alert.alertStyle = .informational
         alert.runModal()
     }

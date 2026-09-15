@@ -50,16 +50,16 @@ T = {
     "Launch at login": dict(de="Bei der Anmeldung öffnen", fr="Ouvrir à l’ouverture de session", es="Abrir al iniciar sesión", it="Apri al login", pt="Abrir ao iniciar sessão", ja="ログイン時に起動", zh="登录时启动", ko="로그인 시 열기", ru="Открывать при входе"),
     "Show Pelmet icon in the menu bar": dict(de="Pelmet-Symbol in der Menüleiste anzeigen", fr="Afficher l’icône Pelmet dans la barre des menus", es="Mostrar el icono de Pelmet en la barra de menús", it="Mostra l’icona di Pelmet nella barra dei menu", pt="Mostrar o ícone do Pelmet na barra de menus", ja="メニューバーにPelmetアイコンを表示", zh="在菜单栏中显示 Pelmet 图标", ko="메뉴 막대에 Pelmet 아이콘 표시", ru="Показывать значок Pelmet в строке меню"),
     "Icon": dict(de="Symbol", fr="Icône", es="Icono", it="Icona", pt="Ícone", ja="アイコン", zh="图标", ko="아이콘", ru="Значок"),
-    "Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.": dict(
-        de="Ohne Symbol: Pelmet erneut über Spotlight öffnen oder mit der rechten Maustaste auf einen Trenner oder eine freie Stelle der Menüleiste klicken.",
-        fr="Sans elle : rouvrez Pelmet depuis Spotlight, ou faites un clic droit sur un séparateur ou une zone vide de la barre des menus.",
-        es="Sin él: vuelve a abrir Pelmet desde Spotlight, o haz clic derecho en un separador o en un espacio vacío de la barra de menús.",
-        it="Senza icona: riapri Pelmet da Spotlight, oppure fai clic destro su un separatore o su uno spazio vuoto della barra dei menu.",
-        pt="Sem ele: reabra o Pelmet pelo Spotlight, ou clique com o botão direito em um separador ou em um espaço vazio da barra de menus.",
-        ja="非表示の場合：SpotlightからPelmetを再度開くか、区切りまたはメニューバーの空いている場所を右クリックしてください。",
-        zh="隐藏后：可通过 Spotlight 重新打开 Pelmet，或右键点击分隔符或菜单栏的空白处。",
-        ko="숨기면: Spotlight에서 Pelmet을 다시 열거나, 구분선 또는 메뉴 막대의 빈 곳을 오른쪽 클릭하세요.",
-        ru="Без значка: откройте Pelmet через Spotlight или нажмите правой кнопкой на разделитель или пустое место строки меню."),
+    "Without it: press %@, reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.": dict(
+        de="Ohne Symbol: %@ drücken, Pelmet erneut über Spotlight öffnen oder mit der rechten Maustaste auf einen Trenner oder eine freie Stelle der Menüleiste klicken.",
+        fr="Sans elle : appuyez sur %@, rouvrez Pelmet depuis Spotlight, ou faites un clic droit sur un séparateur ou une zone vide de la barre des menus.",
+        es="Sin él: pulsa %@, vuelve a abrir Pelmet desde Spotlight, o haz clic derecho en un separador o en un espacio vacío de la barra de menús.",
+        it="Senza icona: premi %@, riapri Pelmet da Spotlight, oppure fai clic destro su un separatore o su uno spazio vuoto della barra dei menu.",
+        pt="Sem ele: pressione %@, reabra o Pelmet pelo Spotlight, ou clique com o botão direito em um separador ou em um espaço vazio da barra de menus.",
+        ja="非表示の場合：%@ を押すか、SpotlightからPelmetを再度開くか、区切りまたはメニューバーの空いている場所を右クリックしてください。",
+        zh="隐藏后：可按 %@，通过 Spotlight 重新打开 Pelmet，或右键点击分隔符或菜单栏的空白处。",
+        ko="숨기면: %@ 를 누르거나, Spotlight에서 Pelmet을 다시 열거나, 구분선 또는 메뉴 막대의 빈 곳을 오른쪽 클릭하세요.",
+        ru="Без значка: нажмите %@, откройте Pelmet через Spotlight или нажмите правой кнопкой на разделитель или пустое место строки меню."),
     "Right-click menu": dict(
         de="Rechtsklick-Menü", fr="Menu du clic droit", es="Menú del clic derecho",
         it="Menu del clic destro", pt="Menu do clique direito", ja="右クリックメニュー",
@@ -119,16 +119,16 @@ T = {
     "Always hidden": dict(de="Immer ausgeblendet", fr="Toujours masqués", es="Siempre ocultos", it="Sempre nascosti", pt="Sempre ocultos", ja="常に非表示", zh="始终隐藏", ko="항상 숨김", ru="Всегда скрыты"),
     "Show while revealed": dict(de="Beim Einblenden anzeigen", fr="Afficher lorsque la barre est déployée", es="Mostrar mientras esté visible", it="Mostra quando la barra è visibile", pt="Mostrar enquanto revelado", ja="表示中は見せる", zh="显示时可见", ko="표시 중일 때 보이기", ru="Показывать при развёрнутой строке"),
     "Pelmet stays a click away": dict(de="Pelmet bleibt einen Klick entfernt", fr="Pelmet reste à portée de clic", es="Pelmet sigue a un clic", it="Pelmet resta a un clic di distanza", pt="O Pelmet continua a um clique", ja="Pelmetはいつでもすぐに開けます", zh="Pelmet 始终触手可及", ko="Pelmet은 언제나 한 번의 클릭으로 열 수 있습니다", ru="Pelmet всегда в одном клике"),
-    "You can always open Pelmet Settings by:\n\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar": dict(
-        de="Die Pelmet-Einstellungen sind jederzeit erreichbar:\n\n•  Pelmet erneut über Spotlight oder den Finder öffnen\n•  Rechtsklick auf einen Pelmet-Trenner in der Menüleiste\n•  Rechtsklick auf eine freie Stelle der Menüleiste",
-        fr="Vous pouvez toujours ouvrir les réglages de Pelmet :\n\n•  En rouvrant Pelmet depuis Spotlight ou le Finder\n•  Par un clic droit sur un séparateur Pelmet dans la barre des menus\n•  Par un clic droit sur une zone vide de la barre des menus",
-        es="Siempre puedes abrir los ajustes de Pelmet:\n\n•  Abriendo Pelmet de nuevo desde Spotlight o el Finder\n•  Haciendo clic derecho en cualquier separador de Pelmet en la barra de menús\n•  Haciendo clic derecho en un espacio vacío de la barra de menús",
-        it="Puoi sempre aprire le impostazioni di Pelmet:\n\n•  Riaprendo Pelmet da Spotlight o dal Finder\n•  Con un clic destro su un separatore Pelmet nella barra dei menu\n•  Con un clic destro su uno spazio vuoto della barra dei menu",
-        pt="Você sempre pode abrir os ajustes do Pelmet:\n\n•  Abrindo o Pelmet novamente pelo Spotlight ou pelo Finder\n•  Clicando com o botão direito em qualquer separador do Pelmet na barra de menus\n•  Clicando com o botão direito em um espaço vazio da barra de menus",
-        ja="Pelmet設定は次の方法でいつでも開けます：\n\n•  SpotlightまたはFinderからPelmetを再度開く\n•  メニューバーのPelmet区切りを右クリック\n•  メニューバーの空いている場所を右クリック",
-        zh="你随时可以通过以下方式打开 Pelmet 设置：\n\n•  在 Spotlight 或访达中再次打开 Pelmet\n•  右键点击菜单栏中的任意 Pelmet 分隔符\n•  右键点击菜单栏的空白处",
-        ko="Pelmet 설정은 언제든지 다음 방법으로 열 수 있습니다:\n\n•  Spotlight 또는 Finder에서 Pelmet을 다시 열기\n•  메뉴 막대의 Pelmet 구분선을 오른쪽 클릭\n•  메뉴 막대의 빈 곳을 오른쪽 클릭",
-        ru="Настройки Pelmet всегда можно открыть:\n\n•  Снова открыв Pelmet через Spotlight или Finder\n•  Правым щелчком по любому разделителю Pelmet в строке меню\n•  Правым щелчком по пустому месту строки меню"),
+    "You can always open Pelmet Settings by:\n\n•  Pressing %@\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar": dict(
+        de="Die Pelmet-Einstellungen sind jederzeit erreichbar:\n\n•  %@ drücken\n•  Pelmet erneut über Spotlight oder den Finder öffnen\n•  Rechtsklick auf einen Pelmet-Trenner in der Menüleiste\n•  Rechtsklick auf eine freie Stelle der Menüleiste",
+        fr="Vous pouvez toujours ouvrir les réglages de Pelmet :\n\n•  En appuyant sur %@\n•  En rouvrant Pelmet depuis Spotlight ou le Finder\n•  Par un clic droit sur un séparateur Pelmet dans la barre des menus\n•  Par un clic droit sur une zone vide de la barre des menus",
+        es="Siempre puedes abrir los ajustes de Pelmet:\n\n•  Pulsando %@\n•  Abriendo Pelmet de nuevo desde Spotlight o el Finder\n•  Haciendo clic derecho en cualquier separador de Pelmet en la barra de menús\n•  Haciendo clic derecho en un espacio vacío de la barra de menús",
+        it="Puoi sempre aprire le impostazioni di Pelmet:\n\n•  Premendo %@\n•  Riaprendo Pelmet da Spotlight o dal Finder\n•  Con un clic destro su un separatore Pelmet nella barra dei menu\n•  Con un clic destro su uno spazio vuoto della barra dei menu",
+        pt="Você sempre pode abrir os ajustes do Pelmet:\n\n•  Pressionando %@\n•  Abrindo o Pelmet novamente pelo Spotlight ou pelo Finder\n•  Clicando com o botão direito em qualquer separador do Pelmet na barra de menus\n•  Clicando com o botão direito em um espaço vazio da barra de menus",
+        ja="Pelmet設定は次の方法でいつでも開けます：\n\n•  %@ を押す\n•  SpotlightまたはFinderからPelmetを再度開く\n•  メニューバーのPelmet区切りを右クリック\n•  メニューバーの空いている場所を右クリック",
+        zh="你随时可以通过以下方式打开 Pelmet 设置：\n\n•  按 %@\n•  在 Spotlight 或访达中再次打开 Pelmet\n•  右键点击菜单栏中的任意 Pelmet 分隔符\n•  右键点击菜单栏的空白处",
+        ko="Pelmet 설정은 언제든지 다음 방법으로 열 수 있습니다:\n\n•  %@ 누르기\n•  Spotlight 또는 Finder에서 Pelmet을 다시 열기\n•  메뉴 막대의 Pelmet 구분선을 오른쪽 클릭\n•  메뉴 막대의 빈 곳을 오른쪽 클릭",
+        ru="Настройки Pelmet всегда можно открыть:\n\n•  Нажав %@\n•  Снова открыв Pelmet через Spotlight или Finder\n•  Правым щелчком по любому разделителю Pelmet в строке меню\n•  Правым щелчком по пустому месту строки меню"),
 
     # ── Displays pane ───────────────────────────────────────────────
     "Notch": dict(de="Notch", fr="Encoche", es="Notch", it="Notch", pt="Notch", ja="ノッチ", zh="刘海", ko="노치", ru="Вырез"),
@@ -332,7 +332,9 @@ T = {
     "Held by another app — record a different one.": dict(de="Wird von einer anderen App belegt — nimm ein anderes auf.", fr="Déjà pris par une autre app — enregistrez-en un autre.", es="Otra app ya lo usa — graba uno distinto.", it="Già usata da un’altra app — registrane un’altra.", pt="Outro app já o usa — grave um diferente.", ja="ほかのアプリが使用中です。別のショートカットを記録してください。", zh="已被其他应用占用，请录制另一个。", ko="다른 앱이 사용 중입니다. 다른 단축키를 기록하세요.", ru="Занято другим приложением — запишите другое."),
     "Record shortcut": dict(de="Kürzel aufnehmen", fr="Enregistrer un raccourci", es="Grabar atajo", it="Registra scorciatoia", pt="Gravar atalho", ja="ショートカットを記録", zh="录制快捷键", ko="단축키 기록", ru="Записать сочетание"),
     "Type shortcut…": dict(de="Kürzel drücken…", fr="Tapez le raccourci…", es="Pulsa el atajo…", it="Premi la scorciatoia…", pt="Digite o atalho…", ja="ショートカットを押してください…", zh="按下快捷键…", ko="단축키를 누르세요…", ru="Нажмите сочетание…"),
-    "Click, then press the new shortcut. ⎋ cancels, ⌫ restores ⌥⌘,.": dict(de="Klicken, dann das neue Kürzel drücken. ⎋ bricht ab, ⌫ stellt ⌥⌘, wieder her.", fr="Cliquez, puis tapez le nouveau raccourci. ⎋ annule, ⌫ rétablit ⌥⌘,.", es="Haz clic y pulsa el nuevo atajo. ⎋ cancela, ⌫ restaura ⌥⌘,.", it="Fai clic, poi premi la nuova scorciatoia. ⎋ annulla, ⌫ ripristina ⌥⌘,.", pt="Clique e pressione o novo atalho. ⎋ cancela, ⌫ restaura ⌥⌘,.", ja="クリックしてから新しいショートカットを押します。⎋ でキャンセル、⌫ で ⌥⌘, に戻します。", zh="点击后按下新快捷键。⎋ 取消，⌫ 恢复为 ⌥⌘,。", ko="클릭한 뒤 새 단축키를 누르세요. ⎋ 취소, ⌫ 는 ⌥⌘, 로 되돌립니다.", ru="Нажмите, затем введите новое сочетание. ⎋ отменяет, ⌫ возвращает ⌥⌘,."),
+    "Click, then press the new shortcut. ⎋ cancels, ⌫ restores %@.": dict(de="Klicken, dann das neue Kürzel drücken. ⎋ bricht ab, ⌫ stellt %@ wieder her.", fr="Cliquez, puis tapez le nouveau raccourci. ⎋ annule, ⌫ rétablit %@.", es="Haz clic y pulsa el nuevo atajo. ⎋ cancela, ⌫ restaura %@.", it="Fai clic, poi premi la nuova scorciatoia. ⎋ annulla, ⌫ ripristina %@.", pt="Clique e pressione o novo atalho. ⎋ cancela, ⌫ restaura %@.", ja="クリックしてから新しいショートカットを押します。⎋ でキャンセル、⌫ で %@ に戻します。", zh="点击后按下新快捷键。⎋ 取消，⌫ 恢复为 %@。", ko="클릭한 뒤 새 단축키를 누르세요. ⎋ 취소, ⌫ 는 %@ 로 되돌립니다.", ru="Нажмите, затем введите новое сочетание. ⎋ отменяет, ⌫ возвращает %@."),
+    "Open Settings": dict(de="Einstellungen öffnen", fr="Ouvrir les réglages", es="Abrir ajustes", it="Apri impostazioni", pt="Abrir ajustes", ja="設定を開く", zh="打开设置", ko="설정 열기", ru="Открыть настройки"),
+    "Opens Pelmet Settings from anywhere.": dict(de="Öffnet die Pelmet-Einstellungen von überall.", fr="Ouvre les réglages de Pelmet depuis n’importe où.", es="Abre los ajustes de Pelmet desde cualquier app.", it="Apre le impostazioni di Pelmet da qualsiasi app.", pt="Abre os ajustes do Pelmet de qualquer app.", ja="どこからでもPelmet設定を開きます。", zh="在任何地方打开 Pelmet 设置。", ko="어디서든 Pelmet 설정을 엽니다.", ru="Открывает настройки Pelmet из любого приложения."),
 }
 
 LANG_CODES = {"de": "de", "fr": "fr", "es": "es", "it": "it", "pt": "pt-BR", "ja": "ja", "zh": "zh-Hans", "ko": "ko", "ru": "ru"}

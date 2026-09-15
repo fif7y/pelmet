@@ -55,7 +55,9 @@ import Testing
 
     @Test func freshStoreCarriesTheDefaultShortcut() {
         #expect(SettingsStore().hotkey == .default)
+        #expect(SettingsStore().settingsHotkey == .settingsDefault)
         #expect(HotkeySpec.default.display == "⌥⌘,")
+        #expect(HotkeySpec.settingsDefault.display == "⇧⌥⌘,")
     }
 
     /// Blobs written before the default existed have no `hotkey` key, and a
@@ -63,8 +65,10 @@ import Testing
     @Test func missingOrNullShortcutTakesTheDefault() throws {
         var blob = try json(SettingsStore())
         blob.removeValue(forKey: "hotkey")
+        blob.removeValue(forKey: "settingsHotkey")
         var decoded = try JSONDecoder().decode(SettingsStore.self, from: JSONSerialization.data(withJSONObject: blob))
         #expect(decoded.hotkey == .default)
+        #expect(decoded.settingsHotkey == .settingsDefault)
         blob["hotkey"] = NSNull()
         decoded = try JSONDecoder().decode(SettingsStore.self, from: JSONSerialization.data(withJSONObject: blob))
         #expect(decoded.hotkey == .default)

@@ -23,6 +23,8 @@ public struct HotkeySpec: Codable, Equatable, Sendable {
     /// everywhere. Carbon constants inlined so PelmetCore stays Carbon-free:
     /// kVK_ANSI_Comma = 0x2B, cmdKey | optionKey = 0x100 | 0x800.
     public static let `default` = HotkeySpec(keyCode: 0x2B, modifiers: 0x900, display: "⌥⌘,")
+    /// ⇧⌥⌘, opens Settings — the toggle combo plus shift (shiftKey = 0x200).
+    public static let settingsDefault = HotkeySpec(keyCode: 0x2B, modifiers: 0xB00, display: "⇧⌥⌘,")
 
     private enum CodingKeys: String, CodingKey { case keyCode, modifiers, display }
 
@@ -241,6 +243,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     public var statusIconStyle: StatusIconStyle = .chevron
     /// Never off: a missing, null or unreadable value takes the default.
     public var hotkey: HotkeySpec? = .default
+    public var settingsHotkey: HotkeySpec? = .settingsDefault
 
     public var revealTriggers = RevealTriggers()
     public var autoRehide: Bool = true
@@ -307,7 +310,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     // failing the whole decode and silently resetting the user's settings)
 
     private enum CodingKeys: String, CodingKey {
-        case onboardingCompleted, launchAtLogin, showStatusItem, hotkey
+        case onboardingCompleted, launchAtLogin, showStatusItem, hotkey, settingsHotkey
         case revealTriggers, autoRehide, rehideDelay, rehideOnClickElsewhere, revealAnimation
         case hideSystemExtras, showMediaControls, extraItems, sectionModel, separators
         case displayTemplate, displayOverrides
@@ -329,6 +332,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         launchAtLogin = field(Bool.self, .launchAtLogin, defaults.launchAtLogin)
         showStatusItem = field(Bool.self, .showStatusItem, defaults.showStatusItem)
         hotkey = field(HotkeySpec?.self, .hotkey, defaults.hotkey) ?? defaults.hotkey
+        settingsHotkey = field(HotkeySpec?.self, .settingsHotkey, defaults.settingsHotkey) ?? defaults.settingsHotkey
         revealTriggers = field(RevealTriggers.self, .revealTriggers, defaults.revealTriggers)
         autoRehide = field(Bool.self, .autoRehide, defaults.autoRehide)
         rehideDelay = field(TimeInterval.self, .rehideDelay, defaults.rehideDelay)

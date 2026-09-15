@@ -32,6 +32,7 @@ final class AppState {
     /// The shortcut in settings could not be registered (another app holds
     /// it) — the General row says so beside the recorder.
     private(set) var hotkeyConflict = false
+    private(set) var settingsHotkeyConflict = false
 
     var settingsWindowVisible = false {
         didSet {
@@ -238,11 +239,16 @@ final class AppState {
         clockRelay.setEnabled(true)
         self.clockRelay = clockRelay
 
-        let hotkey = HotkeyManager { [weak self] in
-            self?.toggle(reason: .hotkey)
+        let hotkey = HotkeyManager { [weak self] slot in
+            switch slot {
+            case .toggle: self?.toggle(reason: .hotkey)
+            case .settings: self?.openSettings()
+            }
         }
-        hotkeyConflict = !hotkey.register(settings.hotkey)
+        hotkeyConflict = !hotkey.register(settings.hotkey, slot: .toggle)
+        settingsHotkeyConflict = !hotkey.register(settings.settingsHotkey, slot: .settings)
         registeredHotkey = settings.hotkey
+        registeredSettingsHotkey = settings.settingsHotkey
         self.hotkey = hotkey
 
         // A relaunched app's status item is a FRESH registration — the agent
@@ -632,6 +638,7 @@ final class AppState {
 
     private var settingsApplyWork: Task<Void, Never>?
     private var registeredHotkey: HotkeySpec?
+    private var registeredSettingsHotkey: HotkeySpec?
 
     /// Persist + apply a changed settings store. Cheap, latency-sensitive
     /// bits apply immediately; the save and the engine converge are debounced
@@ -721,8 +728,12 @@ final class AppState {
         // Re-registering unregisters first — a per-tick re-register left the
         // shortcut momentarily dead. Only touch it when it actually changed.
         if settings.hotkey != registeredHotkey {
-            hotkeyConflict = !(hotkey?.register(settings.hotkey) ?? true)
+            hotkeyConflict = !(hotkey?.register(settings.hotkey, slot: .toggle) ?? true)
             registeredHotkey = settings.hotkey
+        }
+        if settings.settingsHotkey != registeredSettingsHotkey {
+            settingsHotkeyConflict = !(hotkey?.register(settings.settingsHotkey, slot: .settings) ?? true)
+            registeredSettingsHotkey = settings.settingsHotkey
         }
         // Newly created separators and toggled-on extras get hosted wherever
         // macOS pleases (left end of the trailing area — or straight into the

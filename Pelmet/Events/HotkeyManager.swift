@@ -8,24 +8,47 @@ import PelmetCore
 import PelmetEngine
 
 final class HotkeyManager {
-    private var hotKeyRef: EventHotKeyRef?
-    private var handlerRef: EventHandlerRef?
-    private let onTrigger: () -> Void
+    enum Slot: UInt32 { case toggle = 1, settings = 2 }
 
-    init(onTrigger: @escaping () -> Void) {
+    private var hotKeyRefs: [Slot: EventHotKeyRef] = [:]
+    private var handlerRef: EventHandlerRef?
+    private let onTrigger: (Slot) -> Void
+
+    init(onTrigger: @escaping (Slot) -> Void) {
         self.onTrigger = onTrigger
     }
 
     // No deinit: the manager lives for the app's lifetime (owned by AppState);
-    // register(_:) unregisters the previous hotkey on every change.
+    // register(_:slot:) unregisters that slot's previous hotkey on every change.
 
     /// False when the combo is already held elsewhere (RegisterEventHotKey
     /// refuses a duplicate) — the General row tells the user to pick another.
     @discardableResult
-    func register(_ spec: HotkeySpec?) -> Bool {
-        unregister()
+    func register(_ spec: HotkeySpec?, slot: Slot) -> Bool {
+        unregister(slot)
         guard let spec else { return true }
+        installHandlerIfNeeded()
 
+        var ref: EventHotKeyRef?
+        let hotKeyID = EventHotKeyID(signature: OSType(0x4E4F4F4B) /* PELMET */, id: slot.rawValue)
+        let status = RegisterEventHotKey(
+            spec.keyCode,
+            spec.modifiers,
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &ref
+        )
+        if status != noErr {
+            PelmetLog.log("hotkey: \(spec.display) (\(slot)) not registered (status \(status)) — held by another app?")
+            return false
+        }
+        hotKeyRefs[slot] = ref
+        return true
+    }
+
+    private func installHandlerIfNeeded() {
+        guard handlerRef == nil else { return }
         var eventType = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
             eventKind: UInt32(kEventHotKeyPressed)
@@ -33,10 +56,16 @@ final class HotkeyManager {
         let selfPointer = Unmanaged.passUnretained(self).toOpaque()
         InstallEventHandler(
             GetApplicationEventTarget(),
-            { _, _, userData in
-                guard let userData else { return noErr }
+            { _, event, userData in
+                guard let userData, let event else { return noErr }
+                var hotKeyID = EventHotKeyID()
+                GetEventParameter(
+                    event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
+                    nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID
+                )
+                guard let slot = Slot(rawValue: hotKeyID.id) else { return noErr }
                 let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
-                DispatchQueue.main.async { manager.onTrigger() }
+                DispatchQueue.main.async { manager.onTrigger(slot) }
                 return noErr
             },
             1,
@@ -44,31 +73,11 @@ final class HotkeyManager {
             selfPointer,
             &handlerRef
         )
-
-        let hotKeyID = EventHotKeyID(signature: OSType(0x4E4F4F4B) /* PELMET */, id: 1)
-        let status = RegisterEventHotKey(
-            spec.keyCode,
-            spec.modifiers,
-            hotKeyID,
-            GetApplicationEventTarget(),
-            0,
-            &hotKeyRef
-        )
-        if status != noErr {
-            PelmetLog.log("hotkey: \(spec.display) not registered (status \(status)) — held by another app?")
-            hotKeyRef = nil
-        }
-        return status == noErr
     }
 
-    func unregister() {
-        if let hotKeyRef {
-            UnregisterEventHotKey(hotKeyRef)
-            self.hotKeyRef = nil
-        }
-        if let handlerRef {
-            RemoveEventHandler(handlerRef)
-            self.handlerRef = nil
+    private func unregister(_ slot: Slot) {
+        if let ref = hotKeyRefs.removeValue(forKey: slot) {
+            UnregisterEventHotKey(ref)
         }
     }
 }
