@@ -402,6 +402,8 @@ private struct ItemTile: View {
         case .mediaControls: return String(localized: "Media")
         case .cameraMic: return String(localized: "Camera")
         case .airdrop: return String(localized: "AirDrop")
+        case .timer: return String(localized: "Timer")
+        case .userSwitching: return String(localized: "Users")
         default: break
         }
         // SystemUIServer's extras enumerate as one item titled with every
@@ -757,6 +759,16 @@ private struct PelmetItemsStrip: View {
                     caption: "Opens AirDrop in Finder.",
                     isOn: hasKind(.airdrop)
                 ) { toggleKind(.airdrop, on: $0) }
+                PelmetItemRow(
+                    symbol: "timer", title: "Timer",
+                    caption: "A countdown that stays in the bar. Click for durations, rings when it ends.",
+                    isOn: hasKind(.timer)
+                ) { toggleKind(.timer, on: $0) }
+                PelmetItemRow(
+                    symbol: "person.crop.circle", title: "Fast user switching",
+                    caption: "Other users, the login window, lock screen.",
+                    isOn: hasKind(.userSwitching)
+                ) { toggleKind(.userSwitching, on: $0) }
                 ForEach(appState.settings.extraItems.filter { $0.kind == .shortcut }) { spec in
                     HStack(spacing: 8) {
                         Image(systemName: spec.symbol ?? "bolt.fill")

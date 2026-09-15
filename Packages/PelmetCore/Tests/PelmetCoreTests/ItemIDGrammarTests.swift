@@ -19,6 +19,16 @@ struct ItemIDGrammarTests {
         ItemID(rawValue: "garbage"),
     ]
 
+    @Test func everyExtraKindTitleClassifiesAsAPelmetItem() {
+        for kind in ExtraKind.allCases {
+            let id = ItemID.status(bundle: "app.fif7y.Pelmet", title: ExtraItemSpec(kind: kind).itemTitle)
+            #expect(id.pelmetItem != nil, "\(kind)")
+            if case .other = id.pelmetItem { Issue.record("\(kind) is unnamed") }
+        }
+        #expect(ItemID.status(bundle: "app.fif7y.Pelmet", title: "Pelmet.Timer").pelmetItem == .timer)
+        #expect(ItemID.status(bundle: "app.fif7y.Pelmet", title: "Pelmet.Users").pelmetItem == .userSwitching)
+    }
+
     @Test func formattersRoundTripThroughParser() {
         #expect(ItemID.status(bundle: "com.a.B", title: "T").parsed == .status(bundle: "com.a.B", title: "T"))
         #expect(ItemID.module("X").parsed == .module("X"))

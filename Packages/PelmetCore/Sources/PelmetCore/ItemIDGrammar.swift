@@ -71,6 +71,8 @@ public extension ItemID {
         case airdrop
         case shortcut
         case appLauncher
+        case timer
+        case userSwitching
         /// A Pelmet-minted title this build does not name. Still one of ours
         /// (so still a section-managed extra) — the classifier must not
         /// narrow `isPelmetExtraID` to a whitelist that a future or older
@@ -87,6 +89,8 @@ public extension ItemID {
         case "Pelmet.MediaControls": return .mediaControls
         case "Pelmet.CameraMic": return .cameraMic
         case "Pelmet.AirDrop": return .airdrop
+        case "Pelmet.Timer": return .timer
+        case "Pelmet.Users": return .userSwitching
         default: break
         }
         if title.hasPrefix("Pelmet.Separator.") { return .separator }

@@ -56,6 +56,9 @@ final class ExtrasManager {
     /// show only fades them, and a pending layout drop must leave them be.
     private var preattached: Set<UUID> = []
     private var cameraMicMonitor: CameraMicMonitor?
+    /// Pelmet's own countdown, alive while a timer item exists.
+    private var pelmetTimer: PelmetTimer?
+    private var lastTimerActive = false
     /// One clock per media item drawing the animated bars (see ExtraGlyphs).
     private var animators: [UUID: ExtraAnimator] = [:]
     /// Play/pause state the media glyph shows. Click intent drives it (players
@@ -156,6 +159,16 @@ final class ExtrasManager {
             }
         } else if !needsRunningObserver {
             runningAppsObservation = nil
+        }
+        if newSpecs.contains(where: { $0.kind == .timer }) {
+            if pelmetTimer == nil {
+                let timer = PelmetTimer()
+                timer.onChange = { [weak self] in self?.timerChanged() }
+                pelmetTimer = timer
+            }
+        } else if let timer = pelmetTimer {
+            timer.cancel()
+            pelmetTimer = nil
         }
         let needsCameraMonitor = newSpecs.contains {
             $0.kind == .cameraMicIndicator || $0.kind == .mediaControls
@@ -260,7 +273,28 @@ final class ExtrasManager {
                 lastRunning[id] = running
             case .airdrop:
                 updateAirDropGlyph(item, spec: spec)
-            case .shortcut:
+            case .timer:
+                // Section-governed while idle; a counting (or ringing) timer
+                // is an indicator and stays in the bar whatever its section.
+                let active = pelmetTimer?.isActive ?? false
+                let sectionVisible = visible
+                visible = visible || active
+                updateTimerGlyph(item, spec: spec)
+                let itemID = Self.itemID(for: spec)
+                if active, !lastTimerActive {
+                    // The user just clicked it: the section reveal isn't
+                    // what put it in layout, so place it now if the bar is
+                    // looking, else on the next reveal settle.
+                    if sectionVisible {
+                        appState?.placeOwnItemSoon(itemID)
+                    } else {
+                        appState?.queueDynamicExtraPlacement(itemID)
+                    }
+                } else if !active, lastTimerActive {
+                    appState?.cancelDynamicExtraPlacement(itemID)
+                }
+                lastTimerActive = active
+            case .shortcut, .userSwitching:
                 break
             }
             setVisible(visible, for: id, item: item)
@@ -279,7 +313,10 @@ final class ExtrasManager {
         for (id, item) in items {
             guard let spec = specs[id], lastVisible[id] != true else { continue }
             switch spec.kind {
-            case .airdrop, .shortcut: break
+            case .airdrop, .shortcut, .userSwitching: break
+            case .timer:
+                // Counting: already in the bar on its own.
+                guard !(pelmetTimer?.isActive ?? false) else { continue }
             case .appLauncher:
                 // The running edge has its own placement walk; only a plain
                 // launcher (or one already running) rides the section.
@@ -287,7 +324,7 @@ final class ExtrasManager {
             case .cameraMicIndicator, .mediaControls: continue  // hardware-driven
             }
             guard revealing.contains(model.section(of: Self.itemID(for: spec))) else { continue }
-            StatusItemFader.attach(item, shownLength: NSStatusItem.squareLength)
+            StatusItemFader.attach(item, shownLength: Self.shownLength(for: spec))
             preattached.insert(id)
             attached.append(item)
         }
@@ -320,7 +357,7 @@ final class ExtrasManager {
         StatusItemFader.setVisible(
             visible,
             item: item,
-            shownLength: NSStatusItem.squareLength,
+            shownLength: specs[id].map(Self.shownLength(for:)) ?? NSStatusItem.squareLength,
             shownAlpha: 1,
             stillCurrent: stillCurrent
         )
@@ -337,8 +374,13 @@ final class ExtrasManager {
 
     // MARK: Item construction
 
+    /// Square for glyph-only items; the timer grows with its countdown.
+    private static func shownLength(for spec: ExtraItemSpec) -> CGFloat {
+        spec.kind == .timer ? NSStatusItem.variableLength : NSStatusItem.squareLength
+    }
+
     private func makeItem(for spec: ExtraItemSpec) -> NSStatusItem {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        let item = NSStatusBar.system.statusItem(withLength: Self.shownLength(for: spec))
         item.autosaveName = spec.itemTitle
         if let button = item.button {
             if spec.kind == .appLauncher, let icon = Self.launcherImage(for: spec, size: 18) {
@@ -397,6 +439,8 @@ final class ExtrasManager {
         case .airdrop: Self.airdropSymbol
         case .shortcut: spec.symbol ?? "bolt.fill"
         case .appLauncher: spec.symbol ?? "app.dashed"
+        case .timer: "timer"
+        case .userSwitching: "person.crop.circle"
         }
     }
 
@@ -630,7 +674,42 @@ final class ExtrasManager {
         case .mediaControls: updateMediaSymbol(item, spec: spec)
         case .cameraMicIndicator: updateCameraSymbol(item, spec: spec)
         case .airdrop: updateAirDropGlyph(item, spec: spec)
-        case .shortcut, .appLauncher: break
+        case .timer: updateTimerGlyph(item, spec: spec)
+        case .shortcut, .appLauncher, .userSwitching: break
+        }
+    }
+
+    /// The countdown beside the glyph while a timer runs; glyph only when
+    /// idle. Monospaced digits so the width holds from second to second.
+    private func updateTimerGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
+        guard let button = item.button else { return }
+        let text = pelmetTimer?.display
+        let done = pelmetTimer?.state == .done
+        button.image = NSImage(
+            systemSymbolName: done ? "bell.fill" : "timer",
+            accessibilityDescription: spec.itemTitle
+        )
+        if let text {
+            let size = NSFont.menuBarFont(ofSize: 0).pointSize
+            button.attributedTitle = NSAttributedString(
+                string: " " + text,
+                attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: .regular)]
+            )
+            button.imagePosition = .imageLeading
+        } else {
+            button.title = ""
+            button.imagePosition = .imageOnly
+        }
+    }
+
+    private func timerChanged() {
+        guard let spec = specs.values.first(where: { $0.kind == .timer }),
+              let item = items[spec.id] else { return }
+        let active = pelmetTimer?.isActive ?? false
+        if active != lastTimerActive {
+            applyCurrent()  // the visibility override edge
+        } else {
+            updateTimerGlyph(item, spec: spec)
         }
     }
 
@@ -714,6 +793,15 @@ final class ExtrasManager {
             if let name = spec.shortcutName {
                 runShortcut(named: name)
             }
+        case .timer:
+            guard let timer = pelmetTimer else { return }
+            if timer.state == .done, !rightClick {
+                timer.dismiss()
+            } else {
+                popUp(timerMenu(timer), on: statusItem.value)
+            }
+        case .userSwitching:
+            popUp(usersMenu(), on: statusItem.value)
         case .appLauncher:
             if rightClick, Self.isRunning(spec), let bundleID = spec.bundleID {
                 let menu = NSMenu()
@@ -740,6 +828,115 @@ final class ExtrasManager {
 
     @objc private func previousTrack() { MediaKey.previous.send() }
     @objc private func nextTrack() { MediaKey.next.send() }
+
+    // MARK: Timer menu
+
+    private func timerMenu(_ timer: PelmetTimer) -> NSMenu {
+        let menu = NSMenu()
+        func add(_ title: String, _ action: Selector, tag: Int = 0) {
+            let entry = NSMenuItem(title: title, action: action, keyEquivalent: "")
+            entry.target = self
+            entry.tag = tag
+            menu.addItem(entry)
+        }
+        switch timer.state {
+        case .idle:
+            for duration in PelmetTimer.presets {
+                add(PelmetTimer.label(for: duration), #selector(startTimer(_:)), tag: Int(duration))
+            }
+            menu.addItem(.separator())
+            add(String(localized: "Custom…"), #selector(customTimer))
+        case .running, .paused:
+            if let display = timer.display {
+                let header = NSMenuItem(title: String(localized: "\(display) left"), action: nil, keyEquivalent: "")
+                header.isEnabled = false
+                menu.addItem(header)
+                menu.addItem(.separator())
+            }
+            if case .running = timer.state {
+                add(String(localized: "Pause"), #selector(pauseTimer))
+            } else {
+                add(String(localized: "Resume"), #selector(resumeTimer))
+            }
+            add(String(localized: "Add a minute"), #selector(addTimerMinute))
+            menu.addItem(.separator())
+            add(String(localized: "Cancel timer"), #selector(cancelTimer))
+        case .done:
+            add(String(localized: "Dismiss"), #selector(dismissTimer))
+        }
+        return menu
+    }
+
+    @objc private func startTimer(_ sender: NSMenuItem) {
+        pelmetTimer?.start(TimeInterval(sender.tag))
+    }
+
+    @objc private func customTimer() {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Timer")
+        alert.informativeText = String(localized: "Minutes")
+        alert.addButton(withTitle: String(localized: "Start"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 80, height: 24))
+        field.placeholderString = "10"
+        field.alignment = .center
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        NSApp.activate()
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let minutes = Double(field.stringValue.replacingOccurrences(of: ",", with: ".")) ?? 0
+        guard minutes > 0 else { return }
+        pelmetTimer?.start(minutes * 60)
+    }
+
+    @objc private func pauseTimer() { pelmetTimer?.pause() }
+    @objc private func resumeTimer() { pelmetTimer?.resume() }
+    @objc private func addTimerMinute() { pelmetTimer?.addMinute() }
+    @objc private func cancelTimer() { pelmetTimer?.cancel() }
+    @objc private func dismissTimer() { pelmetTimer?.dismiss() }
+
+    // MARK: Users menu
+
+    private func usersMenu() -> NSMenu {
+        let menu = NSMenu()
+        let me = NSMenuItem(title: UserSwitching.current.fullName, action: nil, keyEquivalent: "")
+        me.isEnabled = false
+        menu.addItem(me)
+        let others = UserSwitching.otherAccounts()
+        if !others.isEmpty {
+            menu.addItem(.separator())
+            for account in others {
+                let entry = NSMenuItem(title: account.fullName, action: #selector(switchUser(_:)), keyEquivalent: "")
+                entry.target = self
+                entry.representedObject = account.name
+                menu.addItem(entry)
+            }
+        }
+        menu.addItem(.separator())
+        for (title, action) in [
+            (String(localized: "Login Window…"), #selector(loginWindow)),
+            (String(localized: "Lock Screen"), #selector(lockScreen)),
+        ] {
+            let entry = NSMenuItem(title: title, action: action, keyEquivalent: "")
+            entry.target = self
+            menu.addItem(entry)
+        }
+        menu.addItem(.separator())
+        let settings = NSMenuItem(title: String(localized: "Users & Groups Settings…"), action: #selector(usersSettings), keyEquivalent: "")
+        settings.target = self
+        menu.addItem(settings)
+        return menu
+    }
+
+    @objc private func switchUser(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String,
+              let account = UserSwitching.otherAccounts().first(where: { $0.name == name }) else { return }
+        UserSwitching.switchTo(account)
+    }
+
+    @objc private func loginWindow() { UserSwitching.switchToLoginWindow() }
+    @objc private func lockScreen() { UserSwitching.lockScreen() }
+    @objc private func usersSettings() { UserSwitching.openUsersSettings() }
 
     private func openAirDrop() {
         // Finder's AirDrop view via its keyboard shortcut (⇧⌘R) — the only

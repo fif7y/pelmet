@@ -125,6 +125,13 @@ public enum ExtraKind: String, Codable, CaseIterable, Sendable {
     /// Raw value predates the 2026-09-10 rename (was "app stand-in") — kept
     /// so pre-release settings still decode.
     case appLauncher = "appStandIn"
+    /// Pelmet's own countdown. macOS's timer is a Control Center Live
+    /// Activity the assertion hides, and its state sits behind a private
+    /// entitlement (2026-09-15) — a timer that stays in the bar has to be
+    /// Pelmet's.
+    case timer
+    /// Fast user switching menu — the system one is collateral-hidden too.
+    case userSwitching
 }
 
 /// When an app launcher sits in the bar.
@@ -193,6 +200,8 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
         case .airdrop: "Pelmet.AirDrop"
         case .shortcut: "Pelmet.Shortcut.\(id.uuidString)"
         case .appLauncher: "Pelmet.App.\(id.uuidString)"
+        case .timer: "Pelmet.Timer"
+        case .userSwitching: "Pelmet.Users"
         }
     }
 }
