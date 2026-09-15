@@ -164,6 +164,16 @@ public struct SectionModel: Codable, Equatable, Sendable {
         for (home, list) in order {
             order[home] = list.filter { section(of: $0) == home }
         }
+        // Pelmet's own hosts have no bundle-level identity: their items key
+        // by title. A `bundle:<own id>` entry is a stray (a section helper
+        // registered as a new app before ownIDs covered it, 2026-09-14) that
+        // asked for an adoption window on every flush. Drop it everywhere.
+        let strays = Set(PelmetBundle.ownIDs.map(ItemID.bundleKey))
+        assignments = assignments.filter { !strays.contains($0.key) }
+        for (home, list) in order {
+            order[home] = list.filter { !strays.contains($0) }
+        }
+        knownBundles.subtract(PelmetBundle.ownIDs)
     }
 
     /// Gives `key` a home: `section` (nil keeps whatever the model says) and

@@ -124,6 +124,20 @@ import Testing
         #expect(model.section(of: old) == section)
     }
 
+    @Test func canonicalizeDropsStrayOwnHostKeys() {
+        let stray = ItemID.bundleKey(PelmetBundle.hiddenHostID)
+        let velja = ItemID.bundleKey("com.sindresorhus.Velja")
+        var model = SectionModel(
+            assignments: [stray: .hidden, velja: .hidden],
+            order: [.hidden: [stray, velja]],
+            knownBundles: [PelmetBundle.hiddenHostID, "com.sindresorhus.Velja"]
+        )
+        model.canonicalize()
+        #expect(model.assignments == [velja: .hidden])
+        #expect(model.order[.hidden] == [velja])
+        #expect(model.knownBundles == ["com.sindresorhus.Velja"])
+    }
+
     @Test func canonicalizeIsIdempotent() {
         let old = ItemID(rawValue: "status:com.sindresorhus.Velja::Left and right arrows in a filled circle")
         let new = ItemID(rawValue: "status:com.sindresorhus.Velja::Item-0")
