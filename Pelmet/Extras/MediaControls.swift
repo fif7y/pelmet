@@ -56,10 +56,8 @@ final class ExtrasManager {
     /// show only fades them, and a pending layout drop must leave them be.
     private var preattached: Set<UUID> = []
     private var cameraMicMonitor: CameraMicMonitor?
-    /// One clock per item drawing the animated glyph set (see ExtraGlyphs).
+    /// One clock per media item drawing the animated bars (see ExtraGlyphs).
     private var animators: [UUID: ExtraAnimator] = [:]
-    /// Polls awdl0 only while an animated AirDrop item exists.
-    private var airdropMonitor: AirDropActivityMonitor?
     /// Play/pause state the media glyph shows. Click intent drives it (players
     /// keep the output device open while paused, so DeviceIsRunningSomewhere
     /// alone can't see a pause); real audio EDGES reconcile it when they do
@@ -120,7 +118,7 @@ final class ExtrasManager {
                 ItemImageCache.registerPelmetItem(title: spec.itemTitle, image: icon)
             } else if spec.kind == .airdrop {
                 ItemImageCache.registerPelmetItem(
-                    title: spec.itemTitle, image: ExtraGlyph.airdrop(t: 0, radiating: false)
+                    title: spec.itemTitle, image: ExtraGlyph.airdrop
                 )
             } else if spec.kind == .mediaControls, spec.resolvedStyle == .animated {
                 ItemImageCache.registerPelmetItem(
@@ -147,15 +145,6 @@ final class ExtrasManager {
         // "always" launcher hides purely by section. This KVO fires for
         // every app launch and quit on the machine, so don't hold it for
         // launchers that would ignore it.
-        let needsAirDropMonitor = newSpecs.contains {
-            $0.kind == .airdrop && $0.resolvedStyle == .animated
-        }
-        if needsAirDropMonitor, airdropMonitor == nil {
-            airdropMonitor = AirDropActivityMonitor { [weak self] in self?.applyCurrent() }
-        } else if !needsAirDropMonitor, let monitor = airdropMonitor {
-            monitor.stop()
-            airdropMonitor = nil
-        }
         let needsRunningObserver = newSpecs.contains {
             $0.kind == .appLauncher && $0.resolvedShowRule == .whileRunning
         }
@@ -355,7 +344,7 @@ final class ExtrasManager {
             if spec.kind == .appLauncher, let icon = Self.launcherImage(for: spec, size: 18) {
                 button.image = icon
             } else if spec.kind == .airdrop {
-                button.image = ExtraGlyph.airdrop(t: 0, radiating: false)
+                button.image = ExtraGlyph.airdrop
             } else {
                 button.image = NSImage(
                     systemSymbolName: Self.symbol(for: spec),
@@ -658,7 +647,7 @@ final class ExtrasManager {
                 animator.stop()
                 button.image = ExtraGlyph.mediaBars(t: 0, level: mediaPlaying ? 1 : 0, animated: false)
             } else {
-                animator.run(tag: "bars", fps: 30) { t, level in
+                animator.run(tag: "bars", fps: ExtraGlyph.barsFPS) { t, level in
                     ExtraGlyph.mediaBars(t: t, level: level, animated: true)
                 }
             }
@@ -671,41 +660,15 @@ final class ExtrasManager {
         )
     }
 
-    /// The drawn AirDrop mark; animated, its rings radiate while awdl0
-    /// carries a transfer.
+    /// The drawn AirDrop mark.
     private func updateAirDropGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
-        guard let button = item.button else { return }
-        let transferring = spec.resolvedStyle == .animated && (airdropMonitor?.isTransferring ?? false)
-        if transferring, !Self.reduceMotion {
-            animator(for: spec, button: button).run(tag: "airdrop", fps: 20) { t, _ in
-                ExtraGlyph.airdrop(t: t, radiating: true)
-            }
-            return
-        }
-        animators[spec.id]?.stop()
-        button.image = ExtraGlyph.airdrop(t: 0, radiating: false)
+        item.button?.image = ExtraGlyph.airdrop
     }
 
     private func updateCameraSymbol(_ item: NSStatusItem, spec: ExtraItemSpec) {
         let monitor = cameraMicMonitor
         let camera = monitor?.cameraActive ?? false
         let mic = monitor?.micActive ?? false
-        if spec.resolvedStyle == .animated, camera || mic, let button = item.button {
-            // Camera wins when both are live, like the static set.
-            button.contentTintColor = nil
-            if Self.reduceMotion {
-                animators[spec.id]?.stop()
-                button.image = camera ? ExtraGlyph.cameraLive(t: 0, animated: false)
-                                      : ExtraGlyph.micLive(t: 0, animated: false)
-            } else {
-                animator(for: spec, button: button).run(tag: camera ? "camera" : "mic", fps: 20) { t, _ in
-                    camera ? ExtraGlyph.cameraLive(t: t, animated: true)
-                           : ExtraGlyph.micLive(t: t, animated: true)
-                }
-            }
-            return
-        }
-        animators[spec.id]?.stop()
         let symbol = camera ? "video.fill" : (mic ? "mic.fill" : "video.fill")
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: String(localized: "Camera & Mic"))
         if camera || mic {

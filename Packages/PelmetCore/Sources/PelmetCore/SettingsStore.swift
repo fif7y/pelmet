@@ -136,10 +136,9 @@ public enum LauncherShowRule: String, Codable, CaseIterable, Sendable {
     case whileRunning
 }
 
-/// How a Pelmet item draws its glyph: the SF Symbol still (the shipped
-/// look) or a natively drawn glyph that moves while the item's hardware
-/// is live — bars while audio plays, a breathing camera, a filling mic,
-/// AirDrop's rings radiating during a transfer. Nil on old blobs = static.
+/// How a Pelmet item draws its glyph: the SF Symbol still, or (media
+/// controls only) natively drawn bars that wave while audio plays and
+/// settle when it pauses. Nil on old blobs = static; other kinds ignore it.
 public enum ExtraStyle: String, Codable, CaseIterable, Sendable {
     case `static`
     case animated

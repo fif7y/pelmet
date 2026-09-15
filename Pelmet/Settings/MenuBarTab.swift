@@ -750,14 +750,12 @@ private struct PelmetItemsStrip: View {
                 PelmetItemRow(
                     symbol: "video.fill", title: "Camera & mic indicator",
                     caption: "Appears while a camera or mic is live.",
-                    isOn: hasKind(.cameraMicIndicator),
-                    style: styleBinding(.cameraMicIndicator)
+                    isOn: hasKind(.cameraMicIndicator)
                 ) { toggleKind(.cameraMicIndicator, on: $0) }
                 PelmetItemRow(
-                    symbol: "", image: ExtraGlyph.airdrop(t: 0, radiating: false), title: "AirDrop",
+                    symbol: "", image: ExtraGlyph.airdrop, title: "AirDrop",
                     caption: "Opens AirDrop in Finder.",
-                    isOn: hasKind(.airdrop),
-                    style: styleBinding(.airdrop)
+                    isOn: hasKind(.airdrop)
                 ) { toggleKind(.airdrop, on: $0) }
                 ForEach(appState.settings.extraItems.filter { $0.kind == .shortcut }) { spec in
                     HStack(spacing: 8) {
@@ -790,8 +788,8 @@ private struct PelmetItemRow: View {
     let title: LocalizedStringKey
     let caption: LocalizedStringKey
     let isOn: Bool
-    /// Static or animated glyph, offered once the item is on — the same
-    /// in-row borderless menu the launcher rows use for their show rule.
+    /// Static or animated glyph (media controls only), offered once the
+    /// item is on — the same in-row borderless menu the launcher rows use.
     var style: Binding<ExtraStyle>? = nil
     let onToggle: (Bool) -> Void
 
