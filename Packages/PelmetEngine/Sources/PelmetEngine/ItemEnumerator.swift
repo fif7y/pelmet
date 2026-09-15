@@ -232,18 +232,23 @@ public actor ItemEnumerator {
     }
 
     /// Best-effort title of the app's status item button (used in the agent
-    /// tag). An app node exposes both its MAIN menu bar (wide: Apple, File,
-    /// Edit…) and its status-extras bar (narrow) — pick the narrowest bar so
-    /// we never read "Apple" off the main menu. Falls back to Item-0.
+    /// tag). An app node exposes both its MAIN menu bar (Apple, File, Edit…)
+    /// and its status-extras bar; the agent names the extras bar explicitly
+    /// (`kAXExtrasMenuBarAttribute`, present on every hosted app probed on
+    /// macOS 27). Without it, the narrower bar is the extras bar. No width
+    /// cap: a text item can make the extras bar wider than a main menu (#17),
+    /// and a dropped title collides every item of that app on "Item-0".
+    /// The hosted items' frames sit in the app's own off-screen space, never
+    /// the agent group's, so geometry cannot pick among several items.
     private func statusItemTitle(in appNode: AXUIElement) -> String? {
         let menuBars = children(of: appNode).filter { role(of: $0) == "AXMenuBar" }
-        let extrasBar = menuBars.min { lhs, rhs in
+        let explicit = copyAttribute(appNode, kAXExtrasMenuBarAttribute)
+            .flatMap { CFGetTypeID($0) == AXUIElementGetTypeID() ? ($0 as! AXUIElement) : nil }
+        let extrasBar = explicit ?? menuBars.min { lhs, rhs in
             (frame(of: lhs)?.width ?? .greatestFiniteMagnitude)
                 < (frame(of: rhs)?.width ?? .greatestFiniteMagnitude)
         }
-        guard let extrasBar, let width = frame(of: extrasBar)?.width, width < 500 else {
-            return nil
-        }
+        guard let extrasBar else { return nil }
         for item in children(of: extrasBar) {
             if let title = copyAttribute(item, kAXTitleAttribute) as? String, !title.isEmpty {
                 return title
