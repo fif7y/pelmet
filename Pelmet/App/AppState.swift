@@ -1155,7 +1155,7 @@ final class AppState {
     /// inactive and offers a launcher without waiting for a failed conceal.
     private(set) var bundlelessHosts: Set<String> = Set(
         UserDefaults.standard.stringArray(forKey: AppState.bundlelessKey) ?? []
-    )
+    ).subtracting([PelmetBundle.mainID])
     private static let bundlelessKey = "pelmet.bundlelessHosts"
 
     func isBundlelessHost(_ id: ItemID) -> Bool {
@@ -1186,8 +1186,12 @@ final class AppState {
         for item in snap.items {
             if let bundle = item.id.bundleID { absentBundles.remove(bundle) }
         }
+        // Never Pelmet itself: one walk read a launcher's host (our own
+        // process) as bundle-less and the sticky mark greyed every own tile
+        // with the incompatible card (2026-09-14).
         let seen = snap.items.filter { $0.frame != nil && $0.hostIsBundleless }
             .compactMap(\.id.bundleID)
+            .filter { $0 != PelmetBundle.mainID }
         if !seen.allSatisfy(bundlelessHosts.contains) {
             bundlelessHosts.formUnion(seen)
             UserDefaults.standard.set(Array(bundlelessHosts), forKey: Self.bundlelessKey)
