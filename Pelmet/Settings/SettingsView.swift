@@ -701,7 +701,11 @@ private struct BehaviorPane: View {
         }
 
         SettingsCard(title: "Reveal") {
-            SettingToggleRow(title: "Reveal on hover", isOn: binding(\.revealTriggers.hoverEnabled))
+            SettingToggleRow(
+                title: "Reveal on hover",
+                caption: "Rest the pointer on the right half of the menu bar.",
+                isOn: binding(\.revealTriggers.hoverEnabled)
+            )
             if appState.settings.revealTriggers.hoverEnabled {
                 SettingSliderRow(
                     title: "Hover delay",

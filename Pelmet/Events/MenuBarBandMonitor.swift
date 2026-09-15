@@ -15,6 +15,11 @@ final class MenuBarBandMonitor {
     private var dragMonitor: Any?
     private var hoverTimer: Timer?
     private var pointerInBand = false
+    /// The hover reveal listens on the RIGHT half of the bar only: the left
+    /// half is app menus, and a bar that opened while the pointer went for
+    /// File or Edit pulled the eye to the far right for nothing (#21). The
+    /// band as a whole still holds rehide off (`pointerInBand`).
+    private var pointerInHoverZone = false
     private var cmdDragActive = false
     /// A ⌘-drag happened since the last adoption pass. Band-exit adoption is
     /// a catch-all for missed mouse-ups — but unconditionally snapshotting the
@@ -150,14 +155,8 @@ final class MenuBarBandMonitor {
         if inBand, !pointerInBand {
             pointerInBand = true
             appState.pointerReturnedToBand()
-            // A synthetic placement warps the pointer through the band — a
-            // hover reveal mid-drag injects a reveal/conceal cycle under the
-            // running drag (frames shift mid-measurement; seen live during
-            // the first overflow rescue). Not a hover.
-            scheduleHoverReveal()
         } else if !inBand, pointerInBand {
             pointerInBand = false
-            hoverTimer?.invalidate()
             hoverSuppressedUntilExit = false
             // Leaving the band arms the countdown (never an instant conceal),
             // and catches a ⌘-drag whose mouse-up the monitor missed.
@@ -167,6 +166,26 @@ final class MenuBarBandMonitor {
                 appState.adoptSectionsFromBar()
             }
         }
+        // The hover zone has its own edge: entering the band on the left and
+        // sliding right still counts, leaving the zone drops the dwell.
+        let inZone = inBand && screen.map { isHoverZone(location, of: $0) } == true
+        if inZone, !pointerInHoverZone {
+            pointerInHoverZone = true
+            PelmetLog.log("band: hover zone entered at x=\(Int(location.x)) (mid \(Int(screen?.frame.midX ?? -1)))")
+            // A synthetic placement warps the pointer through the band — a
+            // hover reveal mid-drag injects a reveal/conceal cycle under the
+            // running drag (frames shift mid-measurement; seen live during
+            // the first overflow rescue). Not a hover.
+            scheduleHoverReveal()
+        } else if !inZone, pointerInHoverZone {
+            pointerInHoverZone = false
+            hoverTimer?.invalidate()
+        }
+    }
+
+    /// Where a dwell opens the bar: the band, right of the screen's middle.
+    private func isHoverZone(_ point: NSPoint, of screen: NSScreen) -> Bool {
+        point.x >= screen.frame.midX
     }
 
     /// True while rehide should hold off: pointer in the band, over a
@@ -238,7 +257,7 @@ final class MenuBarBandMonitor {
         hoverTimer?.invalidate()
         hoverTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { _ in
             Task { @MainActor [weak self] in
-                guard let self, let appState = self.appState, self.pointerInBand else { return }
+                guard let self, let appState = self.appState, self.pointerInHoverZone else { return }
                 // Re-verify against the LIVE pointer, not just the
                 // tracked flag — the flag lags by one event-delivery
                 // latency, which is exactly a fast swipe-through. A
@@ -246,6 +265,7 @@ final class MenuBarBandMonitor {
                 let location = NSEvent.mouseLocation
                 guard let screen = NSScreen.containing(location),
                       self.isBarHover(location, of: screen),
+                      self.isHoverZone(location, of: screen),
                       !appState.syntheticDragInFlight else { return }
                 appState.reveal([.hidden], reason: .hover)
             }
@@ -262,7 +282,7 @@ final class MenuBarBandMonitor {
     }
 
     func rearmHoverAfterConceal() {
-        guard pointerInBand,
+        guard pointerInHoverZone,
               let appState,
               appState.settings.behavior(
                 forDisplayUUID: NSScreen.containing(NSEvent.mouseLocation)?.displayUUIDString

@@ -8469,6 +8469,64 @@
         }
       }
     },
+    "Rest the pointer on the right half of the menu bar.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeiger auf der rechten Hälfte der Menüleiste ruhen lassen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deja el puntero sobre la mitad derecha de la barra de menús."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laisse le pointeur sur la moitié droite de la barre des menus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lascia il puntatore sulla metà destra della barra dei menu."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーの右半分にポインタを置きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대 오른쪽 절반에 포인터를 올려 두세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deixe o ponteiro na metade direita da barra de menus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Задержите указатель на правой половине строки меню."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将指针停在菜单栏右半部分。"
+          }
+        }
+      }
+    },
     "Restore %@": {
       "localizations": {
         "de": {

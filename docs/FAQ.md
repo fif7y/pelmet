@@ -125,6 +125,10 @@ open, so the icon keeps pointing at what a click will do.
 0.1 to 0.5 seconds, in 0.1 steps. Auto-rehide runs from instant to 5 seconds
 in half-second steps. Both live in Settings → Behavior.
 
+**Hovering the left side of the menu bar doesn't reveal anything.**
+On purpose. The hover reveal listens on the right half of the bar, where the
+icons live. Reaching for an app's menus on the left leaves the bar alone.
+
 **I'm developing an app in Xcode and its menu bar icon disappears while Pelmet runs.**
 A macOS limitation with no setting for it. The system's menu-bar hiding mechanism
 matches apps by their LaunchServices registration, and apps running out of
