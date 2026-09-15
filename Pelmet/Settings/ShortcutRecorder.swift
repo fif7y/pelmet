@@ -27,7 +27,10 @@ struct ShortcutRecorder: View {
                     Text("Record shortcut")
                 }
             }
-            .font(.callout.monospaced())
+            // System font, not monospaced: mono shrinks ⇧⌥⌘ to specks. Apple's
+            // menus draw modifier glyphs this size with a touch of tracking.
+            .font(.system(size: 13, weight: .medium))
+            .kerning(1.5)
             .foregroundStyle(recording ? .secondary : .primary)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
