@@ -866,6 +866,12 @@ final class AppState {
         model.order[section] = order
         settings.sectionModel = model
         settings.save()
+        // A section move is a re-host for a separator (main ↔ helper bundle);
+        // `sync` is idempotent and a no-op for every other item. Without it
+        // the separator kept its old host until the next settings change and
+        // the placement below read it under the helper's bundle (log,
+        // 2026-09-14 23:52).
+        separators?.sync(with: settings.separators)
         // A deliberate editor drop supersedes any queued newcomer placement.
         placement.dropPlacement(id)
         PelmetLog.log("editor: move \(id.rawValue) → \(section) before=\(beforeID?.rawValue ?? "end")")
@@ -1428,6 +1434,9 @@ final class AppState {
         if result.changed {
             settings.sectionModel = result.model
             settings.save()
+            // A ⌘-drag across the chevron can move a separator between
+            // sections; its host follows the section (see `moveItem`).
+            separators?.sync(with: settings.separators)
             Task { await engine.setModel(result.model) }
         }
     }

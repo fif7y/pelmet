@@ -462,7 +462,6 @@ final class PlacementController {
             snap = await engine.snapshot()
             appState.updateSnapshot(snap)
         }
-        let pelmetBundle = PelmetBundle.mainID
         guard
             let item = liveItem(in: snap),
             let frame = item.frame
@@ -518,7 +517,12 @@ final class PlacementController {
         // the "lifted" coordinate space (`PlacementGeometry.lifted`): targets
         // computed in pre-lift coordinates land one slot off (verified:
         // consistent ±itemWidth misses in the logs).
-        let dragIsPelmetOwned = item.id.bundleID == pelmetBundle
+        // Own = any Pelmet host, helpers included: a helper-hosted separator
+        // is Pelmet's item under the main-bundle key (sectionKey folding),
+        // and it must never run the third-party bounce budget — the
+        // immovable mark refuses own bundles, so that path claimed "placed"
+        // and re-dragged it at every settle.
+        let dragIsPelmetOwned = item.id.bundleID.map(PelmetBundle.ownIDs.contains) ?? false
         func lifted(_ neighborFrame: CGRect) -> CGRect {
             PlacementGeometry.lifted(neighborFrame, dragged: frame, ownItem: dragIsPelmetOwned)
         }
