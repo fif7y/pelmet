@@ -284,7 +284,7 @@ final class AppState {
     /// relaunch: a brief adoption window, then place it.
     func reopenAdoption(for bundle: String) async {
         let keys = settings.sectionModel.assignments.keys.filter { $0.bundleID == bundle }
-        placement.pendingPlacements.formUnion(keys)
+        placement.queuePlacements(keys)
         if await engine.openAdoptionWindow(for: bundle) {
             absentBundles.remove(bundle)
             updateSnapshot(await engine.snapshot())
@@ -335,7 +335,7 @@ final class AppState {
         // The notification and the KVO path can both report one launch.
         if let last = lastRelaunchQueue[bundle], Date.now.timeIntervalSince(last) < 3 { return }
         lastRelaunchQueue[bundle] = .now
-        placement.pendingPlacements.formUnion(keys)
+        placement.queuePlacements(keys)
         PelmetLog.log("place: \(bundle) relaunched — queued \(keys.count) item(s) for re-slot")
         // The relaunched item registers UNDER an active assertion and parks
         // offscreen — it never enters the bar or the AX tree on its own (so
@@ -432,7 +432,7 @@ final class AppState {
             // destinations queue until a reveal makes them measurable.
             let launchSnapshot = await engine.snapshot()
             let launchNewItems = registerNewItems(from: launchSnapshot)
-            placement.pendingPlacements.formUnion(launchNewItems)
+            placement.queuePlacements(launchNewItems)
             // Pelmet's own extras and separators are fresh registrations on
             // every relaunch — the agent seeds their slot, not the model
             // (the media control landed in the hidden zone, 2026-09-02).
@@ -447,7 +447,7 @@ final class AppState {
                     .map(\.id.sectionKey)
             )
             let ownItems = (extras?.managedItemIDs ?? []) + (separators?.managedItemIDs ?? [])
-            placement.pendingPlacements.formUnion(ownItems.filter { liveKeys.contains($0.sectionKey) })
+            placement.queuePlacements(ownItems.filter { liveKeys.contains($0.sectionKey) })
             // The chevron's slot is the hidden cluster's right edge, only
             // measurable while that cluster is live — and right now, before
             // the first converge, everything is. Walk it HERE: doing it at a
@@ -813,7 +813,7 @@ final class AppState {
         settings.sectionModel = model
         settings.save()
         // A deliberate editor drop supersedes any queued newcomer placement.
-        placement.pendingPlacements.remove(id)
+        placement.dropPlacement(id)
         PelmetLog.log("editor: move \(id.rawValue) → \(section) before=\(beforeID?.rawValue ?? "end")")
         // Extras visibility applies via the engine's reflow companion during
         // the converge below — same reflow, same motion as everything else.
@@ -839,7 +839,7 @@ final class AppState {
     /// expansion. The next reveal settle places it, riding motion the user
     /// started. Editor drops still place immediately via moveItem.
     func queueDynamicExtraPlacement(_ id: ItemID) {
-        placement.pendingPlacements.insert(id)
+        placement.queuePlacement(id)
     }
 
     /// An own item that just (re-)entered a REVEALED bar sits at the agent's
@@ -848,7 +848,7 @@ final class AppState {
     /// Place it now, same beat as a freshly added extra; the reveal-settle
     /// queue would only catch the next reveal.
     func placeOwnItemSoon(_ id: ItemID) {
-        placement.pendingPlacements.remove(id)
+        placement.dropPlacement(id)
         Task {
             try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
             await placement.physicallyPlace(id, in: settings.sectionModel.section(of: id))
@@ -859,7 +859,7 @@ final class AppState {
     /// queue would retry (and log) a frameless placement on every reveal
     /// settle after it left layout.
     func cancelDynamicExtraPlacement(_ id: ItemID) {
-        placement.pendingPlacements.remove(id)
+        placement.dropPlacement(id)
     }
 
     /// Overflow rescue shims (PlacementController → SeparatorManager): expand
@@ -1377,7 +1377,7 @@ final class AppState {
             // allowlist) takes effect.
             Task {
                 let newItems = registerNewItems(from: await engine.snapshot())
-                placement.pendingPlacements.formUnion(newItems)
+                placement.queuePlacements(newItems)
                 await engine.setModel(settings.sectionModel)
                 // Visible-destined newcomers place right away; concealed
                 // destinations stay queued until a full reveal makes their

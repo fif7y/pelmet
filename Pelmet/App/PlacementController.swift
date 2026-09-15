@@ -68,13 +68,22 @@ final class PlacementController {
     private(set) var activePlacements = 0
     var syntheticDragInFlight: Bool { activePlacements > 0 }
 
+    /// One record per item: the newcomer queue, the reveal hold, the
+    /// rescue queue, the frameless clock and the correction budgets. The
+    /// rules live in PelmetCore; this controller only decides when to read
+    /// them.
+    private var ledger = PlacementLedger()
+
     /// Routed-but-not-yet-placed newcomers. A new icon spawns at the far left
     /// of the VISIBLE-at-that-moment items — but concealed cluster members
     /// rematerialize around it on reveal, stranding it mid-cluster (Figma
     /// landed between always-hidden icons). Placement into a concealed
     /// section can't be measured, so it waits here until a reveal gives the
     /// section live frames.
-    var pendingPlacements: Set<ItemID> = []
+    var pendingPlacements: Set<ItemID> { ledger.pending }
+    func queuePlacement(_ id: ItemID) { ledger.queue(id) }
+    func queuePlacements(_ ids: some Sequence<ItemID>) { ledger.queue(ids) }
+    func dropPlacement(_ id: ItemID) { ledger.dequeue(id) }
 
     /// Called on every reveal settle: place pending newcomers whose section
     /// is now measurable. Items meanwhile moved by the user (editor drop
@@ -93,19 +102,19 @@ final class PlacementController {
             var attempted = Set<ItemID>()
             while let id = pendingPlacements.subtracting(attempted).sorted(by: { $0.rawValue < $1.rawValue }).first {
                 attempted.insert(id)
-                pendingPlacements.remove(id)
+                ledger.dequeue(id)
                 guard let appState else { return }
                 let section = appState.settings.sectionModel.section(of: id)
                 // Held for the hidden cluster to materialize (see the
                 // hidden-zone rule in physicallyPlaceNow): don't burn a
                 // lookup wait on it until a reveal makes the drag safe.
-                if deferredForReveal.contains(id),
+                if ledger[id].deferredForReveal,
                    !appState.currentRevealedSections.contains(.hidden) {
-                    pendingPlacements.insert(id)
+                    ledger.queue(id)
                     continue
                 }
-                if let after = framelessRetryAfter[id], after > .now {
-                    pendingPlacements.insert(id)
+                if ledger.framelessRetryPending(id, now: .now) {
+                    ledger.queue(id)
                     continue
                 }
                 // Logged per attempt, not per flush: a concealed section's
@@ -120,7 +129,7 @@ final class PlacementController {
                 if id == AppState.chevronItemID { continue }
                 guard section == .visible
                     || appState.revealedSectionsForExtras.contains(section) else {
-                    pendingPlacements.insert(id)
+                    ledger.queue(id)
                     continue
                 }
                 PelmetLog.log("place: attempting \(id.rawValue) (section \(section))")
@@ -128,20 +137,17 @@ final class PlacementController {
                 if placed {
                     // A verified reveal-time placement ends any rescue
                     // ping-pong — the item is truly in its slot.
-                    rescueAttempts.removeValue(forKey: id)
-                    frameless.removeValue(forKey: id)
-                    framelessRetryAfter.removeValue(forKey: id)
-                } else if let since = frameless[id] {
+                    ledger.notePlaced(id)
+                } else if let framelessFor = ledger.scheduleFramelessRetry(id, now: .now) {
                     // No frame at all. If its section is on screen right now
                     // the registration is parked — ask for an adoption
                     // window (rate-limited per bundle), and retry slowly.
-                    framelessRetryAfter[id] = .now.addingTimeInterval(Self.framelessRetryInterval)
                     let onScreen = section == .visible || appState.currentRevealedSections.contains(section)
                     if onScreen, let bundle = id.bundleID, bundle != PelmetBundle.mainID,
-                       Date.now.timeIntervalSince(since) > 2,
+                       framelessFor > 2,
                        (readoptRequested[bundle].map { Date.now.timeIntervalSince($0) > Self.readoptInterval } ?? true) {
                         readoptRequested[bundle] = .now
-                        PelmetLog.log("place: \(id.rawValue) has had no frame for \(Int(Date.now.timeIntervalSince(since)))s while its section is on screen — asking for an adoption window")
+                        PelmetLog.log("place: \(id.rawValue) has had no frame for \(Int(framelessFor))s while its section is on screen — asking for an adoption window")
                         let state = appState
                         Task { await state.reopenAdoption(for: bundle) }
                     }
@@ -153,42 +159,25 @@ final class PlacementController {
                 // controls with nothing playing) — it attaches leftmost in
                 // its section when it next shows, so a standing placement
                 // would only re-run the lookup wait at every flush.
-                if !placed, !pendingRescues.contains(id) {
-                    if deferredForReveal.contains(id) {
-                        pendingPlacements.insert(id)
+                if !placed, !ledger[id].rescueQueued {
+                    if ledger[id].deferredForReveal {
+                        ledger.queue(id)
                     } else if MenuBarPolicy.isPelmetExtraID(id), !id.isPelmetSeparator {
                         PelmetLog.log("place: \(id.rawValue) not hosted — dropped from the queue")
                     } else {
-                        pendingPlacements.insert(id)
+                        ledger.queue(id)
                     }
                 }
             }
         }
     }
 
-    /// Items whose last attempt found no frame at all, with the time of the
-    /// first such miss. Retried on a slow clock, and once the item should be
-    /// visible (its section revealed) the app is asked to re-adopt it.
-    private var frameless: [ItemID: Date] = [:]
-    private var framelessRetryAfter: [ItemID: Date] = [:]
+    /// Adoption windows asked for on behalf of frameless items whose section
+    /// is on screen (their registration is parked), rate-limited per bundle.
     private var readoptRequested: [String: Date] = [:]
-    private static let framelessRetryInterval: TimeInterval = 30
     private static let readoptInterval: TimeInterval = 120
 
-    /// Placements held until the hidden cluster is materialized: their drag
-    /// would touch the hidden zone while its items are absent. Stay queued
-    /// (extras included) and try again at the next reveal settle.
-    private var deferredForReveal: Set<ItemID> = []
-
     // MARK: - Order supervisor (wrong side of the chevron)
-
-    /// Per-item correction budget. A correction is a drag under a reveal;
-    /// an item that will not stay put after a few of them is left alone for
-    /// a while rather than dragged on every hover.
-    private var driftAttempts: [ItemID: Int] = [:]
-    private var driftCoolOffUntil: [ItemID: Date] = [:]
-    private static let maxDriftAttempts = 3
-    private static let driftCoolOff: TimeInterval = 8 * 60
 
     /// Reveal-settle check: every live item on the wrong side of the
     /// chevron for its model section is queued for a corrective placement
@@ -303,7 +292,7 @@ final class PlacementController {
             }
         }
         if a.misplaced.isEmpty {
-            for id in driftAttempts.keys { driftAttempts.removeValue(forKey: id) }
+            ledger.resetDriftBudget(except: [])
             PelmetLog.log("drift: none (chevron@\(a.chevronMinX), \(a.measuredCount) measured)")
             return
         }
@@ -320,23 +309,18 @@ final class PlacementController {
         let misplaced = b.misplaced
         let chevron = CGRect(x: b.chevronMinX, y: 0, width: 0, height: 0)
         // Anything now on its side has earned its budget back.
-        for id in driftAttempts.keys where !misplaced.contains(id) {
-            driftAttempts.removeValue(forKey: id)
-        }
+        ledger.resetDriftBudget(except: misplaced)
         var queued: [String] = []
         for id in misplaced {
-            if let until = driftCoolOffUntil[id], until > .now { continue }
-            driftCoolOffUntil.removeValue(forKey: id)
-            let attempts = driftAttempts[id, default: 0] + 1
-            driftAttempts[id] = attempts
-            if attempts > Self.maxDriftAttempts {
-                driftCoolOffUntil[id] = .now.addingTimeInterval(Self.driftCoolOff)
-                driftAttempts.removeValue(forKey: id)
-                PelmetLog.log("drift: \(id.rawValue) would not stay on its side after \(Self.maxDriftAttempts) corrections — leaving it for \(Int(Self.driftCoolOff / 60)) min")
+            switch ledger.spendDriftAttempt(id, now: .now) {
+            case .skip:
                 continue
+            case .coolOff:
+                PelmetLog.log("drift: \(id.rawValue) would not stay on its side after \(PlacementLedger.maxDriftAttempts) corrections — leaving it for \(Int(PlacementLedger.driftCoolOff / 60)) min")
+            case .correct(let attempt):
+                ledger.queue(id)
+                queued.append("\(id.rawValue)#\(attempt)")
             }
-            pendingPlacements.insert(id)
-            queued.append("\(id.rawValue)#\(attempts)")
         }
         PelmetLog.log("drift: \(misplaced.map(\.rawValue)) misplaced (chevron@\(chevron.minX)) — queued \(queued)")
     }
@@ -349,13 +333,11 @@ final class PlacementController {
     /// would grab whatever REALLY sits at that point. De-crowding
     /// materializes trapped items with real in-band frames (verified live
     /// 2026-08-21), so placement defers to the next conceal settle.
-    private(set) var pendingRescues: Set<ItemID> = []
-    private var rescueAttempts: [ItemID: Int] = [:]
+    var pendingRescues: Set<ItemID> { ledger.rescueQueued }
     private var rescuing = false
-    private static let maxRescueAttempts = 3
 
     private func queueRescue(_ id: ItemID) {
-        guard pendingRescues.insert(id).inserted else { return }
+        guard ledger.queueRescue(id) else { return }
         PelmetLog.log("rescue: \(id.rawValue) queued for next conceal settle")
     }
 
@@ -370,7 +352,7 @@ final class PlacementController {
         guard !pendingRescues.isEmpty, !rescuing else { return }
         rescuing = true
         let queued = pendingRescues
-        pendingRescues.removeAll()
+        for id in queued { ledger[id].rescueQueued = false }
         Task { [weak self] in
             guard let self else { return }
             defer { self.rescuing = false }
@@ -389,7 +371,7 @@ final class PlacementController {
                 activePlacements -= 1
                 // The attempt may have re-queued itself (still phantom) —
                 // this loop is the single requeue authority.
-                pendingRescues.remove(id)
+                ledger[id].rescueQueued = false
                 if placed {
                     // Zone placement only: the section's neighbors are
                     // concealed here, so the target was the chevron fallback
@@ -398,17 +380,15 @@ final class PlacementController {
                     // frames. Attempts reset there, not here — a reveal that
                     // re-traps the item ping-pongs back to rescue, and the
                     // cap must span the whole cycle.
-                    pendingPlacements.insert(id)
+                    ledger.queue(id)
                     PelmetLog.log("rescue: \(id.rawValue) zone-placed — exact slot at next reveal settle")
                 } else {
-                    let attempts = rescueAttempts[id, default: 0] + 1
-                    rescueAttempts[id] = attempts
-                    if attempts < Self.maxRescueAttempts {
-                        pendingRescues.insert(id)
-                        PelmetLog.log("rescue: \(id.rawValue) failed (attempt \(attempts)) — requeued")
+                    let (attempt, requeue) = ledger.spendRescueAttempt(id)
+                    if requeue {
+                        ledger[id].rescueQueued = true
+                        PelmetLog.log("rescue: \(id.rawValue) failed (attempt \(attempt)) — requeued")
                     } else {
-                        rescueAttempts.removeValue(forKey: id)
-                        PelmetLog.log("rescue: \(id.rawValue) gave up after \(attempts) attempts")
+                        PelmetLog.log("rescue: \(id.rawValue) gave up after \(attempt) attempts")
                     }
                 }
             }
@@ -488,10 +468,10 @@ final class PlacementController {
             let frame = item.frame
         else {
             PelmetLog.log("place: no frame for \(id.rawValue) — skipping physical move (concealed?)")
-            if frameless[id] == nil { frameless[id] = .now }
+            ledger.noteFrameless(id, now: .now)
             return false
         }
-        frameless.removeValue(forKey: id)
+        ledger.noteFrame(id)
         // In flight from HERE: the pre-settle and the frame lookup above are
         // ~2s of waiting with no synthetic events, and counting them held
         // the rehide (3s deferral) and swallowed hover reveals after every
@@ -727,10 +707,10 @@ final class PlacementController {
            !appState.currentRevealedSections.contains(.hidden),
            frame.midX < chevron.midX || targetX < chevron.midX {
             PelmetLog.log("place: \(id.rawValue) touches the hidden zone while it is concealed (x=\(frame.midX) → \(targetX), chevron@\(chevron.midX)) — waiting for a reveal")
-            deferredForReveal.insert(id)
+            ledger[id].deferredForReveal = true
             return false
         }
-        deferredForReveal.remove(id)
+        ledger[id].deferredForReveal = false
         // The chevron's slot is an ORDER, not an x: with both boundary
         // neighbors live, sitting between them is the whole job. The x
         // target is a 13pt-off estimate that dragged it every launch and
