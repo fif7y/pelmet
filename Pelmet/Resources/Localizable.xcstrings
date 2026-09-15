@@ -2611,6 +2611,64 @@
         }
       }
     },
+    "Click, then press the new shortcut. ⎋ cancels, ⌫ removes it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken, dann das neue Kürzel drücken. ⎋ bricht ab, ⌫ entfernt es."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz clic y pulsa el nuevo atajo. ⎋ cancela, ⌫ lo elimina."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez, puis tapez le nouveau raccourci. ⎋ annule, ⌫ le supprime."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fai clic, poi premi la nuova scorciatoia. ⎋ annulla, ⌫ la rimuove."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリックしてから新しいショートカットを押します。⎋ でキャンセル、⌫ で削除。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클릭한 뒤 새 단축키를 누르세요. ⎋ 취소, ⌫ 제거."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clique e pressione o novo atalho. ⎋ cancela, ⌫ remove."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нажмите, затем введите новое сочетание. ⎋ отменяет, ⌫ удаляет."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击后按下新快捷键。⎋ 取消，⌫ 移除。"
+          }
+        }
+      }
+    },
     "Collapse": {
       "localizations": {
         "de": {
@@ -4003,6 +4061,64 @@
         }
       }
     },
+    "Held by another app — record a different one.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird von einer anderen App belegt — nimm ein anderes auf."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otra app ya lo usa — graba uno distinto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déjà pris par une autre app — enregistrez-en un autre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Già usata da un’altra app — registrane un’altra."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのアプリが使用中です。別のショートカットを記録してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 앱이 사용 중입니다. 다른 단축키를 기록하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outro app já o usa — grave um diferente."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Занято другим приложением — запишите другое."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已被其他应用占用，请录制另一个。"
+          }
+        }
+      }
+    },
     "Hidden": {
       "localizations": {
         "de": {
@@ -4235,60 +4351,60 @@
         }
       }
     },
-    "Hover the bar to peek, click the chevron to toggle, right-click it for settings. Everything else is arrangeable in Pelmet Settings › Menu Bar.": {
+    "Hover the bar to peek, click the chevron to toggle (⌥⌘, does it from anywhere), right-click it for settings. Everything else is arrangeable in Pelmet Settings › Menu Bar.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Leiste überfahren zum Spicken, Chevron anklicken zum Umschalten, Rechtsklick für die Einstellungen. Alles Weitere ordnest du unter Pelmet-Einstellungen › Menüleiste."
+            "value": "Leiste überfahren zum Spicken, Chevron anklicken zum Umschalten (⌥⌘, geht von überall), Rechtsklick für die Einstellungen. Alles Weitere ordnest du unter Pelmet-Einstellungen › Menüleiste."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pasa el cursor por la barra para echar un vistazo, haz clic en el chevrón para alternar y clic derecho para los ajustes. Todo lo demás se organiza en Ajustes de Pelmet › Barra de menús."
+            "value": "Pasa el cursor por la barra para echar un vistazo, haz clic en el chevrón para alternar (⌥⌘, lo hace desde cualquier app) y clic derecho para los ajustes. Todo lo demás se organiza en Ajustes de Pelmet › Barra de menús."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Survolez la barre pour jeter un œil, cliquez sur le chevron pour basculer, clic droit pour les réglages. Tout le reste s’organise dans Réglages de Pelmet › Barre des menus."
+            "value": "Survolez la barre pour jeter un œil, cliquez sur le chevron pour basculer (⌥⌘, le fait de n’importe où), clic droit pour les réglages. Tout le reste s’organise dans Réglages de Pelmet › Barre des menus."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passa il cursore sulla barra per sbirciare, fai clic sul chevron per alternare, clic destro per le impostazioni. Tutto il resto si sistema in Impostazioni di Pelmet › Barra dei menu."
+            "value": "Passa il cursore sulla barra per sbirciare, fai clic sul chevron per alternare (⌥⌘, lo fa da qualsiasi app), clic destro per le impostazioni. Tutto il resto si sistema in Impostazioni di Pelmet › Barra dei menu."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バーにホバーでちらっと表示、シェブロンをクリックで切り替え、右クリックで設定。その他はすべて「Pelmet設定」›「メニューバー」で並べ替えられます。"
+            "value": "バーにホバーでちらっと表示、シェブロンをクリックで切り替え（⌥⌘, ならどこからでも）、右クリックで設定。その他はすべて「Pelmet設定」›「メニューバー」で並べ替えられます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "막대에 마우스를 올려 살짝 보고, 쉐브론을 클릭해 전환하고, 오른쪽 클릭으로 설정을 엽니다. 나머지는 모두 Pelmet 설정 › 메뉴 막대에서 정리할 수 있습니다."
+            "value": "막대에 마우스를 올려 살짝 보고, 쉐브론을 클릭해 전환하고(⌥⌘, 로 어디서든 가능), 오른쪽 클릭으로 설정을 엽니다. 나머지는 모두 Pelmet 설정 › 메뉴 막대에서 정리할 수 있습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Passe o cursor na barra para espiar, clique no chevron para alternar, clique com o botão direito para os ajustes. Todo o resto se organiza em Ajustes do Pelmet › Barra de menus."
+            "value": "Passe o cursor na barra para espiar, clique no chevron para alternar (⌥⌘, faz isso de qualquer app), clique com o botão direito para os ajustes. Todo o resto se organiza em Ajustes do Pelmet › Barra de menus."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Наведите на строку, чтобы взглянуть, щёлкните шеврон для переключения, правый щелчок — настройки. Всё остальное настраивается в Настройки Pelmet › Строка меню."
+            "value": "Наведите на строку, чтобы взглянуть, щёлкните шеврон для переключения (⌥⌘, работает отовсюду), правый щелчок — настройки. Всё остальное настраивается в Настройки Pelmet › Строка меню."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "悬停菜单栏可快速查看，点击尖角符号切换，右键打开设置。其余一切可在 Pelmet 设置 › 菜单栏中安排。"
+            "value": "悬停菜单栏可快速查看，点击尖角符号切换（⌥⌘, 在任何地方都可以），右键打开设置。其余一切可在 Pelmet 设置 › 菜单栏中安排。"
           }
         }
       }
@@ -4927,6 +5043,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "启动器已就绪"
+          }
+        }
+      }
+    },
+    "Keyboard shortcut": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tastenkürzel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atajo de teclado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raccourci clavier"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorciatoia da tastiera"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボードショートカット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "키보드 단축키"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atalho de teclado"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сочетание клавиш"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "键盘快捷键"
           }
         }
       }
@@ -7599,6 +7773,64 @@
         }
       }
     },
+    "Record shortcut": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kürzel aufnehmen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabar atajo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer un raccourci"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra scorciatoia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ショートカットを記録"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키 기록"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravar atalho"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Записать сочетание"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录制快捷键"
+          }
+        }
+      }
+    },
     "Rehide when clicking elsewhere": {
       "localizations": {
         "de": {
@@ -10035,6 +10267,64 @@
         }
       }
     },
+    "Toggles the hidden icons from anywhere.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blendet die ausgeblendeten Symbole von überall ein und aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra u oculta los iconos ocultos desde cualquier app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affiche ou masque les icônes cachées depuis n’importe où."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra o nasconde le icone nascoste da qualsiasi app."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どこからでも隠したアイコンを切り替えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어디서든 숨긴 아이콘을 전환합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra ou oculta os ícones ocultos de qualquer app."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывает и скрывает спрятанные значки из любого приложения."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在任何地方切换隐藏的图标。"
+          }
+        }
+      }
+    },
     "Turn this icon off in %@'s settings. The launcher takes over from there.": {
       "localizations": {
         "de": {
@@ -10147,6 +10437,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "两个权限。"
+          }
+        }
+      }
+    },
+    "Type shortcut…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kürzel drücken…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulsa el atajo…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tapez le raccourci…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premi la scorciatoia…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ショートカットを押してください…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키를 누르세요…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite o atalho…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нажмите сочетание…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按下快捷键…"
           }
         }
       }

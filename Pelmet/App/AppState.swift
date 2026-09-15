@@ -29,6 +29,10 @@ final class AppState {
     /// the window closed) hover-rehide behaves normally (Gab, 2026-09-02).
     var editorHoldsBar: Bool { settingsWindowVisible && settingsTab == .menuBar }
 
+    /// The shortcut in settings could not be registered (another app holds
+    /// it) — the General row says so beside the recorder.
+    private(set) var hotkeyConflict = false
+
     var settingsWindowVisible = false {
         didSet {
             guard oldValue != settingsWindowVisible else { return }
@@ -237,7 +241,7 @@ final class AppState {
         let hotkey = HotkeyManager { [weak self] in
             self?.toggle(reason: .hotkey)
         }
-        hotkey.register(settings.hotkey)
+        hotkeyConflict = !hotkey.register(settings.hotkey)
         registeredHotkey = settings.hotkey
         self.hotkey = hotkey
 
@@ -717,7 +721,7 @@ final class AppState {
         // Re-registering unregisters first — a per-tick re-register left the
         // shortcut momentarily dead. Only touch it when it actually changed.
         if settings.hotkey != registeredHotkey {
-            hotkey?.register(settings.hotkey)
+            hotkeyConflict = !(hotkey?.register(settings.hotkey) ?? true)
             registeredHotkey = settings.hotkey
         }
         // Newly created separators and toggled-on extras get hosted wherever

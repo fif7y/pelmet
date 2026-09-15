@@ -47,3 +47,49 @@ import Testing
         #expect(decoded.barRightClickMenuActive)
     }
 }
+
+@Suite struct HotkeySettingsTests {
+    private func json(_ store: SettingsStore) throws -> [String: Any] {
+        try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(store)) as? [String: Any])
+    }
+
+    @Test func freshStoreCarriesTheDefaultShortcut() {
+        #expect(SettingsStore().hotkey == .default)
+        #expect(HotkeySpec.default.display == "⌥⌘,")
+    }
+
+    /// Blobs written before the default existed have no `hotkey` key at all
+    /// (or a nil that was never written): they pick the default up.
+    @Test func missingKeyMeansNeverSetAndTakesTheDefault() throws {
+        var blob = try json(SettingsStore())
+        blob.removeValue(forKey: "hotkey")
+        let decoded = try JSONDecoder().decode(SettingsStore.self, from: JSONSerialization.data(withJSONObject: blob))
+        #expect(decoded.hotkey == .default)
+    }
+
+    /// The user removed it: the null is written out and survives a reload.
+    @Test func clearedShortcutStaysClearedAcrossSaveAndLoad() throws {
+        var store = SettingsStore()
+        store.hotkey = nil
+        let blob = try json(store)
+        #expect(blob.keys.contains("hotkey"))
+        #expect(blob["hotkey"] is NSNull)
+        let decoded = try JSONDecoder().decode(SettingsStore.self, from: JSONEncoder().encode(store))
+        #expect(decoded.hotkey == nil)
+    }
+
+    @Test func recordedShortcutRoundTripsWithItsDisplay() throws {
+        var store = SettingsStore()
+        store.hotkey = HotkeySpec(keyCode: 49, modifiers: 0x1000, display: "⌃Space")
+        let decoded = try JSONDecoder().decode(SettingsStore.self, from: JSONEncoder().encode(store))
+        #expect(decoded.hotkey == store.hotkey)
+        #expect(decoded.hotkey?.display == "⌃Space")
+    }
+
+    /// A pre-display blob holding the default combo shows as "⌥⌘," anyway.
+    @Test func legacySpecWithoutDisplayGetsTheDefaultGlyphs() throws {
+        let data = Data(#"{"hotkey":{"keyCode":43,"modifiers":2304}}"#.utf8)
+        let decoded = try JSONDecoder().decode(SettingsStore.self, from: data)
+        #expect(decoded.hotkey?.display == "⌥⌘,")
+    }
+}

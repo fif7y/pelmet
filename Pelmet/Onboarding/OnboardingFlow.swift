@@ -352,7 +352,7 @@ private struct ReadyStep: View {
 
             Spacer().frame(height: 16)
 
-            Text("Hover the bar to peek, click the chevron to toggle, right-click it for settings. Everything else is arrangeable in Pelmet Settings › Menu Bar.")
+            Text("Hover the bar to peek, click the chevron to toggle (⌥⌘, does it from anywhere), right-click it for settings. Everything else is arrangeable in Pelmet Settings › Menu Bar.")
                 .font(.system(size: 13))
                 .foregroundStyle(Ink.textDim)
                 .frame(maxWidth: 420, alignment: .leading)

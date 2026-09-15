@@ -557,6 +557,14 @@ private struct GeneralPane: View {
                     StatusIconPicker(selection: binding(\.statusIconStyle))
                 }
             }
+            SettingRow(
+                title: "Keyboard shortcut",
+                caption: appState.hotkeyConflict
+                    ? "Held by another app — record a different one."
+                    : "Toggles the hidden icons from anywhere."
+            ) {
+                ShortcutRecorder(shortcut: binding(\.hotkey))
+            }
             SettingToggleRow(
                 // Named, not spelled out: a sentence long enough to say the
                 // whole thing ("Right-click the menu bar for Pelmet's menu")

@@ -94,9 +94,13 @@ is notarized by Apple, ships with the hardened runtime, and updates are signed
 Pelmet checks a signed appcast and offers updates in-app (Sparkle). You can
 check manually in Settings → About.
 
+**Is there a keyboard shortcut?**
+⌥⌘, shows and hides the hidden icons from any app. Record a different one, or
+remove it, in Settings → General.
+
 **How do I open Settings if I turned the Pelmet icon off?**
-Any of: the global shortcut (⌥⌘, by default), right-click a Pelmet separator,
-right-click empty menu bar space, or launch Pelmet again from Finder/Spotlight.
+Any of: right-click a Pelmet separator, right-click empty menu bar space, or
+launch Pelmet again from Finder/Spotlight.
 
 **Right-clicking the menu bar opens Pelmet's menu and I don't want it to.**
 Settings → General → "Right-click menu". Turn it off

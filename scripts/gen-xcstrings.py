@@ -204,16 +204,16 @@ T = {
         ko="쉐브론 왼쪽은 숨고 오른쪽은 남습니다. 실제 막대에서는 ⌘를 누른 채 드래그하거나, Pelmet 설정에서 모두 정리하세요.",
         ru="Левее шеврона — скрыто, правее — видно. В настоящей строке удерживайте ⌘ при перетаскивании или расставьте всё в настройках Pelmet."),
     "Settled in.": dict(de="Eingerichtet.", fr="Bien installé.", es="Todo listo.", it="Tutto a posto.", pt="Tudo pronto.", ja="準備完了。", zh="一切就绪。", ko="준비 완료.", ru="Всё готово."),
-    "Hover the bar to peek, click the chevron to toggle, right-click it for settings. Everything else is arrangeable in Pelmet Settings › Menu Bar.": dict(
-        de="Leiste überfahren zum Spicken, Chevron anklicken zum Umschalten, Rechtsklick für die Einstellungen. Alles Weitere ordnest du unter Pelmet-Einstellungen › Menüleiste.",
-        fr="Survolez la barre pour jeter un œil, cliquez sur le chevron pour basculer, clic droit pour les réglages. Tout le reste s’organise dans Réglages de Pelmet › Barre des menus.",
-        es="Pasa el cursor por la barra para echar un vistazo, haz clic en el chevrón para alternar y clic derecho para los ajustes. Todo lo demás se organiza en Ajustes de Pelmet › Barra de menús.",
-        it="Passa il cursore sulla barra per sbirciare, fai clic sul chevron per alternare, clic destro per le impostazioni. Tutto il resto si sistema in Impostazioni di Pelmet › Barra dei menu.",
-        pt="Passe o cursor na barra para espiar, clique no chevron para alternar, clique com o botão direito para os ajustes. Todo o resto se organiza em Ajustes do Pelmet › Barra de menus.",
-        ja="バーにホバーでちらっと表示、シェブロンをクリックで切り替え、右クリックで設定。その他はすべて「Pelmet設定」›「メニューバー」で並べ替えられます。",
-        zh="悬停菜单栏可快速查看，点击尖角符号切换，右键打开设置。其余一切可在 Pelmet 设置 › 菜单栏中安排。",
-        ko="막대에 마우스를 올려 살짝 보고, 쉐브론을 클릭해 전환하고, 오른쪽 클릭으로 설정을 엽니다. 나머지는 모두 Pelmet 설정 › 메뉴 막대에서 정리할 수 있습니다.",
-        ru="Наведите на строку, чтобы взглянуть, щёлкните шеврон для переключения, правый щелчок — настройки. Всё остальное настраивается в Настройки Pelmet › Строка меню."),
+    "Hover the bar to peek, click the chevron to toggle (⌥⌘, does it from anywhere), right-click it for settings. Everything else is arrangeable in Pelmet Settings › Menu Bar.": dict(
+        de="Leiste überfahren zum Spicken, Chevron anklicken zum Umschalten (⌥⌘, geht von überall), Rechtsklick für die Einstellungen. Alles Weitere ordnest du unter Pelmet-Einstellungen › Menüleiste.",
+        fr="Survolez la barre pour jeter un œil, cliquez sur le chevron pour basculer (⌥⌘, le fait de n’importe où), clic droit pour les réglages. Tout le reste s’organise dans Réglages de Pelmet › Barre des menus.",
+        es="Pasa el cursor por la barra para echar un vistazo, haz clic en el chevrón para alternar (⌥⌘, lo hace desde cualquier app) y clic derecho para los ajustes. Todo lo demás se organiza en Ajustes de Pelmet › Barra de menús.",
+        it="Passa il cursore sulla barra per sbirciare, fai clic sul chevron per alternare (⌥⌘, lo fa da qualsiasi app), clic destro per le impostazioni. Tutto il resto si sistema in Impostazioni di Pelmet › Barra dei menu.",
+        pt="Passe o cursor na barra para espiar, clique no chevron para alternar (⌥⌘, faz isso de qualquer app), clique com o botão direito para os ajustes. Todo o resto se organiza em Ajustes do Pelmet › Barra de menus.",
+        ja="バーにホバーでちらっと表示、シェブロンをクリックで切り替え（⌥⌘, ならどこからでも）、右クリックで設定。その他はすべて「Pelmet設定」›「メニューバー」で並べ替えられます。",
+        zh="悬停菜单栏可快速查看，点击尖角符号切换（⌥⌘, 在任何地方都可以），右键打开设置。其余一切可在 Pelmet 设置 › 菜单栏中安排。",
+        ko="막대에 마우스를 올려 살짝 보고, 쉐브론을 클릭해 전환하고(⌥⌘, 로 어디서든 가능), 오른쪽 클릭으로 설정을 엽니다. 나머지는 모두 Pelmet 설정 › 메뉴 막대에서 정리할 수 있습니다.",
+        ru="Наведите на строку, чтобы взглянуть, щёлкните шеврон для переключения (⌥⌘, работает отовсюду), правый щелчок — настройки. Всё остальное настраивается в Настройки Pelmet › Строка меню."),
     "Open Pelmet at login": dict(de="Pelmet bei der Anmeldung öffnen", fr="Ouvrir Pelmet à l’ouverture de session", es="Abrir Pelmet al iniciar sesión", it="Apri Pelmet al login", pt="Abrir o Pelmet ao iniciar sessão", ja="ログイン時にPelmetを開く", zh="登录时打开 Pelmet", ko="로그인 시 Pelmet 열기", ru="Открывать Pelmet при входе"),
     "Drag me left of the chevron": dict(de="Zieh mich links neben den Chevron", fr="Glissez-moi à gauche du chevron", es="Arrástrame a la izquierda del chevrón", it="Trascinami a sinistra del chevron", pt="Arraste-me para a esquerda do chevron", ja="シェブロンの左へドラッグしてください", zh="把我拖到尖角符号左侧", ko="쉐브론 왼쪽으로 드래그하세요", ru="Перетащите меня левее шеврона"),
 
@@ -327,6 +327,12 @@ T = {
     "Add a launcher": dict(de="Starter hinzufügen", fr="Ajouter un lanceur", es="Añadir un lanzador", it="Aggiungi un avvio app", pt="Adicionar um atalho", ja="ランチャーを追加", zh="添加启动器", ko="실행기 추가", ru="Добавить запуск"),
     "Choose an app to launch": dict(de="App zum Öffnen auswählen", fr="Choisissez l’app à ouvrir", es="Elige la app que quieres abrir", it="Scegli l’app da aprire", pt="Escolha o app a abrir", ja="開くアプリを選択", zh="选择要打开的应用", ko="열 앱 선택", ru="Выберите приложение для запуска"),
     "Quit %@": dict(de="%@ beenden", fr="Quitter %@", es="Salir de %@", it="Esci da %@", pt="Encerrar %@", ja="%@ を終了", zh="退出 %@", ko="%@ 종료", ru="Завершить %@"),
+    "Keyboard shortcut": dict(de="Tastenkürzel", fr="Raccourci clavier", es="Atajo de teclado", it="Scorciatoia da tastiera", pt="Atalho de teclado", ja="キーボードショートカット", zh="键盘快捷键", ko="키보드 단축키", ru="Сочетание клавиш"),
+    "Toggles the hidden icons from anywhere.": dict(de="Blendet die ausgeblendeten Symbole von überall ein und aus.", fr="Affiche ou masque les icônes cachées depuis n’importe où.", es="Muestra u oculta los iconos ocultos desde cualquier app.", it="Mostra o nasconde le icone nascoste da qualsiasi app.", pt="Mostra ou oculta os ícones ocultos de qualquer app.", ja="どこからでも隠したアイコンを切り替えます。", zh="在任何地方切换隐藏的图标。", ko="어디서든 숨긴 아이콘을 전환합니다.", ru="Показывает и скрывает спрятанные значки из любого приложения."),
+    "Held by another app — record a different one.": dict(de="Wird von einer anderen App belegt — nimm ein anderes auf.", fr="Déjà pris par une autre app — enregistrez-en un autre.", es="Otra app ya lo usa — graba uno distinto.", it="Già usata da un’altra app — registrane un’altra.", pt="Outro app já o usa — grave um diferente.", ja="ほかのアプリが使用中です。別のショートカットを記録してください。", zh="已被其他应用占用，请录制另一个。", ko="다른 앱이 사용 중입니다. 다른 단축키를 기록하세요.", ru="Занято другим приложением — запишите другое."),
+    "Record shortcut": dict(de="Kürzel aufnehmen", fr="Enregistrer un raccourci", es="Grabar atajo", it="Registra scorciatoia", pt="Gravar atalho", ja="ショートカットを記録", zh="录制快捷键", ko="단축키 기록", ru="Записать сочетание"),
+    "Type shortcut…": dict(de="Kürzel drücken…", fr="Tapez le raccourci…", es="Pulsa el atajo…", it="Premi la scorciatoia…", pt="Digite o atalho…", ja="ショートカットを押してください…", zh="按下快捷键…", ko="단축키를 누르세요…", ru="Нажмите сочетание…"),
+    "Click, then press the new shortcut. ⎋ cancels, ⌫ removes it.": dict(de="Klicken, dann das neue Kürzel drücken. ⎋ bricht ab, ⌫ entfernt es.", fr="Cliquez, puis tapez le nouveau raccourci. ⎋ annule, ⌫ le supprime.", es="Haz clic y pulsa el nuevo atajo. ⎋ cancela, ⌫ lo elimina.", it="Fai clic, poi premi la nuova scorciatoia. ⎋ annulla, ⌫ la rimuove.", pt="Clique e pressione o novo atalho. ⎋ cancela, ⌫ remove.", ja="クリックしてから新しいショートカットを押します。⎋ でキャンセル、⌫ で削除。", zh="点击后按下新快捷键。⎋ 取消，⌫ 移除。", ko="클릭한 뒤 새 단축키를 누르세요. ⎋ 취소, ⌫ 제거.", ru="Нажмите, затем введите новое сочетание. ⎋ отменяет, ⌫ удаляет."),
 }
 
 LANG_CODES = {"de": "de", "fr": "fr", "es": "es", "it": "it", "pt": "pt-BR", "ja": "ja", "zh": "zh-Hans", "ko": "ko", "ru": "ru"}

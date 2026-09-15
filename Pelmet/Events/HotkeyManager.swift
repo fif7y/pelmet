@@ -5,6 +5,7 @@
 import Carbon.HIToolbox
 import Foundation
 import PelmetCore
+import PelmetEngine
 
 final class HotkeyManager {
     private var hotKeyRef: EventHotKeyRef?
@@ -18,9 +19,12 @@ final class HotkeyManager {
     // No deinit: the manager lives for the app's lifetime (owned by AppState);
     // register(_:) unregisters the previous hotkey on every change.
 
-    func register(_ spec: HotkeySpec?) {
+    /// False when the combo is already held elsewhere (RegisterEventHotKey
+    /// refuses a duplicate) — the General row tells the user to pick another.
+    @discardableResult
+    func register(_ spec: HotkeySpec?) -> Bool {
         unregister()
-        guard let spec else { return }
+        guard let spec else { return true }
 
         var eventType = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
@@ -42,7 +46,7 @@ final class HotkeyManager {
         )
 
         let hotKeyID = EventHotKeyID(signature: OSType(0x4E4F4F4B) /* PELMET */, id: 1)
-        RegisterEventHotKey(
+        let status = RegisterEventHotKey(
             spec.keyCode,
             spec.modifiers,
             hotKeyID,
@@ -50,6 +54,11 @@ final class HotkeyManager {
             0,
             &hotKeyRef
         )
+        if status != noErr {
+            PelmetLog.log("hotkey: \(spec.display) not registered (status \(status)) — held by another app?")
+            hotKeyRef = nil
+        }
+        return status == noErr
     }
 
     func unregister() {
