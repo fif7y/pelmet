@@ -22,7 +22,11 @@ if [[ -z "${DEVELOPER_DIR:-}" && -d /Applications/Xcode-beta.app ]]; then
     export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
 fi
 
-VERSION=$(sed -n 's/^ *MARKETING_VERSION: "\(.*\)"/\1/p' project.yml)
+# project.yml carries MARKETING_VERSION twice (app target + the helper
+# template); they must agree, and one line is all the release name gets.
+VERSIONS=$(sed -n 's/^ *MARKETING_VERSION: "\(.*\)"/\1/p' project.yml | sort -u)
+[[ $(wc -l <<<"$VERSIONS") -eq 1 ]] || { echo "error: MARKETING_VERSION differs between targets in project.yml: $VERSIONS" >&2; exit 1; }
+VERSION=$VERSIONS
 [[ -n "$VERSION" ]] || { echo "error: MARKETING_VERSION not found in project.yml" >&2; exit 1; }
 echo "==> Releasing Pelmet $VERSION"
 
