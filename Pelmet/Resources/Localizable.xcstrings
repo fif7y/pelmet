@@ -7309,6 +7309,64 @@
         }
       }
     },
+    "Pelmet can hide %@, but macOS keeps it in its own spot, so the editor can't move it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet kann %@ ausblenden, aber macOS hält es an seinem Platz, der Editor kann es also nicht verschieben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet puede ocultar %@, pero macOS lo mantiene en su sitio, así que el editor no puede moverlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet peut masquer %@, mais macOS le garde à sa place, l'éditeur ne peut donc pas le déplacer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet può nascondere %@, ma macOS lo tiene al suo posto, quindi l'editor non può spostarlo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmetは%@を隠せますが、macOSがその位置を固定しているため、エディタでは移動できません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet은 %@을(를) 숨길 수 있지만 macOS가 제자리에 고정하므로 편집기에서 옮길 수 없습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Pelmet pode ocultar %@, mas o macOS o mantém no lugar, então o editor não consegue movê-lo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet может скрыть %@, но macOS держит её на своём месте, поэтому редактор не может её переместить."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet 可以隐藏 %@，但 macOS 会将它固定在原位，因此编辑器无法移动它。"
+          }
+        }
+      }
+    },
     "Pelmet is free. It stays that way.": {
       "localizations": {
         "de": {
@@ -7711,6 +7769,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "按分区实际重排菜单栏，位置不当的图标每次显示时都会推挤相邻图标。"
+          }
+        }
+      }
+    },
+    "Pinned by macOS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von macOS fixiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fijado por macOS"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Épinglé par macOS"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fissato da macOS"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOSにより固定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS가 고정함"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixado pelo macOS"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закреплено macOS"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由 macOS 固定"
           }
         }
       }
@@ -10553,6 +10669,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在整理…"
+          }
+        }
+      }
+    },
+    "Time Machine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时间机器"
           }
         }
       }

@@ -91,8 +91,7 @@ enum EditorItemsBuilder {
         for id in stored where byID[id] == nil && !representedKeys.contains(id.sectionKey) {
             guard let bundle = id.bundleID,
                   bundle != pelmetBundleID,
-                  !MenuBarPolicy.isUnmanagedAppleBundle(bundle)
-                    || MenuBarPolicy.systemItem(for: id) != nil,
+                  MenuBarPolicy.isSectionManageable(id),
                   isRunning(bundle),
                   recentlySeen(id)
             else { continue }
@@ -126,12 +125,10 @@ enum EditorItemsBuilder {
             if item.id.bundleID == pelmetBundleID {
                 return MenuBarPolicy.isPelmetExtraID(item.id)
             }
-            if MenuBarPolicy.isUnmanagedAppleBundle(item.id.bundleID) {
-                // Core system icons the assertion can individually control
-                // (Sound, battery, Wi-Fi…) are manageable; the rest stay out.
-                return MenuBarPolicy.systemItem(for: item.id) != nil
-            }
-            return true
+            // Core system icons the assertion can individually control
+            // (Sound, battery, Wi-Fi…) and SystemUIServer's extras (hidden
+            // as one bundle) are manageable; the rest of Apple's stay out.
+            return MenuBarPolicy.isSectionManageable(item.id)
         }
         // One tile per canonical identity: title-variant twins collapse. The
         // representative is the leftmost live-framed item (placement measures

@@ -44,6 +44,11 @@ public struct ItemID: RawRepresentable, Hashable, Codable, Sendable {
         if bundleID == PelmetBundle.textInputAgentID {
             return ItemID(rawValue: "bundle:\(PelmetBundle.textInputAgentID)")
         }
+        // SystemUIServer's extras (Siri, Time Machine) hide as one bundle and
+        // enumerate under whichever titles are switched on: one key.
+        if bundleID == PelmetBundle.systemUIServerID {
+            return ItemID(rawValue: "bundle:\(PelmetBundle.systemUIServerID)")
+        }
         guard let bundle = bundleID,
               bundle != PelmetBundle.mainID,
               bundle != PelmetBundle.fallbackID,

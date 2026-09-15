@@ -20,6 +20,21 @@ import PelmetCore
         }
     }
 
+    @Test func systemUIServerHidesThroughTheBundleAllowlist() {
+        let siri = ItemID.status(bundle: "com.apple.systemuiserver", title: "Siri")
+        let plan = ConvergePlan.compute(
+            model: model([siri.sectionKey: .hidden]),
+            liveIDs: [siri], carriedConcealed: [],
+            runningBundles: ["com.apple.systemuiserver", "com.example.other"],
+            revealedSections: [], steadyExtras: true, exemptBundles: exempt
+        )
+        #expect(plan.concealable.contains("com.apple.systemuiserver"))
+        #expect(!plan.allowedBundles.contains("com.apple.systemuiserver"))
+        #expect(plan.allowedBundles.contains("com.example.other"))
+        #expect(plan.concealed.contains(siri))
+        #expect(plan.hiddenSystem.isEmpty)
+    }
+
     let velja = ItemID(rawValue: "status:com.sindresorhus.Velja::Item-0")
     let veljaDrifted = ItemID(rawValue: "status:com.sindresorhus.Velja::Left and right arrows in a filled circle")
     let otterkeep = ItemID(rawValue: "status:com.example.otterkeep::Item-0")

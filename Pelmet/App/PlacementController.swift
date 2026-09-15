@@ -528,13 +528,18 @@ final class PlacementController {
         // into that item's footprint (bar spacing is tighter than 14pt) — the
         // agent then slots the drop one place too far left. Verified: Figma,
         // first-of-Hidden, kept landing left of Always-Hidden's Bitwarden.
-        let globalOrder = appState.editorItems(in: .alwaysHidden)
-            + appState.editorItems(in: .hidden)
-            + appState.editorItems(in: .visible)
+        // Pinned items (SystemUIServer, a tray that swallows drags) sit
+        // wherever their host put them, not where the order says: as a
+        // neighbor, Siri live at the far right made a hidden item's slot
+        // land right of the chevron (2026-09-15). They bound nothing.
+        func placeable(_ section: PelmetCore.Section) -> [ObservedItem] {
+            appState.editorItems(in: section).filter { !appState.isImmovable($0.id) }
+        }
+        let globalOrder = placeable(.alwaysHidden) + placeable(.hidden) + placeable(.visible)
         // Canonical comparison: the editor's representative for this bundle
         // may be a different title-variant of the same item.
         let index = isChevron
-            ? appState.editorItems(in: .alwaysHidden).count + appState.editorItems(in: .hidden).count
+            ? placeable(.alwaysHidden).count + placeable(.hidden).count
             : globalOrder.firstIndex(where: { $0.id.sectionKey == id.sectionKey }) ?? globalOrder.count
         // Only frames in the SAME menu-bar band as the dragged item are
         // trustworthy (`PlacementGeometry.inBand`).
@@ -566,8 +571,8 @@ final class PlacementController {
         // instead of the neighbor from the desired order (the raw retry once
         // aimed at a midpoint straddling the chevron and verified true on the
         // wrong side — Figma, 2026-09-09). `PlacementGeometry.chevronCaps`.
-        let alwaysHiddenEnd = appState.editorItems(in: .alwaysHidden).count
-        let hiddenEnd = alwaysHiddenEnd + appState.editorItems(in: .hidden).count
+        let alwaysHiddenEnd = placeable(.alwaysHidden).count
+        let hiddenEnd = alwaysHiddenEnd + placeable(.hidden).count
         let caps = PlacementGeometry.chevronCaps(
             index: index, leftIdx: leftIdx, rightIdx: rightIdx,
             alwaysHiddenEnd: alwaysHiddenEnd, hiddenEnd: hiddenEnd

@@ -404,6 +404,19 @@ private struct ItemTile: View {
         case .airdrop: return String(localized: "AirDrop")
         default: break
         }
+        // SystemUIServer's extras enumerate as one item titled with every
+        // extra it shows ("Siri, TimeMachine"): name each, comma-joined.
+        if item.id.bundleID == PelmetBundle.systemUIServerID,
+           case .status(_, let title) = item.id.parsed {
+            let names = title.components(separatedBy: ", ").map { extra -> String in
+                switch extra {
+                case "TimeMachine": String(localized: "Time Machine")
+                case "Item-0": String(localized: "System")
+                default: extra
+                }
+            }
+            return names.joined(separator: ", ")
+        }
         if item.id.rawValue.contains("::com.apple.menuextra.") {
             let suffix = item.id.rawValue.components(separatedBy: ".").last ?? String(localized: "System")
             return suffix.replacingOccurrences(of: "-", with: " ").capitalized
@@ -556,7 +569,8 @@ private struct ItemTile: View {
                 hasLauncher: hasLauncher,
                 helperHosted: appState.isBundlelessHost(item.id),
                 immovable: isImmovable && !isUnhideable,
-                addLauncher: item.id.bundleID.map { bundle in
+                pinnedBySystem: MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID),
+                addLauncher: MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID) ? nil : item.id.bundleID.map { bundle in
                     { appState.addAppLauncher(bundleID: bundle, name: displayName, in: section) }
                 }
             )
@@ -598,6 +612,9 @@ private struct InactiveIconCard: View {
     let helperHosted: Bool
     /// Hides fine, won't be moved: the app's tray swallows synthetic drags.
     let immovable: Bool
+    /// Hides fine, won't be moved, and no launcher applies: macOS itself
+    /// pins the host (SystemUIServer's Siri / Time Machine).
+    let pinnedBySystem: Bool
     let addLauncher: (() -> Void)?
 
     @ViewBuilder
@@ -607,8 +624,10 @@ private struct InactiveIconCard: View {
                 .buttonStyle(.borderedProminent)
                 .tint(PelmetAccent.accent)
         }
-        Link("Learn more", destination: PelmetLinks.faqAppLaunchers)
-            .foregroundStyle(PelmetAccent.accent)
+        if !pinnedBySystem {
+            Link("Learn more", destination: PelmetLinks.faqAppLaunchers)
+                .foregroundStyle(PelmetAccent.accent)
+        }
     }
 
     var body: some View {
@@ -617,6 +636,10 @@ private struct InactiveIconCard: View {
                 Text("Its launcher is ready")
                     .font(.headline)
                 Text("Turn this icon off in \(name)'s settings. The launcher takes over from there.")
+            } else if pinnedBySystem {
+                Text("Pinned by macOS")
+                    .font(.headline)
+                Text("Pelmet can hide \(name), but macOS keeps it in its own spot, so the editor can't move it.")
             } else if immovable {
                 Text("Stays where its app put it")
                     .font(.headline)

@@ -62,6 +62,14 @@ struct ItemIDGrammarTests {
         #expect(pelmetExtra.sectionKey == pelmetExtra)
         let agentClock = ItemID.status(bundle: "com.apple.MenuBarAgent", title: "com.apple.menuextra.clock")
         #expect(agentClock.sectionKey == agentClock)
+        // SystemUIServer hides as one bundle whatever extras it shows (#19).
+        #expect(
+            ItemID.status(bundle: "com.apple.systemuiserver", title: "Siri, TimeMachine").sectionKey
+                == .bundleKey("com.apple.systemuiserver")
+        )
+        #expect(MenuBarPolicy.isSectionManageable(ItemID.status(bundle: "com.apple.systemuiserver", title: "Siri")))
+        #expect(!MenuBarPolicy.isSectionManageable(ItemID.status(bundle: "com.apple.controlcenter", title: "X")))
+        #expect(MenuBarPolicy.isSectionManageable(agentClock))
     }
 
     @Test func statusTagPrefixMatchesEveryTitleVariant() {

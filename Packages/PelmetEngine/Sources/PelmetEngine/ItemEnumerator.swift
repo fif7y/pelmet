@@ -249,12 +249,23 @@ public actor ItemEnumerator {
                 < (frame(of: rhs)?.width ?? .greatestFiniteMagnitude)
         }
         guard let extrasBar else { return nil }
-        for item in children(of: extrasBar) {
-            if let title = copyAttribute(item, kAXTitleAttribute) as? String, !title.isEmpty {
-                return title
-            }
+        let titles = children(of: extrasBar).compactMap { item -> String? in
+            let title = copyAttribute(item, kAXTitleAttribute) as? String
+            return title?.isEmpty == false ? title : nil
         }
-        return nil
+        // SystemUIServer's extras (Siri, Time Machine) hide as one bundle and
+        // every group of its carries the same extras bar: name the lot, so
+        // the one editor tile can list them ("Siri, TimeMachine", #19).
+        if pid(of: appNode).flatMap(hostBundle(ofPID:))?.id == PelmetBundle.systemUIServerID {
+            return titles.isEmpty ? nil : titles.joined(separator: ", ")
+        }
+        return titles.first
+    }
+
+    private func pid(of element: AXUIElement) -> pid_t? {
+        var pid: pid_t = 0
+        AXUIElementGetPid(element, &pid)
+        return pid > 0 ? pid : nil
     }
 
     private func children(of element: AXUIElement) -> [AXUIElement] {

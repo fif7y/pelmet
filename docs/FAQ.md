@@ -46,8 +46,10 @@ macOS re-confirms Screen Recording roughly monthly for all apps. If the nag
 bothers you, turn the permission off and keep going.
 
 **Some system icons can't be hidden.**
-macOS protects a small set of system items (Clock, Control Center, Siri). Pelmet
-shows them locked in the editor rather than pretending.
+macOS protects a small set of system items (Clock, Control Center). Pelmet
+shows them locked in the editor rather than pretending. Siri and Time Machine
+are a special case: macOS draws them from one process, so they hide together
+as one tile, and macOS pins their spot, so the editor can't move them.
 
 <a name="app-launchers"></a>
 **One app's icon won't hide, and the editor marks it with a "!".**

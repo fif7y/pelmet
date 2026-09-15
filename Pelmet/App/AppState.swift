@@ -325,8 +325,7 @@ final class AppState {
     static func registrationCandidates(_ items: [ItemID]) -> [ItemID] {
         items.filter {
             guard let bundle = $0.bundleID else { return false }
-            return !PelmetBundle.ownIDs.contains(bundle)
-                && (!MenuBarPolicy.isUnmanagedAppleBundle(bundle) || MenuBarPolicy.systemItem(for: $0) != nil)
+            return !PelmetBundle.ownIDs.contains(bundle) && MenuBarPolicy.isSectionManageable($0)
         }
     }
 
@@ -1223,8 +1222,10 @@ final class AppState {
     ).subtracting(PelmetBundle.ownIDs)
     private static let immovableKey = "pelmet.immovableBundles"
 
+    /// Learned (bounced drags) or known (the agent pins SystemUIServer).
     func isImmovable(_ id: ItemID) -> Bool {
-        id.bundleID.map { immovableBundles.contains($0) } ?? false
+        guard let bundle = id.bundleID else { return false }
+        return immovableBundles.contains(bundle) || MenuBarPolicy.isBundleHideableAppleHost(bundle)
     }
 
     func setImmovable(_ bundle: String, _ immovable: Bool) {

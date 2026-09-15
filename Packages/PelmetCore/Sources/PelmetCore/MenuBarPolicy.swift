@@ -12,6 +12,9 @@ public enum PelmetBundle {
     public static let fallbackID = "app.fif7y.Pelmet"
     public static let agentID = "com.apple.MenuBarAgent"
     public static let textInputAgentID = "com.apple.TextInputMenuAgent"
+    /// SystemUIServer hosts the legacy menu extras (Siri, Time Machine,
+    /// VPN…) as one bundle: the assertion hides them together or not at all.
+    public static let systemUIServerID = "com.apple.systemuiserver"
     /// The one canonical "Pelmet's own bundle id" (A10): Bundle.main's, with
     /// the fallback for hosts that have none. Use this — never hand-roll the
     /// `??` (or forget it, as one comparison site did).
@@ -101,15 +104,29 @@ public enum MenuBarPolicy {
     }
 
     /// Apple bundle that is NOT manageable as a third-party item — only the
-    /// menuextra → SystemItem allowlist can touch it (or nothing can).
-    /// SystemUIServer's Siri icon deliberately stays out of scope: the
-    /// assertion CAN hide it (bundle-allowlist governed, verified live
-    /// 2026-08-21), but the agent hard-pins its position — plist slots and
-    /// synthetic ⌘-drags are both ignored — and an editor tile that ignores
-    /// placement breaks the editor's promise. macOS's own Siri setting
-    /// already covers show/hide.
+    /// menuextra → SystemItem allowlist can touch it (or nothing can), or
+    /// the bundle allowlist for SystemUIServer (see `isBundleHideableAppleHost`).
+    /// Never placed, never zone-adopted: the agent hard-pins these.
     public static func isUnmanagedAppleBundle(_ bundle: String?) -> Bool {
         bundle?.hasPrefix("com.apple.") == true
+    }
+
+    /// An Apple host whose items the assertion hides through the BUNDLE
+    /// allowlist, like a third-party app: SystemUIServer (Siri, Time
+    /// Machine, #19). Verified live 2026-08-21. The agent pins its position
+    /// (plist slots and synthetic ⌘-drags both ignored), so it is hideable
+    /// but not movable — the editor shows one tile for the whole host and
+    /// says so. Its items key by bundle (see `ItemID.sectionKey`).
+    public static func isBundleHideableAppleHost(_ bundle: String?) -> Bool {
+        bundle == PelmetBundle.systemUIServerID
+    }
+
+    /// Eligible for a section: third-party bundles, the individually
+    /// allowlisted system items, and the bundle-hideable Apple host.
+    public static func isSectionManageable(_ id: ItemID) -> Bool {
+        guard let bundle = id.bundleID else { return false }
+        if !isUnmanagedAppleBundle(bundle) { return true }
+        return systemItem(for: id) != nil || isBundleHideableAppleHost(bundle)
     }
 
     /// True when a bar ⌘-drag of this item may change its section: third-party
