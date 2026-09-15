@@ -148,6 +148,31 @@ import Testing
         #expect(effects == [.armTimer(now.addingTimeInterval(1))])
     }
 
+    /// Instant rehide + a hotkey reveal: no settle timer (the pointer never
+    /// entered the bar, so "instant" has nothing to wait on); the bar stays
+    /// until the pointer leaves, a click elsewhere, or the next press.
+    @Test func hotkeyRevealAtInstantRehideStaysUp() {
+        var machine = RehideStateMachine(policy: .init(autoRehide: true, delay: 0))
+        _ = machine.handle(.toggleRequested([.hidden], .hotkey), now: now)
+        #expect(machine.handle(.transitionSettled, now: now) == [.none])
+        #expect(machine.state == .revealed(sections: [.hidden], reason: .hotkey))
+        #expect(machine.handle(.pointerLeft, now: now) == [.armTimer(now)])
+    }
+
+    /// A configured delay still applies to a hotkey reveal.
+    @Test func hotkeyRevealWithDelayArmsTheDelay() {
+        var machine = RehideStateMachine(policy: .init(autoRehide: true, delay: 5))
+        _ = machine.handle(.toggleRequested([.hidden], .hotkey), now: now)
+        #expect(machine.handle(.transitionSettled, now: now) == [.armTimer(now.addingTimeInterval(5))])
+    }
+
+    /// Instant + hover with the pointer already gone keeps the readable floor.
+    @Test func hoverRevealAtInstantRehideKeepsTheFloor() {
+        var machine = RehideStateMachine(policy: .init(autoRehide: true, delay: 0))
+        _ = machine.handle(.revealRequested([.hidden], .hover), now: now)
+        #expect(machine.handle(.transitionSettled, now: now) == [.armTimer(now.addingTimeInterval(0.75))])
+    }
+
     @Test func pointerLeaveAfterClickKeepsFullDelay() {
         var machine = RehideStateMachine(policy: .init(autoRehide: true, delay: 5))
         _ = machine.handle(.revealRequested([.hidden], .click), now: now)

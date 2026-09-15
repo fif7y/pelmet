@@ -15,6 +15,28 @@ struct ShortcutRecorder: View {
     @State private var monitor: Any?
 
     var body: some View {
+        HStack(spacing: 6) {
+            chip
+            // A custom combo gets a way back to the default without knowing
+            // about ⌫ — the × only exists while there is something to undo.
+            if !recording, let shortcut, shortcut != fallback {
+                Button {
+                    commit(fallback)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .focusEffectDisabled()
+                .help("Restore \(fallback.display)")
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: shortcut == fallback)
+        .onDisappear(perform: stopRecording)
+    }
+
+    private var chip: some View {
         Button {
             recording ? stopRecording() : startRecording()
         } label: {
@@ -47,7 +69,6 @@ struct ShortcutRecorder: View {
         .buttonStyle(.plain)
         .focusEffectDisabled()
         .help("Click, then press the new shortcut. ⎋ cancels, ⌫ restores \(fallback.display).")
-        .onDisappear(perform: stopRecording)
     }
 
     private func startRecording() {

@@ -104,7 +104,7 @@ public struct RehideStateMachine: Equatable, Sendable {
             // extras still physically on screen) or downgrade a deliberate
             // reveal onto hover's quick rehide clock.
             state = .revealed(sections: current, reason: reason)
-            return armIfNeeded(now: now)
+            return armIfNeeded(reason: reason, now: now)
 
         case (.revealed, .toggleRequested):
             state = .transitioning(target: .conceal, queued: nil)
@@ -183,7 +183,7 @@ public struct RehideStateMachine: Equatable, Sendable {
             switch (target, queued) {
             case (.reveal(let sections, let reason), nil):
                 state = .revealed(sections: sections, reason: reason)
-                return armIfNeeded(now: now)
+                return armIfNeeded(reason: reason, now: now)
             case (.conceal, nil):
                 state = .concealed
                 return [.none]
@@ -226,15 +226,20 @@ public struct RehideStateMachine: Equatable, Sendable {
         }
     }
 
-    private func armIfNeeded(now: Date) -> [RehideEffect] {
+    private func armIfNeeded(reason: RevealReason, now: Date) -> [RehideEffect] {
+        guard policy.autoRehide else { return [.none] }
+        // "Instant" means "as soon as the pointer leaves the bar". A hotkey
+        // reveal's pointer never entered it, so there is nothing to leave:
+        // the bar stays up until the pointer visits and leaves, a click
+        // elsewhere, or the next press. The 0.75 s floor that replaced the
+        // old open-shut flash read as "the first press did nothing" (Gab,
+        // 2026-09-15).
+        if reason == .hotkey, policy.delay == 0 { return [.none] }
         // Floor the settle-time arm: with the rehide delay dialed to 0, a
         // reveal whose pointer isn't parked in the band concealed within
-        // milliseconds of settling — an unreadable open-shut flash (hotkey
-        // reveals especially). Pointer-driven rehide stays instant via
-        // `.pointerLeft`; only the "never entered the band" case gets a
-        // minimum readable window.
-        policy.autoRehide
-            ? [.armTimer(now.addingTimeInterval(max(policy.delay, 0.75)))]
-            : [.none]
+        // milliseconds of settling — an unreadable open-shut flash. Pointer-
+        // driven rehide stays instant via `.pointerLeft`; only the "never
+        // entered the band" case gets a minimum readable window.
+        return [.armTimer(now.addingTimeInterval(max(policy.delay, 0.75)))]
     }
 }
