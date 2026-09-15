@@ -104,7 +104,7 @@ final class ExtrasManager {
             lastVisible.removeValue(forKey: id)
             lastRunning.removeValue(forKey: id)
             removalObservations.removeValue(forKey: id)
-            animators[id]?.stop()
+            animators[id]?.tearDown()
             animators.removeValue(forKey: id)
         }
         for spec in newSpecs {
@@ -133,7 +133,7 @@ final class ExtrasManager {
                 )
             }
             if styleChanged, let item = items[spec.id] {
-                animators[spec.id]?.stop()
+                animators[spec.id]?.tearDown()
                 animators.removeValue(forKey: spec.id)
                 refreshGlyph(item, spec: spec)
             }

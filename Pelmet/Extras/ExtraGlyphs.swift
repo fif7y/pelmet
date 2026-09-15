@@ -195,12 +195,17 @@ enum ExtraGlyph {
 /// Drives one status button's image from a clock. `level` eases toward
 /// `targetLevel` (the play ↔ pause blend); once it has settled and the
 /// frame is declared still at that level, the timer stops — a resting
-/// media button costs no ticks. Reduce Motion is the caller's call: pass
+/// media button costs no ticks. Nor does one nobody can see: the clock
+/// also holds while the item is hidden (`paused`) and while the button's
+/// window is occluded — the bar tucked away by a fullscreen app, the
+/// display asleep. Reduce Motion is the caller's call: pass
 /// `animated: false` to the glyph and never run the animator.
 @MainActor
 final class ExtraAnimator {
     private weak var button: NSStatusBarButton?
     private var timer: Timer?
+    // Observed for the animator's lifetime; the item outlives every clock.
+    private var occlusionObserver: NSObjectProtocol?
     private var frame: ((TimeInterval, CGFloat) -> NSImage)?
     private let epoch = Date()
     private var lastTick: TimeInterval = 0
@@ -217,6 +222,23 @@ final class ExtraAnimator {
 
     init(button: NSStatusBarButton?) {
         self.button = button
+        occlusionObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            // Identity only crosses to the main actor, never the window.
+            let windowID = (note.object as AnyObject?).map(ObjectIdentifier.init)
+            Task { @MainActor [weak self] in
+                guard let self, let own = self.button?.window, windowID == ObjectIdentifier(own) else { return }
+                self.schedule()
+            }
+        }
+    }
+
+    /// The bar is on screen: no window yet counts as visible (the item is
+    /// about to attach), an occluded one does not.
+    private var onScreen: Bool {
+        guard let window = button?.window else { return true }
+        return window.occlusionState.contains(.visible)
     }
 
     private var tag = ""
@@ -239,12 +261,20 @@ final class ExtraAnimator {
         tag = ""
     }
 
+    /// Called when the item goes away; the notification observer is the
+    /// one thing a deinit can't release under strict concurrency.
+    func tearDown() {
+        stop()
+        if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
+        occlusionObserver = nil
+    }
+
     private var settled: Bool { abs(level - targetLevel) < 0.005 }
 
     private func schedule() {
         timer?.invalidate()
         timer = nil
-        guard frame != nil, !paused else { return }
+        guard frame != nil, !paused, onScreen else { return }
         // A settled rest level needs no clock; the live level does.
         if settled, targetLevel == 0 { return }
         lastTick = Date().timeIntervalSince(epoch)
