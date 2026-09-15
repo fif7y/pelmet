@@ -151,15 +151,22 @@ public actor EngineGoldenGate: MenuBarEngine {
     /// then re-converge. Cost: concealed items flash for the window's
     /// duration — callers keep it rare (app relaunch) and skip it when the
     /// bundle is already observable.
-    public func openAdoptionWindow(for bundleID: String) async -> Bool {
+    ///
+    /// `item`: the one live id the window is for. A section helper hosts
+    /// several items under one bundle, so "any item of this bundle" is
+    /// satisfied by a sibling that was adopted long ago and the window
+    /// closes before the new registration lands (parked for the session).
+    public func openAdoptionWindow(for bundleID: String, expecting item: ItemID? = nil) async -> Bool {
         guard assertion != nil else { return true }
-        PelmetLog.log("adoptWindow: dropping assertion for \(bundleID)")
+        PelmetLog.log("adoptWindow: dropping assertion for \(item?.rawValue ?? bundleID)")
         invalidateAssertion()
         var adopted = false
         let deadline = Date().addingTimeInterval(EngineTiming.adoptionWindowDeadline)
         while Date() < deadline {
             let snap = await refreshSnapshot()
-            if snap.items.contains(where: { $0.id.bundleID == bundleID }) {
+            let landed = item.map { id in snap.items.contains { $0.id == id } }
+                ?? snap.items.contains { $0.id.bundleID == bundleID }
+            if landed {
                 adopted = true
                 break
             }
@@ -410,7 +417,14 @@ public actor EngineGoldenGate: MenuBarEngine {
             concealed: plan.concealed,
             takenAt: after.takenAt
         )
-        if !concealable.isEmpty {
+        // The post-swap walk is the verify's first poll: when it already
+        // shows every concealable bundle gone there is nothing to poll for,
+        // and a hover cycle skips a full AX walk (~100ms on the actor).
+        let stillVisible = after.items.contains { item in
+            guard let bundle = item.id.bundleID else { return false }
+            return concealable.contains(bundle)
+        }
+        if stillVisible {
             Task { await self.verifyConcealment(of: concealable) }
         }
     }

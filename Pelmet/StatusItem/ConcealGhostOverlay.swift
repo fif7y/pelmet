@@ -115,11 +115,10 @@ final class ConcealGhostOverlay {
     /// (below the bar), never a panel whose top edge merely grazes the
     /// band's last rows.
     static func foreignBandWindows(
-        intersecting rect: CGRect, bandHeight: CGFloat
+        intersecting rect: CGRect, bandHeight: CGFloat,
+        in list: [[String: Any]]? = nil
     ) -> [(id: CGWindowID, owner: String)] {
-        guard let list = CGWindowListCopyWindowInfo(
-            [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
-        ) as? [[String: Any]] else { return [] }
+        guard let list = list ?? onScreenWindows() else { return [] }
         let me = ProcessInfo.processInfo.processIdentifier
         let barLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
         return list.compactMap { w in
@@ -133,6 +132,14 @@ final class ConcealGhostOverlay {
             else { return nil }
             return (id, w[kCGWindowOwnerName as String] as? String ?? "pid \(pid)")
         }
+    }
+
+    /// The window server's on-screen list, fetched once per capture set:
+    /// every display's band is filtered from the same list.
+    static func onScreenWindows() -> [[String: Any]]? {
+        CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
+        ) as? [[String: Any]]
     }
 
     private let window: NSWindow
@@ -172,6 +179,7 @@ final class ConcealGhostOverlay {
         guard let primary = NSScreen.screens.first else { return [] }
 
         var shots: [BarSnapshot] = []
+        let windowList = onScreenWindows()
         for screen in NSScreen.screens {
             guard let displayID = screen.directDisplayID,
                   let display = await scDisplay(for: displayID) else { continue }
@@ -211,7 +219,7 @@ final class ConcealGhostOverlay {
             // The SCWindow lookup is the slow call, so only pay it on a hit.
             let foreign = foreignBandWindows(
                 intersecting: CGRect(x: globalX, y: bounds.minY, width: width, height: bandHeight),
-                bandHeight: bandHeight
+                bandHeight: bandHeight, in: windowList
             )
             var excluded: [SCWindow] = []
             if !foreign.isEmpty {

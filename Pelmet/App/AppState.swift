@@ -668,7 +668,11 @@ final class AppState {
         guard engineStarted else { return }
         placement.queuePlacement(id)
         Task {
-            if await engine.openAdoptionWindow(for: bundle) {
+            // Wait for THIS registration: the helper's other items were
+            // adopted long ago and would satisfy a bundle-level check at
+            // the first walk, closing the window before the new one lands.
+            let live = ItemID.status(bundle: bundle, title: title)
+            if await engine.openAdoptionWindow(for: bundle, expecting: live) {
                 updateSnapshot(await engine.snapshot())
             }
             placement.flushPendingPlacements()
@@ -802,7 +806,7 @@ final class AppState {
         return Set(
             ids.compactMap { id -> String? in
                 guard let bundle = id.bundleID,
-                      bundle != PelmetBundle.mainID,
+                      !PelmetBundle.ownIDs.contains(bundle),
                       !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
                       !unhideableKeys.contains(id.sectionKey),
                       !bundlelessHosts.contains(bundle)
@@ -814,7 +818,7 @@ final class AppState {
 
     /// A third-party item whose app the user gave a launcher.
     func hasAppLauncher(for id: ItemID) -> Bool {
-        guard let bundle = id.bundleID, bundle != PelmetBundle.mainID else { return false }
+        guard let bundle = id.bundleID, !PelmetBundle.ownIDs.contains(bundle) else { return false }
         return settings.extraItems.contains { $0.kind == .appLauncher && $0.bundleID == bundle }
     }
 
@@ -1215,7 +1219,7 @@ final class AppState {
     /// inactive and offers a launcher without waiting for a failed conceal.
     private(set) var bundlelessHosts: Set<String> = Set(
         UserDefaults.standard.stringArray(forKey: AppState.bundlelessKey) ?? []
-    ).subtracting([PelmetBundle.mainID])
+    ).subtracting(PelmetBundle.ownIDs)
     private static let bundlelessKey = "pelmet.bundlelessHosts"
     /// Bundles whose bar item swallows synthetic ⌘-drags: every placement
     /// landed back where it started (Kap's Electron tray, #15). Left where
@@ -1459,6 +1463,11 @@ final class AppState {
                 expected.insert(id)
             }
         }
+        // Helper-hosted items hide through the assertion, not a collapsed
+        // width, so before the first converge every one the helpers have
+        // registered sits in band — and the first converge would park a
+        // registration the agent hasn't adopted yet, same as a visible one.
+        for id in helperHosts?.hostedLiveIDs ?? [] { expected.insert(id) }
         guard !expected.isEmpty else { return }
         let deadline = Date.now.addingTimeInterval(8)
         while Date.now < deadline {

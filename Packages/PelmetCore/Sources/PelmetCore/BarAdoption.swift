@@ -256,7 +256,9 @@ public enum BarAdoption {
         // app's own icon on every Settings open, 2026-09-09).
         let liveX: [ItemID: CGFloat] = items.reduce(into: [:]) {
             guard let x = $1.minX else { return }
-            if $1.id.bundleID == pelmetBundleID, $1.id != draggedID { return }
+            // Helper-hosted own items carry the helper's bundle in the live
+            // id; the section key folds them to the main bundle.
+            if $1.id.sectionKey.bundleID == pelmetBundleID, $1.id != draggedID { return }
             let key = $1.id.sectionKey
             $0[key] = min($0[key] ?? .greatestFiniteMagnitude, x)
         }

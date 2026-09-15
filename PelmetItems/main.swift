@@ -32,7 +32,7 @@ final class ItemsHost: NSObject, NSApplicationDelegate {
     /// does not read our own removal as a user drag-out.
     private var unhosting: Set<String> = []
     private var listener: MessagePortListener?
-    private var parentWatch: Timer?
+    private var parentWatch: DispatchSourceProcess?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         listener = MessagePortListener(name: bundleID) { data in
@@ -45,12 +45,21 @@ final class ItemsHost: NSObject, NSApplicationDelegate {
             return
         }
         let parent = ProcessInfo.processInfo.environment["PELMET_PARENT_PID"].flatMap(pid_t.init) ?? getppid()
-        parentWatch = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
-            if kill(parent, 0) != 0 {
-                log.notice("PelmetItems: parent \(parent) gone — exiting")
-                NSApp.terminate(nil)
-            }
+        // Exit the instant the parent does: a 2 s poll left this process
+        // alive across a quit-and-relaunch (a Sparkle update), and the new
+        // Pelmet's launch handed it the OLD helper, which never said ready.
+        guard kill(parent, 0) == 0 else {
+            log.notice("PelmetItems: parent \(parent) already gone — exiting")
+            NSApp.terminate(nil)
+            return
         }
+        let watch = DispatchSource.makeProcessSource(identifier: parent, eventMask: .exit, queue: .main)
+        watch.setEventHandler {
+            log.notice("PelmetItems: parent \(parent) gone — exiting")
+            NSApp.terminate(nil)
+        }
+        watch.resume()
+        parentWatch = watch
         let sent = send(.ready(bundle: bundleID))
         log.notice("PelmetItems: ready sent=\(sent)")
         log.notice("PelmetItems: \(bundleID, privacy: .public) ready, parent \(parent)")

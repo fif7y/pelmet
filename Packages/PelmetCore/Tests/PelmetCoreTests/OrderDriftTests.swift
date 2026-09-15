@@ -76,4 +76,24 @@ struct OrderDriftTests {
         )
         #expect(ok.isEmpty)
     }
+
+    @Test func helperHostedSeparatorOutsideItsSlotIsReported() {
+        let pelmet = "app.fif7y.Pelmet"
+        let separator = ItemID(rawValue: "status:app.fif7y.Pelmet.items.hidden::Pelmet.Separator.S1")
+        let vorssaint = ItemID(rawValue: "status:com.vorssaint.utils::Item-0")
+        let snib = ItemID(rawValue: "status:app.fif7y.Snib::Item-0")
+        var model = SectionModel()
+        for id in [separator, vorssaint, snib] { model.assignments[id.sectionKey] = .hidden }
+        model.order[.hidden] = [vorssaint.sectionKey, separator.sectionKey, snib.sectionKey]
+        let out = OrderDrift.ownItemsOutOfOrder(
+            items: [(id: separator, minX: 400), (id: vorssaint, minX: 430), (id: snib, minX: 460)],
+            model: model, pelmetBundleID: pelmet
+        )
+        #expect(out == [separator])
+        let ok = OrderDrift.ownItemsOutOfOrder(
+            items: [(id: vorssaint, minX: 400), (id: separator, minX: 430), (id: snib, minX: 460)],
+            model: model, pelmetBundleID: pelmet
+        )
+        #expect(ok.isEmpty)
+    }
 }

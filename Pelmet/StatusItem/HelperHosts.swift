@@ -119,6 +119,16 @@ final class HelperHosts {
                 } else {
                     host.running = app
                     PelmetLog.log("helpers: \(host.appName) launched pid=\(app?.processIdentifier ?? 0)")
+                    // Launch Services hands back a running instance of the
+                    // same bundle: after a quit-and-relaunch the previous
+                    // Pelmet's helper is still winding down and would never
+                    // say ready to this one. Kill it; its termination
+                    // relaunches a fresh helper through `helperTerminated`.
+                    if let app, let born = app.launchDate,
+                       let ours = NSRunningApplication.current.launchDate, born < ours {
+                        PelmetLog.log("helpers: \(host.appName) pid=\(app.processIdentifier) predates this Pelmet — replacing")
+                        app.forceTerminate()
+                    }
                 }
                 self.hosts[section] = host
             }
@@ -128,6 +138,7 @@ final class HelperHosts {
     private func helperTerminated(bundle: String, pid: pid_t) {
         guard let section = hosts.first(where: { $0.value.bundleID == bundle })?.key,
               var host = hosts[section] else { return }
+        PelmetLog.log("helpers: \(host.appName) pid=\(pid) terminated (tracked \(host.running?.processIdentifier ?? 0))")
         guard host.running?.processIdentifier == pid || host.running == nil else { return }
         host.running = nil
         host.ready = false
@@ -163,6 +174,16 @@ final class HelperHosts {
             appState?.helperItemClicked(title: title, rightButton: rightButton, at: NSPoint(x: x, y: y))
         case .draggedOff(_, let title):
             appState?.helperItemDraggedOff(title: title)
+        }
+    }
+
+    /// Live ids (helper bundle, Pelmet title) of every item the helpers have
+    /// registered so far — the boot adoption wait expects their in-band
+    /// frames. Wanted-but-unregistered items are left out: a missing helper
+    /// already burned its own deadline in `waitUntilHosted`.
+    var hostedLiveIDs: [ItemID] {
+        hosts.values.flatMap { host in
+            host.hosted.map { ItemID.status(bundle: host.bundleID, title: $0) }
         }
     }
 

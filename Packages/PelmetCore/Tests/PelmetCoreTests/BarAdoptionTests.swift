@@ -430,6 +430,34 @@ struct BarAdoptionTests {
         #expect(dragged?.model.order[.hidden] == [velja.sectionKey, launcher.sectionKey, figma.sectionKey])
     }
 
+    @Test func helperHostedOwnItemHoldsItsModelSlotToo() {
+        // A hidden-section separator is drawn by the hidden helper: its live
+        // id carries the helper bundle, its key folds to the main bundle.
+        let live = ItemID(rawValue: "status:app.fif7y.Pelmet.items.hidden::Pelmet.Separator.S1")
+        let key = live.sectionKey
+        #expect(key == ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.Separator.S1"))
+        var model = SectionModel()
+        model.assignments[velja.sectionKey] = .hidden
+        model.assignments[figma.sectionKey] = .hidden
+        model.assignments[key] = .hidden
+        model.order[.hidden] = [velja.sectionKey, figma.sectionKey, key]
+        let items: [(id: ItemID, minX: CGFloat?)] = [
+            (id: chevron, minX: 1000),
+            (id: velja, minX: 400),
+            (id: live, minX: 450),
+            (id: figma, minX: 500),
+        ]
+        let zones = [velja.rawValue: Section.hidden, figma.rawValue: .hidden, live.rawValue: .hidden]
+        let held = BarAdoption.reconcile(
+            items: items, model: model, previousZones: zones, pelmetBundleID: pelmet
+        )
+        #expect(held?.model.order[.hidden] == [velja.sectionKey, figma.sectionKey, key])
+        let dragged = BarAdoption.reconcile(
+            items: items, model: model, previousZones: zones, pelmetBundleID: pelmet, draggedID: live
+        )
+        #expect(dragged?.model.order[.hidden] == [velja.sectionKey, key, figma.sectionKey])
+    }
+
     @Test func sectionChangedEntryDropsOutOfOrder() {
         var model = SectionModel()
         model.assignments[velja.sectionKey] = .hidden

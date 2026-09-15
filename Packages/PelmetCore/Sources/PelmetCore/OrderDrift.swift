@@ -62,7 +62,7 @@ public enum OrderDrift {
         }
         return items.compactMap { entry in
             guard let minX = entry.minX,
-                  entry.id.bundleID == pelmetBundleID,
+                  entry.id.sectionKey.bundleID == pelmetBundleID,
                   MenuBarPolicy.isPelmetExtraID(entry.id)
             else { return nil }
             let order = model.order[model.section(of: entry.id)] ?? []
