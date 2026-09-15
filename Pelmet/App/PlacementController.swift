@@ -445,7 +445,7 @@ final class PlacementController {
         // a primary-band frame is a frame we can drag or aim at.
         let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
         func isPrimary(_ f: CGRect) -> Bool {
-            MenuBarGeometry.isInBand(f) && f.midX > 0 && f.midX < primaryMaxX
+            PlacementGeometry.isPrimary(f, screenMaxX: primaryMaxX)
         }
         func primaryFrame(of key: ItemID, in snap: EngineSnapshot) -> CGRect? {
             Self.liveItem(for: key, in: snap.items, matchingFrame: isPrimary)?.frame
@@ -485,16 +485,12 @@ final class PlacementController {
         // primary band and every bar mirrors the one order — drags here move
         // all displays.
         guard let screen = NSScreen.screens.first else { return false }
-        // Trapped-in-overflow check: a trapped registration reports a phantom
-        // frame sharing its minX with another item in the same band — real
-        // items never share an x (verified 2026-08-21: 8 trapped separators
-        // at exactly one x). Dragging from a phantom would grab whatever
-        // REALLY sits there — skip and defer to the conceal-settle rescue.
-        let phantom = snap.items.contains {
-            $0.id != item.id && $0.frame.map {
-                abs($0.minX - frame.minX) < 0.5 && abs($0.midY - frame.midY) < 30
-            } == true
-        }
+        // Trapped-in-overflow check (`PlacementGeometry.isPhantom`): dragging
+        // from a phantom would grab whatever REALLY sits there — skip and
+        // defer to the conceal-settle rescue.
+        let phantom = PlacementGeometry.isPhantom(
+            frame, amongOthers: snap.items.filter { $0.id != item.id }.compactMap(\.frame)
+        )
         if phantom {
             PelmetLog.log("place: \(id.rawValue) frame is a phantom (duplicate minX \(frame.minX)) — trapped in overflow")
             // Expand the native « inline: the trapped item materializes with
@@ -519,20 +515,12 @@ final class PlacementController {
         let rawChevronFrame = isChevron ? nil : appState.pelmetChevronItem(in: snap)?.frame
 
         // Neighbors in the DESIRED order that have live frames — adjusted into
-        // the "lifted" coordinate space: once the drag picks the item up, the
-        // gap it leaves closes, shifting everything right of its origin left
-        // by one item width. Targets computed in pre-lift coordinates land one
-        // slot off (verified: consistent ±itemWidth misses in the logs).
-        // EXCEPT for Pelmet's own items (separators, extras): dragging an
-        // own-process item keeps the bar frozen — the gap does NOT close, so
-        // lifted targets land one width short and the drop bounces back
-        // (verified: raw-frame drop swaps, lifted-frame drop reverts).
+        // the "lifted" coordinate space (`PlacementGeometry.lifted`): targets
+        // computed in pre-lift coordinates land one slot off (verified:
+        // consistent ±itemWidth misses in the logs).
         let dragIsPelmetOwned = item.id.bundleID == pelmetBundle
         func lifted(_ neighborFrame: CGRect) -> CGRect {
-            guard !dragIsPelmetOwned else { return neighborFrame }
-            return neighborFrame.minX > frame.midX
-                ? neighborFrame.offsetBy(dx: -frame.width, dy: 0)
-                : neighborFrame
+            PlacementGeometry.lifted(neighborFrame, dragged: frame, ownItem: dragIsPelmetOwned)
         }
         // Neighbors from the GLOBAL desired order, not just the item's own
         // section: at a section boundary the adjacent item belongs to the
@@ -549,13 +537,9 @@ final class PlacementController {
             ? appState.editorItems(in: .alwaysHidden).count + appState.editorItems(in: .hidden).count
             : globalOrder.firstIndex(where: { $0.id.sectionKey == id.sectionKey }) ?? globalOrder.count
         // Only frames in the SAME menu-bar band as the dragged item are
-        // trustworthy: an AX walk can carry another display's bar (its own
-        // coordinate origin), and one foreign neighbor frame aimed a drop at
-        // x=268 on a status area that starts around x=1050.
+        // trustworthy (`PlacementGeometry.inBand`).
         func inBand(_ f: CGRect) -> Bool {
-            MenuBarGeometry.isInBand(f)
-                && abs(f.midY - frame.midY) < 30
-                && f.midX > 0 && f.midX < screen.frame.maxX
+            PlacementGeometry.inBand(f, of: frame, screenMaxX: screen.frame.maxX)
         }
         let chevronFrame = rawChevronFrame.flatMap { inBand($0) ? $0 : nil }
         // Keep the neighbor ITEMS, not just their frames — after the drag the
@@ -578,20 +562,18 @@ final class PlacementController {
         let rightPair = rightIdx.map { globalOrder[$0] }
         let leftNeighbor = leftPair?.frame.map(lifted)
         let rightNeighbor = rightPair?.frame.map(lifted)
-        // The desired order has no chevron in it, so a LAST-of-Hidden item's
-        // right neighbor is the first Visible one — and "between Snib and
-        // Sound" holds on BOTH sides of the chevron. The raw retry then aimed
-        // at their midpoint (1479, chevron at 1459) and verified true on the
-        // wrong side (Figma, 2026-09-09). At the hidden/visible boundary the
-        // live chevron caps the slot instead. Mirror for first-of-Visible.
+        // At the hidden/visible boundary the live chevron caps the slot
+        // instead of the neighbor from the desired order (the raw retry once
+        // aimed at a midpoint straddling the chevron and verified true on the
+        // wrong side — Figma, 2026-09-09). `PlacementGeometry.chevronCaps`.
         let alwaysHiddenEnd = appState.editorItems(in: .alwaysHidden).count
         let hiddenEnd = alwaysHiddenEnd + appState.editorItems(in: .hidden).count
-        let chevronCapsRight = !isChevron && chevronFrame != nil
-            && index >= alwaysHiddenEnd && index < hiddenEnd
-            && (rightIdx.map { $0 >= hiddenEnd } ?? true)
-        let chevronCapsLeft = !isChevron && chevronFrame != nil
-            && index >= hiddenEnd
-            && (leftIdx.map { $0 < hiddenEnd } ?? true)
+        let caps = PlacementGeometry.chevronCaps(
+            index: index, leftIdx: leftIdx, rightIdx: rightIdx,
+            alwaysHiddenEnd: alwaysHiddenEnd, hiddenEnd: hiddenEnd
+        )
+        let chevronCapsRight = !isChevron && chevronFrame != nil && caps.right
+        let chevronCapsLeft = !isChevron && chevronFrame != nil && caps.left
         func liveChevron(_ snap: EngineSnapshot) -> CGRect? {
             appState.pelmetChevronItem(in: snap)?.frame.flatMap { inBand($0) ? $0 : nil }
         }
@@ -647,23 +629,17 @@ final class PlacementController {
             return false
         }
 
-        // Skip only when the item is genuinely at its slot already — a full
-        // icon-width tolerance silently swallowed every one-slot move. With
-        // NO live neighbors the target is a zone-approximate chevron
-        // fallback, and chasing it exactly just bounces (rescue drags at
-        // conceal hopped 30pt into the chevron and reverted every time).
+        // Skip only when the item is genuinely at its slot already
+        // (`PlacementGeometry.alreadyAtSlot`: an order with both bounds live,
+        // x proximity otherwise; rescue drags at conceal once hopped 30pt
+        // into the chevron and reverted every time, hence the wide fallback
+        // tolerance).
         let fallbackTarget = leftNeighbor == nil && rightNeighbor == nil
-        // With both bounds live the slot is an ORDER: strictly between the
-        // bound centers is placed, whatever the x estimate says. Strict, with
-        // a margin — a freshly hosted own item can report the very x of its
-        // neighbor (Media controls at Sound's 1554, 2026-09-09), and that one
-        // must still be dragged. Without both bounds fall back to x proximity.
-        let alreadyPlaced: Bool = {
-            if let l = leftBound(in: snap), let r = rightBound(in: snap), l.midX < r.midX {
-                return l.midX + 2 < frame.midX && frame.midX < r.midX - 2
-            }
-            return abs(frame.midX - targetX) < (fallbackTarget ? 40 : 10)
-        }()
+        let alreadyPlaced = PlacementGeometry.alreadyAtSlot(
+            x: frame.midX,
+            leftMidX: leftBound(in: snap)?.midX, rightMidX: rightBound(in: snap)?.midX,
+            targetX: targetX, fallbackTarget: fallbackTarget
+        )
         guard !alreadyPlaced else {
             PelmetLog.log("place: \(id.rawValue) already at slot (x=\(frame.midX), target=\(targetX))")
             return true
@@ -705,7 +681,7 @@ final class PlacementController {
         // real frames. The chevron's own walk already runs under one.
         if !isChevron, let chevron = chevronFrame,
            !appState.currentRevealedSections.contains(.hidden),
-           frame.midX < chevron.midX || targetX < chevron.midX {
+           PlacementGeometry.touchesHiddenZone(x: frame.midX, targetX: targetX, chevronMidX: chevron.midX) {
             PelmetLog.log("place: \(id.rawValue) touches the hidden zone while it is concealed (x=\(frame.midX) → \(targetX), chevron@\(chevron.midX)) — waiting for a reveal")
             ledger[id].deferredForReveal = true
             return false
