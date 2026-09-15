@@ -1,6 +1,64 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ ignores the moves Pelmet makes in the bar, so it keeps its own spot. Hold ⌘ and drag it yourself, or give it a launcher.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ignoriert die Verschiebungen, die Pelmet in der Leiste macht, und behält seinen Platz. Halte ⌘ und zieh es selbst, oder gib ihm einen Starter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ignora los movimientos que Pelmet hace en la barra y conserva su sitio. Mantén ⌘ y arrástralo tú mismo, o dale un lanzador."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ignore les déplacements que Pelmet fait dans la barre et garde sa place. Maintiens ⌘ et déplace-le toi-même, ou donne-lui un lanceur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ignora gli spostamenti che Pelmet fa nella barra e tiene il suo posto. Tieni premuto ⌘ e trascinala tu, oppure dalle un avvio app."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@はPelmetがバーで行う移動を無視し、自分の位置を保ちます。⌘を押しながら自分でドラッグするか、ランチャーを追加してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@은(는) Pelmet이 막대에서 하는 이동을 무시하고 제자리를 지킵니다. ⌘를 누른 채 직접 드래그하거나 실행기를 추가하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ignora os movimentos que o Pelmet faz na barra e mantém o seu lugar. Segure ⌘ e arraste você mesmo, ou dê a ele um atalho."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ игнорирует перемещения, которые Pelmet делает в строке меню, и остаётся на своём месте. Удерживайте ⌘ и перетащите её сами или добавьте для неё запуск."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 会忽略 Pelmet 在菜单栏中的移动，保持自己的位置。按住 ⌘ 自行拖动，或为它添加一个启动器。"
+          }
+        }
+      }
+    },
     "%@ runs its menu bar icon from a helper macOS doesn't count as an app, so it won't show.": {
       "localizations": {
         "de": {
@@ -9741,6 +9799,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "在 Pelmet 图标隐藏期间保持开启——这是回到设置的入口。"
+          }
+        }
+      }
+    },
+    "Stays where its app put it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bleibt, wo seine App es hingesetzt hat"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se queda donde su app lo puso"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reste là où son app l'a mis"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resta dove la sua app l'ha messa"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリが置いた場所に留まります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱이 놓은 자리에 그대로 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fica onde o app a colocou"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Остаётся там, куда её поставило приложение"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "留在其应用放置的位置"
           }
         }
       }

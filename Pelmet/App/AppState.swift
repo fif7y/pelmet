@@ -1212,6 +1212,28 @@ final class AppState {
         UserDefaults.standard.stringArray(forKey: AppState.bundlelessKey) ?? []
     ).subtracting([PelmetBundle.mainID])
     private static let bundlelessKey = "pelmet.bundlelessHosts"
+    /// Bundles whose bar item swallows synthetic ⌘-drags: every placement
+    /// landed back where it started (Kap's Electron tray, #15). Left where
+    /// the app put it instead of dragged on every reveal; the editor says
+    /// so and offers a launcher. Sticky across launches — the item bounces
+    /// the same way every time, and re-learning it costs three visible
+    /// drags per session. Cleared by a verified move (a user's own ⌘-drag).
+    private(set) var immovableBundles: Set<String> = Set(
+        UserDefaults.standard.stringArray(forKey: AppState.immovableKey) ?? []
+    ).subtracting(PelmetBundle.ownIDs)
+    private static let immovableKey = "pelmet.immovableBundles"
+
+    func isImmovable(_ id: ItemID) -> Bool {
+        id.bundleID.map { immovableBundles.contains($0) } ?? false
+    }
+
+    func setImmovable(_ bundle: String, _ immovable: Bool) {
+        guard !PelmetBundle.ownIDs.contains(bundle),
+              immovableBundles.contains(bundle) != immovable else { return }
+        if immovable { immovableBundles.insert(bundle) } else { immovableBundles.remove(bundle) }
+        UserDefaults.standard.set(Array(immovableBundles), forKey: Self.immovableKey)
+        PelmetLog.log("editor: immovable \(immovableBundles.sorted())")
+    }
     /// Consecutive snapshots a host must read the same (dis)agreeing way
     /// before the sticky mark flips.
     private static let bundlelessConfirmations = 3
@@ -1377,6 +1399,9 @@ final class AppState {
             if let hit { PelmetLog.log("adopt: dragged=\(hit.id.rawValue)") }
             return hit?.id
         }
+        // The user just moved it by hand: whatever swallowed Pelmet's drags
+        // before, the mark no longer describes the item.
+        if let draggedID, let bundle = draggedID.bundleID { setImmovable(bundle, false) }
         guard let result = BarAdoption.reconcile(
             items: items.map { (id: $0.id, minX: $0.frame?.minX) },
             model: settings.sectionModel,

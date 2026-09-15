@@ -306,7 +306,7 @@ final class PlacementController {
             PelmetLog.log("drift: unsettled — \(a.misplaced.map(\.rawValue)) at chevron@\(a.chevronMinX), then \(b.misplaced.map(\.rawValue)) at chevron@\(b.chevronMinX) — skipped")
             return
         }
-        let misplaced = b.misplaced
+        let misplaced = b.misplaced.filter { !appState.isImmovable($0) }
         let chevron = CGRect(x: b.chevronMinX, y: 0, width: 0, height: 0)
         // Anything now on its side has earned its budget back.
         ledger.resetDriftBudget(except: misplaced)
@@ -705,6 +705,13 @@ final class PlacementController {
             PelmetLog.log("place: chevron has no live hidden neighbor — waiting for a reveal")
             return false
         }
+        // Marked after `PlacementLedger.maxBounces` placements whose drags
+        // all landed back at the start: dragging it again is the glitch the
+        // user sees (#15), not a fix. Treated as placed so nothing requeues.
+        if appState.isImmovable(id) {
+            PelmetLog.log("place: \(id.rawValue) is marked immovable — left where its app put it")
+            return true
+        }
         PelmetLog.log("place: dragging \(id.rawValue) x=\(frame.midX) → \(targetX) (section \(section), \(aimedBetween ? "between" : "anchored"))")
         // Keep the settings window above the dragged icon's app for the
         // span of the drag; released after the refocus ladder below.
@@ -782,6 +789,19 @@ final class PlacementController {
                 return await physicallyPlaceNow(id, in: section, allowExpansion: false)
             }
             queueRescue(id)
+        }
+        // A third-party item that never moved across both drags swallowed
+        // them (an Electron tray, #15). Count it; after the budget, stop
+        // dragging it for good and let the editor say why.
+        if !placed, !dragIsPelmetOwned, let bundle = id.bundleID,
+           let finalX = primaryFrame(of: liveID, in: after)?.minX,
+           abs(finalX - frame.minX) < 0.5 {
+            let bounce = ledger.noteBounce(id)
+            PelmetLog.log("place: \(id.rawValue) bounced both drags (x=\(finalX)) — \(bounce.count)/\(PlacementLedger.maxBounces)")
+            if bounce.immovable {
+                appState.setImmovable(bundle, true)
+                return true
+            }
         }
         return placed
     }

@@ -33,6 +33,18 @@ import Testing
         #expect(v6 == .correct(attempt: 1))
     }
 
+    @Test func bouncesEarnTheImmovableMarkUnlessPlaced() {
+        var ledger = PlacementLedger()
+        #expect(ledger.noteBounce(a) == (1, false))
+        #expect(ledger.noteBounce(a) == (2, false))
+        // A verified placement forgives earlier bounces.
+        ledger.notePlaced(a)
+        #expect(ledger.noteBounce(a) == (1, false))
+        #expect(ledger.noteBounce(a) == (2, false))
+        #expect(ledger.noteBounce(a) == (3, true))
+        #expect(ledger.noteBounce(b) == (1, false))
+    }
+
     @Test func driftResetSparesTheMisplaced() {
         var ledger = PlacementLedger()
         _ = ledger.spendDriftAttempt(a, now: t0)

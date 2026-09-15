@@ -441,8 +441,14 @@ private struct ItemTile: View {
         hasLauncher && !isAppLauncher
     }
 
+    /// The bar item swallowed Pelmet's drags three placements running; it
+    /// hides fine but stays where its app put it (see AppState.immovableBundles).
+    private var isImmovable: Bool {
+        !isAppLauncher && appState.isImmovable(item.id)
+    }
+
     private func scheduleCard() {
-        guard isUnhideable || isSuperseded else { return }
+        guard isUnhideable || isSuperseded || isImmovable else { return }
         cardWork?.cancel()
         let wantShown = hovered || cardHovered
         guard wantShown != cardShown else { return }
@@ -549,6 +555,7 @@ private struct ItemTile: View {
                 name: displayName,
                 hasLauncher: hasLauncher,
                 helperHosted: appState.isBundlelessHost(item.id),
+                immovable: isImmovable && !isUnhideable,
                 addLauncher: item.id.bundleID.map { bundle in
                     { appState.addAppLauncher(bundleID: bundle, name: displayName, in: section) }
                 }
@@ -589,6 +596,8 @@ private struct InactiveIconCard: View {
     /// The icon's host is a bundle-less helper — the one cause Pelmet can
     /// name; otherwise the bar simply kept the icon when asked to hide it.
     let helperHosted: Bool
+    /// Hides fine, won't be moved: the app's tray swallows synthetic drags.
+    let immovable: Bool
     let addLauncher: (() -> Void)?
 
     @ViewBuilder
@@ -608,6 +617,10 @@ private struct InactiveIconCard: View {
                 Text("Its launcher is ready")
                     .font(.headline)
                 Text("Turn this icon off in \(name)'s settings. The launcher takes over from there.")
+            } else if immovable {
+                Text("Stays where its app put it")
+                    .font(.headline)
+                Text("\(name) ignores the moves Pelmet makes in the bar, so it keeps its own spot. Hold ⌘ and drag it yourself, or give it a launcher.")
             } else {
                 Text("Incompatible app")
                     .font(.headline)
@@ -626,7 +639,7 @@ private struct InactiveIconCard: View {
                 VStack(alignment: .leading, spacing: 8) { cardActions }
             }
             .padding(.top, 2)
-            if !hasLauncher {
+            if !hasLauncher, !immovable {
                 Text("Then turn the original off in \(name)'s settings.")
                     .foregroundStyle(.tertiary)
             }

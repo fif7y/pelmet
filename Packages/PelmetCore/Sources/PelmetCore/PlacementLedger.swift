@@ -28,6 +28,9 @@ public struct PlacementRecord: Equatable, Sendable {
     public var framelessRetryAfter: Date?
     public var rescueAttempts = 0
     public var driftAttempts = 0
+    /// Placements where both drags left the frame where it was: the item
+    /// swallows synthetic ⌘-drags (an Electron tray, #15).
+    public var bounces = 0
     /// After the drift budget is spent the item is left alone until here.
     public var driftCoolOffUntil: Date?
 
@@ -43,6 +46,8 @@ public struct PlacementLedger: Sendable {
     public static let maxDriftAttempts = 3
     public static let driftCoolOff: TimeInterval = 8 * 60
     public static let maxRescueAttempts = 3
+    /// Bounced placements before an item is left where its app put it.
+    public static let maxBounces = 3
     public static let framelessRetryInterval: TimeInterval = 30
 
     private var records: [ItemID: PlacementRecord] = [:]
@@ -107,6 +112,7 @@ public struct PlacementLedger: Sendable {
     /// A verified placement ends any rescue ping-pong and frameless wait.
     public mutating func notePlaced(_ id: ItemID) {
         self[id].rescueAttempts = 0
+        self[id].bounces = 0
         self[id].framelessSince = nil
         self[id].framelessRetryAfter = nil
     }
@@ -141,6 +147,16 @@ public struct PlacementLedger: Sendable {
         }
         self[id].driftAttempts = attempts
         return .correct(attempt: attempts)
+    }
+
+    // MARK: Bounce budget
+
+    /// A placement's drags all landed back where they started. Returns the
+    /// bounce count and whether the item has now earned the immovable mark.
+    public mutating func noteBounce(_ id: ItemID) -> (count: Int, immovable: Bool) {
+        let count = self[id].bounces + 1
+        self[id].bounces = count
+        return (count, count >= Self.maxBounces)
     }
 
     // MARK: Rescue budget
