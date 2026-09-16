@@ -62,6 +62,14 @@ final class TransitionCoordinator {
     /// reveal path floats it synchronously instead of paying ~100ms+ of SCK
     /// capture before the swap can even start (snappiness).
     private var revealCoverSnapshot: [ConcealGhostOverlay.BarSnapshot] = []
+    /// The active display (see `AppState.lastMouseDownDisplay`) when each
+    /// picture was taken. macOS dims the bar on every other display, so a
+    /// picture is only true while the same display stays active: a click
+    /// on a dimmed bar activates it as the reveal starts, and the stale
+    /// picture floated over it showed the dim bar going bright as it
+    /// lifted — the whole bar blinking (Gab, 2026-09-16, three displays).
+    private var revealCoverActiveDisplay: CGDirectDisplayID?
+    private var revealedStripActiveDisplay: CGDirectDisplayID?
 
     /// The widest strip any conceal has measured (left edge only — the
     /// right edge is the same chevron/visible cluster every time). A
@@ -327,6 +335,10 @@ final class TransitionCoordinator {
         guard let first = revealCoverSnapshot.first,
               Date().timeIntervalSince(first.takenAt) < AppTiming.revealCoverFreshness
         else { return [] }
+        guard revealCoverActiveDisplay == appState?.lastMouseDownDisplay else {
+            PelmetLog.log("cover: picture from another active display (\(revealCoverActiveDisplay ?? 0) → \(appState?.lastMouseDownDisplay ?? 0)), not used")
+            return []
+        }
         return revealCoverSnapshot
     }
 
@@ -389,6 +401,10 @@ final class TransitionCoordinator {
             PelmetLog.log("finished: hidden section changed since the picture — was \(revealedStripSignature.map(\.rawValue)) now \(hiddenSectionSignature.map(\.rawValue))")
             return false
         }
+        guard revealedStripActiveDisplay == appState?.lastMouseDownDisplay else {
+            PelmetLog.log("finished: picture from another active display")
+            return false
+        }
         return true
     }
 
@@ -405,6 +421,7 @@ final class TransitionCoordinator {
             // The reveal cover's footprint, so the two pictures overlay
             // exactly (same rect, same padding).
             revealedStripSignature = hiddenSectionSignature
+            revealedStripActiveDisplay = appState.lastMouseDownDisplay
             revealedStripSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
             PelmetLog.log("finished: picture taken (\(revealedStripSnapshot.count) display(s), \(revealedStripSignature.count) hidden item(s))")
         }
@@ -423,6 +440,7 @@ final class TransitionCoordinator {
             // The agent's own conceal fade must not bake into the snapshot.
             try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
             guard !Task.isCancelled, appState.currentRevealedSections.isEmpty else { return }
+            revealCoverActiveDisplay = appState.lastMouseDownDisplay
             revealCoverSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
         }
     }

@@ -36,7 +36,18 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     private var enabled = false
     /// A physical mouse-down was swallowed; eat the matching mouse-up.
     private var swallowUp = false
+    private var _lastMouseDownDisplay: CGDirectDisplayID?
     private let onClick: @MainActor (CGPoint) -> Void
+
+    /// The display the last physical click landed on. macOS draws the bar
+    /// at full intensity on the display it considers active — where the
+    /// user last clicked — and dims the others, so this is the transition
+    /// pictures' "active display": a picture taken while another display
+    /// was active paints the wrong intensity (Gab, 2026-09-16: click the
+    /// chevron on a dimmed bar and every icon blinks bright as the cover
+    /// lifts). This tap is the only session-wide click observer Pelmet has;
+    /// a global NSEvent monitor never sees clicks on Pelmet's own items.
+    var lastMouseDownDisplay: CGDirectDisplayID? { lock.withLock { _lastMouseDownDisplay } }
 
     init(onClick: @escaping @MainActor (CGPoint) -> Void) {
         self.onClick = onClick
@@ -83,6 +94,7 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     private func startTap() {
         let mask = (CGEventMask(1) << CGEventType.leftMouseDown.rawValue)
             | (CGEventMask(1) << CGEventType.leftMouseUp.rawValue)
+            | (CGEventMask(1) << CGEventType.rightMouseDown.rawValue)
         let selfPtr = Unmanaged.passUnretained(self).toOpaque()
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
@@ -130,7 +142,9 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
                 defer { swallowUp = false }
                 return swallowUp
             }
-            guard enabled, isOnClock(location) else { return false }
+            if let display = Self.display(under: location) { _lastMouseDownDisplay = display }
+            // Only a plain left click is the clock's; a right-click passes.
+            guard type == .leftMouseDown, enabled, isOnClock(location) else { return false }
             // Modifier clicks keep their native meaning (⌘-drag reorders).
             guard event.flags.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift]).isEmpty else {
                 return false

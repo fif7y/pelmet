@@ -65,6 +65,9 @@ final class AppState {
     private var extras: ExtrasManager?
     private var bandMonitor: MenuBarBandMonitor?
     private var clockRelay: ClockClickRelay?
+    /// See `ClockClickRelay.lastMouseDownDisplay`: the display whose bar
+    /// macOS draws active. nil until the first click after launch.
+    var lastMouseDownDisplay: CGDirectDisplayID? { clockRelay?.lastMouseDownDisplay }
     private var hotkey: HotkeyManager?
     private var eventTask: Task<Void, Never>?
     @ObservationIgnored private lazy var accessibility = AccessibilityMonitor { [weak self] granted in
