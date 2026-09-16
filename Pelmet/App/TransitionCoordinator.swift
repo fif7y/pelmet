@@ -275,6 +275,13 @@ final class TransitionCoordinator {
         // and retake the picture, so cover and bar agree for the cover's
         // life: the indicator outlives it by seconds.
         var snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clock.minX))
+        // No picture (Screen Recording not granted): nothing to retake, and
+        // the walks below only delay the replayed click (~250ms on #27's
+        // machine, four walks per click).
+        guard !snaps.isEmpty else {
+            PelmetLog.log("clock: blink cover none — no picture, ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+            return nil
+        }
         var clockNow = clock.minX
         var walks = 0
         while walks < 4 {
