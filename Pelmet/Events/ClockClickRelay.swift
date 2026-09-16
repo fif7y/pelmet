@@ -26,7 +26,7 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     private var tapSource: CFRunLoopSource?
     private var tapRunLoop: CFRunLoop?
     private let lock = NSLock()
-    /// Clock geometry, main-display AX frame (top-left origin, same space as
+    /// Clock geometry from the AX frame (top-left origin, same space as
     /// CGEvent locations). Mirrored to every display by right-edge inset:
     /// the bar mirrors, so the clock sits the same distance from the right
     /// edge on each screen.
@@ -51,10 +51,17 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     /// clock isn't in the walk — locked screen, empty AX).
     @MainActor func updateClockFrame(_ frame: CGRect?) {
         guard let frame, let main = NSScreen.screens.first else { return }
+        // Measure the inset against the display the frame is on, not the
+        // main one: the walk can hand back another display's copy of the
+        // clock (#27), and a main-width inset from a frame on the display
+        // beside it put the clock off every screen — clicks passed
+        // through untouched, and the agent refused them.
+        let bounds = Self.display(under: CGPoint(x: frame.midX, y: frame.midY)).map(CGDisplayBounds)
+            ?? CGRect(origin: .zero, size: main.frame.size)
         lock.withLock {
-            insetFromRight = main.frame.width - frame.maxX
+            insetFromRight = bounds.maxX - frame.maxX
             width = frame.width
-            bandHeight = max(frame.maxY, main.frame.maxY - main.visibleFrame.maxY)
+            bandHeight = max(frame.maxY - bounds.minY, main.frame.maxY - main.visibleFrame.maxY)
         }
     }
 
@@ -142,13 +149,18 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     /// the clock's right-edge inset on that display.
     private func isOnClock(_ point: CGPoint) -> Bool {
         guard let insetFromRight, width > 0, bandHeight > 0 else { return false }
-        var display: CGDirectDisplayID = 0
-        var count: UInt32 = 0
-        guard CGGetDisplaysWithPoint(point, 1, &display, &count) == .success, count == 1 else { return false }
+        guard let display = Self.display(under: point) else { return false }
         let bounds = CGDisplayBounds(display)
         guard point.y >= bounds.minY, point.y < bounds.minY + bandHeight else { return false }
         let maxX = bounds.maxX - insetFromRight
         return point.x >= maxX - width && point.x < maxX
+    }
+
+    private static func display(under point: CGPoint) -> CGDirectDisplayID? {
+        var display: CGDirectDisplayID = 0
+        var count: UInt32 = 0
+        guard CGGetDisplaysWithPoint(point, 1, &display, &count) == .success, count == 1 else { return nil }
+        return display
     }
 
     // MARK: - Replay

@@ -55,9 +55,14 @@ public actor ItemEnumerator {
                 guard let item = describeGroup(group) else { continue }
                 if let existing = byID[item.id] {
                     // The same item appears once per display. Prefer the
-                    // main-display occurrence (y ≈ 0 in CG top-left coords) so
-                    // every frame lives in one coordinate space — boundary
-                    // comparisons break across mixed display spaces.
+                    // main-display occurrence so every frame lives in one
+                    // coordinate space — boundary comparisons break across
+                    // mixed display spaces. The band test alone is not
+                    // enough: a display parked beside the main one, tops
+                    // aligned, puts its bar at y ≈ 0 too, and its copies
+                    // can come first in the walk (#27: every system item
+                    // read past the main display's right edge, so the
+                    // clock relay and the adopt pass measured nothing).
                     if !isMainDisplayFrame(existing.frame), isMainDisplayFrame(item.frame) {
                         byID[item.id] = item
                     }
@@ -70,8 +75,12 @@ public actor ItemEnumerator {
         return order.compactMap { byID[$0] }
     }
 
+    /// In the band AND inside the main display's bounds (CG global space,
+    /// main display at the origin) — the band alone admits a side-by-side
+    /// display's bar.
     private func isMainDisplayFrame(_ frame: CGRect) -> Bool {
         MenuBarGeometry.isInBand(frame)
+            && CGDisplayBounds(CGMainDisplayID()).contains(CGPoint(x: frame.midX, y: frame.midY))
     }
 
     // MARK: - Internals
