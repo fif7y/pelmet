@@ -284,11 +284,14 @@ final class TransitionCoordinator {
         let started = Date()
         // The capture itself lights the screen-capture indicator at the
         // bar's right end and the whole cluster shifts left to make room
-        // (8pt, 2026-09-14) — the first picture is stale the moment it
-        // exists, and the clock slid under the cover's edge. Walk again
-        // until the clock has moved (or is already in its shifted place)
-        // and retake the picture, so cover and bar agree for the cover's
-        // life: the indicator outlives it by seconds.
+        // (8pt, 2026-09-14; 3pt on 2026-09-16) — the first picture is stale
+        // the moment it exists, and the clock slid under the cover's edge.
+        // Walk again until the clock has moved and retake the picture, so
+        // cover and bar agree for the cover's life. Not when the indicator
+        // is already lit from a recent picture: the bar sat shifted before
+        // this capture, nothing will move, and the walks were pure delay
+        // (four of them, ~460ms between the click and its replay).
+        let indicatorLit = ConcealGhostOverlay.captureIndicatorLit
         var snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clock.minX))
         // No picture (Screen Recording not granted): nothing to retake, and
         // the walks below only delay the replayed click (~250ms on #27's
@@ -299,7 +302,7 @@ final class TransitionCoordinator {
         }
         var clockNow = clock.minX
         var walks = 0
-        while walks < 4 {
+        while !indicatorLit, walks < 2 {
             walks += 1
             let fresh = await appState.engine.freshSnapshot()
             guard let now = fresh.items.first(where: isClock)?.frame?.minX else { break }
@@ -310,7 +313,7 @@ final class TransitionCoordinator {
             snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clockNow))
         }
         let cover = ConcealGhostOverlay.begin(from: snaps, safety: AppTiming.transitionCoverSafety)
-        PelmetLog.log("clock: blink cover \(cover == nil ? "none" : "up") \(Int(minX))..\(Int(clockNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) clock \(Int(clock.minX))→\(Int(clockNow)) after \(walks) walk(s), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+        PelmetLog.log("clock: blink cover \(cover == nil ? "none" : "up") \(Int(minX))..\(Int(clockNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) clock \(Int(clock.minX))→\(Int(clockNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
         return cover
     }
 

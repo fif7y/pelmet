@@ -16,6 +16,10 @@ enum AppTiming {
     /// Longest the blink cover waits for the concealed items to leave the
     /// AX tree after the re-acquire before lifting anyway.
     static let clockBlinkCoverDeadline: TimeInterval = 1.5
+    /// How long after a capture the bar is taken to be in its indicator-
+    /// shifted place (see `ConcealGhostOverlay.captureIndicatorLit`): the
+    /// indicator lasts ~3s, half a second is kept back for the edge.
+    static let captureIndicatorHold: TimeInterval = 2.5
     /// Adoption deferral while a transition is in flight.
     static let adoptDeferralDelay: Duration = .milliseconds(300)
     static let adoptMaxDeferrals = 10

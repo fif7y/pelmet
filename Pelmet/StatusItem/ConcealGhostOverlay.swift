@@ -170,6 +170,17 @@ final class ConcealGhostOverlay {
     /// the picture's background is continuous with the bar around it.
     static let capturePadding: CGFloat = 6
 
+    /// When Pelmet last took a picture. Every capture lights the system's
+    /// screen-capture indicator at the bar's right end, which shifts the
+    /// whole cluster left ~3pt and stays ~3s past the last capture
+    /// (measured 3.0–3.2s, `screencapture` and a one-frame SCStream alike,
+    /// 2026-09-16). While it is lit the bar is already in its shifted
+    /// place, so a picture taken now needs no retake.
+    private(set) static var lastCaptureAt: Date?
+    static var captureIndicatorLit: Bool {
+        lastCaptureAt.map { Date().timeIntervalSince($0) < AppTiming.captureIndicatorHold } ?? false
+    }
+
     static func snapshotSet(of rect: CGRect?) async -> [BarSnapshot] {
         guard let rect, rect.width > 8 else { return [] }
         guard ScreenRecordingAccess.isGranted else {
@@ -256,6 +267,7 @@ final class ConcealGhostOverlay {
                 takenAt: Date()
             ))
         }
+        if !shots.isEmpty { lastCaptureAt = Date() }
         return shots
     }
 
