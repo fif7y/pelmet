@@ -104,25 +104,40 @@ enum ExtraGlyph {
         }
     }
 
-    /// Both marks, side by side at 62% — the tile stands for two icons, and
-    /// showing one of them named the wrong thing. Halves of each were tried
-    /// first and fail: both marks are same-diameter circles, so a split
-    /// fuses them into one glitched circle instead of reading as a pair.
-    /// 62% is the size where both still hold a legible stroke at 20pt.
+    /// Both marks, overlapped with a knockout gap — the tile stands for two
+    /// icons, and showing one of them named the wrong thing. Halves of each
+    /// was tried first and fails: both marks are same-diameter circles, so a
+    /// split fuses them into one glitched circle. Overlapping reads as a pair
+    /// because the gap around the front mark is what separates them.
+    ///
+    /// Sized to the 20pt icon box exactly (mark + offset = 1.0): spilling
+    /// into the tile's padding flattered it in the harness and clipped in the
+    /// app. Time Machine sits BEHIND because its arrow tail is on the outside
+    /// left and survives the bite, where Siri's wave is central and would not.
     static let appleExtraPair: NSImage = {
-        let box: CGFloat = 20, mark = box * 0.62
+        let box: CGFloat = 20
+        let mark = box * 0.58, offset = box * 0.42, ring: CGFloat = 1.1
         return raster(size: NSSize(width: box, height: box), template: true) { rect in
-            func place(_ image: NSImage, x: CGFloat) {
+            func place(_ image: NSImage, _ frame: NSRect) {
                 let size = image.size
-                let fit = min(mark / size.width, mark / size.height)
+                let fit = min(frame.width / size.width, frame.height / size.height)
                 let width = size.width * fit, height = size.height * fit
                 image.draw(
-                    in: NSRect(x: x, y: rect.midY - height / 2, width: width, height: height),
+                    in: NSRect(x: frame.midX - width / 2, y: frame.midY - height / 2, width: width, height: height),
                     from: .zero, operation: .sourceOver, fraction: 1
                 )
             }
-            place(siri, x: -1)
-            place(timeMachineIdle, x: box - mark + 1)
+            let back = NSRect(x: 0, y: rect.midY - mark / 2 + 1, width: mark, height: mark)
+            let front = NSRect(x: offset, y: rect.midY - mark / 2 - 1, width: mark, height: mark)
+            place(timeMachineIdle, back)
+            // Clear the alpha rather than painting a colour: the image is a
+            // template, so the hole lets whatever the tile sits on show
+            // through — right in both appearances and at any hover state.
+            NSGraphicsContext.current?.cgContext.setBlendMode(.destinationOut)
+            NSColor.black.setFill()
+            NSBezierPath(ovalIn: front.insetBy(dx: -ring, dy: -ring)).fill()
+            NSGraphicsContext.current?.cgContext.setBlendMode(.normal)
+            place(siri, front)
         }
     }()
 
