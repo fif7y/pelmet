@@ -59,6 +59,8 @@ final class ExtrasManager {
     /// Pelmet's own countdown, alive while a timer item exists.
     private var pelmetTimer: PelmetTimer?
     private var lastTimerActive = false
+    /// Time Machine's state, alive while a Time Machine item exists.
+    private var timeMachine: TimeMachineBackup?
     /// One clock per media item drawing the animated bars (see ExtraGlyphs).
     private var animators: [UUID: ExtraAnimator] = [:]
     /// Play/pause state the media glyph shows. Click intent drives it (players
@@ -93,6 +95,15 @@ final class ExtrasManager {
     /// All ItemIDs the editor should represent even when invisible.
     var managedItemIDs: [ItemID] {
         specs.values.map(Self.itemID(for:))
+    }
+
+    /// Whether this extra is actually in the bar right now. The hardware-gated
+    /// kinds sit in a section but only appear while their hardware is live
+    /// (media controls with audio playing, the camera indicator with a camera
+    /// on), so a caller that needs a real AX item — the boot adoption wait —
+    /// has to ask rather than infer it from the section.
+    func isShowing(_ id: ItemID) -> Bool {
+        specs.contains { lastVisible[$0.key] == true && Self.itemID(for: $0.value) == id }
     }
 
     func sync(with newSpecs: [ExtraItemSpec]) {
@@ -169,6 +180,17 @@ final class ExtrasManager {
         } else if let timer = pelmetTimer {
             timer.cancel()
             pelmetTimer = nil
+        }
+        if newSpecs.contains(where: { $0.kind == .timeMachine }) {
+            if timeMachine == nil {
+                let backup = TimeMachineBackup()
+                backup.onChange = { [weak self] in self?.timeMachineChanged() }
+                timeMachine = backup
+                backup.start()
+            }
+        } else if let backup = timeMachine {
+            backup.stop()
+            timeMachine = nil
         }
         let needsCameraMonitor = newSpecs.contains {
             $0.kind == .cameraMicIndicator || $0.kind == .mediaControls
@@ -294,7 +316,9 @@ final class ExtrasManager {
                     appState?.cancelDynamicExtraPlacement(itemID)
                 }
                 lastTimerActive = active
-            case .shortcut, .userSwitching:
+            case .timeMachine:
+                updateTimeMachineGlyph(item, spec: spec)
+            case .shortcut, .userSwitching, .siri:
                 break
             }
             setVisible(visible, for: id, item: item)
@@ -313,7 +337,7 @@ final class ExtrasManager {
         for (id, item) in items {
             guard let spec = specs[id], lastVisible[id] != true else { continue }
             switch spec.kind {
-            case .airdrop, .shortcut, .userSwitching: break
+            case .airdrop, .shortcut, .userSwitching, .timeMachine, .siri: break
             case .timer:
                 // Counting: already in the bar on its own.
                 guard !(pelmetTimer?.isActive ?? false) else { continue }
@@ -441,6 +465,8 @@ final class ExtrasManager {
         case .appLauncher: spec.symbol ?? "app.dashed"
         case .timer: "timer"
         case .userSwitching: "person.crop.circle"
+        case .timeMachine: ExtraGlyph.timeMachineSymbol
+        case .siri: "siri"
         }
     }
 
@@ -675,7 +701,8 @@ final class ExtrasManager {
         case .cameraMicIndicator: updateCameraSymbol(item, spec: spec)
         case .airdrop: updateAirDropGlyph(item, spec: spec)
         case .timer: updateTimerGlyph(item, spec: spec)
-        case .shortcut, .appLauncher, .userSwitching: break
+        case .timeMachine: updateTimeMachineGlyph(item, spec: spec)
+        case .shortcut, .appLauncher, .userSwitching, .siri: break
         }
     }
 
@@ -744,6 +771,24 @@ final class ExtrasManager {
         item.button?.image = ExtraGlyph.airdrop
     }
 
+    /// Apple's own faces: the clock while idle, the arrows while a backup
+    /// runs, the exclamation after a failed one. Same image object each
+    /// time so an unchanged state costs no replicant redraw.
+    private func updateTimeMachineGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
+        let status = timeMachine?.status ?? .init()
+        let image = status.running ? ExtraGlyph.timeMachineBackingUp
+            : status.failed ? ExtraGlyph.timeMachineFailed
+            : ExtraGlyph.timeMachineIdle
+        if item.button?.image !== image { item.button?.image = image }
+    }
+
+    private func timeMachineChanged() {
+        for (id, item) in items {
+            guard let spec = specs[id], spec.kind == .timeMachine else { continue }
+            updateTimeMachineGlyph(item, spec: spec)
+        }
+    }
+
     private func updateCameraSymbol(_ item: NSStatusItem, spec: ExtraItemSpec) {
         let monitor = cameraMicMonitor
         let camera = monitor?.cameraActive ?? false
@@ -802,6 +847,20 @@ final class ExtrasManager {
             }
         case .userSwitching:
             popUp(usersMenu(), on: statusItem.value)
+        case .timeMachine:
+            // Fresh for the next open; this one shows what the poll last saw.
+            timeMachine?.refresh()
+            popUp(timeMachineMenu(), on: statusItem.value)
+        case .siri:
+            if rightClick {
+                let menu = NSMenu()
+                let settings = NSMenuItem(title: String(localized: "Siri Settings…"), action: #selector(siriSettings), keyEquivalent: "")
+                settings.target = self
+                menu.items = [settings]
+                popUp(menu, on: statusItem.value)
+            } else {
+                Siri.activate()
+            }
         case .appLauncher:
             if rightClick, Self.isRunning(spec), let bundleID = spec.bundleID {
                 let menu = NSMenu()
@@ -937,6 +996,72 @@ final class ExtrasManager {
     @objc private func loginWindow() { UserSwitching.switchToLoginWindow() }
     @objc private func lockScreen() { UserSwitching.lockScreen() }
     @objc private func usersSettings() { UserSwitching.openUsersSettings() }
+
+    // MARK: Time Machine menu
+
+    /// Apple's menu, line for line: the state on top, then the verbs.
+    private func timeMachineMenu() -> NSMenu {
+        let menu = NSMenu()
+        func label(_ title: String) {
+            let entry = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            entry.isEnabled = false
+            menu.addItem(entry)
+        }
+        func verb(_ title: String, _ action: Selector) {
+            let entry = NSMenuItem(title: title, action: action, keyEquivalent: "")
+            entry.target = self
+            menu.addItem(entry)
+        }
+        let status = timeMachine?.status ?? .init()
+        if status.running {
+            if status.stopping {
+                label(String(localized: "Stopping Backup…"))
+            } else if let percent = status.percent {
+                label(String(localized: "Backing Up: \(Int((percent * 100).rounded()))%"))
+            } else if status.phase == "Finishing" || status.phase?.hasPrefix("Thinning") == true {
+                label(String(localized: "Finishing Backup…"))
+            } else {
+                label(String(localized: "Preparing Backup…"))
+            }
+        } else if let destination = TimeMachineBackup.destination() {
+            if let latest = destination.latestBackup {
+                label(String(localized: "Latest Backup to “\(destination.name)”"))
+                label(Self.backupDateFormatter.string(from: latest))
+            } else {
+                label(String(localized: "Waiting to Complete First Backup"))
+            }
+            if destination.failed {
+                label(String(localized: "Backup Failed…"))
+            }
+        } else {
+            label(String(localized: "No Backup Disk Selected"))
+        }
+        menu.addItem(.separator())
+        if status.running, !status.stopping {
+            verb(String(localized: "Skip This Backup"), #selector(skipBackup))
+        } else {
+            verb(String(localized: "Back Up Now"), #selector(backUpNow))
+        }
+        menu.addItem(.separator())
+        verb(String(localized: "Browse Time Machine Backups"), #selector(browseBackups))
+        menu.addItem(.separator())
+        verb(String(localized: "Open Time Machine Settings…"), #selector(timeMachineSettings))
+        return menu
+    }
+
+    private static let backupDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .short
+        formatter.doesRelativeDateFormatting = true
+        return formatter
+    }()
+
+    @objc private func backUpNow() { timeMachine?.backUpNow() }
+    @objc private func skipBackup() { timeMachine?.skipBackup() }
+    @objc private func browseBackups() { TimeMachineBackup.browseBackups() }
+    @objc private func timeMachineSettings() { TimeMachineBackup.openSettings() }
+    @objc private func siriSettings() { Siri.openSettings() }
 
     private func openAirDrop() {
         // Finder's AirDrop view via its keyboard shortcut (⇧⌘R) — the only

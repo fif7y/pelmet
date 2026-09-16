@@ -27,6 +27,8 @@ struct ItemIDGrammarTests {
         }
         #expect(ItemID.status(bundle: "app.fif7y.Pelmet", title: "Pelmet.Timer").pelmetItem == .timer)
         #expect(ItemID.status(bundle: "app.fif7y.Pelmet", title: "Pelmet.Users").pelmetItem == .userSwitching)
+        #expect(ItemID.status(bundle: "app.fif7y.Pelmet", title: "Pelmet.TimeMachine").pelmetItem == .timeMachine)
+        #expect(ItemID.status(bundle: "app.fif7y.Pelmet", title: "Pelmet.Siri").pelmetItem == .siri)
     }
 
     @Test func formattersRoundTripThroughParser() {

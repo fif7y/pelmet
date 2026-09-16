@@ -52,7 +52,13 @@ bothers you, turn the permission off and keep going.
 macOS protects a small set of system items (Clock, Control Center). Pelmet
 shows them locked in the editor rather than pretending. Siri and Time Machine
 are a special case: macOS draws them from one process, so they hide together
-as one tile, and macOS pins their spot, so the editor can't move them.
+as one tile, and macOS pins their spot, so the editor can't move them. To
+manage them one by one, turn on Pelmet's own Time Machine and Siri items in
+Settings → Menu Bar: each gets its own tile, moves and hides like any icon,
+and Apple's icon switches off in System Settings → Menu Bar while Pelmet's is
+on (it comes back when you turn Pelmet's off). Pelmet's Time Machine item
+shows the latest backup, backs up now, skips a running backup and opens the
+backup browser, the same menu as Apple's.
 
 <a name="app-launchers"></a>
 **One app's icon won't hide, and the editor marks it with a "!".**

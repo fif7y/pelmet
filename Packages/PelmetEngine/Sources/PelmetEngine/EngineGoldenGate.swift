@@ -345,6 +345,15 @@ public actor EngineGoldenGate: MenuBarEngine {
            activeSystemAllow == Set(allowedSystem.map(\.rawValue)),
            let activeAllowlist, activeAllowlist.isSuperset(of: allowedBundles) {
             PelmetLog.log("converge: no-op (concealable=\(concealable.count), allow=\(allowedBundles.count))")
+            // The assertion stands, but the bookkeeping may not: a carried
+            // id whose section is now revealed is no longer concealed, and
+            // left stamped it drew a ghost tile in the editor (Apple's Siri
+            // and Time Machine switched off under a revealed Hidden section,
+            // 2026-09-16 — SystemUIServer runs forever, so nothing else
+            // ever pruned them).
+            if let last = lastSnapshot, last.concealed != plan.concealed {
+                lastSnapshot = EngineSnapshot(items: snapshot.items, concealed: plan.concealed, takenAt: snapshot.takenAt)
+            }
             return
         }
         if assertionLost {

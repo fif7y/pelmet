@@ -845,6 +845,62 @@ final class AppState {
         settings.sectionModel.enroll(key, in: section)
         PelmetLog.log("extras: add \(spec.itemTitle) → \(settings.sectionModel.section(of: key))")
         settings.save()
+        retireAppleTwin(of: spec.kind)
+    }
+
+    /// The singleton kinds' toggle going off. Siri and Time Machine also
+    /// hand Apple's icon back.
+    func removeExtras(of kind: ExtraKind) {
+        settings.extraItems.removeAll { $0.kind == kind }
+        restoreAppleTwin(of: kind)
+    }
+
+    /// The pinned SystemUIServer tile's one action: turn on whichever of
+    /// Pelmet's Siri and Time Machine is still off. Each `addExtra` retires
+    /// Apple's twin, so once both are on SystemUIServer has no extras left
+    /// and the tile that offered this goes away on its own.
+    func useAppleExtraReplacements() {
+        var added = false
+        for kind in [ExtraKind.siri, .timeMachine] where !settings.extraItems.contains(where: { $0.kind == kind }) {
+            addExtra(ExtraItemSpec(kind: kind))
+            added = true
+        }
+        guard added else { return }
+        settingsChanged()
+    }
+
+    /// Siri and Time Machine: Apple's own icon switches off in System
+    /// Settings the moment Pelmet's switches on (otherwise the bar shows
+    /// two), and comes back when Pelmet's goes off — only if Pelmet was the
+    /// one that switched it off. Nothing runs at launch: once off, the
+    /// System Settings switch stays off on its own, and a user who ticks it
+    /// back by hand is not fought.
+    private func retireAppleTwin(of kind: ExtraKind) {
+        guard let twin = AppleMenuExtra(kind), twin.isShown else { return }
+        guard twin.setShown(false) else { return }
+        UserDefaults.standard.set(true, forKey: twin.restoreKey)
+        // SystemUIServer tears the icon down over a few hundred ms, so the
+        // walk its own settings change triggers still sees it and the editor
+        // kept showing a tile for an icon already gone. Re-read until it is,
+        // rather than once on a fixed delay — a single late look made the
+        // tile linger for the whole delay even though the icon went in ~300ms.
+        Task {
+            for _ in 0..<8 {
+                try? await Task.sleep(for: .milliseconds(250))
+                let snap = await engine.snapshot()
+                updateSnapshot(snap)
+                let stillThere = snap.items.contains {
+                    $0.id.bundleID == PelmetBundle.systemUIServerID && $0.frame != nil
+                }
+                if !stillThere { return }
+            }
+        }
+    }
+
+    private func restoreAppleTwin(of kind: ExtraKind) {
+        guard let twin = AppleMenuExtra(kind), UserDefaults.standard.bool(forKey: twin.restoreKey) else { return }
+        UserDefaults.standard.removeObject(forKey: twin.restoreKey)
+        twin.setShown(true)
     }
 
     func moveItem(_ id: ItemID, to section: PelmetCore.Section, before beforeID: ItemID?) {
@@ -1457,9 +1513,13 @@ final class AppState {
             settings.separators.map { SeparatorManager.itemID(for: $0) }
                 .filter { settings.sectionModel.section(of: $0) == .visible }
         )
+        // Media controls are a visible-section item that is only IN the bar
+        // while audio plays; with nothing playing it is width-collapsed and
+        // never enters the AX tree, so expecting it burned the full 8s on
+        // every silent launch (2026-09-16). Wait for it only when it shows.
         for spec in settings.extraItems where spec.kind == .mediaControls {
             let id = ExtrasManager.itemID(for: spec)
-            if settings.sectionModel.section(of: id) == .visible {
+            if settings.sectionModel.section(of: id) == .visible, extras?.isShowing(id) == true {
                 expected.insert(id)
             }
         }
@@ -1470,14 +1530,20 @@ final class AppState {
         for id in helperHosts?.hostedLiveIDs ?? [] { expected.insert(id) }
         guard !expected.isEmpty else { return }
         let deadline = Date.now.addingTimeInterval(8)
+        var missing = expected
+        var lastWalk: [ItemID: CGRect?] = [:]
         while Date.now < deadline {
             // In-band frames only: a registration made while the PREVIOUS
             // instance's assertion still held (relaunch overlap) is present
             // in AX but parked offscreen (x=4800, 2026-09-02) — counting it
             // as adopted let the first converge assert over it, parking the
             // media control in the wrong zone for the whole session.
+            let snap = await engine.snapshot()
+            lastWalk = Dictionary(
+                snap.items.map { ($0.id, $0.frame) }, uniquingKeysWith: { a, _ in a }
+            )
             let observed = Set(
-                await engine.snapshot().items
+                snap.items
                     .filter { $0.frame.map(MenuBarGeometry.isInBand) == true }
                     .map(\.id)
             )
@@ -1485,9 +1551,15 @@ final class AppState {
                 PelmetLog.log("start: own items adopted (\(expected.count))")
                 return
             }
+            missing = expected.subtracting(observed)
             try? await Task.sleep(for: .milliseconds(500))
         }
-        PelmetLog.log("start: own-item adoption timeout — continuing without \(expected.count) item(s)")
+        let detail = missing.sorted { $0.rawValue < $1.rawValue }.map { id -> String in
+            guard let frame = lastWalk[id] else { return "\(id.rawValue) absent-from-AX" }
+            guard let frame else { return "\(id.rawValue) no-frame" }
+            return "\(id.rawValue) parked x=\(Int(frame.minX)) y=\(Int(frame.minY))"
+        }
+        PelmetLog.log("start: own-item adoption timeout — continuing without \(detail)")
     }
 
     private func handle(engineEvent: EngineEvent) {
@@ -1496,6 +1568,16 @@ final class AppState {
             adoptSectionsFromBar()
             Task { updateSnapshot(await engine.snapshot()) }
         case .itemsChanged:
+            // Not before the first converge. `waitForOwnItemAdoption` polls
+            // the engine every 500ms, and any id that flips mid-boot (an
+            // item still without a frame, SystemUIServer's title resolving
+            // on the second walk) makes one of those polls emit
+            // itemsChanged. Converging on it asserts over the helpers whose
+            // adoption the wait is still waiting for, so the wait could
+            // never finish and burned its full 8s (2026-09-16). Nothing is
+            // lost: the boot sequence runs registerNewItems + setModel
+            // itself, straight after the wait.
+            guard engineStarted else { return }
             // Route never-seen bundles to the configured new-items section,
             // then re-converge so the change (or a known bundle rejoining the
             // allowlist) takes effect.

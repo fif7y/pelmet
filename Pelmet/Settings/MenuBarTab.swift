@@ -404,6 +404,8 @@ private struct ItemTile: View {
         case .airdrop: return String(localized: "AirDrop")
         case .timer: return String(localized: "Timer")
         case .userSwitching: return String(localized: "Users")
+        case .timeMachine: return String(localized: "Time Machine")
+        case .siri: return String(localized: "Siri")
         default: break
         }
         // SystemUIServer's extras enumerate as one item titled with every
@@ -572,6 +574,9 @@ private struct ItemTile: View {
                 helperHosted: appState.isBundlelessHost(item.id),
                 immovable: isImmovable && !isUnhideable,
                 pinnedBySystem: MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID),
+                usePelmetReplacements: item.id.bundleID == PelmetBundle.systemUIServerID
+                    ? { appState.useAppleExtraReplacements() }
+                    : nil,
                 addLauncher: MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID) ? nil : item.id.bundleID.map { bundle in
                     { appState.addAppLauncher(bundleID: bundle, name: displayName, in: section) }
                 }
@@ -617,12 +622,22 @@ private struct InactiveIconCard: View {
     /// Hides fine, won't be moved, and no launcher applies: macOS itself
     /// pins the host (SystemUIServer's Siri / Time Machine).
     let pinnedBySystem: Bool
+    /// SystemUIServer's pair only: Pelmet ships its own Siri and Time
+    /// Machine, so the card turns them on from here rather than dead-ending
+    /// on "can't move it". Nil for the other pinned host (Kerberos), which
+    /// has no replacement.
+    let usePelmetReplacements: (() -> Void)?
     let addLauncher: (() -> Void)?
 
     @ViewBuilder
     private var cardActions: some View {
         if !hasLauncher, let addLauncher {
             Button("Add a launcher", action: addLauncher)
+                .buttonStyle(.borderedProminent)
+                .tint(PelmetAccent.accent)
+        }
+        if let usePelmetReplacements {
+            Button("Use Pelmet's Siri and Time Machine", action: usePelmetReplacements)
                 .buttonStyle(.borderedProminent)
                 .tint(PelmetAccent.accent)
         }
@@ -641,7 +656,11 @@ private struct InactiveIconCard: View {
             } else if pinnedBySystem {
                 Text("Pinned by macOS")
                     .font(.headline)
-                Text("Pelmet can hide \(name), but macOS keeps it in its own spot, so the editor can't move it.")
+                if usePelmetReplacements != nil {
+                    Text("Siri and Time Machine are locked macOS system icons. Turn on Pelmet's Siri and Time Machine below for separate icons you can move.")
+                } else {
+                    Text("Pelmet can hide \(name), but macOS keeps it in its own spot, so the editor can't move it.")
+                }
             } else if immovable {
                 Text("Stays where its app put it")
                     .font(.headline)
@@ -706,7 +725,7 @@ private struct PelmetItemsStrip: View {
         if on, !hasKind(kind) {
             appState.addExtra(ExtraItemSpec(kind: kind))
         } else if !on {
-            appState.settings.extraItems.removeAll { $0.kind == kind }
+            appState.removeExtras(of: kind)
         }
         appState.settingsChanged()
     }
@@ -755,15 +774,25 @@ private struct PelmetItemsStrip: View {
                     isOn: hasKind(.cameraMicIndicator)
                 ) { toggleKind(.cameraMicIndicator, on: $0) }
                 PelmetItemRow(
-                    symbol: "", image: ExtraGlyph.airdrop, title: "AirDrop",
-                    caption: "Opens AirDrop in Finder.",
-                    isOn: hasKind(.airdrop)
-                ) { toggleKind(.airdrop, on: $0) }
+                    symbol: "siri", title: "Siri",
+                    caption: "Opens Siri. Apple's own icon turns off in System Settings while this is on.",
+                    isOn: hasKind(.siri)
+                ) { toggleKind(.siri, on: $0) }
                 PelmetItemRow(
                     symbol: "timer", title: "Timer",
                     caption: "A countdown that stays in the bar. Click for durations, rings when it ends.",
                     isOn: hasKind(.timer)
                 ) { toggleKind(.timer, on: $0) }
+                PelmetItemRow(
+                    symbol: ExtraGlyph.timeMachineSymbol, title: "Time Machine",
+                    caption: "Latest backup, Back Up Now. Apple's own icon turns off in System Settings while this is on.",
+                    isOn: hasKind(.timeMachine)
+                ) { toggleKind(.timeMachine, on: $0) }
+                PelmetItemRow(
+                    symbol: "", image: ExtraGlyph.airdrop, title: "AirDrop",
+                    caption: "Opens AirDrop in Finder.",
+                    isOn: hasKind(.airdrop)
+                ) { toggleKind(.airdrop, on: $0) }
                 PelmetItemRow(
                     symbol: "person.crop.circle", title: "Fast user switching",
                     caption: "Other users, the login window, lock screen.",

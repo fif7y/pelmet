@@ -171,9 +171,17 @@ public actor ItemEnumerator {
             copyAttribute(element, kAXIdentifierAttribute) as? String,
             copyAttribute(element, kAXDescriptionAttribute) as? String,
         ]
-        let title = candidates.compactMap { $0?.isEmpty == false ? $0 : nil }.first ?? "Item-0"
+        var title = candidates.compactMap { $0?.isEmpty == false ? $0 : nil }.first
+        // Time Machine's extra is a bare AXUnknown leaf with no title of its
+        // own, so it collapsed onto "Item-0" and the editor called the tile
+        // "System" (#19). SystemUIServer's extras bar still lists it: name
+        // the leaf from there, the same way its AXApplication-shaped items
+        // are named.
+        if title == nil, host.id == PelmetBundle.systemUIServerID {
+            title = statusItemTitle(in: AXUIElementCreateApplication(pid))
+        }
         return RawItem(
-            id: .status(bundle: host.id, title: title),
+            id: .status(bundle: host.id, title: title ?? "Item-0"),
             frame: frame,
             appName: NSRunningApplication(processIdentifier: pid)?.localizedName,
             hostIsBundleless: host.bundleless,
@@ -255,11 +263,22 @@ public actor ItemEnumerator {
         }
         // SystemUIServer's extras (Siri, Time Machine) hide as one bundle and
         // every group of its carries the same extras bar: name the lot, so
-        // the one editor tile can list them ("Siri, TimeMachine", #19).
+        // the one editor tile can list them ("Siri, TimeMachine", #19). An
+        // extra loaded from a .menu bundle (Time Machine) exposes no AX
+        // title, description or identifier at all; the bundle list
+        // SystemUIServer keeps names those.
         if pid(of: appNode).flatMap(hostBundle(ofPID:))?.id == PelmetBundle.systemUIServerID {
-            return titles.isEmpty ? nil : titles.joined(separator: ", ")
+            let untitled = children(of: extrasBar).count - titles.count
+            let named = titles + (untitled > 0 ? Array(Self.loadedMenuExtraNames().prefix(untitled)) : [])
+            return named.isEmpty ? nil : named.joined(separator: ", ")
         }
         return titles.first
+    }
+
+    /// "/System/Library/CoreServices/Menu Extras/TimeMachine.menu" → "TimeMachine".
+    private static func loadedMenuExtraNames() -> [String] {
+        let paths = UserDefaults(suiteName: PelmetBundle.systemUIServerID)?.array(forKey: "menuExtras") as? [String] ?? []
+        return paths.map { ($0 as NSString).lastPathComponent.replacingOccurrences(of: ".menu", with: "") }
     }
 
     private func pid(of element: AXUIElement) -> pid_t? {

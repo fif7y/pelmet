@@ -132,6 +132,14 @@ public enum ExtraKind: String, Codable, CaseIterable, Sendable {
     case timer
     /// Fast user switching menu — the system one is collateral-hidden too.
     case userSwitching
+    /// Time Machine status and Back Up Now. Apple's own is a SystemUIServer
+    /// extra: the assertion hides that process as one bundle, so Siri and
+    /// Time Machine could only ever hide together (#19). A Pelmet-drawn
+    /// item is the only way each gets its own tile; adding one switches
+    /// Apple's twin off in System Settings so the bar shows a single icon.
+    case timeMachine
+    /// Siri, same story as `timeMachine`.
+    case siri
 }
 
 /// When an app launcher sits in the bar.
@@ -202,6 +210,8 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
         case .appLauncher: "Pelmet.App.\(id.uuidString)"
         case .timer: "Pelmet.Timer"
         case .userSwitching: "Pelmet.Users"
+        case .timeMachine: "Pelmet.TimeMachine"
+        case .siri: "Pelmet.Siri"
         }
     }
 }

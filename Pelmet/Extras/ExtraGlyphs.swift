@@ -67,6 +67,45 @@ enum ExtraGlyph {
 
     @MainActor private static var barsCache: [[Int]: NSImage] = [:]
 
+    /// Time Machine's idle mark: the SF Symbol Apple's own extra draws, with
+    /// the older name as the fallback.
+    static let timeMachineSymbol: String = {
+        NSImage(systemSymbolName: "clock.arrow.trianglehead.counterclockwise.rotate.90", accessibilityDescription: nil) != nil
+            ? "clock.arrow.trianglehead.counterclockwise.rotate.90"
+            : "clock.arrow.circlepath"
+    }()
+
+    /// One idle image for the lifetime of the item, so a re-apply that
+    /// changes nothing swaps nothing.
+    static let timeMachineIdle: NSImage = {
+        let image = NSImage(systemSymbolName: timeMachineSymbol, accessibilityDescription: "Time Machine")!
+        image.isTemplate = true
+        return image
+    }()
+
+    /// Apple's mark for a failed backup: the arrow around an exclamation.
+    static let timeMachineFailed: NSImage = {
+        let image = NSImage(systemSymbolName: "exclamationmark.arrow.trianglehead.counterclockwise.rotate.90", accessibilityDescription: "Time Machine")
+            ?? NSImage(systemSymbolName: "exclamationmark.arrow.circlepath", accessibilityDescription: "Time Machine")!
+        image.isTemplate = true
+        return image
+    }()
+
+    /// Time Machine's "backing up" mark, the very image Apple's extra shows
+    /// during a backup, read from its bundle at runtime (nothing of Apple's
+    /// ships in Pelmet). Falls back to the two-arrow symbol.
+    static let timeMachineBackingUp: NSImage = {
+        let bundle = Bundle(path: "/System/Library/CoreServices/Menu Extras/TimeMachine.menu")
+        if let image = bundle?.image(forResource: "time_machine_backingup") {
+            image.isTemplate = true
+            return image
+        }
+        let fallback = NSImage(systemSymbolName: "clock.arrow.2.circlepath", accessibilityDescription: nil)
+            ?? NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)!
+        fallback.isTemplate = true
+        return fallback
+    }()
+
     /// AirDrop's own mark: concentric rings with the wedge cut out below
     /// and the solid beam inside it. SF Symbols has no `airdrop` glyph on
     /// this OS, so it's drawn here as a template, once.
