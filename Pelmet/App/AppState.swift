@@ -860,13 +860,17 @@ final class AppState {
     /// Apple's twin, so once both are on SystemUIServer has no extras left
     /// and the tile that offered this goes away on its own.
     func useAppleExtraReplacements() {
-        var added = false
-        for kind in [ExtraKind.siri, .timeMachine] where !settings.extraItems.contains(where: { $0.kind == kind }) {
-            addExtra(ExtraItemSpec(kind: kind))
-            added = true
-        }
-        guard added else { return }
+        let missing = missingAppleReplacements
+        guard !missing.isEmpty else { return }
+        for kind in missing { addExtra(ExtraItemSpec(kind: kind)) }
         settingsChanged()
+    }
+
+    /// Which of Apple's pinned pair Pelmet has not replaced yet — what the
+    /// pinned card offers, and what its copy names.
+    var missingAppleReplacements: [ExtraKind] {
+        let kinds = Set(settings.extraItems.map(\.kind))
+        return [ExtraKind.siri, .timeMachine].filter { !kinds.contains($0) }
     }
 
     /// Siri and Time Machine: Apple's own icon switches off in System
@@ -916,10 +920,26 @@ final class AppState {
         forgetRetiredHost(PelmetBundle.systemUIServerID)
     }
 
-    /// If the user turns the Pelmet items back off, the returning icons
-    /// register as newcomers and route like any other new icon.
+    /// Where the host sat before Pelmet retired it, so turning the Pelmet
+    /// items back off puts the returning icons where the user had them
+    /// rather than treating them as newcomers.
+    private static let retiredSlotKey = "pelmet.appleExtra.systemuiserver.slot"
+
     private func forgetRetiredHost(_ bundle: String) {
         let key = ItemID(rawValue: "bundle:\(bundle)")
+        var slot: [String: Any] = [:]
+        // `.visible` is the absence of an assignment, so record the section
+        // that way round too — an empty section means visible.
+        if let section = settings.sectionModel.assignments[key] {
+            slot["section"] = section.rawValue
+        }
+        for (section, order) in settings.sectionModel.order {
+            if let index = order.firstIndex(of: key) {
+                slot["orderSection"] = section.rawValue
+                slot["index"] = index
+                break
+            }
+        }
         var changed = settings.sectionModel.assignments.removeValue(forKey: key) != nil
         for section in settings.sectionModel.order.keys {
             let before = settings.sectionModel.order[section]?.count
@@ -928,13 +948,38 @@ final class AppState {
         }
         lastSeenAt.removeValue(forKey: key)
         guard changed else { return }
-        PelmetLog.log("apple extras: dropped dead slot \(key.rawValue)")
+        UserDefaults.standard.set(slot, forKey: Self.retiredSlotKey)
+        PelmetLog.log("apple extras: dropped dead slot \(key.rawValue) (remembered \(slot))")
+        settings.save()
+    }
+
+    /// Puts the host back where it was before Pelmet retired it. Runs the
+    /// moment a Pelmet replacement is switched off, before the returning
+    /// icon re-registers, so `registerNewItems` finds it already placed and
+    /// routes nothing.
+    private func restoreRetiredHostSlot() {
+        guard let slot = UserDefaults.standard.dictionary(forKey: Self.retiredSlotKey) else { return }
+        UserDefaults.standard.removeObject(forKey: Self.retiredSlotKey)
+        let key = ItemID(rawValue: "bundle:\(PelmetBundle.systemUIServerID)")
+        if let raw = slot["section"] as? String, let section = PelmetCore.Section(rawValue: raw) {
+            settings.sectionModel.assignments[key] = section
+        }
+        if let raw = slot["orderSection"] as? String,
+           let section = PelmetCore.Section(rawValue: raw) {
+            var order = settings.sectionModel.order[section] ?? []
+            order.removeAll { $0 == key }
+            let index = min(max(slot["index"] as? Int ?? order.count, 0), order.count)
+            order.insert(key, at: index)
+            settings.sectionModel.order[section] = order
+        }
+        PelmetLog.log("apple extras: restored slot \(key.rawValue) → \(settings.sectionModel.section(of: key))")
         settings.save()
     }
 
     private func restoreAppleTwin(of kind: ExtraKind) {
         guard let twin = AppleMenuExtra(kind), UserDefaults.standard.bool(forKey: twin.restoreKey) else { return }
         UserDefaults.standard.removeObject(forKey: twin.restoreKey)
+        restoreRetiredHostSlot()
         twin.setShown(true)
     }
 

@@ -11485,6 +11485,64 @@
         }
       }
     },
+    "Siri is a locked macOS system icon. Turn on Pelmet's Siri below for an icon you can move.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri ist ein gesperrtes macOS-Systemsymbol. Aktiviere unten Pelmets Siri für ein Symbol, das du bewegen kannst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri es un icono del sistema bloqueado por macOS. Activa abajo el Siri de Pelmet para tener un icono que puedas mover."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri est une icône système verrouillée par macOS. Activez le Siri de Pelmet ci-dessous pour une icône que vous pouvez déplacer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri è un'icona di sistema bloccata da macOS. Attiva qui sotto il Siri di Pelmet per avere un'icona che puoi spostare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SiriはmacOSがロックしているシステムアイコンです。下でPelmetのSiriをオンにすると、移動できるアイコンになります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri는 macOS가 잠근 시스템 아이콘입니다. 아래에서 Pelmet의 Siri를 켜면 옮길 수 있는 아이콘이 됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Siri é um ícone de sistema bloqueado pelo macOS. Ative abaixo a Siri do Pelmet para ter um ícone que você pode mover."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri — системный значок, заблокированный macOS. Включите ниже Siri от Pelmet, чтобы получить значок, который можно перемещать."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri 是被 macOS 锁定的系统图标。在下方开启 Pelmet 的 Siri，即可获得可移动的图标。"
+          }
+        }
+      }
+    },
     "Skip This Backup": {
       "localizations": {
         "de": {
@@ -12819,6 +12877,64 @@
         }
       }
     },
+    "Time Machine is a locked macOS system icon. Turn on Pelmet's Time Machine below for an icon you can move.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine ist ein gesperrtes macOS-Systemsymbol. Aktiviere unten Pelmets Time Machine für ein Symbol, das du bewegen kannst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine es un icono del sistema bloqueado por macOS. Activa abajo el Time Machine de Pelmet para tener un icono que puedas mover."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine est une icône système verrouillée par macOS. Activez le Time Machine de Pelmet ci-dessous pour une icône que vous pouvez déplacer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine è un'icona di sistema bloccata da macOS. Attiva qui sotto il Time Machine di Pelmet per avere un'icona che puoi spostare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time MachineはmacOSがロックしているシステムアイコンです。下でPelmetのTime Machineをオンにすると、移動できるアイコンになります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine은 macOS가 잠근 시스템 아이콘입니다. 아래에서 Pelmet의 Time Machine을 켜면 옮길 수 있는 아이콘이 됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Time Machine é um ícone de sistema bloqueado pelo macOS. Ative abaixo o Time Machine do Pelmet para ter um ícone que você pode mover."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time Machine — системный значок, заблокированный macOS. Включите ниже Time Machine от Pelmet, чтобы получить значок, который можно перемещать."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时间机器是被 macOS 锁定的系统图标。在下方开启 Pelmet 的时间机器，即可获得可移动的图标。"
+          }
+        }
+      }
+    },
     "Timer": {
       "localizations": {
         "de": {
@@ -13399,6 +13515,64 @@
         }
       }
     },
+    "Use Pelmet's Siri": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmets Siri verwenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar el Siri de Pelmet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser le Siri de Pelmet"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa il Siri di Pelmet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PelmetのSiriを使う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet의 Siri 사용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar a Siri do Pelmet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Использовать Siri от Pelmet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Pelmet 的 Siri"
+          }
+        }
+      }
+    },
     "Use Pelmet's Siri and Time Machine": {
       "localizations": {
         "de": {
@@ -13453,6 +13627,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用 Pelmet 的 Siri 和时间机器"
+          }
+        }
+      }
+    },
+    "Use Pelmet's Time Machine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmets Time Machine verwenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar el Time Machine de Pelmet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser le Time Machine de Pelmet"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa il Time Machine di Pelmet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PelmetのTime Machineを使う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet의 Time Machine 사용"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar o Time Machine do Pelmet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Использовать Time Machine от Pelmet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Pelmet 的时间机器"
           }
         }
       }

@@ -574,9 +574,10 @@ private struct ItemTile: View {
                 helperHosted: appState.isBundlelessHost(item.id),
                 immovable: isImmovable && !isUnhideable,
                 pinnedBySystem: MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID),
-                usePelmetReplacements: item.id.bundleID == PelmetBundle.systemUIServerID
-                    ? { appState.useAppleExtraReplacements() }
-                    : nil,
+                missingReplacements: item.id.bundleID == PelmetBundle.systemUIServerID
+                    ? appState.missingAppleReplacements
+                    : [],
+                usePelmetReplacements: { appState.useAppleExtraReplacements() },
                 addLauncher: MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID) ? nil : item.id.bundleID.map { bundle in
                     { appState.addAppLauncher(bundleID: bundle, name: displayName, in: section) }
                 }
@@ -622,12 +623,19 @@ private struct InactiveIconCard: View {
     /// Hides fine, won't be moved, and no launcher applies: macOS itself
     /// pins the host (SystemUIServer's Siri / Time Machine).
     let pinnedBySystem: Bool
-    /// SystemUIServer's pair only: Pelmet ships its own Siri and Time
-    /// Machine, so the card turns them on from here rather than dead-ending
-    /// on "can't move it". Nil for the other pinned host (Kerberos), which
-    /// has no replacement.
-    let usePelmetReplacements: (() -> Void)?
+    /// SystemUIServer's pair only: which of Pelmet's Siri and Time Machine
+    /// are still off. The card names exactly those and offers to turn them
+    /// on, rather than dead-ending on "can't move it". Empty for the other
+    /// pinned host (Kerberos), which has no replacement.
+    let missingReplacements: [ExtraKind]
+    let usePelmetReplacements: () -> Void
     let addLauncher: (() -> Void)?
+
+    private func replacementButton(_ title: LocalizedStringKey) -> some View {
+        Button(title, action: usePelmetReplacements)
+            .buttonStyle(.borderedProminent)
+            .tint(PelmetAccent.accent)
+    }
 
     @ViewBuilder
     private var cardActions: some View {
@@ -636,10 +644,15 @@ private struct InactiveIconCard: View {
                 .buttonStyle(.borderedProminent)
                 .tint(PelmetAccent.accent)
         }
-        if let usePelmetReplacements {
-            Button("Use Pelmet's Siri and Time Machine", action: usePelmetReplacements)
-                .buttonStyle(.borderedProminent)
-                .tint(PelmetAccent.accent)
+        switch missingReplacements {
+        case [.siri]:
+            replacementButton("Use Pelmet's Siri")
+        case [.timeMachine]:
+            replacementButton("Use Pelmet's Time Machine")
+        case [.siri, .timeMachine]:
+            replacementButton("Use Pelmet's Siri and Time Machine")
+        default:
+            EmptyView()
         }
         if !pinnedBySystem {
             Link("Learn more", destination: PelmetLinks.faqAppLaunchers)
@@ -656,9 +669,14 @@ private struct InactiveIconCard: View {
             } else if pinnedBySystem {
                 Text("Pinned by macOS")
                     .font(.headline)
-                if usePelmetReplacements != nil {
+                switch missingReplacements {
+                case [.siri]:
+                    Text("Siri is a locked macOS system icon. Turn on Pelmet's Siri below for an icon you can move.")
+                case [.timeMachine]:
+                    Text("Time Machine is a locked macOS system icon. Turn on Pelmet's Time Machine below for an icon you can move.")
+                case [.siri, .timeMachine]:
                     Text("Siri and Time Machine are locked macOS system icons. Turn on Pelmet's Siri and Time Machine below for separate icons you can move.")
-                } else {
+                default:
                     Text("Pelmet can hide \(name), but macOS keeps it in its own spot, so the editor can't move it.")
                 }
             } else if immovable {
