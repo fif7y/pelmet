@@ -897,6 +897,41 @@ final class AppState {
         }
     }
 
+    /// SystemUIServer's slot once BOTH its icons are Pelmet's. Nothing else
+    /// prunes it: the editor draws a tile for any stored key whose process
+    /// runs, the order-slot repair only touches Pelmet's own extras, and
+    /// SystemUIServer never quits — so the pinned tile outlived the icons it
+    /// stood for (2026-09-16). Guarded on both replacements being on, so a
+    /// half-replaced pair keeps the tile the remaining icon still needs.
+    /// Cheap no-op once the slot is gone, which is the steady state.
+    private func pruneRetiredAppleHostSlot(_ snap: EngineSnapshot) {
+        let key = ItemID(rawValue: "bundle:\(PelmetBundle.systemUIServerID)")
+        guard settings.sectionModel.assignments[key] != nil
+                || settings.sectionModel.order.values.contains(where: { $0.contains(key) })
+        else { return }
+        let kinds = Set(settings.extraItems.map(\.kind))
+        guard kinds.contains(.siri), kinds.contains(.timeMachine) else { return }
+        guard !snap.items.contains(where: { $0.id.bundleID == PelmetBundle.systemUIServerID })
+        else { return }
+        forgetRetiredHost(PelmetBundle.systemUIServerID)
+    }
+
+    /// If the user turns the Pelmet items back off, the returning icons
+    /// register as newcomers and route like any other new icon.
+    private func forgetRetiredHost(_ bundle: String) {
+        let key = ItemID(rawValue: "bundle:\(bundle)")
+        var changed = settings.sectionModel.assignments.removeValue(forKey: key) != nil
+        for section in settings.sectionModel.order.keys {
+            let before = settings.sectionModel.order[section]?.count
+            settings.sectionModel.order[section]?.removeAll { $0 == key }
+            if settings.sectionModel.order[section]?.count != before { changed = true }
+        }
+        lastSeenAt.removeValue(forKey: key)
+        guard changed else { return }
+        PelmetLog.log("apple extras: dropped dead slot \(key.rawValue)")
+        settings.save()
+    }
+
     private func restoreAppleTwin(of kind: ExtraKind) {
         guard let twin = AppleMenuExtra(kind), UserDefaults.standard.bool(forKey: twin.restoreKey) else { return }
         UserDefaults.standard.removeObject(forKey: twin.restoreKey)
@@ -1317,6 +1352,7 @@ final class AppState {
             if item.pid > 0, let bundle = item.id.bundleID { lastSeenPID[bundle] = item.pid }
         }
         for id in snap.concealed { lastSeenAt[id.sectionKey] = now }
+        pruneRetiredAppleHostSlot(snap)
         guard snapshot?.contentEquals(snap) != true else { return }
         let bundleless = snap.items.filter(\.hostIsBundleless).map(\.id.rawValue)
         if bundleless != lastBundlelessIDs {
