@@ -84,8 +84,21 @@ enum StatusItemFader {
             guard stillCurrent(), let button = item?.button else { return }
             AlphaFade.run(button, to: shownAlpha, duration: fadeDuration, controlPoints: showCurve) {
                 button.alphaValue = shownAlpha  // re-sync the view property
+                republish(button)
             }
         }
+    }
+
+    /// The bar on the active display composites the item's window live,
+    /// so the fade shows there. Every other display's bar shows the
+    /// agent's replicant snapshot of the item, taken at attach (alpha 0)
+    /// and retaken when the button's image is set, never for a layer fade
+    /// or an alpha change: the item stayed a blank slot on the dimmed bars
+    /// for the whole reveal (Gab, 2026-09-16: Siri, camera, launchers on
+    /// the LG). Set the image again once the fade has landed so every bar
+    /// takes a fresh picture (~5ms, once per show).
+    private static func republish(_ button: NSStatusBarButton) {
+        button.image = button.image
     }
 
     /// The show fade for an item attached AHEAD of the swap: it was placed
@@ -105,6 +118,7 @@ enum StatusItemFader {
             guard stillCurrent(), let button = item?.button else { return }
             AlphaFade.run(button, to: shownAlpha, duration: fadeDuration, controlPoints: showCurve) {
                 button.alphaValue = shownAlpha
+                republish(button)
             }
         }
     }
