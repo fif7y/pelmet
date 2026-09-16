@@ -9397,6 +9397,64 @@
         }
       }
     },
+    "Pinned by macOS — Pelmet can hide it, but not move it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von macOS fixiert – Pelmet kann es ausblenden, aber nicht bewegen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fijado por macOS: Pelmet puede ocultarlo, pero no moverlo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Épinglé par macOS – Pelmet peut le masquer, mais pas le déplacer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloccato da macOS: Pelmet può nasconderlo, ma non spostarlo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOSが固定しています。Pelmetは非表示にできますが、移動はできません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS가 고정함 — Pelmet이 숨길 수는 있지만 옮길 수는 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixado pelo macOS — o Pelmet pode ocultá-lo, mas não movê-lo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закреплено macOS — Pelmet может скрыть, но не переместить"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由 macOS 固定 — Pelmet 可以隐藏它，但无法移动"
+          }
+        }
+      }
+    },
     "Pipe": {
       "localizations": {
         "de": {

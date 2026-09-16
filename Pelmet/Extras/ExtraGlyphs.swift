@@ -75,6 +75,26 @@ enum ExtraGlyph {
             : "clock.arrow.circlepath"
     }()
 
+    /// Apple's own Siri mark, read from Siri.bundle at runtime (nothing of
+    /// Apple's ships in Pelmet). Falls back to the SF Symbol.
+    static let siri: NSImage = {
+        if let image = Bundle(path: "/System/Library/CoreServices/Siri.bundle")?
+            .image(forResource: "SiriMenuIcon") {
+            image.isTemplate = true
+            return image
+        }
+        let fallback = NSImage(systemSymbolName: "siri", accessibilityDescription: "Siri")!
+        fallback.isTemplate = true
+        return fallback
+    }()
+
+    /// The mark for the pinned SystemUIServer tile, which has no icon Pelmet
+    /// can capture — so the editor drew a blank placeholder for it. Named
+    /// from the item's own title, which lists the extras it stands for.
+    static func pinnedAppleExtra(named title: String) -> NSImage {
+        title.localizedCaseInsensitiveContains("siri") ? siri : timeMachineIdle
+    }
+
     /// One idle image for the lifetime of the item, so a re-apply that
     /// changes nothing swaps nothing.
     static let timeMachineIdle: NSImage = {

@@ -458,6 +458,13 @@ private struct ItemTile: View {
         hasLauncher && !isAppLauncher
     }
 
+    /// macOS pins this host's spot (SystemUIServer's Siri and Time Machine,
+    /// the Kerberos extra). It hides, it just can't be dragged — so the tile
+    /// says so rather than looking as movable as its neighbours.
+    private var isPinnedBySystem: Bool {
+        MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID)
+    }
+
     /// The bar item swallowed Pelmet's drags three placements running; it
     /// hides fine but stays where its app put it (see AppState.immovableBundles).
     private var isImmovable: Bool {
@@ -493,7 +500,16 @@ private struct ItemTile: View {
         VStack(spacing: 3) {
             ZStack(alignment: .topTrailing) {
                 Group {
-                    if let icon = ItemImageCache.icon(for: item.id) {
+                    if isPinnedBySystem {
+                        // What the bar hands over for these is a blank
+                        // rounded square that read as a broken tile. Draw
+                        // Apple's own mark instead, ahead of the capture —
+                        // the tile shows the real thing.
+                        Image(nsImage: ExtraGlyph.pinnedAppleExtra(named: displayName))
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundStyle(.secondary)
+                    } else if let icon = ItemImageCache.icon(for: item.id) {
                         Image(nsImage: icon)
                             .resizable()
                             .scaledToFit()
@@ -503,11 +519,18 @@ private struct ItemTile: View {
                     }
                 }
                 .frame(width: 20, height: 20)
+                // Pinned tiles don't move, so they sit back: a flatter fill
+                // and no lift, against the raised tiles you CAN drag.
+                .opacity(isPinnedBySystem && !hovered ? 0.55 : 1)
                 .padding(7)
                 .background(
                     RoundedRectangle(cornerRadius: 9)
-                        .fill(.background.opacity(hovered ? 1 : 0.65))
-                        .shadow(color: .black.opacity(hovered ? 0.18 : 0.08), radius: hovered ? 4 : 2, y: 1)
+                        .fill(.background.opacity(isPinnedBySystem ? 0.35 : (hovered ? 1 : 0.65)))
+                        .shadow(
+                            color: .black.opacity(isPinnedBySystem ? 0 : (hovered ? 0.18 : 0.08)),
+                            radius: isPinnedBySystem ? 0 : (hovered ? 4 : 2),
+                            y: isPinnedBySystem ? 0 : 1
+                        )
                 )
                 if isSuperseded {
                     Image(systemName: "exclamationmark")
@@ -525,6 +548,14 @@ private struct ItemTile: View {
                         .padding(2)
                         .background(Circle().fill(.background))
                         .offset(x: 4, y: -4)
+                } else if isPinnedBySystem {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .padding(2)
+                        .background(Circle().fill(.background))
+                        .offset(x: 4, y: -4)
+                        .help("Pinned by macOS — Pelmet can hide it, but not move it")
                 } else if isAppLauncher {
                     Image(systemName: "sparkles")
                         .font(.system(size: 7, weight: .bold))
