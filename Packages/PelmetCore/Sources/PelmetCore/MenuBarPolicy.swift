@@ -158,4 +158,12 @@ public enum MenuBarGeometry {
     public static func isInBand(_ frame: CGRect) -> Bool {
         frame.minY > bandTopInset && frame.minY < bandBottomLimit
     }
+
+    /// In the band AND on the primary display. A display parked beside the
+    /// primary with its top aligned puts its bar in the band too, and an
+    /// item that overflows on a notched built-in has only those copies in
+    /// the walk (its main copy sits in the overflow menu).
+    public static func isInPrimaryBand(_ frame: CGRect, primaryMaxX: CGFloat) -> Bool {
+        isInBand(frame) && frame.midX > 0 && frame.midX < primaryMaxX
+    }
 }

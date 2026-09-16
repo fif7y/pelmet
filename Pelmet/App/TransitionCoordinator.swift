@@ -96,6 +96,11 @@ final class TransitionCoordinator {
             return CGRect(x: minX - 120, y: $0.minY, width: ($0.maxX - minX) + 180, height: $0.height)
         }
     }
+    /// Strip and cover rects are primary-band geometry: an external's copy
+    /// of an item stretched the strip across displays (`1278..4887`) and
+    /// the blink cover to `-906..1676`, a capture spanning two bars.
+    private var primaryMaxX: CGFloat { NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude }
+
     private func rememberStrip(_ strip: CGRect?) {
         lastConcealedStripRect = strip
         guard let strip else { return }
@@ -261,10 +266,12 @@ final class TransitionCoordinator {
     /// here: it stops at the strip, right where the extras reappear.
     func beginClockBlinkCover() async -> ConcealGhostOverlay.GhostSet? {
         let isClock: (ObservedItem) -> Bool = { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }
+        let primaryMaxX = primaryMaxX
         guard let appState, let items = appState.snapshot?.items, !items.isEmpty,
               let clock = items.first(where: isClock)?.frame,
-              let leftmost = items.compactMap { $0.frame?.minX }.min(),
-              let band = lastConcealedStripRect ?? items.compactMap(\.frame).first
+              case let frames = items.compactMap(\.frame).filter({ MenuBarGeometry.isInPrimaryBand($0, primaryMaxX: primaryMaxX) }),
+              let leftmost = frames.map(\.minX).min(),
+              let band = lastConcealedStripRect ?? frames.first
         else { return nil }
         let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24
         // The capture pads 6pt past the rect on both sides (continuous
@@ -455,8 +462,9 @@ final class TransitionCoordinator {
         guard lastConcealedStripRect == nil, let appState else { return }
         var union: CGRect?
         var count = 0
+        let primaryMaxX = primaryMaxX
         for item in snap.items {
-            guard let frame = item.frame, MenuBarGeometry.isInBand(frame),
+            guard let frame = item.frame, MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX),
                   appState.settings.sectionModel.section(of: item.id) != .visible
             else { continue }
             count += 1
@@ -469,7 +477,7 @@ final class TransitionCoordinator {
         scheduleRevealCoverPrecapture()
     }
 
-    /// Union of the on-screen frames about to conceal (main-display band
+    /// Union of the on-screen frames about to conceal (primary band
     /// only): everything assigned to a non-visible section that currently has
     /// a frame. Nil when nothing concealable is showing. Re-snapshots: AX
     /// lists freshly revealed items progressively, and the settle-time
@@ -482,9 +490,10 @@ final class TransitionCoordinator {
         concealableCount = snap.items.filter {
             !$0.id.isSystemModule && appState.settings.sectionModel.section(of: $0.id) != .visible
         }.count
+        let primaryMaxX = primaryMaxX
         for item in snap.items {
             guard let frame = item.frame,
-                  MenuBarGeometry.isInBand(frame),
+                  MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX),
                   appState.settings.sectionModel.section(of: item.id) != .visible
             else { continue }
             count += 1
