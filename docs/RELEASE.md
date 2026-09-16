@@ -48,13 +48,34 @@ Everything below the one-time setup is: bump version → run script → publish.
 2. `scripts/release.sh` — archives, exports with Developer ID, notarizes +
    staples app and DMG, writes `build/releases/Pelmet-<v>.dmg` + `appcast.xml`.
 3. Tag and publish: create GitHub release `v<version>` with the DMG attached.
-4. Push `appcast.xml` (and `*.delta` files if any) to `gh-pages`.
+4. Push `appcast.xml` (and `*.delta` files if any) to `gh-pages`. Commit it
+   with the repo's own identity — a scratch clone picks up the global git
+   config, and a push authored with the gmail address is rejected by the
+   account's email-privacy setting:
+
+   ```sh
+   git -c user.name="Gab" -c user.email="16541220+fif7y@users.noreply.github.com" \
+       commit -m "Appcast: Pelmet <version>"
+   ```
+
+   Don't trust the push's own output — `git push … | tail` reports the
+   pipeline's status, not the push's, so a rejected push can read as success.
+   Poll the live feed instead (Pages lags 20–60s):
+
+   ```sh
+   curl -s "https://fif7y.github.io/pelmet/appcast.xml?cb=$RANDOM" \
+     | grep -o '<sparkle:shortVersionString>[^<]*' | head -1
+   ```
 5. **Legacy feed mirror** — nook-era installs (≤ 0.1.4) poll
    `https://fif7y.github.io/nook/appcast.xml`, served by the stub repo
    `fif7y/nook` (GitHub Pages paths don't redirect on repo rename). Push the
    same `appcast.xml` to that stub's `gh-pages` too, until that feed's traffic
    dies off.
-6. Sanity: install the previous DMG, let Sparkle offer the new version, update.
+6. Bump the Homebrew cask: `fif7y/homebrew-tap` → `Casks/pelmet.rb`, set
+   `version` and the DMG's `sha256` (`shasum -a 256 build/releases/Pelmet-<v>.dmg`),
+   push with the same identity rule as step 4, then confirm the published DMG
+   hashes to what the cask declares.
+7. Sanity: install the previous DMG, let Sparkle offer the new version, update.
 
 `SKIP_NOTARIZE=1 scripts/release.sh` smoke-tests the archive/export/DMG half
 without credentials.
