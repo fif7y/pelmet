@@ -465,6 +465,19 @@ private struct ItemTile: View {
         MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID)
     }
 
+    /// Only SystemUIServer's pair has no capturable icon; the other pinned
+    /// host (Kerberos) has a real one and keeps it.
+    private var drawsOwnPinnedGlyph: Bool {
+        item.id.bundleID == PelmetBundle.systemUIServerID
+    }
+
+    /// The enumerator's un-localized title ("Siri, TimeMachine") — what the
+    /// glyph is keyed on, since the display name is translated.
+    private var rawExtraTitle: String {
+        if case .status(_, let title) = item.id.parsed { return title }
+        return ""
+    }
+
     /// The bar item swallowed Pelmet's drags three placements running; it
     /// hides fine but stays where its app put it (see AppState.immovableBundles).
     private var isImmovable: Bool {
@@ -500,12 +513,12 @@ private struct ItemTile: View {
         VStack(spacing: 3) {
             ZStack(alignment: .topTrailing) {
                 Group {
-                    if isPinnedBySystem {
+                    if isPinnedBySystem, drawsOwnPinnedGlyph {
                         // What the bar hands over for these is a blank
                         // rounded square that read as a broken tile. Draw
                         // Apple's own mark instead, ahead of the capture —
                         // the tile shows the real thing.
-                        Image(nsImage: ExtraGlyph.pinnedAppleExtra(named: displayName))
+                        Image(nsImage: ExtraGlyph.pinnedAppleExtra(rawTitle: rawExtraTitle))
                             .resizable()
                             .scaledToFit()
                             .foregroundStyle(.secondary)

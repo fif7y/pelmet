@@ -89,11 +89,42 @@ enum ExtraGlyph {
     }()
 
     /// The mark for the pinned SystemUIServer tile, which has no icon Pelmet
-    /// can capture — so the editor drew a blank placeholder for it. Named
-    /// from the item's own title, which lists the extras it stands for.
-    static func pinnedAppleExtra(named title: String) -> NSImage {
-        title.localizedCaseInsensitiveContains("siri") ? siri : timeMachineIdle
+    /// can capture — so the editor drew a blank placeholder for it. Keyed on
+    /// the item's RAW title ("Siri, TimeMachine"), which the enumerator
+    /// builds from the extras the host actually shows; the display name is
+    /// localized and cannot be matched on.
+    static func pinnedAppleExtra(rawTitle: String) -> NSImage {
+        let names = rawTitle.components(separatedBy: ", ")
+        let hasSiri = names.contains { $0.caseInsensitiveCompare("Siri") == .orderedSame }
+        let hasTimeMachine = names.contains { $0.caseInsensitiveCompare("TimeMachine") == .orderedSame }
+        switch (hasSiri, hasTimeMachine) {
+        case (true, true): return appleExtraPair
+        case (false, true): return timeMachineIdle
+        default: return siri
+        }
     }
+
+    /// Both marks, side by side at 62% — the tile stands for two icons, and
+    /// showing one of them named the wrong thing. Halves of each were tried
+    /// first and fail: both marks are same-diameter circles, so a split
+    /// fuses them into one glitched circle instead of reading as a pair.
+    /// 62% is the size where both still hold a legible stroke at 20pt.
+    static let appleExtraPair: NSImage = {
+        let box: CGFloat = 20, mark = box * 0.62
+        return raster(size: NSSize(width: box, height: box), template: true) { rect in
+            func place(_ image: NSImage, x: CGFloat) {
+                let size = image.size
+                let fit = min(mark / size.width, mark / size.height)
+                let width = size.width * fit, height = size.height * fit
+                image.draw(
+                    in: NSRect(x: x, y: rect.midY - height / 2, width: width, height: height),
+                    from: .zero, operation: .sourceOver, fraction: 1
+                )
+            }
+            place(siri, x: -1)
+            place(timeMachineIdle, x: box - mark + 1)
+        }
+    }()
 
     /// One idle image for the lifetime of the item, so a re-apply that
     /// changes nothing swaps nothing.
