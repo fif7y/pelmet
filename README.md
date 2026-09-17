@@ -62,8 +62,8 @@ seconds) or the moment you click somewhere else.
   collapse. Whichever display your pointer is on wins.
 - **Built-in replacements.** Media controls, AirDrop, camera/mic indicator,
   a timer, Focus, fast user switching and Shortcuts items that survive hiding, since macOS temporarily removes
-  its own extras while hiding is active. Each shows when active or always,
-  and a ⌘-drag off the bar turns it off.
+  its own extras while hiding is active. Media controls, Time Machine and Focus
+  show when active or always, and a ⌘-drag off the bar turns any of them off.
 - **App launchers.** A Pelmet icon for any app: click opens it, and it hides
   like everything else. The fix for apps whose own icon can't be hidden (see
   the [FAQ](docs/FAQ.md#app-launchers)), and a handy launcher for the rest.
