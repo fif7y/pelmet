@@ -27,6 +27,12 @@ final class HelperHosts {
         var ready = false
         var hosted: Set<String> = []
         var running: NSRunningApplication?
+        /// Kernel exit watch on `running`'s pid (kqueue NOTE_EXIT). The
+        /// NSWorkspace termination notification is kept as a second
+        /// source, but it never landed for a helper that died 4.5s into a
+        /// reboot login (2026-09-16, pid 1399): nothing relaunched it and
+        /// the Hidden separator stayed unhosted until a manual relaunch.
+        var exitWatch: DispatchSourceProcess?
         var launching = false
         var relaunches = 0
 
@@ -91,7 +97,7 @@ final class HelperHosts {
         if !MessagePortLink.send(data, to: host.bundleID) {
             PelmetLog.log("helpers: \(host.appName) not answering — relaunch")
             hosts[section]?.ready = false
-            hosts[section]?.running = nil
+            track(nil, for: section)
             launch(section)
         }
     }
@@ -117,8 +123,10 @@ final class HelperHosts {
                 if let error {
                     PelmetLog.log("helpers: \(host.appName) launch failed — \(error.localizedDescription)")
                 } else {
-                    host.running = app
                     PelmetLog.log("helpers: \(host.appName) launched pid=\(app?.processIdentifier ?? 0)")
+                    self.hosts[section] = host
+                    self.track(app, for: section)
+                    host = self.hosts[section] ?? host
                     // Launch Services hands back a running instance of the
                     // same bundle: after a quit-and-relaunch the previous
                     // Pelmet's helper is still winding down and would never
@@ -135,11 +143,38 @@ final class HelperHosts {
         }
     }
 
+    /// Track the helper process behind `app`: remember it and arm the exit
+    /// watch on its pid. A pid that is already gone reports its death now.
+    private func track(_ app: NSRunningApplication?, for section: PelmetCore.Section) {
+        guard var host = hosts[section] else { return }
+        host.exitWatch?.cancel()
+        host.exitWatch = nil
+        host.running = app
+        hosts[section] = host
+        guard let app, app.processIdentifier > 0 else { return }
+        let pid = app.processIdentifier
+        let bundle = host.bundleID
+        guard kill(pid, 0) == 0 else {
+            helperTerminated(bundle: bundle, pid: pid)
+            return
+        }
+        let watch = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
+        watch.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in self?.helperTerminated(bundle: bundle, pid: pid) }
+        }
+        watch.resume()
+        hosts[section]?.exitWatch = watch
+    }
+
     private func helperTerminated(bundle: String, pid: pid_t) {
         guard let section = hosts.first(where: { $0.value.bundleID == bundle })?.key,
               var host = hosts[section] else { return }
-        PelmetLog.log("helpers: \(host.appName) pid=\(pid) terminated (tracked \(host.running?.processIdentifier ?? 0))")
-        guard host.running?.processIdentifier == pid || host.running == nil else { return }
+        // The exit watch and the NSWorkspace notification both report a
+        // death; whichever comes second finds the pid already untracked.
+        guard host.running?.processIdentifier == pid else { return }
+        PelmetLog.log("helpers: \(host.appName) pid=\(pid) terminated")
+        host.exitWatch?.cancel()
+        host.exitWatch = nil
         host.running = nil
         host.ready = false
         host.hosted = []
@@ -162,7 +197,7 @@ final class HelperHosts {
             PelmetLog.log("helpers: \(hosts[section]?.appName ?? bundle) ready")
             hosts[section]?.ready = true
             if hosts[section]?.running == nil {
-                hosts[section]?.running = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first
+                track(NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first, for: section)
             }
             push(section)
         case .hosted(let bundle, let title):
