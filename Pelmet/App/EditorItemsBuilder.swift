@@ -23,7 +23,8 @@ enum EditorItemsBuilder {
         pelmetBundleID: String,
         isRunning: (String) -> Bool,
         appName: (String) -> String?,
-        recentlySeen: (ItemID) -> Bool = { _ in true }
+        recentlySeen: (ItemID) -> Bool = { _ in true },
+        destroyed: Set<ItemID> = []
     ) -> [ObservedItem] {
         var byID: [ItemID: ObservedItem] = [:]
         // An own item hosted by a section helper is observed under the
@@ -94,6 +95,19 @@ enum EditorItemsBuilder {
                   MenuBarPolicy.isSectionManageable(id),
                   isRunning(bundle),
                   recentlySeen(id)
+            else { continue }
+            byID[id] = ObservedItem(id: id, frame: nil, appName: appName(bundle))
+        }
+        // Icons the bar destroyed although the allowlist protects them (#30,
+        // see CollateralTracker). They are usually unassigned, so `stored`
+        // never held them, and Pelmet never asked to conceal them, so the
+        // concealed loop skipped them too — with no AX frame either they
+        // belonged to no branch at all and the board simply lost them
+        // (iStat Menus appeared under neither Visible nor Hidden).
+        for id in destroyed where byID[id] == nil && !representedKeys.contains(id.sectionKey) {
+            guard let bundle = id.bundleID,
+                  bundle != pelmetBundleID,
+                  isRunning(bundle)
             else { continue }
             byID[id] = ObservedItem(id: id, frame: nil, appName: appName(bundle))
         }

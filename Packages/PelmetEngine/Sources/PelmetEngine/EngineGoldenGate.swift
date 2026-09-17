@@ -156,6 +156,12 @@ public actor EngineGoldenGate: MenuBarEngine {
     /// several items under one bundle, so "any item of this bundle" is
     /// satisfied by a sibling that was adopted long ago and the window
     /// closes before the new registration lands (parked for the session).
+    /// Whether a hide assertion is held right now. Callers use it to decide
+    /// if an adoption window will actually drop anything worth covering —
+    /// with none held `openAdoptionWindow` returns straight away and the
+    /// bar never changes.
+    public var holdsAssertion: Bool { assertion != nil }
+
     public func openAdoptionWindow(for bundleID: String, expecting item: ItemID? = nil) async -> Bool {
         guard assertion != nil else { return true }
         PelmetLog.log("adoptWindow: dropping assertion for \(item?.rawValue ?? bundleID)")

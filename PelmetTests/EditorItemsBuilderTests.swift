@@ -54,7 +54,8 @@ struct EditorItemsBuilderTests {
         model: SectionModel = SectionModel(),
         running: Set<String> = [],
         names: [String: String] = [:],
-        recentlySeen: Bool = true
+        recentlySeen: Bool = true,
+        destroyed: Set<ItemID> = []
     ) -> [ObservedItem] {
         EditorItemsBuilder.build(
             section: section,
@@ -66,8 +67,41 @@ struct EditorItemsBuilderTests {
             pelmetBundleID: pelmet,
             isRunning: { running.contains($0) },
             appName: { names[$0] },
-            recentlySeen: { _ in recentlySeen }
+            recentlySeen: { _ in recentlySeen },
+            destroyed: destroyed
         )
+    }
+
+    @Test func barKilledIconKeepsItsTileInItsDefaultSection() {
+        // #30: iStat Menus is unassigned (so not in `stored`), Pelmet never
+        // concealed it (so not in `concealed`), and the agent destroyed its
+        // scenes (so no frame) — it belonged to no branch and the board lost
+        // it under both Visible and Hidden. A confirmed casualty gets a tile.
+        let istat = ItemID(rawValue: "status:com.bjango.istatmenus.status::CPU")
+        #expect(build(section: .visible, running: ["com.bjango.istatmenus.status"]).isEmpty)
+        let result = build(
+            section: .visible,
+            running: ["com.bjango.istatmenus.status"],
+            names: ["com.bjango.istatmenus.status": "iStat Menus"],
+            destroyed: [istat]
+        )
+        #expect(result.map(\.id) == [istat])
+        #expect(result.first?.appName == "iStat Menus")
+        #expect(result.first?.frame == nil)
+        // Its app quit: no tile (the guard the concealed path uses too).
+        #expect(build(section: .visible, destroyed: [istat]).isEmpty)
+    }
+
+    @Test func barKilledIconDoesNotDoubleUpWithALiveTile() {
+        let istat = ItemID(rawValue: "status:com.bjango.istatmenus.status::CPU")
+        let result = build(
+            section: .visible,
+            items: [ObservedItem(id: istat, frame: frame(x: 400), appName: "iStat Menus")],
+            running: ["com.bjango.istatmenus.status"],
+            destroyed: [istat]
+        )
+        #expect(result.count == 1)
+        #expect(result.first?.frame != nil)
     }
 
     @Test func liveTwinsCollapseToLeftmostFrame() {

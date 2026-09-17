@@ -450,6 +450,7 @@ private struct ItemTile: View {
         !isAppLauncher && (
             appState.unhideableKeys.contains(item.id.sectionKey)
                 || appState.isBundlelessHost(item.id)
+                || appState.isDestroyedHost(item.id)
         )
     }
 
@@ -1330,6 +1331,26 @@ private struct LauncherIconPicker: View {
 
 // MARK: - Separators
 
+/// A separator as it reads in the editor. Drawn styles show their own
+/// character; the spacer has none, so it shows the gap itself as a dashed
+/// slot — the "nothing lives here" shape the board already uses for empty
+/// tiles. It wore `␣` before, which only says "space" to someone who knows
+/// the convention, and the spacer went unfound because of it.
+private struct SeparatorGlyph: View {
+    let style: SeparatorStyle
+
+    var body: some View {
+        if style == .space {
+            RoundedRectangle(cornerRadius: 2.5)
+                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
+                .frame(width: 12, height: 10)
+        } else {
+            Text(style.rawValue)
+                .font(.system(size: 14, weight: .medium))
+        }
+    }
+}
+
 private struct SeparatorStrip: View {
     @Environment(AppState.self) private var appState
 
@@ -1383,8 +1404,7 @@ private struct SeparatorChip: View {
             showsChooser = true
         } label: {
             ZStack(alignment: .topTrailing) {
-                Text(separator.style == .space ? "␣" : separator.style.rawValue)
-                    .font(.system(size: 14, weight: .medium))
+                SeparatorGlyph(style: separator.style)
                     .foregroundStyle(separator.style == .space ? .tertiary : .secondary)
                     .opacity(separator.style == .space ? 1 : max(separator.opacity, 0.25))
                     .frame(width: 30, height: 30)
@@ -1415,8 +1435,7 @@ private struct SeparatorChip: View {
                         separator.style = style
                         appState.settingsChanged()
                     } label: {
-                        Text(style == .space ? "␣" : style.rawValue)
-                            .font(.system(size: 14, weight: .medium))
+                        SeparatorGlyph(style: style)
                             .frame(width: 30, height: 30)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
@@ -1431,7 +1450,30 @@ private struct SeparatorChip: View {
                     .help(Self.name(for: style))
                 }
             }
-            if separator.style != .space {
+            // Every style has exactly one thing to tune, so the row is never
+            // empty: a drawn glyph has opacity, and the spacer — whose whole
+            // job is the gap — has width. Picking the spacer used to collapse
+            // the popover to a bare button row with nothing to adjust.
+            if separator.style == .space {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.left.and.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Slider(value: Binding(
+                        get: { separator.width },
+                        set: { value in
+                            separator.width = value.rounded()
+                            appState.settingsChanged()
+                        }
+                    ), in: SeparatorSpec.widthRange)
+                    Text("\(Int(separator.width)) pt")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .frame(width: 34, alignment: .trailing)
+                }
+                .help("Spacer width in the menu bar")
+            } else {
                 HStack(spacing: 8) {
                     Image(systemName: "circle.lefthalf.filled")
                         .font(.caption)
@@ -1454,6 +1496,13 @@ private struct SeparatorChip: View {
             }
             .padding(10)
             .frame(width: 240)
+            // The popover focuses its first taker and rings it, which read as
+            // a second selection competing with the tint ring that marks the
+            // style actually in use (Gab, 2026-09-17: "the Focused state on
+            // the most left item that always remains there"). One signal per
+            // state. Disabling the EFFECT, not focusability, so the controls
+            // stay keyboard-reachable; it propagates to the whole subtree.
+            .focusEffectDisabled()
         }
     }
 

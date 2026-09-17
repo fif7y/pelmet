@@ -300,10 +300,27 @@ final class AppState {
     /// parked (ChatGPT Classic re-creates its status item at runtime, 2026-09-09;
     /// the icon showed for a moment and never came back). Same remedy as a
     /// relaunch: a brief adoption window, then place it.
+    /// An adoption window drops the assertion outright — the agent refuses to
+    /// attach a newly registered item while ANY assertion is held, allowlist
+    /// or not — so for its whole life (up to 2.5s) every hidden AND
+    /// always-hidden icon is back in the bar. Float the same picture the
+    /// clock blink uses over the strip for the round trip. #31: a relaunched
+    /// always-hidden app showed its icon "for a second" on the next hover —
+    /// the hover was a coincidence, the retry window was the flash.
+    private func coveringAdoption(_ body: () async -> Bool) async -> Bool {
+        guard await engine.holdsAssertion else { return await body() }
+        let cover = await transitions.beginBarCover(
+            label: "adopt", safety: AppTiming.adoptionCoverSafety
+        )
+        let adopted = await body()
+        if let cover { transitions.endBarCover(cover, label: "adopt") }
+        return adopted
+    }
+
     func reopenAdoption(for bundle: String) async {
         let keys = settings.sectionModel.assignments.keys.filter { $0.bundleID == bundle }
         placement.queuePlacements(keys)
-        if await engine.openAdoptionWindow(for: bundle) {
+        if await coveringAdoption({ await engine.openAdoptionWindow(for: bundle) }) {
             absentBundles.remove(bundle)
             updateSnapshot(await engine.snapshot())
             placement.flushPendingPlacements()
@@ -398,7 +415,7 @@ final class AppState {
                     PelmetLog.log("adoptWindow: \(bundle) \(held ? "registered and concealed" : "restarted without its item") — nothing to adopt")
                     return
                 }
-                if await self.engine.openAdoptionWindow(for: bundle) {
+                if await self.coveringAdoption({ await self.engine.openAdoptionWindow(for: bundle) }) {
                     self.updateSnapshot(await self.engine.snapshot())
                     self.placement.flushPendingPlacements()
                     return
@@ -651,13 +668,13 @@ final class AppState {
     /// the bar is quiet beneath it. With nothing held the click just replays.
     private func clockClicked(at point: CGPoint) {
         Task { @MainActor in
-            let cover = await transitions.beginClockBlinkCover()
+            let cover = await transitions.beginBarCover()
             let blinked = await engine.beginClockBlink()
             ClockClickRelay.postClick(at: point)
             guard blinked else { cover?.dismiss(); return }
             try? await Task.sleep(for: AppTiming.clockBlinkReacquire)
             await engine.endClockBlink()
-            if let cover { transitions.endClockBlinkCover(cover) }
+            if let cover { transitions.endBarCover(cover) }
         }
     }
 
@@ -1155,8 +1172,16 @@ final class AppState {
             pelmetBundleID: PelmetBundle.mainID,
             isRunning: { app($0) != nil && !absentBundles.contains($0) },
             appName: { app($0)?.localizedName },
-            recentlySeen: { Date.now.timeIntervalSince(lastSeenAt[$0.sectionKey] ?? .distantPast) < Self.storedTileGrace }
+            recentlySeen: { Date.now.timeIntervalSince(lastSeenAt[$0.sectionKey] ?? .distantPast) < Self.storedTileGrace },
+            destroyed: destroyedKeys
         )
+    }
+
+    /// An icon the bar took down although Pelmet allowed it — the editor
+    /// badges it exactly like one that refused to hide: either way Pelmet
+    /// can't manage it, and a launcher is the way out. See CollateralTracker.
+    func isDestroyedHost(_ id: ItemID) -> Bool {
+        destroyedKeys.contains(id.sectionKey)
     }
 
     // MARK: - Effects
@@ -1352,6 +1377,11 @@ final class AppState {
     /// Canonical keys of icons the bar kept showing after Pelmet concealed
     /// them — the editor's "can't hide" badge. See UnhideableTracker.
     private(set) var unhideableKeys: Set<ItemID> = []
+    private var collateralTracker = CollateralTracker()
+    /// Canonical keys of icons the bar destroyed although the allowlist
+    /// protects them (#30) — same badge, and the editor keeps their tile
+    /// instead of losing them to every section at once. See CollateralTracker.
+    private(set) var destroyedKeys: Set<ItemID> = []
     /// Bundles whose bar item is hosted by a bundle-less process (ChatGPT
     /// Classic's helper): the assertion allowlist can't key on such a
     /// process, so Pelmet can't hide the icon reliably — the editor shows it
@@ -1453,6 +1483,23 @@ final class AppState {
         if unhideableTracker.confirmed != unhideableKeys {
             unhideableKeys = unhideableTracker.confirmed
             PelmetLog.log("snapshot: unhideable \(unhideableKeys.map(\.rawValue))")
+        }
+        // Third-party keys only: Apple's modules come and go with the
+        // assertion's system flags, not with an allowlist the agent can fail
+        // to match, and Pelmet's own items are never collateral.
+        collateralTracker.observe(
+            live: Set(
+                snap.items
+                    .filter { $0.frame != nil && !$0.id.isSystemModule }
+                    .map(\.id.sectionKey)
+                    .filter { $0.bundleID.map { !PelmetBundle.ownIDs.contains($0) } ?? false }
+            ),
+            concealing: Set(snap.concealed.compactMap(\.bundleID)),
+            running: { NSRunningApplication.runningApplications(withBundleIdentifier: $0).isEmpty == false }
+        )
+        if collateralTracker.confirmed != destroyedKeys {
+            destroyedKeys = collateralTracker.confirmed
+            PelmetLog.log("snapshot: destroyed by the bar \(destroyedKeys.map(\.rawValue))")
         }
         snapshot = snap
         clockRelay?.updateClockFrame(
@@ -1686,6 +1733,7 @@ final class AppState {
             }
         case .assertionTornDown:
             unhideableTracker.assertionLost()
+            collateralTracker.assertionLost()
             // Recovery: force a real converge. (A `.concealRequested` through
             // the rehide machine was a no-op from `.concealed` — the exact
             // state an external teardown usually finds us in.)

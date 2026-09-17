@@ -97,7 +97,7 @@ final class SeparatorManager {
             title: spec.itemTitle,
             kind: .separator,
             text: spec.style == .space ? "" : spec.style.rawValue,
-            length: spec.style == .space ? 14 : nil,
+            length: spec.style == .space ? spec.width : nil,
             alpha: spec.style == .space ? 0 : spec.opacity
         )
     }
@@ -112,6 +112,11 @@ final class SeparatorManager {
         }
         for spec in specs {
             if let existing = items[spec.id] {
+                // Width is the item's own length, not the button's — a spacer
+                // dragged down the slider stays its old size otherwise.
+                if spec.style == .space, existing.length != spec.width {
+                    existing.length = spec.width
+                }
                 configure(existing.button, spec: spec)
             } else {
                 items[spec.id] = makeItem(for: spec)
@@ -127,7 +132,7 @@ final class SeparatorManager {
 
     private func makeItem(for spec: SeparatorSpec) -> NSStatusItem {
         let item = NSStatusBar.system.statusItem(
-            withLength: spec.style == .space ? 14 : NSStatusItem.variableLength
+            withLength: spec.style == .space ? spec.width : NSStatusItem.variableLength
         )
         item.autosaveName = spec.itemTitle
         item.button?.setAccessibilityTitle(spec.itemTitle)
@@ -235,10 +240,16 @@ final class SeparatorManager {
     }
 
     /// Editor-tile glyph: the separator's actual character, template-style.
+    /// The spacer is the one style with no character to show, so it draws the
+    /// gap itself — a dashed slot, the same "nothing lives here" shape the
+    /// editor's empty tiles use. `␣` only reads as a space if you already
+    /// know the convention (Gab, 2026-09-17: asked for a spacer that was
+    /// already there, wearing that symbol).
     private static func glyphImage(for style: SeparatorStyle) -> NSImage {
         let size = NSSize(width: 20, height: 20)
+        guard style != .space else { return spacerSlotImage(size: size) }
         let image = NSImage(size: size, flipped: false) { rect in
-            let text = style == .space ? "␣" : style.rawValue
+            let text = style.rawValue
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: NSFont.systemFont(ofSize: 13, weight: .medium),
                 .foregroundColor: NSColor.black,
@@ -249,6 +260,21 @@ final class SeparatorManager {
                 x: rect.midX - bounds.width / 2,
                 y: rect.midY - bounds.height / 2
             ))
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    /// A dashed slot: the shape of an empty place in the bar.
+    private static func spacerSlotImage(size: NSSize) -> NSImage {
+        let image = NSImage(size: size, flipped: false) { rect in
+            let slot = NSRect(x: rect.midX - 6, y: rect.midY - 5, width: 12, height: 10)
+            let path = NSBezierPath(roundedRect: slot, xRadius: 2.5, yRadius: 2.5)
+            path.lineWidth = 1
+            path.setLineDash([2, 2], count: 2, phase: 0)
+            NSColor.black.setStroke()
+            path.stroke()
             return true
         }
         image.isTemplate = true

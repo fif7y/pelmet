@@ -176,6 +176,7 @@ T = {
     "AirDrop": dict(de="AirDrop", fr="AirDrop", es="AirDrop", it="AirDrop", pt="AirDrop", ja="AirDrop", zh="隔空投送", ko="AirDrop", ru="AirDrop"),
     "Separators": dict(de="Trenner", fr="Séparateurs", es="Separadores", it="Separatori", pt="Separadores", ja="区切り", zh="分隔符", ko="구분선", ru="Разделители"),
     "Separator opacity in the menu bar": dict(de="Deckkraft des Trenners in der Menüleiste", fr="Opacité du séparateur dans la barre des menus", es="Opacidad del separador en la barra de menús", it="Opacità del separatore nella barra dei menu", pt="Opacidade do separador na barra de menus", ja="メニューバーでの区切りの不透明度", zh="分隔符在菜单栏中的不透明度", ko="메뉴 막대에서 구분선의 불투명도", ru="Непрозрачность разделителя в строке меню"),
+    "Spacer width in the menu bar": dict(de="Breite des Abstandshalters in der Menüleiste", fr="Largeur de l'espaceur dans la barre des menus", es="Ancho del espaciador en la barra de menús", it="Larghezza dello spaziatore nella barra dei menu", pt="Largura do espaçador na barra de menus", ja="メニューバーでのスペーサーの幅", zh="间隔符在菜单栏中的宽度", ko="메뉴 막대에서 여백의 너비", ru="Ширина разделителя-отступа в строке меню"),
     "Pipe": dict(de="Strich", fr="Barre verticale", es="Barra vertical", it="Barra verticale", pt="Barra vertical", ja="縦線", zh="竖线", ko="세로선", ru="Вертикальная черта"),
     "Dot": dict(de="Punkt", fr="Point", es="Punto", it="Punto", pt="Ponto", ja="ドット", zh="圆点", ko="점", ru="Точка"),
     "Chevron ‹": dict(de="Chevron ‹", fr="Chevron ‹", es="Chevrón ‹", it="Chevron ‹", pt="Chevron ‹", ja="シェブロン ‹", zh="尖角符号 ‹", ko="쉐브론 ‹", ru="Шеврон ‹"),

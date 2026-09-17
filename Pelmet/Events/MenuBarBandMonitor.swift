@@ -319,6 +319,10 @@ final class MenuBarBandMonitor {
                 PelmetLog.log("band: click refused — on \(overlay)")
                 return
             }
+            if let screen, isRightOfClock(location, on: screen) {
+                PelmetLog.log("band: click refused — right of the clock")
+                return
+            }
             guard isEmptyMenuBarArea(location, on: screen) else { return }
             if event.type == .rightMouseDown {
                 // Right-click on empty bar: the settings entry that survives a
@@ -450,6 +454,26 @@ final class MenuBarBandMonitor {
     /// but is not an item/menu. A systemwide hit-test works on every display
     /// (the snapshot's frames are main-display-only, which silently broke
     /// empty-click detection on external screens).
+    /// macOS 27 parks the privacy indicator — the purple dot — at the far
+    /// right of the bar, past the clock. It draws no AX element of its own,
+    /// so `isEmptyMenuBarArea` reads it as bare bar and a click aimed at the
+    /// clock that lands a few points wide summoned the hidden icons instead
+    /// (reported 2026-09-17). Nothing of Pelmet's is reachable right of the
+    /// clock, so the whole zone is out of bounds for the click trigger.
+    /// Mirrored per display by right-edge inset, the way ClockClickRelay
+    /// does it: the bar repeats on every screen at the same inset, while the
+    /// walk only ever hands back the main display's copy of the clock.
+    /// No clock in the walk (hidden, locked screen, empty AX) is no rule.
+    private func isRightOfClock(_ point: NSPoint, on screen: NSScreen) -> Bool {
+        guard let primary = NSScreen.screens.first,
+              let clock = appState?.snapshot?.items.first(where: {
+                  $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock")
+              })?.frame
+        else { return false }
+        let insetFromRight = primary.frame.maxX - clock.maxX
+        return point.x > screen.frame.maxX - insetFromRight
+    }
+
     private func isEmptyMenuBarArea(_ point: NSPoint, on screen: NSScreen?) -> Bool {
         guard let primary = NSScreen.screens.first else { return false }
         // Convert bottom-left mouse coords → top-left AX coords.

@@ -90,11 +90,24 @@ public struct SeparatorSpec: Codable, Equatable, Identifiable, Sendable {
     public var style: SeparatorStyle
     /// Glyph opacity in the bar (invisible spacers ignore it).
     public var opacity: Double
+    /// Points of bar the invisible spacer takes up (drawn styles size
+    /// themselves to their glyph and ignore it). The gap is the only thing a
+    /// spacer has to offer, so it is the one control its chooser shows.
+    public var width: Double
 
-    public init(id: UUID = UUID(), style: SeparatorStyle, opacity: Double = 0.55) {
+    public static let defaultWidth: Double = 14
+    public static let widthRange: ClosedRange<Double> = 4...48
+
+    public init(
+        id: UUID = UUID(),
+        style: SeparatorStyle,
+        opacity: Double = 0.55,
+        width: Double = SeparatorSpec.defaultWidth
+    ) {
         self.id = id
         self.style = style
         self.opacity = opacity
+        self.width = width
     }
 
     /// Stable ItemID title, the separator's twin of `ExtraItemSpec.itemTitle`.
@@ -102,14 +115,16 @@ public struct SeparatorSpec: Codable, Equatable, Identifiable, Sendable {
     /// model keys on belongs with the spec that owns it.
     public var itemTitle: String { "Pelmet.Separator.\(id.uuidString)" }
 
-    // Resilient decode: specs saved before `opacity` existed keep the old look.
-    private enum CodingKeys: String, CodingKey { case id, style, opacity }
+    // Resilient decode: specs saved before `opacity` or `width` existed keep
+    // the old look — a spacer from before the width control is still 14pt.
+    private enum CodingKeys: String, CodingKey { case id, style, opacity, width }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
         style = try c.decode(SeparatorStyle.self, forKey: .style)
         opacity = try c.decodeIfPresent(Double.self, forKey: .opacity) ?? 0.55
+        width = try c.decodeIfPresent(Double.self, forKey: .width) ?? Self.defaultWidth
     }
 }
 

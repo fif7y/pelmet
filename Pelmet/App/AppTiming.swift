@@ -16,6 +16,11 @@ enum AppTiming {
     /// Longest the blink cover waits for the concealed items to leave the
     /// AX tree after the re-acquire before lifting anyway.
     static let clockBlinkCoverDeadline: TimeInterval = 1.5
+    /// Adoption-window cover watchdog. The window itself runs up to
+    /// `EngineTiming.adoptionWindowDeadline` (2.5s) and the converge that
+    /// re-asserts follows it, so the blink's 2.5s would lift the picture
+    /// mid-drop and show the very flash it is there to hide (#31).
+    static let adoptionCoverSafety: TimeInterval = 6
     /// How long after a capture the bar is taken to be in its indicator-
     /// shifted place (see `ConcealGhostOverlay.captureIndicatorLit`): the
     /// indicator lasts ~3s, half a second is kept back for the edge.

@@ -254,17 +254,23 @@ final class TransitionCoordinator {
         }
     }
 
-    /// Clock blink (see AppState.clockClicked): the assertion drops for the
-    /// click and, until the re-acquire lands, the agent slides every hidden
-    /// icon in AND brings back the system extras the assertion keeps out
-    /// (Now Playing lands in the visible cluster, shifting the chevron).
+    /// Covers a deliberate assertion drop. Two callers drop it and take it
+    /// straight back: the clock blink (see AppState.clockClicked) and an
+    /// adoption window (the agent refuses to attach a newly registered item
+    /// while ANY assertion is held, so the only way in is to let go — #31).
+    /// Until the re-acquire lands the agent slides every hidden icon in AND
+    /// brings back the system extras the assertion keeps out (Now Playing
+    /// lands in the visible cluster, shifting the chevron).
     /// A live picture of the bar from its leftmost item to the clock's left
     /// edge, floated before the drop, hides the whole round trip in either
     /// state — concealed or hover-revealed — since it is the bar as it
     /// looks right now. The clock stays uncovered (it never moves: the
     /// right zone is fixed) and the pre-captured empty-bar still is no use
     /// here: it stops at the strip, right where the extras reappear.
-    func beginClockBlinkCover() async -> ConcealGhostOverlay.GhostSet? {
+    func beginBarCover(
+        label: String = "clock",
+        safety: TimeInterval = AppTiming.transitionCoverSafety
+    ) async -> ConcealGhostOverlay.GhostSet? {
         let isClock: (ObservedItem) -> Bool = { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }
         let primaryMaxX = primaryMaxX
         guard let appState, let items = appState.snapshot?.items, !items.isEmpty,
@@ -297,7 +303,7 @@ final class TransitionCoordinator {
         // the walks below only delay the replayed click (~250ms on #27's
         // machine, four walks per click).
         guard !snaps.isEmpty else {
-            PelmetLog.log("clock: blink cover none — no picture, ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+            PelmetLog.log("\(label): cover none — no picture, ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
             return nil
         }
         var clockNow = clock.minX
@@ -312,8 +318,8 @@ final class TransitionCoordinator {
         if clockNow != clock.minX {
             snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clockNow))
         }
-        let cover = ConcealGhostOverlay.begin(from: snaps, safety: AppTiming.transitionCoverSafety)
-        PelmetLog.log("clock: blink cover \(cover == nil ? "none" : "up") \(Int(minX))..\(Int(clockNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) clock \(Int(clock.minX))→\(Int(clockNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+        let cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
+        PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(minX))..\(Int(clockNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) clock \(Int(clock.minX))→\(Int(clockNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
         return cover
     }
 
@@ -323,7 +329,7 @@ final class TransitionCoordinator {
     /// fading out when a hold-only lift came (Gab, 2026-09-14: "all apps at
     /// the very end"). Poll a fresh AX walk until the concealed items have
     /// left the tree, then hold for the agent's fade.
-    func endClockBlinkCover(_ cover: ConcealGhostOverlay.GhostSet) {
+    func endBarCover(_ cover: ConcealGhostOverlay.GhostSet, label: String = "clock") {
         Task { @MainActor in
             guard let appState else { cover.dismiss(); return }
             let started = Date()
@@ -335,7 +341,7 @@ final class TransitionCoordinator {
             let gone = Int(-started.timeIntervalSinceNow * 1000)
             try? await Task.sleep(for: .seconds(AppTiming.exitCoverHold))
             cover.dismiss()
-            PelmetLog.log("clock: blink cover down — concealed gone at \(gone)ms, lifted at \(Int(-started.timeIntervalSinceNow * 1000))ms")
+            PelmetLog.log("\(label): cover down — concealed gone at \(gone)ms, lifted at \(Int(-started.timeIntervalSinceNow * 1000))ms")
         }
     }
 
