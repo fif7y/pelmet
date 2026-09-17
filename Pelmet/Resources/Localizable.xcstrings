@@ -1567,6 +1567,64 @@
         }
       }
     },
+    "Always": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siempre"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toujours"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sempre"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常に"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항상"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sempre"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Всегда"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "始终"
+          }
+        }
+      }
+    },
     "Always Hidden": {
       "localizations": {
         "de": {
@@ -3423,6 +3481,64 @@
         }
       }
     },
+    "Click to play or pause, right-click for tracks.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klick spielt oder pausiert, Rechtsklick wechselt den Titel."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clic para reproducir o pausar, clic derecho para cambiar de pista."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clic pour lire ou mettre en pause, clic droit pour changer de piste."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clic per riprodurre o mettere in pausa, clic destro per cambiare brano."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリックで再生／一時停止、右クリックで曲送り。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클릭하면 재생/일시 정지, 오른쪽 클릭으로 트랙 이동."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clique para tocar ou pausar, clique direito para trocar de faixa."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Щелчок — пуск или пауза, правый щелчок — смена трека."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点按播放或暂停，右键切换曲目。"
+          }
+        }
+      }
+    },
     "Click, then press the new shortcut. ⎋ cancels, ⌫ restores %@.": {
       "localizations": {
         "de": {
@@ -4637,6 +4753,122 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在完成备份…"
+          }
+        }
+      }
+    },
+    "Focus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo de concentración"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentration"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full immersion"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "集中モード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "집중 모드"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foco"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фокусирование"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专注模式"
+          }
+        }
+      }
+    },
+    "Focus Settings…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus-Einstellungen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes de concentración…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages de Concentration…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni Full immersion…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "集中モード設定…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "집중 모드 설정…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes de Foco…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки фокусирования…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专注模式设置…"
           }
         }
       }
@@ -11311,60 +11543,60 @@
         }
       }
     },
-    "Shows while audio plays. Click to play or pause, right-click for tracks.": {
+    "Shows which Focus is on. Click for the Focus panel.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erscheint, solange Audio läuft. Klick spielt oder pausiert, Rechtsklick wechselt den Titel."
+            "value": "Zeigt, welcher Fokus aktiv ist. Klick öffnet das Fokus-Panel."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se muestra mientras suena audio. Clic para reproducir o pausar, clic derecho para las pistas."
+            "value": "Muestra qué modo de concentración está activo. Un clic abre el panel."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Visible pendant la lecture audio. Clic pour lire ou mettre en pause, clic droit pour changer de piste."
+            "value": "Indique quelle Concentration est active. Un clic ouvre le panneau Concentration."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appare mentre c’è audio in riproduzione. Clic per riprodurre o mettere in pausa, clic destro per i brani."
+            "value": "Mostra quale Full immersion è attiva. Un clic apre il pannello."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "音声の再生中に表示。クリックで再生/一時停止、右クリックで曲送り。"
+            "value": "オンになっている集中モードを表示します。クリックで集中モードパネルを開きます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "오디오 재생 중에 표시됩니다. 클릭하면 재생/일시정지, 우클릭으로 트랙 이동."
+            "value": "켜져 있는 집중 모드를 표시합니다. 클릭하면 집중 모드 패널이 열립니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aparece enquanto há áudio tocando. Clique para tocar ou pausar, clique direito para as faixas."
+            "value": "Mostra qual Foco está ativo. Clique para abrir o painel de Foco."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показывается во время воспроизведения. Клик — играть или пауза, правый клик — треки."
+            "value": "Показывает, какой режим фокусирования включён. Щелчок открывает панель."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "播放音频时显示。点击播放或暂停，右键切换曲目。"
+            "value": "显示当前开启的专注模式。点按打开专注模式面板。"
           }
         }
       }
@@ -14091,6 +14323,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "网站"
+          }
+        }
+      }
+    },
+    "When active": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei Aktivität"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando está activo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si actif"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando è attivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクティブ時のみ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활성 상태일 때"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando ativo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "При активности"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动时"
           }
         }
       }

@@ -406,6 +406,7 @@ private struct ItemTile: View {
         case .userSwitching: return String(localized: "Users")
         case .timeMachine: return String(localized: "Time Machine")
         case .siri: return String(localized: "Siri")
+        case .focus: return String(localized: "Focus")
         default: break
         }
         // SystemUIServer's extras enumerate as one item titled with every
@@ -783,6 +784,19 @@ private struct PelmetItemsStrip: View {
         )
     }
 
+    /// When an activity-driven singleton kind sits in the bar (media
+    /// controls, Time Machine, Focus).
+    private func ruleBinding(_ kind: ExtraKind) -> Binding<ExtraShowRule> {
+        Binding(
+            get: { appState.settings.extraItems.first { $0.kind == kind }?.resolvedShowRule ?? kind.defaultShowRule },
+            set: { rule in
+                guard let index = appState.settings.extraItems.firstIndex(where: { $0.kind == kind }) else { return }
+                appState.settings.extraItems[index].showRule = rule
+                appState.settingsChanged()
+            }
+        )
+    }
+
     private func toggleKind(_ kind: ExtraKind, on: Bool) {
         if on, !hasKind(kind) {
             appState.addExtra(ExtraItemSpec(kind: kind))
@@ -826,9 +840,10 @@ private struct PelmetItemsStrip: View {
             VStack(alignment: .leading, spacing: 12) {
                 PelmetItemRow(
                     symbol: "playpause.fill", title: "Media controls",
-                    caption: "Shows while audio plays. Click to play or pause, right-click for tracks.",
+                    caption: "Click to play or pause, right-click for tracks.",
                     isOn: hasKind(.mediaControls),
-                    style: styleBinding(.mediaControls)
+                    style: styleBinding(.mediaControls),
+                    rule: ruleBinding(.mediaControls)
                 ) { toggleKind(.mediaControls, on: $0) }
                 PelmetItemRow(
                     symbol: "video.fill", title: "Camera & mic indicator",
@@ -846,9 +861,16 @@ private struct PelmetItemsStrip: View {
                     isOn: hasKind(.timer)
                 ) { toggleKind(.timer, on: $0) }
                 PelmetItemRow(
+                    symbol: "moon.fill", title: "Focus",
+                    caption: "Shows which Focus is on. Click for the Focus panel.",
+                    isOn: hasKind(.focus),
+                    rule: ruleBinding(.focus)
+                ) { toggleKind(.focus, on: $0) }
+                PelmetItemRow(
                     symbol: ExtraGlyph.timeMachineSymbol, title: "Time Machine",
                     caption: "Latest backup, Back Up Now. Apple's own icon turns off in System Settings while this is on.",
-                    isOn: hasKind(.timeMachine)
+                    isOn: hasKind(.timeMachine),
+                    rule: ruleBinding(.timeMachine)
                 ) { toggleKind(.timeMachine, on: $0) }
                 PelmetItemRow(
                     symbol: "", image: ExtraGlyph.airdrop, title: "AirDrop",
@@ -894,6 +916,9 @@ private struct PelmetItemRow: View {
     /// Static or animated glyph (media controls only), offered once the
     /// item is on — the same in-row borderless menu the launcher rows use.
     var style: Binding<ExtraStyle>? = nil
+    /// Shows when active or always (media, Time Machine, Focus), same
+    /// menu, same moment.
+    var rule: Binding<ExtraShowRule>? = nil
     let onToggle: (Bool) -> Void
 
     var body: some View {
@@ -923,6 +948,13 @@ private struct PelmetItemRow: View {
                 PelmetMenuPicker(
                     selection: style,
                     options: [(.static, "Static"), (.animated, "Animated")],
+                    borderless: true
+                )
+            }
+            if isOn, let rule {
+                PelmetMenuPicker(
+                    selection: rule,
+                    options: [(.whenActive, "When active"), (.always, "Always")],
                     borderless: true
                 )
             }
@@ -1084,7 +1116,7 @@ private struct AppLauncherRow: View {
     @State private var pickingIcon = false
     @State private var iconHovered = false
 
-    private func setRule(_ rule: LauncherShowRule) {
+    private func setRule(_ rule: ExtraShowRule) {
         guard let index = appState.settings.extraItems.firstIndex(where: { $0.id == spec.id }) else { return }
         appState.settings.extraItems[index].showRule = rule
         appState.settingsChanged()
@@ -1096,7 +1128,7 @@ private struct AppLauncherRow: View {
         appState.settingsChanged()
     }
 
-    private var ruleBinding: Binding<LauncherShowRule> {
+    private var ruleBinding: Binding<ExtraShowRule> {
         Binding(get: { spec.resolvedShowRule }, set: { setRule($0) })
     }
 
@@ -1105,14 +1137,14 @@ private struct AppLauncherRow: View {
     private var ruleMenu: some View {
         PelmetMenuPicker(
             selection: ruleBinding,
-            options: LauncherShowRule.allCases.map { ($0, Self.label($0)) },
+            options: ExtraShowRule.allCases.map { ($0, Self.label($0)) },
             borderless: true
         )
     }
 
-    private static func label(_ rule: LauncherShowRule) -> LocalizedStringKey {
+    private static func label(_ rule: ExtraShowRule) -> LocalizedStringKey {
         switch rule {
-        case .whileRunning: "Only while app is running"
+        case .whenActive: "Only while app is running"
         case .always: "Always shows"
         }
     }
@@ -1159,7 +1191,7 @@ private struct AppLauncherRow: View {
             ViewThatFits(in: .horizontal) {
                 PelmetSegments(
                     selection: ruleBinding,
-                    options: LauncherShowRule.allCases.map { ($0, Self.label($0)) },
+                    options: ExtraShowRule.allCases.map { ($0, Self.label($0)) },
                     compact: true
                 )
                 ruleMenu

@@ -559,13 +559,20 @@ final class PlacementController {
         func isLive(_ item: ObservedItem) -> Bool {
             primaryFrame(of: item.id, in: snap).map(inBand) == true
         }
+        let alwaysHiddenEnd = placeable(.alwaysHidden).count
+        let hiddenEnd = alwaysHiddenEnd + placeable(.hidden).count
         // The trailing system cluster never moves and nothing drops right of
         // it, so a system member is no LEFT bound: an own item ordered
         // "after the clock" (Media controls on a bar whose Visible section
         // is battery/wifi/clock, #13) aimed at clock.maxX, verified against
         // the clock's x, failed, and re-dragged at every conceal settle.
-        // Left of one is a real slot, so it still bounds on the right.
-        let leftIdx = globalOrder[..<index].lastIndex(where: { isLive($0) && !Self.isProtectedSystemItem($0.id) })
+        // Left of one is a real slot, so it still bounds on the right. A
+        // system item the user HIDES is not that cluster — it moves like any
+        // other icon, and skipping it aimed the Focus item one slot left of
+        // the Sound icon and called it placed (2026-09-16).
+        let leftIdx = globalOrder.indices[..<index].last(where: { i in
+            isLive(globalOrder[i]) && (!Self.isProtectedSystemItem(globalOrder[i].id) || i < hiddenEnd)
+        })
         let rightIdx = globalOrder[(min(index + 1, globalOrder.count))...].firstIndex(where: isLive)
         let leftPair = leftIdx.map { globalOrder[$0] }
         let rightPair = rightIdx.map { globalOrder[$0] }
@@ -575,8 +582,6 @@ final class PlacementController {
         // instead of the neighbor from the desired order (the raw retry once
         // aimed at a midpoint straddling the chevron and verified true on the
         // wrong side — Figma, 2026-09-09). `PlacementGeometry.chevronCaps`.
-        let alwaysHiddenEnd = placeable(.alwaysHidden).count
-        let hiddenEnd = alwaysHiddenEnd + placeable(.hidden).count
         let caps = PlacementGeometry.chevronCaps(
             index: index, leftIdx: leftIdx, rightIdx: rightIdx,
             alwaysHiddenEnd: alwaysHiddenEnd, hiddenEnd: hiddenEnd

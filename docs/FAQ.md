@@ -14,10 +14,12 @@ a grouped "moves together" badge.
 While hiding is active, macOS itself temporarily removes a few of its own
 extras. Pelmet can't exempt them individually, they come back the moment hiding
 is off. Pelmet ships its own replacements for the common ones (media controls,
-AirDrop, camera/mic indicator, Shortcuts, a timer, fast user switching). Add
-them in Settings → Menu Bar. The timer is Pelmet's own: it counts down in the
-bar and rings, but it can't show a timer started in Clock or with Siri, since
-macOS keeps that one to itself.
+AirDrop, camera/mic indicator, Shortcuts, a timer, Focus, fast user switching).
+Add them in Settings → Menu Bar. The timer is Pelmet's own: it counts down in
+the bar and rings, but it can't show a timer started in Clock or with Siri,
+since macOS keeps that one to itself. The Focus item follows the real thing:
+it shows the Focus that is on, with its own icon, and a click opens the Focus
+panel in Control Center.
 
 **How does clicking the clock open Notification Center?**
 That's Pelmet working around macOS. While any icon is hidden, the system

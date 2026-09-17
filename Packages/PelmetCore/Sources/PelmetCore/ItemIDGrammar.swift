@@ -75,6 +75,7 @@ public extension ItemID {
         case userSwitching
         case timeMachine
         case siri
+        case focus
         /// A Pelmet-minted title this build does not name. Still one of ours
         /// (so still a section-managed extra) — the classifier must not
         /// narrow `isPelmetExtraID` to a whitelist that a future or older
@@ -95,6 +96,7 @@ public extension ItemID {
         case "Pelmet.Users": return .userSwitching
         case "Pelmet.TimeMachine": return .timeMachine
         case "Pelmet.Siri": return .siri
+        case "Pelmet.Focus": return .focus
         default: break
         }
         if title.hasPrefix("Pelmet.Separator.") { return .separator }

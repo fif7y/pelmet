@@ -140,15 +140,42 @@ public enum ExtraKind: String, Codable, CaseIterable, Sendable {
     case timeMachine
     /// Siri, same story as `timeMachine`.
     case siri
+    /// The Focus indicator. Apple's is a Control Center extra the assertion
+    /// hides with the Live Activities (#29), and donotdisturbd only talks to
+    /// entitled clients — but it narrates every transition to the unified
+    /// log with the mode's name and symbol in the clear (probed 2026-09-16),
+    /// so a Pelmet-drawn twin can follow along.
+    case focus
 }
 
-/// When an app launcher sits in the bar.
-public enum LauncherShowRule: String, Codable, CaseIterable, Sendable {
-    /// A launcher: present whether or not the app runs. The default — a
+/// When an activity-driven item sits in the bar — System Settings' "Always
+/// Show" / "Show When Active" for Pelmet's own items. What counts as active
+/// is the kind's: a launcher's app running, audio playing, a backup running,
+/// a Focus being on. Kinds with no such state (Siri, AirDrop, shortcuts,
+/// fast user switching) have no rule; neither does the camera & mic
+/// indicator (one that always showed would lie) nor the timer (idle and
+/// hidden, it could never be started).
+public enum ExtraShowRule: String, Codable, CaseIterable, Sendable {
+    /// Present whether or not the thing is active. A launcher's default — a
     /// launcher you can't click when the app is closed isn't a launcher.
     case always
-    /// Mirrors the app's own icon: present only while the app runs.
-    case whileRunning
+    /// Present only while active: mirrors the app's own icon, or Apple's
+    /// Focus item. Raw value predates the 2026-09-16 generalisation from
+    /// launchers — kept so saved settings still decode.
+    case whenActive = "whileRunning"
+}
+
+public extension ExtraKind {
+    /// What a spec with no saved rule does. Media comes and goes like
+    /// Apple's; a launcher, Time Machine and Focus stay — the Focus item at
+    /// rest is the button that opens the Focus panel, so it earns its slot
+    /// (Gab, 2026-09-16), unlike Apple's own default.
+    var defaultShowRule: ExtraShowRule {
+        switch self {
+        case .mediaControls, .cameraMicIndicator: .whenActive
+        default: .always
+        }
+    }
 }
 
 /// How a Pelmet item draws its glyph: the SF Symbol still, or (media
@@ -173,8 +200,9 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
     public var bundleID: String?
     /// App launchers: display name captured at add time (the app may be quit).
     public var appName: String?
-    /// App launchers: nil reads as `.always`.
-    public var showRule: LauncherShowRule?
+    /// The activity-driven kinds (launchers, media controls, Time Machine,
+    /// Focus); nil reads as the kind's default (`ExtraKind.defaultShowRule`).
+    public var showRule: ExtraShowRule?
 
     public init(
         id: UUID = UUID(),
@@ -183,7 +211,7 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
         symbol: String? = nil,
         bundleID: String? = nil,
         appName: String? = nil,
-        showRule: LauncherShowRule? = nil,
+        showRule: ExtraShowRule? = nil,
         style: ExtraStyle? = nil
     ) {
         self.id = id
@@ -196,7 +224,7 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
         self.showRule = showRule
     }
 
-    public var resolvedShowRule: LauncherShowRule { showRule ?? .always }
+    public var resolvedShowRule: ExtraShowRule { showRule ?? kind.defaultShowRule }
     public var resolvedStyle: ExtraStyle { style ?? .static }
 
     /// Stable ItemID title. Singleton kinds keep fixed titles (section
@@ -212,6 +240,7 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
         case .userSwitching: "Pelmet.Users"
         case .timeMachine: "Pelmet.TimeMachine"
         case .siri: "Pelmet.Siri"
+        case .focus: "Pelmet.Focus"
         }
     }
 }

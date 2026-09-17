@@ -49,8 +49,8 @@ final class ExtrasManager {
     private var items: [UUID: NSStatusItem] = [:]
     private var specs: [UUID: ExtraItemSpec] = [:]
     private var lastVisible: [UUID: Bool] = [:]
-    /// Launchers allow the native ⌘-drag off the bar; AppKit reports it as an
-    /// `isVisible` flip (see `observeRemoval`).
+    /// Every extra allows the native ⌘-drag off the bar; AppKit reports it
+    /// as an `isVisible` flip (see `observeRemoval`).
     private var removalObservations: [UUID: NSKeyValueObservation] = [:]
     /// Attached ahead of an uncovered swap (see `preattach`): the companion's
     /// show only fades them, and a pending layout drop must leave them be.
@@ -61,6 +61,10 @@ final class ExtrasManager {
     private var lastTimerActive = false
     /// Time Machine's state, alive while a Time Machine item exists.
     private var timeMachine: TimeMachineBackup?
+    private var lastBackupRunning = false
+    /// Which Focus is on, alive while a Focus item exists.
+    private var focusStatus: FocusStatus?
+    private var lastFocusActive = false
     /// One clock per media item drawing the animated bars (see ExtraGlyphs).
     private var animators: [UUID: ExtraAnimator] = [:]
     /// Play/pause state the media glyph shows. Click intent drives it (players
@@ -160,7 +164,7 @@ final class ExtrasManager {
         // every app launch and quit on the machine, so don't hold it for
         // launchers that would ignore it.
         let needsRunningObserver = newSpecs.contains {
-            $0.kind == .appLauncher && $0.resolvedShowRule == .whileRunning
+            $0.kind == .appLauncher && $0.resolvedShowRule == .whenActive
         }
         if needsRunningObserver, runningAppsObservation == nil {
             runningAppsObservation = NSWorkspace.shared.observe(
@@ -191,6 +195,17 @@ final class ExtrasManager {
         } else if let backup = timeMachine {
             backup.stop()
             timeMachine = nil
+        }
+        if newSpecs.contains(where: { $0.kind == .focus }) {
+            if focusStatus == nil {
+                let status = FocusStatus()
+                status.onChange = { [weak self] in self?.focusChanged() }
+                focusStatus = status
+                status.start()
+            }
+        } else if let status = focusStatus {
+            status.stop()
+            focusStatus = nil
         }
         let needsCameraMonitor = newSpecs.contains {
             $0.kind == .cameraMicIndicator || $0.kind == .mediaControls
@@ -251,29 +266,34 @@ final class ExtrasManager {
                 }
                 lastCameraIndicatorVisible = visible
             case .mediaControls:
-                // Section-governed AND media-relevant: playing, or within the
-                // post-playback linger so pause doesn't swallow resume.
-                visible = visible && (cameraMicMonitor?.mediaRelevant ?? true)
                 let audioActive = cameraMicMonitor?.audioOutputActive ?? false
                 if audioActive != lastAudioOutputActive {
                     lastAudioOutputActive = audioActive
                     mediaPlaying = audioActive
                 }
                 updateMediaSymbol(item, spec: spec)
-                // Same re-entry hazard as the camera pill: audio starting
-                // (or the linger expiring and resuming) puts the item back
-                // in layout at the agent's slot, not the model's.
-                let itemID = Self.itemID(for: spec)
-                if visible, lastVisible[id] != true {
-                    appState?.queueDynamicExtraPlacement(itemID)
-                } else if !visible, lastVisible[id] == true {
-                    appState?.cancelDynamicExtraPlacement(itemID)
+                // "Always": a play/pause button that rides its section like
+                // AirDrop. "When active": section-governed AND
+                // media-relevant — playing, or within the post-playback
+                // linger so pause doesn't swallow resume.
+                if spec.resolvedShowRule == .whenActive {
+                    visible = visible && (cameraMicMonitor?.mediaRelevant ?? true)
+                    // Same re-entry hazard as the camera pill: audio
+                    // starting (or the linger expiring and resuming) puts
+                    // the item back in layout at the agent's slot, not the
+                    // model's.
+                    let itemID = Self.itemID(for: spec)
+                    if visible, lastVisible[id] != true {
+                        appState?.queueDynamicExtraPlacement(itemID)
+                    } else if !visible, lastVisible[id] == true {
+                        appState?.cancelDynamicExtraPlacement(itemID)
+                    }
                 }
             case .appLauncher:
                 // "While running" mirrors the app's own icon; "Always" is a
                 // launcher and hides purely by section, like AirDrop.
                 let running = Self.isRunning(spec)
-                if spec.resolvedShowRule == .whileRunning {
+                if spec.resolvedShowRule == .whenActive {
                     visible = visible && running
                     // The running edge re-enters layout at the agent's slot,
                     // not the model's — same hazard as the media button.
@@ -318,6 +338,47 @@ final class ExtrasManager {
                 lastTimerActive = active
             case .timeMachine:
                 updateTimeMachineGlyph(item, spec: spec)
+                // "When active": only while a backup runs, the running edge
+                // placed like a while-running launcher.
+                if spec.resolvedShowRule == .whenActive {
+                    let running = timeMachine?.status.running ?? false
+                    let sectionVisible = visible
+                    visible = visible && running
+                    let itemID = Self.itemID(for: spec)
+                    if running, !lastBackupRunning {
+                        if sectionVisible {
+                            appState?.placeOwnItemSoon(itemID)
+                        } else {
+                            appState?.queueDynamicExtraPlacement(itemID)
+                        }
+                    } else if !running, lastBackupRunning {
+                        appState?.cancelDynamicExtraPlacement(itemID)
+                    }
+                    lastBackupRunning = running
+                }
+            case .focus:
+                // An indicator like the camera pill: a Focus that is on shows
+                // whatever the section says (Apple's own does, and one that
+                // hid would be lying). Off, the rule decides — gone like
+                // Apple's default, or in its section as a moon that opens the
+                // Focus panel.
+                let active = focusStatus?.active != nil
+                let sectionVisible = visible
+                visible = active || (spec.resolvedShowRule == .always && sectionVisible)
+                updateFocusGlyph(item, spec: spec)
+                let itemID = Self.itemID(for: spec)
+                if active, !lastFocusActive {
+                    // Same re-entry hazard as the timer: the switch put it in
+                    // layout at the agent's slot, not the model's.
+                    if sectionVisible {
+                        appState?.placeOwnItemSoon(itemID)
+                    } else {
+                        appState?.queueDynamicExtraPlacement(itemID)
+                    }
+                } else if !active, lastFocusActive {
+                    appState?.cancelDynamicExtraPlacement(itemID)
+                }
+                lastFocusActive = active
             case .shortcut, .userSwitching, .siri:
                 break
             }
@@ -337,15 +398,23 @@ final class ExtrasManager {
         for (id, item) in items {
             guard let spec = specs[id], lastVisible[id] != true else { continue }
             switch spec.kind {
-            case .airdrop, .shortcut, .userSwitching, .timeMachine, .siri: break
+            case .airdrop, .shortcut, .userSwitching, .siri: break
             case .timer:
                 // Counting: already in the bar on its own.
                 guard !(pelmetTimer?.isActive ?? false) else { continue }
+            case .focus:
+                // Only an always-shown, currently off Focus rides the section.
+                guard spec.resolvedShowRule == .always else { continue }
             case .appLauncher:
                 // The running edge has its own placement walk; only a plain
                 // launcher (or one already running) rides the section.
-                guard spec.resolvedShowRule != .whileRunning || Self.isRunning(spec) else { continue }
-            case .cameraMicIndicator, .mediaControls: continue  // hardware-driven
+                guard spec.resolvedShowRule != .whenActive || Self.isRunning(spec) else { continue }
+            case .timeMachine:
+                guard spec.resolvedShowRule != .whenActive || timeMachine?.status.running == true else { continue }
+            case .mediaControls:
+                // Audio-driven unless it always shows.
+                guard spec.resolvedShowRule == .always else { continue }
+            case .cameraMicIndicator: continue  // hardware-driven
             }
             guard revealing.contains(model.section(of: Self.itemID(for: spec))) else { continue }
             StatusItemFader.attach(item, shownLength: Self.shownLength(for: spec))
@@ -430,10 +499,13 @@ final class ExtrasManager {
             // enumerator falls back to "Item-0" and every Pelmet item collides.
             button.setAccessibilityTitle(spec.itemTitle)
         }
-        if spec.kind == .appLauncher {
-            item.behavior = .removalAllowed
-            observeRemoval(of: item, for: spec)
-        }
+        // Every extra may be dragged off the bar, and that drag must be a
+        // per-item removal: without `.removalAllowed`, macOS 27 answers a
+        // drag-out by disallowing the whole app in "Allow in the Menu Bar"
+        // (2026-09-14), and a Focus item dropped short of that just slid to
+        // the far left (2026-09-16).
+        item.behavior = .removalAllowed
+        observeRemoval(of: item, for: spec)
         return item
     }
 
@@ -442,14 +514,15 @@ final class ExtrasManager {
     /// listening the launcher stayed in Settings and healed back on the next
     /// reveal (Comet, 2026-09-14). Pelmet's own hides flip `lastVisible`
     /// first, so a false arriving while it still reads true is the user's
-    /// hand: drop the spec like the editor's Remove button does.
+    /// hand: drop the spec — the launcher's Remove, the toggle off for a
+    /// singleton kind.
     private func observeRemoval(of item: NSStatusItem, for spec: ExtraItemSpec) {
         removalObservations[spec.id] = item.observe(\.isVisible, options: [.new]) { [weak self] _, _ in
             Task { @MainActor [weak self] in
                 guard let self, let item = self.items[spec.id], !item.isVisible,
                       self.lastVisible[spec.id] == true,
                       let appState = self.appState else { return }
-                PelmetLog.log("extras: \(spec.itemTitle) dragged off the bar → remove launcher \(spec.bundleID ?? "?")")
+                PelmetLog.log("extras: \(spec.itemTitle) dragged off the bar → off")
                 appState.settings.extraItems.removeAll { $0.id == spec.id }
                 appState.settingsChanged()
             }
@@ -467,6 +540,7 @@ final class ExtrasManager {
         case .userSwitching: "person.crop.circle"
         case .timeMachine: ExtraGlyph.timeMachineSymbol
         case .siri: "siri"
+        case .focus: "moon.fill"
         }
     }
 
@@ -702,7 +776,28 @@ final class ExtrasManager {
         case .airdrop: updateAirDropGlyph(item, spec: spec)
         case .timer: updateTimerGlyph(item, spec: spec)
         case .timeMachine: updateTimeMachineGlyph(item, spec: spec)
+        case .focus: updateFocusGlyph(item, spec: spec)
         case .shortcut, .appLauncher, .userSwitching, .siri: break
+        }
+    }
+
+    /// The active mode's own symbol (macOS names it in the log line); an
+    /// outlined moon while off, the way Apple's always-shown item rests.
+    private func updateFocusGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
+        guard let button = item.button else { return }
+        let symbol = focusStatus?.active?.symbol ?? "moon"
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: spec.itemTitle)
+            ?? NSImage(systemSymbolName: "moon.fill", accessibilityDescription: spec.itemTitle)
+    }
+
+    private func focusChanged() {
+        guard let spec = specs.values.first(where: { $0.kind == .focus }),
+              let item = items[spec.id] else { return }
+        let active = focusStatus?.active != nil
+        if active != lastFocusActive {
+            applyCurrent()  // the visibility edge
+        } else {
+            updateFocusGlyph(item, spec: spec)  // one mode to another
         }
     }
 
@@ -783,6 +878,12 @@ final class ExtrasManager {
     }
 
     private func timeMachineChanged() {
+        let running = timeMachine?.status.running ?? false
+        if running != lastBackupRunning,
+           specs.values.contains(where: { $0.kind == .timeMachine && $0.resolvedShowRule == .whenActive }) {
+            applyCurrent()  // the visibility edge
+            return
+        }
         for (id, item) in items {
             guard let spec = specs[id], spec.kind == .timeMachine else { continue }
             updateTimeMachineGlyph(item, spec: spec)
@@ -860,6 +961,16 @@ final class ExtrasManager {
                 popUp(menu, on: statusItem.value)
             } else {
                 Siri.activate()
+            }
+        case .focus:
+            if rightClick {
+                let menu = NSMenu()
+                let settings = NSMenuItem(title: String(localized: "Focus Settings…"), action: #selector(focusSettings), keyEquivalent: "")
+                settings.target = self
+                menu.items = [settings]
+                popUp(menu, on: statusItem.value)
+            } else {
+                ControlCenterFocus.toggle()
             }
         case .appLauncher:
             if rightClick, Self.isRunning(spec), let bundleID = spec.bundleID {
@@ -1062,6 +1173,9 @@ final class ExtrasManager {
     @objc private func browseBackups() { TimeMachineBackup.browseBackups() }
     @objc private func timeMachineSettings() { TimeMachineBackup.openSettings() }
     @objc private func siriSettings() { Siri.openSettings() }
+    @objc private func focusSettings() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Focus-Settings.extension")!)
+    }
 
     private func openAirDrop() {
         // Finder's AirDrop view via its keyboard shortcut (⇧⌘R) — the only
