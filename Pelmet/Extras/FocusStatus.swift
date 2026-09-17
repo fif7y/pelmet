@@ -25,6 +25,10 @@ final class FocusStatus {
     private var stream: Process?
     private var stopped = false
     private var restarts = 0
+    /// Pelmet quitting takes the child with it — a `Process` outlives its
+    /// parent, and a `log stream` left behind at every relaunch was found
+    /// re-parented to launchd (2026-09-16).
+    private var termination: NSObjectProtocol?
 
     /// donotdisturbd's one line per transition; the state it carries is
     /// what `FocusLogParser` reads.
@@ -33,6 +37,12 @@ final class FocusStatus {
 
     func start() {
         stopped = false
+        reapOrphans()
+        if termination == nil {
+            termination = NotificationCenter.default.addObserver(
+                forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+            ) { [weak self] _ in MainActor.assumeIsolated { self?.stop() } }
+        }
         recover()
         openStream()
     }
@@ -42,6 +52,17 @@ final class FocusStatus {
         (stream?.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil
         stream?.terminate()
         stream = nil
+    }
+
+    /// A crash (or a quit before the observer existed) can still strand a
+    /// child; any `log stream` running our predicate under launchd is ours.
+    private func reapOrphans() {
+        Task.detached(priority: .utility) {
+            let pids = Self.run(["/usr/bin/pgrep", "-P", "1", "-f", "Did receive state update"])
+                .compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
+            for pid in pids { kill(pid, SIGTERM) }
+            if !pids.isEmpty { PelmetLog.log("focus: reaped \(pids.count) orphaned log stream(s)") }
+        }
     }
 
     // MARK: Boot
@@ -149,8 +170,13 @@ final class FocusStatus {
 
     nonisolated private static func run(_ arguments: [String]) -> [String] {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/log")
-        process.arguments = arguments
+        if let tool = arguments.first, tool.hasPrefix("/") {
+            process.executableURL = URL(fileURLWithPath: tool)
+            process.arguments = Array(arguments.dropFirst())
+        } else {
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/log")
+            process.arguments = arguments
+        }
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
