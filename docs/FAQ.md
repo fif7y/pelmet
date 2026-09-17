@@ -19,7 +19,9 @@ Add them in Settings → Menu Bar. The timer is Pelmet's own: it counts down in
 the bar and rings, but it can't show a timer started in Clock or with Siri,
 since macOS keeps that one to itself. The Focus item follows the real thing:
 it shows the Focus that is on, with its own icon, and a click opens the Focus
-panel in Control Center.
+panel in Control Center. Media controls, Time Machine and Focus can sit in the
+bar only while active or all the time, the choice is beside each toggle. To
+turn any Pelmet item off from the bar, ⌘-drag it off.
 
 **How does clicking the clock open Notification Center?**
 That's Pelmet working around macOS. While any icon is hidden, the system
