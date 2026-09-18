@@ -34,8 +34,16 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     private var width: CGFloat = 0
     private var bandHeight: CGFloat = 0
     private var enabled = false
-    /// A physical mouse-down was swallowed; eat the matching mouse-up.
-    private var swallowUp = false
+    /// A physical mouse-down was swallowed; eat the matching mouse-up —
+    /// but only its own. The flag used to be a bare Bool: if the up ever
+    /// slipped past the tap (the tap re-enabling after a timeout is one
+    /// way), the NEXT up anywhere was eaten and that app never saw the
+    /// button let go — text selecting under a pointer nobody was holding
+    /// (#27). A deadline bounds it, and any later mouse-down clears it: a
+    /// new press means the old release has come and gone. Worst case the
+    /// app gets one extra release, which is harmless.
+    private var swallowUpUntil: Date?
+    private static let swallowUpWindow: TimeInterval = 1
     private var _lastMouseDownDisplay: CGDirectDisplayID?
     private let onClick: @MainActor (CGPoint) -> Void
 
@@ -130,6 +138,8 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
         // Auto-disable notifications must re-enable or the tap dies silently.
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            // Whatever passed while the tap was down included the up.
+            lock.withLock { swallowUpUntil = nil }
             return Unmanaged.passUnretained(event)
         }
         // Pelmet's own posted events (this relay's replay, placement drags).
@@ -139,9 +149,10 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
         let location = event.location
         let decision: Bool = lock.withLock {
             if type == .leftMouseUp {
-                defer { swallowUp = false }
-                return swallowUp
+                defer { swallowUpUntil = nil }
+                return swallowUpUntil.map { Date() < $0 } ?? false
             }
+            swallowUpUntil = nil
             if let display = Self.display(under: location) { _lastMouseDownDisplay = display }
             // Only a plain left click is the clock's; a right-click passes.
             guard type == .leftMouseDown, enabled, isOnClock(location) else { return false }
@@ -149,7 +160,7 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
             guard event.flags.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift]).isEmpty else {
                 return false
             }
-            swallowUp = true
+            swallowUpUntil = Date().addingTimeInterval(Self.swallowUpWindow)
             return true
         }
         guard decision else { return Unmanaged.passUnretained(event) }
