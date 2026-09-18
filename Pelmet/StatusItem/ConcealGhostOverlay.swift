@@ -347,6 +347,30 @@ final class ConcealGhostOverlay {
         return out.isEmpty ? nil : out
     }
 
+    /// The same pictures cut to `range` (primary-band x, points; other
+    /// displays translate right-anchored like the captures did): the floating
+    /// bar's cover hides the strip alone — the chevron and the visible cluster
+    /// beside it stay live for the whole reveal.
+    static func cropped(_ snaps: [BarSnapshot], toPrimaryX range: ClosedRange<CGFloat>) -> [BarSnapshot] {
+        guard let primary = NSScreen.screens.first else { return [] }
+        return snaps.compactMap { snap in
+            let f = snap.windowFrame
+            guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(f) }) else { return nil }
+            let dx = screen.frame.maxX - primary.frame.maxX
+            let lo = max(f.minX, range.lowerBound + dx), hi = min(f.maxX, range.upperBound + dx)
+            guard hi - lo > 4 else { return nil }
+            let scale = CGFloat(snap.image.width) / f.width
+            let x0 = ((lo - f.minX) * scale).rounded(), x1 = ((hi - f.minX) * scale).rounded()
+            guard let image = snap.image.cropping(to: CGRect(x: x0, y: 0, width: x1 - x0, height: CGFloat(snap.image.height)))
+            else { return nil }
+            return BarSnapshot(
+                image: image,
+                windowFrame: NSRect(x: f.minX + x0 / scale, y: f.minY, width: (x1 - x0) / scale, height: f.height),
+                takenAt: snap.takenAt
+            )
+        }
+    }
+
     /// The same pictures with `columns` (absolute x, points) made
     /// transparent — the empty-bar cover with the chevron cut out, so the
     /// real chevron (which flips at the swap) shows through instead of the
@@ -603,7 +627,7 @@ final class ConcealGhostOverlay {
 /// SCK's callback on the capture queue tripped the isolation check, and
 /// the target's MainActor default isolation did the same for a top-level
 /// class until `nonisolated`.
-nonisolated private final class FirstFrameSink: NSObject, SCStreamOutput, @unchecked Sendable {
+nonisolated final class FirstFrameSink: NSObject, SCStreamOutput, @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<CGImage?, Never>?
     private var pending: CGImage?
@@ -648,7 +672,7 @@ nonisolated private final class FirstFrameSink: NSObject, SCStreamOutput, @unche
         finish(Self.cgImage(from: buffer))
     }
 
-    private static func cgImage(from buffer: CVPixelBuffer) -> CGImage? {
+    static func cgImage(from buffer: CVPixelBuffer) -> CGImage? {
         guard CVPixelBufferGetPixelFormatType(buffer) == kCVPixelFormatType_32BGRA else { return nil }
         CVPixelBufferLockBaseAddress(buffer, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }

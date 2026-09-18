@@ -96,4 +96,13 @@ enum AppTiming {
     static let rescueForceShowSettle: Duration = .milliseconds(600)
     /// « expansion → re-measure: the overflow items reflow into the bar.
     static let overflowExpandSettle: Duration = .milliseconds(700)
+    /// The floating bar's cover hides the strip for the whole reveal; the
+    /// safety fade only exists for a reveal whose task died with it up.
+    static let floatingCoverSafety: TimeInterval = 3600
+    /// The mirror's frame rate: the strip is mostly still, and every frame
+    /// costs a capture (measured 35ms each, ~4% CPU at 10fps, 2026-09-17).
+    static let floatingMirrorFPS: Int32 = 10
+    /// Routing checkbox flipped with the editor open → the preview reveal
+    /// re-runs once the conceal it forces has settled.
+    static let previewRerevealDelay: Duration = .milliseconds(800)
 }

@@ -327,6 +327,11 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     public var sectionModel = SectionModel()
     public var separators: [SeparatorSpec] = []
 
+    /// Sections that reveal into the floating bar (a glass panel flush under
+    /// the menu bar) instead of into the bar. A reveal takes that route when
+    /// every section it shows is listed here; off by default, per section.
+    public var floatingBarSections: Set<Section> = []
+
     /// Behavior template + per-display overrides, keyed by display UUID string.
     /// No UI writes the template yet — DisplaysPane edits only `displayOverrides`;
     /// the template is the fallback `behavior(forDisplayUUID:)` returns.
@@ -363,6 +368,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case displayTemplate, displayOverrides
         case notifyOnUpdates, barRightClickMenu
         case statusIconStyle
+        case floatingBarSections
     }
 
     public init(from decoder: Decoder) throws {
@@ -395,6 +401,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         notifyOnUpdates = field(Bool.self, .notifyOnUpdates, defaults.notifyOnUpdates)
         barRightClickMenu = field(Bool.self, .barRightClickMenu, defaults.barRightClickMenu)
         statusIconStyle = field(StatusIconStyle.self, .statusIconStyle, defaults.statusIconStyle)
+        floatingBarSections = field(Set<Section>.self, .floatingBarSections, defaults.floatingBarSections)
     }
 
     // MARK: - Persistence

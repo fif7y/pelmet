@@ -238,6 +238,21 @@ private struct EditorSectionView: View {
 
     private var coordinateSpace: String { "pelmet.strip.\(section.rawValue)" }
 
+    private var floatingBarBinding: Binding<Bool> {
+        Binding(
+            get: { appState.settings.floatingBarSections.contains(section) },
+            set: { on in
+                if on {
+                    appState.settings.floatingBarSections.insert(section)
+                } else {
+                    appState.settings.floatingBarSections.remove(section)
+                }
+                appState.settingsChanged()
+                appState.refreshSettingsPreview()
+            }
+        )
+    }
+
     var body: some View {
         let tiles = self.tiles
         let placedSlots = slots(tiles)
@@ -258,6 +273,18 @@ private struct EditorSectionView: View {
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
+                // The whole feature is this checkbox: the section reveals
+                // into a glass bar under the menu bar instead of into it.
+                // One look, no knobs (Gab, 2026-09-17). An empty section
+                // has nothing to float, so it cannot be routed.
+                if section != .visible {
+                    Toggle("Floating bar", isOn: floatingBarBinding)
+                        .toggleStyle(.checkbox)
+                        .font(.callout)
+                        .fixedSize()
+                        .disabled(tiles.isEmpty)
+                        .help("Show this section in a bar under the menu bar instead of in it")
+                }
             }
 
             // Right-anchored like the real bar — icons cluster at the

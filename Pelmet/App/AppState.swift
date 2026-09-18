@@ -531,6 +531,23 @@ final class AppState {
         }
     }
 
+    /// The floating bar is the bar's own extension: a pointer on it is on
+    /// the bar (hover-out waits until it has left both).
+    func floatingBarContains(_ point: NSPoint) -> Bool { transitions.floatingBarContains(point) }
+
+    /// The Menu Bar tab is the preview: a routing change while it holds the
+    /// bar re-runs the preview reveal, so the floating bar appears (or goes
+    /// back into the bar) right under the checkbox that was just flipped.
+    func refreshSettingsPreview() {
+        guard editorHoldsBar else { return }
+        concealNow()
+        Task {
+            try? await Task.sleep(for: AppTiming.previewRerevealDelay)
+            guard editorHoldsBar else { return }
+            reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
+        }
+    }
+
     func reveal(_ sections: Set<PelmetCore.Section>, reason: RevealReason) {
         dispatch(rehide.handle(.revealRequested(sections, reason)))
     }

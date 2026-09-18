@@ -44,10 +44,18 @@ final class TransitionCoordinator {
     private weak var appState: AppState?
     private let engine: EngineGoldenGate
 
+    /// The floating bar: a routed section reveals into it (see
+    /// `SettingsStore.floatingBarSections`) — the same engine reveal under
+    /// a cover that stays, mirrored into a panel under the bar.
+    let floatingBar = FloatingBar()
+
     init(appState: AppState, engine: EngineGoldenGate) {
         self.appState = appState
         self.engine = engine
+        floatingBar.onPress = { [weak self] x in self?.pressFloatingItem(at: x) }
     }
+
+    func floatingBarContains(_ point: NSPoint) -> Bool { floatingBar.contains(point) }
 
     /// Settle re-entry into AppState (rehide machine, settle catch-up,
     /// placement flush / hover re-arm). Wired once at boot.
@@ -112,6 +120,7 @@ final class TransitionCoordinator {
             guard let appState else { return }
             let style = appState.settings.revealAnimation
             let recipe = AnimationRecipe.recipe(for: style)
+            if await performFloatingReveal(sections, style: style, recipe: recipe) { return }
             // Two pictures make the style: the empty bar (hides the agent's
             // slide-in) and the strip as it looks revealed and at rest
             // (taken at the last reveal settle). The finished picture
@@ -198,6 +207,10 @@ final class TransitionCoordinator {
             guard let appState else { return }
             let style = appState.settings.revealAnimation
             let recipe = AnimationRecipe.recipe(for: style)
+            if floatingBar.isShown {
+                await performFloatingConceal(style: style, recipe: recipe)
+                return
+            }
             // Mirror of the reveal: the empty-bar picture over the strip
             // hides the agent's own fade, and a live capture of the icons
             // (opaque for a fade, cut out for a slide) performs the exit
@@ -252,6 +265,117 @@ final class TransitionCoordinator {
             onConcealSettled?()
             scheduleRevealCoverPrecapture()
         }
+    }
+
+    // MARK: - Floating bar
+
+    /// The floating bar takes a reveal when every section it shows is routed
+    /// there (a double-click that also pulls an unrouted Always Hidden into
+    /// the bar stays in-bar, whole), a strip has been measured, and a
+    /// picture can be taken. False = the in-bar reveal runs as always.
+    private func performFloatingReveal(_ sections: Set<PelmetCore.Section>, style: RevealAnimation, recipe: AnimationRecipe) async -> Bool {
+        guard let appState, !sections.isEmpty,
+              sections.isSubset(of: appState.settings.floatingBarSections) else { return false }
+        guard ScreenRecordingAccess.isGranted else {
+            PelmetLog.log("floating: no Screen Recording — in-bar reveal")
+            ScreenRecordingAccess.promptOnce()
+            return false
+        }
+        guard let rect = floatingStripRect else {
+            PelmetLog.log("floating: no strip measured yet — in-bar reveal")
+            return false
+        }
+        // The cover hides the strip alone for the whole reveal: the empty-bar
+        // picture cut to the strip when it is fresh, a capture of it now
+        // otherwise. It stays until the conceal beneath is swap-quiet.
+        var cover = ConcealGhostOverlay.begin(
+            from: ConcealGhostOverlay.cropped(freshEmptyBarSnapshots(), toPrimaryX: rect.minX...rect.maxX),
+            safety: AppTiming.floatingCoverSafety
+        )
+        if cover == nil {
+            cover = await ConcealGhostOverlay.begin(over: rect, safety: AppTiming.floatingCoverSafety)
+        }
+        guard let cover else {
+            PelmetLog.log("floating: no cover picture — in-bar reveal")
+            return false
+        }
+        // The panel's move is the style's own; Smooth lets the agent's slide
+        // show inside a panel that is simply there, so the icons enter once.
+        let entrance: AnimationRecipe.Move = style == .smooth ? .pop : recipe.entrance
+        let screen = floatingScreen
+        PelmetLog.log("effect reveal \(sections) → floating bar (anim=\(style.rawValue), strip=\(Int(rect.minX))..\(Int(rect.maxX)), display=\(screen.directDisplayID ?? 0))")
+        await floatingBar.show(strip: rect, cover: cover, on: screen, entrance: entrance)
+        await engine.reveal(sections)
+        appState.updateSnapshot(await engine.snapshot())
+        PelmetLog.log("effect reveal settled")
+        onRevealSettled?()
+        // The panel fits the items that actually landed, measured at rest.
+        Task { @MainActor in
+            await appState.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
+            guard floatingBar.isShown, let live = await concealStripFrames() else { return }
+            await floatingBar.update(strip: live)
+        }
+        return true
+    }
+
+    /// The mirror of the floating reveal: the panel leaves with the exit
+    /// move while the cover keeps the strip hidden through the swap, then
+    /// lifts on swap-quiet. No exit picture — the icons never showed in the
+    /// bar, so there is nothing to slide or fade there.
+    private func performFloatingConceal(style: RevealAnimation, recipe: AnimationRecipe) async {
+        guard let appState else { return }
+        rememberStrip(await concealStripFrames())
+        PelmetLog.log("effect conceal → engine (floating bar, anim=\(style.rawValue))")
+        floatingBar.hide(exit: recipe.exit)
+        await engine.conceal()
+        appState.updateSnapshot(await engine.snapshot())
+        let liftAt = Date().addingTimeInterval(AppTiming.exitCoverHold)
+        Task { @MainActor in
+            await appState.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
+            let remaining = liftAt.timeIntervalSinceNow
+            if remaining > 0 { try? await Task.sleep(for: .seconds(remaining)) }
+            floatingBar.dismissCover()
+        }
+        PelmetLog.log("effect conceal settled")
+        onConcealSettled?()
+        scheduleRevealCoverPrecapture()
+    }
+
+    /// The strip the floating cover hides: the last measured strip, never
+    /// narrower than the widest one seen, with a little bar on the left where
+    /// the icons slide in from — and nothing on the right, where the chevron
+    /// and the visible cluster stay live.
+    private var floatingStripRect: CGRect? {
+        lastConcealedStripRect.map {
+            let minX = min($0.minX, widestStripMinX ?? $0.minX) - 12
+            return CGRect(x: minX, y: $0.minY, width: $0.maxX - minX, height: $0.height)
+        }
+    }
+
+    /// The panel goes under the active display's bar (the last click's, like
+    /// the pictures), else the pointer's, else the primary's.
+    private var floatingScreen: NSScreen {
+        if let id = appState?.lastMouseDownDisplay,
+           let screen = NSScreen.screens.first(where: { $0.directDisplayID == id }) {
+            return screen
+        }
+        return NSScreen.containing(NSEvent.mouseLocation) ?? NSScreen.screens[0]
+    }
+
+    /// A click on the mirror lands on the real item under that x — it is
+    /// hosted in the bar beneath the cover, so its own menu opens from there.
+    private func pressFloatingItem(at x: CGFloat) {
+        guard let items = appState?.snapshot?.items else { return }
+        let primaryMaxX = primaryMaxX
+        guard let item = items.first(where: { item in
+            guard let frame = item.frame, MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX) else { return false }
+            return frame.minX <= x && x <= frame.maxX
+        }) else {
+            PelmetLog.log("floating: click x=\(Int(x)) hit no item")
+            return
+        }
+        let pressed = FloatingBarPress.press(item)
+        PelmetLog.log("floating: click x=\(Int(x)) → \(item.id.rawValue) \(pressed ? "pressed" : "press failed")")
     }
 
     /// Clock blink (see AppState.clockClicked): the assertion drops for the

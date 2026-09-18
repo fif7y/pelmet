@@ -4757,6 +4757,64 @@
         }
       }
     },
+    "Floating bar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schwebende Leiste"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra flotante"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre flottante"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra fluttuante"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フローティングバー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "플로팅 바"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra flutuante"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Плавающая панель"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮动栏"
+          }
+        }
+      }
+    },
     "Focus": {
       "localizations": {
         "de": {
@@ -11481,6 +11539,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "在菜单栏中显示 Pelmet 图标"
+          }
+        }
+      }
+    },
+    "Show this section in a bar under the menu bar instead of in it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Bereich in einer Leiste unter der Menüleiste zeigen statt in ihr"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar esta sección en una barra bajo la barra de menús en lugar de en ella"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher cette section dans une barre sous la barre des menus plutôt que dedans"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra questa sezione in una barra sotto la barra dei menu invece che al suo interno"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このセクションをメニューバー内ではなく、その下のバーに表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 섹션을 메뉴 막대 안이 아니라 그 아래의 바에 표시"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar esta seção em uma barra abaixo da barra de menus em vez de nela"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать эту секцию в панели под строкой меню, а не в ней"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将此分区显示在菜单栏下方的浮动栏中，而不是菜单栏内"
           }
         }
       }
