@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pelmet DMG background</title>
+<!--
+  Source of scripts/dmg/background*.png — the picture behind the DMG window.
+  660×400 CSS px. Finder draws the two icons (128pt, centres at 168,182 and
+  492,182 — see make-dmg.sh); this page only draws the dot trail and the line.
+  Recipe in README.md.
+-->
+<style>
+  :root{ --brand:#6841ED; --ink:#1d1d1f; --ink-2:#6e6e73; --paper:#f5f5f7; }
+  body{ margin:0; background:none; font-family:system-ui,-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif; }
+  #bg{ position:relative; width:660px; height:400px; background:var(--paper); overflow:hidden; }
+  /* the icon's own sliding dots, growing toward Applications */
+  .dots{ position:absolute; left:250px; top:174px; width:160px; height:16px; display:flex; align-items:center; justify-content:space-between; }
+  .dots i{ display:block; border-radius:50%; background:var(--brand); }
+  .dots i:nth-child(1){width:6px;height:6px;opacity:.22} .dots i:nth-child(2){width:8px;height:8px;opacity:.36}
+  .dots i:nth-child(3){width:10px;height:10px;opacity:.52} .dots i:nth-child(4){width:12px;height:12px;opacity:.7}
+  .dots i:nth-child(5){width:14px;height:14px;opacity:.88} .dots i:nth-child(6){width:16px;height:16px;opacity:1}
+  .cap{ position:absolute; left:0; right:0; bottom:44px; text-align:center; font:13px system-ui,"Helvetica Neue",sans-serif; color:var(--ink-2); }
+  .cap b{ font-weight:600; color:var(--ink) }
+</style>
+<div id="bg">
+  <div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="cap">Drag into <b>Applications</b>, then open Pelmet from there</div>
+</div>

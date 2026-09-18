@@ -60,12 +60,7 @@ fi
 echo "==> Building DMG"
 DMG="$RELEASES_DIR/Pelmet-$VERSION.dmg"
 mkdir -p "$RELEASES_DIR"
-rm -f "$DMG"
-STAGE=$(mktemp -d)
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "Pelmet" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
-rm -rf "$STAGE"
+scripts/make-dmg.sh "$APP" "$DMG"
 
 if [[ -z "${SKIP_NOTARIZE:-}" ]]; then
     echo "==> Notarizing DMG"
