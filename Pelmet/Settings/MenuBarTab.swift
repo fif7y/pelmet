@@ -426,8 +426,14 @@ private struct ItemTile: View {
             let suffix = item.id.rawValue.components(separatedBy: ".").last ?? String(localized: "System")
             return suffix.replacingOccurrences(of: "-", with: " ").capitalized
         }
+        // The Passwords extra is a login item named after its executable
+        // ("PasswordsMenuBarExtra"); the tile says what the icon is.
+        if item.id.bundleID == MenuBarPolicy.passwordsMenuBarExtraID { return Self.passwordsAppName }
         return item.appName ?? item.id.bundleID?.components(separatedBy: ".").last ?? "?"
     }
+
+    /// Finder's localized name of the Passwords app, extension dropped.
+    private static let passwordsAppName = FileManager.default.displayName(atPath: "/System/Applications/Passwords.app")
 
     private var isSystemIcon: Bool {
         MenuBarPolicy.systemItem(for: item.id) != nil

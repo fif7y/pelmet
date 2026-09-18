@@ -113,18 +113,22 @@ public enum MenuBarPolicy {
 
     /// An Apple host whose items the assertion hides through the BUNDLE
     /// allowlist, like a third-party app: SystemUIServer (Siri, Time
-    /// Machine, #19) and the Kerberos ticket extra (#24, a standalone
-    /// `KerberosMenuExtra.app` under AppSSOKerberos.framework). Verified
-    /// live 2026-08-21 / 2026-09-15. The agent pins their position (plist
+    /// Machine, #19), the Kerberos ticket extra (#24, a standalone
+    /// `KerberosMenuExtra.app` under AppSSOKerberos.framework) and the
+    /// Passwords extra (#34, the `PasswordsMenuBarExtra.app` login item
+    /// inside Passwords.app). Verified live 2026-08-21 / 2026-09-15 /
+    /// 2026-09-18. The agent pins their position (plist
     /// slots and synthetic ⌘-drags both ignored), so they are hideable but
     /// not movable — the editor shows one tile per host and says so.
     /// SystemUIServer's items key by bundle (see `ItemID.sectionKey`);
-    /// Kerberos shows a single item, so its status key already is the tile.
+    /// Kerberos and Passwords show a single item, so the status key
+    /// already is the tile.
     public static func isBundleHideableAppleHost(_ bundle: String?) -> Bool {
-        bundle == PelmetBundle.systemUIServerID || bundle == kerberosMenuExtraID
+        bundle == PelmetBundle.systemUIServerID || bundle == kerberosMenuExtraID || bundle == passwordsMenuBarExtraID
     }
 
     static let kerberosMenuExtraID = "com.apple.KerberosMenuExtra"
+    public static let passwordsMenuBarExtraID = "com.apple.Passwords.MenuBarExtra"
 
     /// Eligible for a section: third-party bundles, the individually
     /// allowlisted system items, and the bundle-hideable Apple host.

@@ -76,6 +76,12 @@ struct MenuBarPolicyTests {
         #expect(MenuBarPolicy.systemItem(for: item) == nil)
     }
 
+    @Test func passwordsMenuBarExtraIsSectionManageable() {
+        let item = ItemID.status(bundle: "com.apple.Passwords.MenuBarExtra", title: "Item-0")
+        #expect(MenuBarPolicy.isSectionManageable(item))
+        #expect(MenuBarPolicy.systemItem(for: item) == nil)
+    }
+
     @Test func bandPredicateAcceptsMainBarBandOnly() {
         #expect(MenuBarGeometry.isInBand(CGRect(x: 100, y: 0, width: 30, height: 24)))
         #expect(!MenuBarGeometry.isInBand(CGRect(x: 100, y: 800, width: 30, height: 24)))
