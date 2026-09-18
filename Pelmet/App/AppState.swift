@@ -267,10 +267,22 @@ final class AppState {
             queue: .main
         ) { [weak self] note in
             guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                  let bundle = app.bundleIdentifier else { return }
+                  let bundle = app.bundleIdentifier, Self.isBundleMainProcess(app) else { return }
             MainActor.assumeIsolated { self?.queueRelaunchedBundlePlacement(bundle) }
         }
         observeRunningApplications()
+    }
+
+    /// The process is the app itself, not a child LaunchServices filed
+    /// under its parent's bundle: an `osascript` or `open` spawned by an
+    /// app runs as that app's bundle id with its own executable. Claude
+    /// Desktop's tool runs spawn one every few seconds, and each read as a
+    /// relaunch — an adoption window per spawn, the assertion dropped and
+    /// every hidden icon flashed under a cover (2026-09-18).
+    nonisolated static func isBundleMainProcess(_ app: NSRunningApplication) -> Bool {
+        guard let bundleURL = app.bundleURL, let exe = app.executableURL,
+              let own = Bundle(url: bundleURL)?.executableURL else { return true }
+        return own.standardizedFileURL.path == exe.standardizedFileURL.path
     }
 
     private var relaunchObserver: NSObjectProtocol?
@@ -287,7 +299,10 @@ final class AppState {
             \.runningApplications, options: [.old, .new]
         ) { [weak self] _, change in
             let before = Set((change.oldValue ?? []).compactMap(\.bundleIdentifier))
-            let appeared = (change.newValue ?? []).compactMap(\.bundleIdentifier).filter { !before.contains($0) }
+            let appeared = (change.newValue ?? [])
+                .filter { Self.isBundleMainProcess($0) }
+                .compactMap(\.bundleIdentifier)
+                .filter { !before.contains($0) }
             guard !appeared.isEmpty else { return }
             Task { @MainActor [weak self] in
                 for bundle in appeared { self?.queueRelaunchedBundlePlacement(bundle) }
@@ -369,6 +384,7 @@ final class AppState {
         // The notification and the KVO path can both report one launch.
         if let last = lastRelaunchQueue[bundle], Date.now.timeIntervalSince(last) < 3 { return }
         lastRelaunchQueue[bundle] = .now
+        let queuedAt = Date.now
         placement.queuePlacements(keys)
         PelmetLog.log("place: \(bundle) relaunched — queued \(keys.count) item(s) for re-slot")
         // The relaunched item registers UNDER an active assertion and parks
@@ -400,6 +416,19 @@ final class AppState {
                 if let pid = self.lastSeenPID[bundle], kill(pid, 0) == 0 {
                     if self.siblingLaunchLogged.insert(bundle).inserted {
                         PelmetLog.log("adoptWindow: \(bundle) owner pid=\(pid) still running — sibling launch, nothing to adopt (logged once)")
+                    }
+                    return
+                }
+                // No owner pid on record (an item Pelmet only ever saw
+                // through the agent's tree — Electron apps with AX off):
+                // an instance of the app older than this launch is still
+                // up, so the item is concealed, not parked.
+                if self.lastSeenPID[bundle] == nil,
+                   NSRunningApplication.runningApplications(withBundleIdentifier: bundle).contains(where: {
+                       Self.isBundleMainProcess($0) && ($0.launchDate ?? .now) < queuedAt.addingTimeInterval(-1)
+                   }) {
+                    if self.siblingLaunchLogged.insert(bundle).inserted {
+                        PelmetLog.log("adoptWindow: \(bundle) an older instance is still running — sibling launch, nothing to adopt (logged once)")
                     }
                     return
                 }
