@@ -494,6 +494,18 @@ final class MenuBarBandMonitor {
         // Items, buttons, and app menus are NOT empty; the agent's bare
         // window/group backdrop is.
         let itemRoles: Set<String> = ["AXMenuBarItem", "AXButton", "AXMenuButton", "AXImage"]
+        // Pelmet's OWN extras bar under the pointer is one of its items,
+        // not empty space: right after the chevron moved (a capture shifts
+        // the bar 3pt, a conceal reflows it) the item's AX frame lags and
+        // the hit lands on the bar element that holds it. Reading that as
+        // an empty-area click toggled a reveal, the button's own action
+        // then queued the opposite, and the pointer's hover reopened the
+        // bar — a click that flashed open-shut-open (16 times across two
+        // logs, 2026-09-18).
+        if role == "AXMenuBar", pid == ProcessInfo.processInfo.processIdentifier, Self.isOwnExtrasBar(element) {
+            PelmetLog.log("band: hit-test role=AXMenuBar owner=\(owner) → own extras bar, not empty")
+            return false
+        }
         // The frontmost app's bare AXMenuBar element is the backdrop that
         // spans the whole bar — hitting it (not an AXMenuBarItem title) means
         // empty space. The agent's own window/group backdrop counts too.
@@ -503,6 +515,20 @@ final class MenuBarBandMonitor {
                 || role == "AXWindow" || role == "AXGroup")
         PelmetLog.log("band: hit-test role=\(role) owner=\(owner) → empty=\(empty)")
         return empty
+    }
+
+    /// The element is Pelmet's `AXExtrasMenuBar` (its status items' bar),
+    /// as opposed to its app menu bar, which only spans the bar while a
+    /// Pelmet window is frontmost.
+    private static func isOwnExtrasBar(_ element: AXUIElement) -> Bool {
+        let me = ProcessInfo.processInfo.processIdentifier
+        // Not frontmost: Pelmet has no app menu bar on screen, so its only
+        // AXMenuBar under the pointer is the extras bar.
+        if NSWorkspace.shared.frontmostApplication?.processIdentifier != me { return true }
+        var extras: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(AXUIElementCreateApplication(me), "AXExtrasMenuBar" as CFString, &extras) == .success,
+              let extras else { return false }
+        return CFEqual(extras, element)
     }
 
 }
