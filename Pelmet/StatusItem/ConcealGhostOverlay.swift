@@ -142,6 +142,45 @@ final class ConcealGhostOverlay {
         ) as? [[String: Any]]
     }
 
+    /// What shows through the glass behind `rect` (CG global, top-left):
+    /// every other process's window below the bar's level whose bounds
+    /// come within `backdropReach` of the band, on any display, as
+    /// `[id, x, y, w, h]` runs sorted by id. Two equal signatures = the
+    /// same backdrop; a moved, resized, raised or closed window changes
+    /// it, and a picture of the bar taken under the old one is stale (#33:
+    /// a Finder window's top edge slid in with the bar).
+    static func backdropSignature(of rect: CGRect?, in list: [[String: Any]]? = nil) -> [Int] {
+        guard let rect, rect.width > 8, let list = list ?? onScreenWindows(),
+              let primary = NSScreen.screens.first else { return [] }
+        let me = ProcessInfo.processInfo.processIdentifier
+        let barLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
+        let zones: [CGRect] = NSScreen.screens.compactMap { screen in
+            guard let displayID = screen.directDisplayID else { return nil }
+            let bounds = CGDisplayBounds(displayID)
+            let shift = screen.frame.maxX - primary.frame.maxX
+            let band = max(screen.safeAreaInsets.top, screen.frame.maxY - screen.visibleFrame.maxY, rect.maxY)
+            return CGRect(
+                x: rect.minX + shift - backdropReach, y: bounds.minY,
+                width: rect.width + 2 * backdropReach, height: band + backdropReach)
+        }
+        var runs: [(CGWindowID, [Int])] = []
+        for w in list {
+            guard let pid = w[kCGWindowOwnerPID as String] as? Int32, pid != me,
+                  let id = (w[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
+                  let layer = w[kCGWindowLayer as String] as? Int, layer < barLevel,
+                  let b = w[kCGWindowBounds as String] as? [String: CGFloat],
+                  let x = b["X"], let y = b["Y"], let width = b["Width"], let height = b["Height"]
+            else { continue }
+            let frame = CGRect(x: x, y: y, width: width, height: height)
+            guard zones.contains(where: { $0.intersects(frame) }) else { continue }
+            runs.append((id, [Int(id), Int(x), Int(y), Int(width), Int(height)]))
+        }
+        return runs.sorted { $0.0 < $1.0 }.flatMap(\.1)
+    }
+    /// How far below the band a window still tints it: the glass blur
+    /// and a window's shadow both reach a few dozen points.
+    static let backdropReach: CGFloat = 48
+
     private let window: NSWindow
     private let imageView: NSImageView
     private var finished = false

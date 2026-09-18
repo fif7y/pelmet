@@ -47,6 +47,35 @@ final class TransitionCoordinator {
     init(appState: AppState, engine: EngineGoldenGate) {
         self.appState = appState
         self.engine = engine
+        backdropWatch.start()
+    }
+
+    /// The bar is glass — a window parked under it tints the pictures, and
+    /// a window that then moves leaves its edge baked into every reveal
+    /// (#33). Checked off the reveal path, on the signals that end a
+    /// window move; a changed backdrop drops the stale pictures and retakes
+    /// the empty-bar one at once when the bar is concealed and at rest.
+    private lazy var backdropWatch = BackdropWatch { [weak self] in self?.backdropMayHaveChanged() }
+    /// `ConcealGhostOverlay.backdropSignature` at the time each picture was taken.
+    private var revealCoverBackdrop: [Int] = []
+    private var revealedStripBackdrop: [Int] = []
+
+    private func backdropMayHaveChanged() {
+        guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty else { return }
+        let now = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
+        let coverStale = !revealCoverSnapshot.isEmpty && now != revealCoverBackdrop
+        let stripStale = !revealedStripSnapshot.isEmpty && now != revealedStripBackdrop
+        guard coverStale || stripStale else { return }
+        let concealed = appState.currentRevealedSections.isEmpty
+        PelmetLog.log("backdrop: changed under the bar (\(now.count / 5) window(s)) — cover \(coverStale ? (concealed ? "dropped, retaking" : "dropped") : "kept"), finished \(stripStale ? "dropped" : "kept")")
+        // A stale picture is worse than none: the reveal captures live
+        // instead. The finished picture returns at the next reveal settle,
+        // the cover at the next conceal settle if not right now.
+        if stripStale { revealedStripSnapshot = [] }
+        if coverStale {
+            revealCoverSnapshot = []
+            if concealed { scheduleRevealCoverPrecapture() }
+        }
     }
 
     /// Settle re-entry into AppState (rehide machine, settle catch-up,
@@ -438,6 +467,7 @@ final class TransitionCoordinator {
             // exactly (same rect, same padding).
             revealedStripSignature = hiddenSectionSignature
             revealedStripActiveDisplay = appState.lastMouseDownDisplay
+            revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
             revealedStripSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
             PelmetLog.log("finished: picture taken (\(revealedStripSnapshot.count) display(s), \(revealedStripSignature.count) hidden item(s))")
         }
@@ -457,6 +487,7 @@ final class TransitionCoordinator {
             try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
             guard !Task.isCancelled, appState.currentRevealedSections.isEmpty else { return }
             revealCoverActiveDisplay = appState.lastMouseDownDisplay
+            revealCoverBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
             revealCoverSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
         }
     }

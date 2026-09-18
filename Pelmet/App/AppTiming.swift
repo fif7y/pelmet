@@ -31,6 +31,10 @@ enum AppTiming {
     /// Precaptured reveal-cover freshness: an appearance/wallpaper change
     /// while idle would flash a stale background.
     static let revealCoverFreshness: TimeInterval = 900
+    /// Backdrop check delay after an animated window move (tiling key,
+    /// activation, Space switch): a Space switch animates ~0.5s. A mouse-up
+    /// is checked at once — the window is already where the drag left it.
+    static let backdropSettle: TimeInterval = 0.6
     /// Style signatures (2026-09-08): the agent's own reveal slide is ~300ms
     /// and its conceal fade ~150–230ms; these sit clearly apart from both.
     /// Fade: the empty-bar cover's crossfade on reveal, the opaque strip's
