@@ -64,14 +64,23 @@ final class TransitionCoordinator {
         guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty else { return }
         let now = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
         let coverStale = !revealCoverSnapshot.isEmpty && now != revealCoverBackdrop
-        let stripStale = !revealedStripSnapshot.isEmpty && now != revealedStripBackdrop
+        let stripStale = !revealedStripSnapshot.isEmpty && revealedStripBackground.isEmpty && now != revealedStripBackdrop
         guard coverStale || stripStale else { return }
         let concealed = appState.currentRevealedSections.isEmpty
-        PelmetLog.log("backdrop: changed under the bar (\(now.count / 5) window(s)) — cover \(coverStale ? (concealed ? "dropped, retaking" : "dropped") : "kept"), finished \(stripStale ? "dropped" : "kept")")
         // A stale picture is worse than none: the reveal captures live
-        // instead. The finished picture returns at the next reveal settle,
-        // the cover at the next conceal settle if not right now.
-        if stripStale { revealedStripSnapshot = [] }
+        // instead. The cover returns at the next conceal settle if not
+        // right now. The finished picture only returns at a reveal settle,
+        // and every reveal until then paid the cover-only path (#35) — so
+        // when the empty bar it was taken over is still here, keep both:
+        // the icons cut out against that empty bar are true whatever moved
+        // beneath, and the next reveal composites them over the fresh cover.
+        let stripCutOut = stripStale && !revealCoverSnapshot.isEmpty && revealCoverBackdrop == revealedStripBackdrop
+        PelmetLog.log("backdrop: changed under the bar (\(now.count / 5) window(s)) — cover \(coverStale ? (concealed ? "dropped, retaking" : "dropped") : "kept"), finished \(stripStale ? (stripCutOut ? "kept as a cut-out" : "dropped") : "kept")")
+        if stripCutOut {
+            revealedStripBackground = revealCoverSnapshot
+        } else if stripStale {
+            revealedStripSnapshot = []
+        }
         if coverStale {
             revealCoverSnapshot = []
             if concealed { scheduleRevealCoverPrecapture() }
@@ -130,6 +139,14 @@ final class TransitionCoordinator {
     /// the blink cover to `-906..1676`, a capture spanning two bars.
     private var primaryMaxX: CGFloat { NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude }
 
+    /// Before the first click of the session the active display is
+    /// unknown; the one under the pointer is the one macOS most likely
+    /// draws bright, and the one the first click most likely lands on. A
+    /// nil stamp made every boot picture unusable at the first reveal
+    /// ("another active display (0 → 1)"), one reason the first reveal of
+    /// a session was slow.
+    private static var displayUnderPointer: CGDirectDisplayID? { NSScreen.underPointer?.directDisplayID }
+
     private func rememberStrip(_ strip: CGRect?) {
         lastConcealedStripRect = strip
         guard let strip else { return }
@@ -163,14 +180,29 @@ final class TransitionCoordinator {
             } else if style != .smooth {
                 cover = await ConcealGhostOverlay.begin(over: revealCoverRect, safety: AppTiming.transitionCoverSafety)
             }
+            lastRevealedSections = sections
             if cover != nil, sections == [.hidden], revealedStripUsable {
                 var picture: [ConcealGhostOverlay.BarSnapshot]? = revealedStripSnapshot
-                if recipe.entrance.needsCutOut {
+                if recipe.entrance.needsCutOut || revealedStripCutOut {
+                    // Against the empty bar the picture was taken over: the
+                    // fresh cover when nothing moved (and for the boot
+                    // picture), the kept one when the backdrop changed
+                    // since (see backdropMayHaveChanged).
                     picture = ConcealGhostOverlay.iconsOnly(
-                        revealedStripSnapshot, background: emptyBar,
+                        revealedStripSnapshot, background: revealedStripBackground.isEmpty ? emptyBar : revealedStripBackground,
                         punch: chevronPunch(clearingFrom: lastConcealedStripRect?.maxX),
-                        keep: entranceKeep
+                        keep: revealedStripKeep ?? entranceKeep
                     )
+                    if revealedStripCutOut {
+                        PelmetLog.log("finished: \(picture == nil ? "cut-out failed, cover only" : "cut out over the fresh cover")\(revealedStripKeep == nil ? "" : " (boot picture)")")
+                        // A failed cut-out against a kept background won't
+                        // succeed next time either: let the next settle
+                        // take a fresh picture. The boot picture only
+                        // lacked a cover; it waits for one.
+                        if picture == nil, !revealedStripBackground.isEmpty {
+                            revealedStripSnapshot = []; revealedStripBackground = []; revealedStripKeep = nil
+                        }
+                    }
                 }
                 if let picture {
                     let startsHidden: Bool = { if case .pop = recipe.entrance { return false } else { return true } }()
@@ -234,6 +266,13 @@ final class TransitionCoordinator {
             // agent's fade shows as is.
             let stripRect = await concealStripFrames()
             rememberStrip(stripRect)
+            // A reveal shorter than the settle precapture (~1s) never got
+            // its finished picture, and every reveal after paid the
+            // cover-only path — 0.6s from the click to the icons on each
+            // toggle (#35). The strip is still up and at rest: take it now.
+            if lastRevealedSections == [.hidden], let why = revealedStripProblem {
+                await takeRevealedStripPicture(reason: "conceal (\(why))")
+            }
             let emptyBar = freshEmptyBarSnapshots()
             var cover: ConcealGhostOverlay.GhostSet?
             var strip: ConcealGhostOverlay.GhostSet?
@@ -420,6 +459,19 @@ final class TransitionCoordinator {
     /// reports the bar changed (an icon added, removed or reordered would
     /// paint a stale picture).
     private var revealedStripSnapshot: [ConcealGhostOverlay.BarSnapshot] = []
+    /// The empty-bar picture the finished picture sits on, kept only once
+    /// the backdrop changed under both (see backdropMayHaveChanged): the
+    /// reveal then cuts the icons out against it. Empty otherwise.
+    private var revealedStripBackground: [ConcealGhostOverlay.BarSnapshot] = []
+    /// The boot picture's hidden run (see takeBootPicture): cut out against
+    /// the fresh cover, keeping these columns only. Nil for a picture of
+    /// the revealed bar, which keeps `entranceKeep`.
+    private var revealedStripKeep: ClosedRange<CGFloat>?
+    /// The picture is icons over an empty bar it must be cut out against.
+    private var revealedStripCutOut: Bool { !revealedStripBackground.isEmpty || revealedStripKeep != nil }
+    /// What the last reveal showed — the state machine is already
+    /// transitioning to conceal when performConceal runs.
+    private var lastRevealedSections: Set<PelmetCore.Section> = []
     /// What the picture shows: the hidden section's membership and order
     /// when it was taken. A reveal only paints it while that still holds
     /// (an editor move, an adopted drag or a new app changes the picture;
@@ -434,23 +486,35 @@ final class TransitionCoordinator {
     }
 
     private var revealedStripUsable: Bool {
-        guard let first = revealedStripSnapshot.first else {
-            PelmetLog.log("finished: no picture")
-            return false
-        }
-        guard Date().timeIntervalSince(first.takenAt) < AppTiming.revealedStripFreshness else {
-            PelmetLog.log("finished: picture stale")
-            return false
-        }
+        guard let why = revealedStripProblem else { return true }
+        PelmetLog.log("finished: \(why)")
+        return false
+    }
+
+    /// Why the finished picture can't be painted, nil when it can.
+    private var revealedStripProblem: String? {
+        guard let first = revealedStripSnapshot.first else { return "no picture" }
+        guard Date().timeIntervalSince(first.takenAt) < AppTiming.revealedStripFreshness else { return "picture stale" }
         guard revealedStripSignature == hiddenSectionSignature else {
-            PelmetLog.log("finished: hidden section changed since the picture — was \(revealedStripSignature.map(\.rawValue)) now \(hiddenSectionSignature.map(\.rawValue))")
-            return false
+            return "hidden section changed since the picture — was \(revealedStripSignature.map(\.rawValue)) now \(hiddenSectionSignature.map(\.rawValue))"
         }
-        guard revealedStripActiveDisplay == appState?.lastMouseDownDisplay else {
-            PelmetLog.log("finished: picture from another active display")
-            return false
-        }
-        return true
+        guard revealedStripActiveDisplay == appState?.lastMouseDownDisplay else { return "picture from another active display" }
+        return nil
+    }
+
+    /// The strip as it looks now — revealed, at rest, no picture over it —
+    /// becomes the finished picture. Callers check the reveal state.
+    private func takeRevealedStripPicture(reason: String) async {
+        guard let appState, !ConcealGhostOverlay.stripActive else { return }
+        // The reveal cover's footprint, so the two pictures overlay
+        // exactly (same rect, same padding).
+        revealedStripSignature = hiddenSectionSignature
+        revealedStripActiveDisplay = appState.lastMouseDownDisplay
+        revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
+        revealedStripBackground = []
+        revealedStripKeep = nil
+        revealedStripSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
+        PelmetLog.log("finished: picture taken at \(reason) (\(revealedStripSnapshot.count) display(s), \(revealedStripSignature.count) hidden item(s))")
     }
 
 
@@ -461,15 +525,8 @@ final class TransitionCoordinator {
             await appState.waitUntilQuiesced(interval: 0.5, deadline: 3, poll: .milliseconds(200))
             // No cover's fade may bake into the snapshot.
             try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
-            guard !Task.isCancelled, appState.currentRevealedSections == [.hidden],
-                  !ConcealGhostOverlay.stripActive else { return }
-            // The reveal cover's footprint, so the two pictures overlay
-            // exactly (same rect, same padding).
-            revealedStripSignature = hiddenSectionSignature
-            revealedStripActiveDisplay = appState.lastMouseDownDisplay
-            revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
-            revealedStripSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
-            PelmetLog.log("finished: picture taken (\(revealedStripSnapshot.count) display(s), \(revealedStripSignature.count) hidden item(s))")
+            guard !Task.isCancelled, appState.currentRevealedSections == [.hidden] else { return }
+            await takeRevealedStripPicture(reason: "settle")
         }
     }
 
@@ -486,7 +543,7 @@ final class TransitionCoordinator {
             // The agent's own conceal fade must not bake into the snapshot.
             try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
             guard !Task.isCancelled, appState.currentRevealedSections.isEmpty else { return }
-            revealCoverActiveDisplay = appState.lastMouseDownDisplay
+            revealCoverActiveDisplay = appState.lastMouseDownDisplay ?? Self.displayUnderPointer
             revealCoverBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
             revealCoverSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
         }
@@ -499,7 +556,16 @@ final class TransitionCoordinator {
     /// item still had a frame — so the strip is known from it; the empty-
     /// bar picture follows once the boot conceal has settled.
     func warmAfterBoot(from snap: EngineSnapshot) {
-        guard lastConcealedStripRect == nil, let appState else { return }
+        guard seedStripAtBoot(from: snap) else { return }
+        scheduleRevealCoverPrecapture()
+    }
+
+    /// Idempotent: the first call seeds, later ones return whether a strip
+    /// is known.
+    @discardableResult
+    private func seedStripAtBoot(from snap: EngineSnapshot) -> Bool {
+        guard lastConcealedStripRect == nil else { return true }
+        guard let appState else { return false }
         var union: CGRect?
         var count = 0
         let primaryMaxX = primaryMaxX
@@ -511,10 +577,47 @@ final class TransitionCoordinator {
             union = union.map { $0.union(frame) } ?? frame
         }
         concealableCount = count
-        guard let union else { return }
+        guard let union else { return false }
         rememberStrip(union)
         PelmetLog.log("strip: seeded at boot from \(count) pre-assertion frame(s) → \(Int(union.minX))..\(Int(union.maxX))")
-        scheduleRevealCoverPrecapture()
+        return true
+    }
+
+    /// Boot, before the first converge: the bar is fully live, and the
+    /// hidden section sits exactly where the first reveal will bring it
+    /// back. A picture of it now, with the hidden run cut out against the
+    /// empty bar the boot conceal leaves, makes the first reveal of the
+    /// session as instant as the ones after it — it used to pay the
+    /// cover-only path every launch (Gab, 2026-09-18). The always-hidden
+    /// icons are live too, so only the hidden run is kept; an always-hidden
+    /// icon sitting inside that run (untidy bar) would ride along, so the
+    /// picture is skipped then.
+    func takeBootPicture(from snap: EngineSnapshot) async {
+        guard let appState, seedStripAtBoot(from: snap), let rect = revealCoverRect else { return }
+        let model = appState.settings.sectionModel
+        let primaryMaxX = primaryMaxX
+        var hidden: CGRect?
+        var alwaysHidden: [CGRect] = []
+        for item in snap.items {
+            guard let frame = item.frame, MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX) else { continue }
+            switch model.section(of: item.id) {
+            case .hidden: hidden = hidden.map { $0.union(frame) } ?? frame
+            case .alwaysHidden: alwaysHidden.append(frame)
+            default: break
+            }
+        }
+        guard let hidden else { return }
+        guard !alwaysHidden.contains(where: { $0.midX > hidden.minX && $0.midX < hidden.maxX }) else {
+            PelmetLog.log("finished: boot picture skipped — an always-hidden icon sits inside the hidden run")
+            return
+        }
+        revealedStripSignature = hiddenSectionSignature
+        revealedStripActiveDisplay = appState.lastMouseDownDisplay ?? Self.displayUnderPointer
+        revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: rect)
+        revealedStripBackground = []
+        revealedStripKeep = (hidden.minX - 6)...(hidden.maxX + 6)
+        revealedStripSnapshot = await ConcealGhostOverlay.snapshotSet(of: rect)
+        PelmetLog.log("finished: boot picture taken (\(revealedStripSnapshot.count) display(s), \(revealedStripSignature.count) hidden item(s), keep \(Int(hidden.minX))..\(Int(hidden.maxX)))")
     }
 
     /// Union of the on-screen frames about to conceal (primary band

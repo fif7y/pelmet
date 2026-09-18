@@ -492,6 +492,11 @@ final class AppState {
             if settings.showStatusItem {
                 await placement.physicallyPlace(Self.chevronItemID, in: .visible)
             }
+            // Last look at the fully live bar: the first reveal's picture
+            // (see TransitionCoordinator.takeBootPicture). A fresh walk,
+            // the chevron drag above may have shifted the run. The converge
+            // below is what conceals.
+            await transitions.takeBootPicture(from: await engine.snapshot())
             await engine.setModel(settings.sectionModel)
             // Visible-destined newcomers place right away (the flush filter
             // passes them without a reveal); concealed ones wait for one.
