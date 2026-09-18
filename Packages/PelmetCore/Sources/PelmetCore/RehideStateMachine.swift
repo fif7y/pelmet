@@ -96,15 +96,18 @@ public struct RehideStateMachine: Equatable, Sendable {
             state = .transitioning(target: .reveal(union, reason), queued: nil)
             return [.cancelTimer, .reveal(union)]
 
-        case (.revealed(let current, let reason), .revealRequested):
+        case (.revealed(let current, let reason), .revealRequested(_, let requested)):
             // Already showing these sections — just refresh the timer. Keep
             // the WIDER tracked set and the original reason: a routine hover
             // re-fire during a full [.hidden, .alwaysHidden] reveal must not
             // narrow tracking (companion applies would hide always-hidden
             // extras still physically on screen) or downgrade a deliberate
-            // reveal onto hover's quick rehide clock.
-            state = .revealed(sections: current, reason: reason)
-            return armIfNeeded(reason: reason, now: now)
+            // reveal onto hover's quick rehide clock. The other way round
+            // holds: a deliberate request on a hover reveal makes it the
+            // click's (a chevron click landing just as the hover opened).
+            let kept = (reason == .hover && requested != .hover) ? requested : reason
+            state = .revealed(sections: current, reason: kept)
+            return armIfNeeded(reason: kept, now: now)
 
         case (.revealed, .toggleRequested):
             state = .transitioning(target: .conceal, queued: nil)
@@ -143,6 +146,12 @@ public struct RehideStateMachine: Equatable, Sendable {
                     keptReason = queuedReason
                 }
                 if sections.subtracting(union).isEmpty {
+                    // Covered — but a deliberate request landing on a hover
+                    // reveal makes it the click's: the bar then keeps the
+                    // click's rehide policy, not the glance's quick one.
+                    if reason != .hover, inFlightReason == .hover, queued == nil {
+                        state = .transitioning(target: .reveal(inFlight, reason), queued: nil)
+                    }
                     return [.none]
                 }
                 union.formUnion(sections)

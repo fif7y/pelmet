@@ -65,6 +65,13 @@ enum AppTiming {
     /// Below ~100ms every swipe-through of the band reads as a hover
     /// (the fire-time live-pointer check catches the rest).
     static let hoverDelayFloor: TimeInterval = 0.1
+    /// A chevron click this soon after a hover reveal was dispatched was
+    /// decided before the user could see the bar open (the picture is up
+    /// ~100–200ms after dispatch, a reaction takes ~250ms more): it means
+    /// "open", not "the opposite of where we're heading". Measured 2026-09-18:
+    /// a click 95ms after the picture flashed open-shut-open, 350ms after
+    /// it read as a close.
+    static let hoverRevealClickGrace: TimeInterval = 0.5
     /// MenuBarAgent finalizes a ⌘-drag position before adoption reads it.
     static let dragAdoptDelay: TimeInterval = 0.35
     /// Rehide re-arm while deferred (pointer in band / elevated window).

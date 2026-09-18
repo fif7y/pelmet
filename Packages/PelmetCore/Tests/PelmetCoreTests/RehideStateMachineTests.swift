@@ -14,6 +14,26 @@ import Testing
         #expect(machine.state == .revealed(sections: [.hidden], reason: .hover))
     }
 
+    @Test func clickDuringHoverRevealMakesItTheClicks() {
+        var machine = RehideStateMachine(policy: .init(autoRehide: true, delay: 5))
+        #expect(machine.handle(.revealRequested([.hidden], .hover)) == [.reveal([.hidden])])
+        #expect(machine.handle(.revealRequested([.hidden], .statusItem)) == [.none])
+        #expect(machine.state == .transitioning(target: .reveal([.hidden], .statusItem), queued: nil))
+        _ = machine.handle(.transitionSettled)
+        #expect(machine.state == .revealed(sections: [.hidden], reason: .statusItem))
+    }
+
+    @Test func clickOnASettledHoverRevealMakesItTheClicks() {
+        var machine = RehideStateMachine(policy: .init(autoRehide: true, delay: 5))
+        _ = machine.handle(.revealRequested([.hidden], .hover))
+        _ = machine.handle(.transitionSettled)
+        _ = machine.handle(.revealRequested([.hidden], .statusItem))
+        #expect(machine.state == .revealed(sections: [.hidden], reason: .statusItem))
+        // Never the other way: a hover re-fire keeps the click's reason.
+        _ = machine.handle(.revealRequested([.hidden], .hover))
+        #expect(machine.state == .revealed(sections: [.hidden], reason: .statusItem))
+    }
+
     @Test func noTimerWhenAutoRehideOff() {
         var machine = RehideStateMachine(policy: .init(autoRehide: false))
         _ = machine.handle(.revealRequested([.hidden], .click), now: now)

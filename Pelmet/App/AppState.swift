@@ -541,6 +541,26 @@ final class AppState {
     // MARK: - Intents (UI + monitors call these)
 
     func toggle(reason: RevealReason) {
+        // A click landing in the first moments of a hover reveal: the
+        // pointer reached the chevron, the hover fired ~100ms later, and
+        // the click was already on its way. The machine's rule for a
+        // toggle mid-transition (the opposite of where we're heading)
+        // read it as "close" — open, shut, then the hover on the chevron
+        // opened it again (2026-09-18). Take it as the same reveal, now
+        // the click's.
+        let hoverSections: Set<PelmetCore.Section>? = {
+            switch rehide.state {
+            case .transitioning(target: .reveal(let sections, .hover), queued: nil): sections
+            case .revealed(let sections, .hover): sections
+            default: nil
+            }
+        }()
+        if let hoverSections, let started = hoverRevealStartedAt,
+           Date().timeIntervalSince(started) < AppTiming.hoverRevealClickGrace {
+            PelmetLog.log("toggle(\(reason)) \(Int(Date().timeIntervalSince(started) * 1000))ms into a hover reveal — taken as the same reveal")
+            dispatch(rehide.handle(.revealRequested(hoverSections, reason)))
+            return
+        }
         let effects = rehide.handle(.toggleRequested([.hidden], reason))
         PelmetLog.log("toggle(\(reason)) state=\(rehide.state) effects=\(effects)")
         dispatch(effects)
@@ -556,6 +576,10 @@ final class AppState {
     func reveal(_ sections: Set<PelmetCore.Section>, reason: RevealReason) {
         dispatch(rehide.handle(.revealRequested(sections, reason)))
     }
+
+    /// When the last hover reveal's effect started — the earliest the user
+    /// could see the bar open (see `toggle`).
+    private var hoverRevealStartedAt: Date?
 
     func concealNow() {
         PelmetLog.log("concealNow state=\(rehide.state)")
@@ -1228,6 +1252,7 @@ final class AppState {
             case .none:
                 break
             case .reveal(let sections):
+                if case .transitioning(target: .reveal(_, .hover), _) = rehide.state { hoverRevealStartedAt = .now }
                 transitions.performReveal(sections)
             case .conceal:
                 transitions.performConceal()
