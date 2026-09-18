@@ -359,7 +359,10 @@ final class ConcealGhostOverlay {
             guard let bg = background.first(where: {
                 abs($0.windowFrame.minY - strip.windowFrame.minY) < 1
                     && $0.windowFrame.intersects(strip.windowFrame)
-            }) else { return nil }
+            }) else {
+                PelmetLog.log("ghost: cut-out skipped — no background under the strip @x=\(Int(strip.windowFrame.minX))")
+                return nil
+            }
             guard var cut = cutOut(strip: strip, background: bg, punch: punch) else { return nil }
             var frame = strip.windowFrame
             // Only the strip's own columns: a system icon at the picture's
@@ -374,7 +377,10 @@ final class ConcealGhostOverlay {
                 let x1 = min(CGFloat(cut.width), (keep.upperBound + dx - strip.windowFrame.minX) * scale)
                 guard x1 - x0 > 4 * scale,
                       let cropped = cut.cropping(to: CGRect(x: x0.rounded(), y: 0, width: (x1 - x0).rounded(), height: CGFloat(cut.height)))
-                else { return nil }
+                else {
+                    PelmetLog.log("ghost: cut-out skipped — keep \(Int(keep.lowerBound))..\(Int(keep.upperBound)) maps to \(Int(x0))..\(Int(x1)) px on the strip @x=\(Int(strip.windowFrame.minX))")
+                    return nil
+                }
                 cut = cropped
                 frame = NSRect(
                     x: strip.windowFrame.minX + x0.rounded() / scale, y: frame.minY,
@@ -412,18 +418,30 @@ final class ConcealGhostOverlay {
 
     /// Snapshots on other displays are the primary strip translated
     /// right-anchored (snapshotSet); `keep` is given in primary coordinates.
+    /// The primary strip is the one on the primary display — not the one
+    /// nearest x=0: a display parked left of the primary put its strip at
+    /// x=-864 against the primary's 1012, and `keep` mapped off the picture
+    /// (2026-09-18, three displays).
     private static func primaryOffset(of strip: BarSnapshot, in strips: [BarSnapshot]) -> CGFloat {
-        guard let primary = strips.min(by: { abs($0.windowFrame.minX) < abs($1.windowFrame.minX) }) else { return 0 }
-        return primary.windowFrame.minX
+        let primaryFrame = NSScreen.screens.first?.frame ?? .zero
+        let primary = strips.first { primaryFrame.contains(CGPoint(x: $0.windowFrame.midX, y: primaryFrame.midY)) }
+            ?? strips.min(by: { abs($0.windowFrame.minX) < abs($1.windowFrame.minX) })
+        return primary?.windowFrame.minX ?? 0
     }
 
     private static func cutOut(
         strip: BarSnapshot, background bg: BarSnapshot, punch: [ClosedRange<CGFloat>]
     ) -> CGImage? {
         let overlap = strip.windowFrame.intersection(bg.windowFrame)
-        guard overlap.width > 4 else { return nil }
+        guard overlap.width > 4 else {
+            PelmetLog.log("ghost: cut-out skipped — strip and background don't overlap")
+            return nil
+        }
         let scale = CGFloat(strip.image.width) / strip.windowFrame.width
-        guard abs(CGFloat(bg.image.width) / bg.windowFrame.width - scale) < 0.01 else { return nil }
+        guard abs(CGFloat(bg.image.width) / bg.windowFrame.width - scale) < 0.01 else {
+            PelmetLog.log("ghost: cut-out skipped — strip and background scales differ")
+            return nil
+        }
         let w = strip.image.width, h = min(strip.image.height, bg.image.height)
         guard let a = rgba(strip.image, width: w, height: h),
               let b = rgba(bg.image, width: bg.image.width, height: h) else { return nil }
