@@ -66,7 +66,7 @@ struct ItemIDGrammarTests {
         #expect(stray.sectionKey == ItemID.bundleKey(PelmetBundle.alwaysHiddenHostID))
     }
 
-    @Test func sectionKeyCollapsesOnlyThirdPartyStatusTags() {
+    @Test func sectionKeyCollapsesEveryStatusTagButTheAgentsAndPelmetsOwn() {
         #expect(
             ItemID.status(bundle: "com.sindresorhus.Velja", title: "Item-0").sectionKey
                 == .bundleKey("com.sindresorhus.Velja")
@@ -79,6 +79,13 @@ struct ItemIDGrammarTests {
         #expect(
             ItemID.status(bundle: "com.apple.systemuiserver", title: "Siri, TimeMachine").sectionKey
                 == .bundleKey("com.apple.systemuiserver")
+        )
+        // A standalone Apple helper keys by bundle like any app: its one
+        // item's AX title is localized, and a retitle would orphan the
+        // assignment the user made.
+        #expect(
+            ItemID.status(bundle: "com.apple.Passwords.MenuBarExtra", title: "Item-0").sectionKey
+                == .bundleKey("com.apple.Passwords.MenuBarExtra")
         )
         #expect(MenuBarPolicy.isSectionManageable(ItemID.status(bundle: "com.apple.systemuiserver", title: "Siri")))
         #expect(!MenuBarPolicy.isSectionManageable(ItemID.status(bundle: "com.apple.controlcenter", title: "X")))

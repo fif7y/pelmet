@@ -121,7 +121,7 @@ public enum MenuBarPolicy {
     static let systemItemHosts: Set<String> = [
         PelmetBundle.agentID, PelmetBundle.textInputAgentID, controlCenterID,
     ]
-    static let controlCenterID = "com.apple.controlcenter"
+    public static let controlCenterID = "com.apple.controlcenter"
 
     /// An Apple process with an item of its own — SystemUIServer (Siri,
     /// Time Machine, #19), the Kerberos ticket extra (#24, a standalone
@@ -150,6 +150,15 @@ public enum MenuBarPolicy {
     public static let pinnedAppleHosts: Set<String> = [PelmetBundle.systemUIServerID]
     public static func isPinnedAppleHost(_ bundle: String?) -> Bool {
         bundle.map(pinnedAppleHosts.contains) ?? false
+    }
+
+    /// macOS owns this item's slot, one way or the other: the system-item
+    /// hosts (the agent draws them) and the pinned Apple hosts (the agent
+    /// refuses to move them). Geometry never reads their x as a user's
+    /// intent — the trailing clamp, readopt and the adoption window skip
+    /// them (mr-steveryan, PR #38).
+    public static func isPositionPinnedAppleBundle(_ bundle: String?) -> Bool {
+        isUnmanagedAppleBundle(bundle) || isPinnedAppleHost(bundle)
     }
 
     /// Eligible for a section: third-party bundles, Apple hosts with items

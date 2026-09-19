@@ -230,21 +230,25 @@ struct EditorItemsBuilderTests {
         #expect(result.first { $0.id == helperItem }?.hostIsBundleless == true)
     }
 
-    @Test func appleAndSystemModuleItemsStayOffTheBoard() {
+    @Test func onlyTheUndrawableAppleHostsStayOffTheBoard() {
         let clock = ItemID(rawValue: "status:com.apple.MenuBarAgent::com.apple.menuextra.clock")
         let siri = ItemID(rawValue: "status:com.apple.Siri::Item-0")
+        let bento = ItemID(rawValue: "status:com.apple.controlcenter::Item-0")
         var model = SectionModel()
         model.assignments[clock] = .hidden
         model.assignments[siri.sectionKey] = .hidden
+        model.assignments[bento.sectionKey] = .hidden
         let result = build(
             items: [
                 ObservedItem(id: clock, frame: frame(x: 100), appName: nil),
                 ObservedItem(id: siri, frame: frame(x: 130), appName: "Siri"),
+                ObservedItem(id: bento, frame: frame(x: 160), appName: "Control Center"),
             ],
             model: model
         )
-        // The clock is assertion-controllable (SystemItem table) — it stays;
-        // Siri (unmanaged Apple bundle, no SystemItem mapping) does not.
-        #expect(result.map(\.id) == [clock])
+        // The clock is assertion-controllable (SystemItem table) and an Apple
+        // app with its own status item is an ordinary tile — both stay.
+        // Control Center comes back under any assertion, so it never does.
+        #expect(result.map(\.id) == [clock, siri])
     }
 }

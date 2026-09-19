@@ -440,8 +440,11 @@ final class AppState {
                 // is either registered and already concealed (placement
                 // waits for a reveal) or it restarted without an item (the
                 // menu switched off in System Settings). Neither needs the
-                // assertion dropped, let alone twice (2026-09-10).
-                if MenuBarPolicy.isUnmanagedAppleBundle(bundle) {
+                // assertion dropped, let alone twice (2026-09-10). The
+                // pinned hosts get nothing from a window either: the slot
+                // they come back to is the one macOS gives them. Apple's
+                // ordinary helpers DO park, and fall through like any app.
+                if MenuBarPolicy.isPositionPinnedAppleBundle(bundle) {
                     let held = snap.concealed.contains { $0.bundleID == bundle }
                     PelmetLog.log("adoptWindow: \(bundle) \(held ? "registered and concealed" : "restarted without its item") — nothing to adopt")
                     return
