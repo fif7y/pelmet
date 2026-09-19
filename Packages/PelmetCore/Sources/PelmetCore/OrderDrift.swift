@@ -30,7 +30,7 @@ public enum OrderDrift {
             guard let minX = entry.minX,
                   let bundle = entry.id.bundleID,
                   !entry.id.isSystemModule,
-                  !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
+                  !MenuBarPolicy.isPositionPinnedAppleBundle(bundle),
                   MenuBarPolicy.isZoneAdoptable(entry.id, pelmetBundleID: pelmetBundleID)
             else { return nil }
             let leftOfChevron = minX < chevronMinX

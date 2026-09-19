@@ -32,7 +32,7 @@ final class PlacementController {
         // The input menu is movable; it must not become the trailing clamp
         // when the agent re-registers it to the left of the chevron.
         if id.bundleID == PelmetBundle.textInputAgentID { return false }
-        return MenuBarPolicy.isUnmanagedAppleBundle(id.bundleID) || id.isSystemModule
+        return MenuBarPolicy.isPositionPinnedAppleBundle(id.bundleID) || id.isSystemModule
     }
 
     // MARK: - Physical placement (synthetic ⌘-drag)
@@ -212,7 +212,7 @@ final class PlacementController {
         for (key, section) in appState.settings.sectionModel.assignments {
             guard section == .visible || revealed.contains(section),
                   let bundle = key.bundleID, bundle != PelmetBundle.mainID,
-                  !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
+                  !MenuBarPolicy.isPositionPinnedAppleBundle(bundle),
                   let pid = running[bundle],
                   !present.contains(key.sectionKey)
             else { continue }

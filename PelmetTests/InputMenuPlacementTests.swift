@@ -56,13 +56,28 @@ struct InputMenuPlacementTests {
     }
 
     @Test func unmanagedAppleAndOwnItemsStayExcluded() {
-        for bundle in ["com.apple.UnknownAgent", PelmetBundle.mainID] {
+        // The agent's own bundle under a title that maps to no system item:
+        // nothing the allowlist can reach, so nothing to place.
+        for bundle in [PelmetBundle.agentID, PelmetBundle.mainID] {
             let id = ItemID.status(bundle: bundle, title: "Item-0")
-            let model = SectionModel(assignments: [id: .visible], knownBundles: [bundle])
+            let model = SectionModel(assignments: [id.sectionKey: .visible], knownBundles: [bundle])
             #expect(AppState.registrationCandidates([id]).isEmpty)
             #expect(AppState.relaunchPlacementKeys(for: bundle, model: model).isEmpty)
         }
         #expect(AppState.relaunchPlacementKeys(for: bundle, model: SectionModel()).isEmpty)
+    }
+
+    /// An Apple login item nothing in the code names is placed like any app —
+    /// the inversion's whole point. Weather's is the shape (#34's Passwords
+    /// was the same): one LSUIElement helper, one status item.
+    @Test func unnamedAppleHelperIsPlacedLikeAnyApp() {
+        let weather = ItemID.status(bundle: "com.apple.weather.menu", title: "Item-0")
+        let model = SectionModel(
+            assignments: [weather.sectionKey: .hidden],
+            knownBundles: ["com.apple.weather.menu"]
+        )
+        #expect(AppState.registrationCandidates([weather]) == [weather])
+        #expect(AppState.relaunchPlacementKeys(for: "com.apple.weather.menu", model: model) == [weather.sectionKey])
     }
 
     @Test func placementResolvesCanonicalAndPreviousLayoutToRestartedNeighbor() {
@@ -86,7 +101,9 @@ struct InputMenuPlacementTests {
     }
 
     @Test func inputMenuDoesNotClampPlacementToItsLeft() {
-        let clock = ItemID.status(bundle: "com.apple.ControlCenter", title: "Clock")
+        // The real id is lowercase; this read "com.apple.ControlCenter" and
+        // only ever matched through the old com.apple. prefix test.
+        let clock = ItemID.status(bundle: MenuBarPolicy.controlCenterID, title: "Clock")
         let items = [
             ObservedItem(id: input, frame: CGRect(x: 600, y: 0, width: 30, height: 24), appName: "Canadian"),
             ObservedItem(id: clock, frame: CGRect(x: 1000, y: 0, width: 30, height: 24), appName: "Clock")

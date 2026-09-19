@@ -120,6 +120,19 @@ struct MenuBarPolicyTests {
         #expect(!MenuBarPolicy.isSectionManageable(menuExtra("audiovideo")))
     }
 
+    // Hideable and movable are different questions (PR #38): the pinned
+    // set is the system-item hosts plus the host macOS refuses to drag.
+    @Test func positionPinnedIsTheSystemItemHostsPlusTheDragRefusingHost() {
+        for bundle in [PelmetBundle.agentID, PelmetBundle.textInputAgentID, MenuBarPolicy.controlCenterID, PelmetBundle.systemUIServerID] {
+            #expect(MenuBarPolicy.isPositionPinnedAppleBundle(bundle))
+        }
+        // Real ⌘-drags move these (2026-09-19), so they are not pinned.
+        for bundle in ["com.apple.Passwords.MenuBarExtra", "com.apple.weather.menu", "com.example.App"] {
+            #expect(!MenuBarPolicy.isPositionPinnedAppleBundle(bundle))
+        }
+        #expect(!MenuBarPolicy.isPositionPinnedAppleBundle(nil))
+    }
+
     @Test func bandPredicateAcceptsMainBarBandOnly() {
         #expect(MenuBarGeometry.isInBand(CGRect(x: 100, y: 0, width: 30, height: 24)))
         #expect(!MenuBarGeometry.isInBand(CGRect(x: 100, y: 800, width: 30, height: 24)))

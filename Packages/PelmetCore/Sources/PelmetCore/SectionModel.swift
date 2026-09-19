@@ -32,27 +32,25 @@ public struct ItemID: RawRepresentable, Hashable, Codable, Sendable {
         rawValue.hasPrefix("module:")
     }
 
-    /// The identity the MODEL keys on. Third-party items collapse to their
-    /// bundle (`bundle:<id>`): AX titles are volatile ("Item-0" fallback under
-    /// load, dynamic titles), every flap minted a fresh identity, and stale
-    /// twins polluted assignments/order/editor alike — while hiding is
-    /// per-bundle anyway. Pelmet's own items (stable Pelmet-chosen titles) and
-    /// Apple/system items (stable agent identifiers) keep full identity.
+    /// The identity the MODEL keys on. Items collapse to their bundle
+    /// (`bundle:<id>`): AX titles are volatile ("Item-0" fallback under load,
+    /// dynamic titles), every flap minted a fresh identity, and stale twins
+    /// polluted assignments/order/editor alike — while hiding is per-bundle
+    /// anyway. Only Pelmet's own items (stable Pelmet-chosen titles) and
+    /// MenuBarAgent's (whose nine extras share one bundle and are allowed
+    /// individually) keep full identity.
+    ///
+    /// The collapse covers Apple's standalone helpers for the same reason it
+    /// covers third-party apps — the input menu retitles itself with the
+    /// active input source, SystemUIServer enumerates under whichever of
+    /// Siri/Time Machine are switched on, and a localized AX title would
+    /// otherwise orphan the assignment. Those two were named here as special
+    /// cases until 2026-09-19, when they became the general rule.
     public var sectionKey: ItemID {
-        // Changing input sources changes the menu title, not the menu's
-        // identity or the user's chosen section.
-        if bundleID == PelmetBundle.textInputAgentID {
-            return ItemID(rawValue: "bundle:\(PelmetBundle.textInputAgentID)")
-        }
-        // SystemUIServer's extras (Siri, Time Machine) hide as one bundle and
-        // enumerate under whichever titles are switched on: one key.
-        if bundleID == PelmetBundle.systemUIServerID {
-            return ItemID(rawValue: "bundle:\(PelmetBundle.systemUIServerID)")
-        }
         guard let bundle = bundleID,
               bundle != PelmetBundle.mainID,
               bundle != PelmetBundle.fallbackID,
-              !bundle.hasPrefix("com.apple.")
+              bundle != PelmetBundle.agentID
         else { return self }
         // An own item hosted by a section helper keys as if the main app
         // hosted it: the model never learns which process draws it, so a
