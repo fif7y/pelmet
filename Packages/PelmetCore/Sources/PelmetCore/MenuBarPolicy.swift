@@ -103,52 +103,76 @@ public enum MenuBarPolicy {
         id.bundleID == pelmetBundleID && id.isPelmetChevron
     }
 
-    /// Apple bundle that is NOT manageable as a third-party item — only the
-    /// menuextra → SystemItem allowlist can touch it (or nothing can), or
-    /// the bundle allowlist for SystemUIServer (see `isBundleHideableAppleHost`).
-    /// Never placed, never zone-adopted: the agent hard-pins these.
+    /// An Apple process whose bar items are the system's, not its own — the
+    /// only Apple bundles Pelmet leaves alone as apps: never placed, never
+    /// zone-adopted, never routed as newly installed, only the menuextra →
+    /// SystemItem allowlist can touch their items (or nothing can). The
+    /// agent hosts the menuextras, the input menu agent is
+    /// `SystemItem.keyboard`, Control Center never hides. Until 2026-09-19
+    /// this was every `com.apple.` bundle, and each Apple app with an item
+    /// of its own (Kerberos #24, Passwords #34, Weather #36) needed a patch
+    /// by name to become hideable and could never be moved.
     public static func isUnmanagedAppleBundle(_ bundle: String?) -> Bool {
-        bundle?.hasPrefix("com.apple.") == true
+        guard let bundle else { return false }
+        return systemItemHosts.contains(bundle)
     }
 
-    /// An Apple host whose items the assertion hides through the BUNDLE
-    /// allowlist, like a third-party app: SystemUIServer (Siri, Time
-    /// Machine, #19), the Kerberos ticket extra (#24, a standalone
-    /// `KerberosMenuExtra.app` under AppSSOKerberos.framework) and the
-    /// Passwords extra (#34, the `PasswordsMenuBarExtra.app` login item
-    /// inside Passwords.app). Verified live 2026-08-21 / 2026-09-15 /
-    /// 2026-09-18. The agent pins their position (plist
-    /// slots and synthetic ⌘-drags both ignored), so they are hideable but
-    /// not movable — the editor shows one tile per host and says so.
-    /// SystemUIServer's items key by bundle (see `ItemID.sectionKey`);
-    /// Kerberos and Passwords show a single item, so the status key
-    /// already is the tile.
+    /// Apple processes whose bar items are the system's, not theirs.
+    static let systemItemHosts: Set<String> = [
+        PelmetBundle.agentID, PelmetBundle.textInputAgentID, controlCenterID,
+    ]
+    static let controlCenterID = "com.apple.controlcenter"
+
+    /// An Apple process with an item of its own — SystemUIServer (Siri,
+    /// Time Machine, #19), the Kerberos ticket extra (#24, a standalone
+    /// `KerberosMenuExtra.app` under AppSSOKerberos.framework), the login
+    /// items inside Passwords.app (#34) and Weather.app (#36), and whatever
+    /// Apple ships next. The assertion hides it through the BUNDLE
+    /// allowlist like a third-party app, and a ⌘-drag moves it like one
+    /// (Weather and Passwords both moved under a real ⌘-drag, 2026-09-19;
+    /// the earlier "pinned" reading of Passwords was a synthetic drag that
+    /// landed mid-walk). The only difference from a third-party app is the
+    /// tile name (the shipping app's) and no launcher offer. Where macOS
+    /// really does pin one, `pinnedAppleHosts` says so up front and the
+    /// bounce ledger catches the rest.
+    /// SystemUIServer's items key by bundle (see `ItemID.sectionKey`); the
+    /// others show a single stably titled item, so the status key already
+    /// is the tile.
     public static func isBundleHideableAppleHost(_ bundle: String?) -> Bool {
-        bundle == PelmetBundle.systemUIServerID || bundle == kerberosMenuExtraID || bundle == passwordsMenuBarExtraID
+        guard let bundle, bundle.hasPrefix("com.apple.") else { return false }
+        return !systemItemHosts.contains(bundle)
     }
 
-    static let kerberosMenuExtraID = "com.apple.KerberosMenuExtra"
-    public static let passwordsMenuBarExtraID = "com.apple.Passwords.MenuBarExtra"
+    /// Apple hosts macOS keeps in their own spot whatever is dragged:
+    /// SystemUIServer's legacy extras (verified 2026-08-21). Hideable, not
+    /// movable — the editor says so instead of dragging them around, and a
+    /// zone crossing is never their user's intent.
+    public static let pinnedAppleHosts: Set<String> = [PelmetBundle.systemUIServerID]
+    public static func isPinnedAppleHost(_ bundle: String?) -> Bool {
+        bundle.map(pinnedAppleHosts.contains) ?? false
+    }
 
-    /// Eligible for a section: third-party bundles, the individually
-    /// allowlisted system items, and the bundle-hideable Apple host.
+    /// Eligible for a section: third-party bundles, Apple hosts with items
+    /// of their own, and the individually allowlisted system items.
     public static func isSectionManageable(_ id: ItemID) -> Bool {
         guard let bundle = id.bundleID else { return false }
         if !isUnmanagedAppleBundle(bundle) { return true }
-        return systemItem(for: id) != nil || isBundleHideableAppleHost(bundle)
+        return systemItem(for: id) != nil
     }
 
     /// True when a bar ⌘-drag of this item may change its section: third-party
-    /// items, Pelmet's own extras/separators, and the core system extras the
-    /// assertion can individually allow (Sound, battery, Wi-Fi…). The rest of
-    /// Apple's items and the chevron itself are never adopted. Mirrors the
-    /// editor's tile filter — Sound dragged right of the chevron stayed
-    /// "hidden" because adoption skipped every `com.apple.` bundle (2026-09-08).
+    /// items, Apple hosts with items of their own, Pelmet's own
+    /// extras/separators, and the core system extras the assertion can
+    /// individually allow (Sound, battery, Wi-Fi…). The system items with no
+    /// allowlist entry, the pinned Apple hosts and the chevron itself are
+    /// never adopted. Mirrors the editor's tile filter — Sound dragged right
+    /// of the chevron stayed "hidden" because adoption skipped every
+    /// `com.apple.` bundle (2026-09-08).
     public static func isZoneAdoptable(_ id: ItemID, pelmetBundleID: String) -> Bool {
         guard let bundle = id.bundleID, !id.isSystemModule else { return false }
         if bundle == pelmetBundleID { return isPelmetExtraID(id) }
         if isUnmanagedAppleBundle(bundle) { return systemItem(for: id) != nil }
-        return true
+        return !isPinnedAppleHost(bundle)
     }
 }
 

@@ -64,8 +64,14 @@ struct MenuBarPolicyTests {
         #expect(!MenuBarPolicy.isPelmetExtraID(.status(bundle: "com.example.App", title: "Item-0")))
     }
 
-    @Test func unmanagedAppleBundleIsApplePrefixOnly() {
-        #expect(MenuBarPolicy.isUnmanagedAppleBundle("com.apple.Siri"))
+    // Only the hosts whose items are the system's are unmanaged as apps;
+    // every other Apple process is an app like any other (2026-09-19).
+    @Test func unmanagedAppleBundlesAreTheSystemItemHosts() {
+        #expect(MenuBarPolicy.isUnmanagedAppleBundle(PelmetBundle.agentID))
+        #expect(MenuBarPolicy.isUnmanagedAppleBundle(PelmetBundle.textInputAgentID))
+        #expect(MenuBarPolicy.isUnmanagedAppleBundle("com.apple.controlcenter"))
+        #expect(!MenuBarPolicy.isUnmanagedAppleBundle("com.apple.weather.menu"))
+        #expect(!MenuBarPolicy.isUnmanagedAppleBundle("com.apple.systemuiserver"))
         #expect(!MenuBarPolicy.isUnmanagedAppleBundle("com.example.App"))
         #expect(!MenuBarPolicy.isUnmanagedAppleBundle(nil))
     }
@@ -80,6 +86,38 @@ struct MenuBarPolicyTests {
         let item = ItemID.status(bundle: "com.apple.Passwords.MenuBarExtra", title: "Item-0")
         #expect(MenuBarPolicy.isSectionManageable(item))
         #expect(MenuBarPolicy.systemItem(for: item) == nil)
+    }
+
+    // #36: any Apple process with an item of its own is hideable AND
+    // movable like a third-party app — Weather today, the next login-item
+    // extra tomorrow — without a patch per name. Only the known-pinned host
+    // (SystemUIServer) is kept out of zone adoption.
+    @Test func appleHostsWithOwnItemsAreManagedLikeAppsByDefault() {
+        let weather = ItemID.status(bundle: "com.apple.weather.menu", title: "Weather")
+        #expect(MenuBarPolicy.isBundleHideableAppleHost("com.apple.weather.menu"))
+        #expect(MenuBarPolicy.isSectionManageable(weather))
+        #expect(MenuBarPolicy.systemItem(for: weather) == nil)
+        #expect(MenuBarPolicy.isZoneAdoptable(weather, pelmetBundleID: PelmetBundle.fallbackID))
+        #expect(!MenuBarPolicy.isPinnedAppleHost("com.apple.weather.menu"))
+        #expect(MenuBarPolicy.isBundleHideableAppleHost("com.apple.KerberosMenuExtra"))
+        #expect(MenuBarPolicy.isBundleHideableAppleHost("com.apple.Passwords.MenuBarExtra"))
+        let siri = ItemID.status(bundle: "com.apple.systemuiserver", title: "Siri")
+        #expect(MenuBarPolicy.isBundleHideableAppleHost("com.apple.systemuiserver"))
+        #expect(MenuBarPolicy.isPinnedAppleHost("com.apple.systemuiserver"))
+        #expect(MenuBarPolicy.isSectionManageable(siri))
+        #expect(!MenuBarPolicy.isZoneAdoptable(siri, pelmetBundleID: PelmetBundle.fallbackID))
+    }
+
+    // The hosts whose items are the system's stay on the SystemItem path:
+    // the agent's menuextras, the input menu, Control Center.
+    @Test func systemItemHostsAreNotBundleHideable() {
+        #expect(!MenuBarPolicy.isBundleHideableAppleHost(PelmetBundle.agentID))
+        #expect(!MenuBarPolicy.isBundleHideableAppleHost(PelmetBundle.textInputAgentID))
+        #expect(!MenuBarPolicy.isBundleHideableAppleHost("com.apple.controlcenter"))
+        #expect(!MenuBarPolicy.isBundleHideableAppleHost("com.example.App"))
+        #expect(!MenuBarPolicy.isBundleHideableAppleHost(nil))
+        // The camera pill stays unmanageable: a menuextra without a SystemItem.
+        #expect(!MenuBarPolicy.isSectionManageable(menuExtra("audiovideo")))
     }
 
     @Test func bandPredicateAcceptsMainBarBandOnly() {

@@ -426,14 +426,37 @@ private struct ItemTile: View {
             let suffix = item.id.rawValue.components(separatedBy: ".").last ?? String(localized: "System")
             return suffix.replacingOccurrences(of: "-", with: " ").capitalized
         }
-        // The Passwords extra is a login item named after its executable
-        // ("PasswordsMenuBarExtra"); the tile says what the icon is.
-        if item.id.bundleID == MenuBarPolicy.passwordsMenuBarExtraID { return Self.passwordsAppName }
+        // Apple's login-item extras are named after their executable
+        // ("PasswordsMenuBarExtra", "WeatherMenu"); the tile says what the
+        // icon is: the app that ships it.
+        if let bundle = item.id.bundleID, MenuBarPolicy.isBundleHideableAppleHost(bundle),
+           let shipping = Self.shippingAppName(for: bundle) {
+            return shipping
+        }
         return item.appName ?? item.id.bundleID?.components(separatedBy: ".").last ?? "?"
     }
 
-    /// Finder's localized name of the Passwords app, extension dropped.
-    private static let passwordsAppName = FileManager.default.displayName(atPath: "/System/Applications/Passwords.app")
+    /// Finder's localized name of the app a login-item extra ships inside
+    /// (…/Weather.app/Contents/Library/LoginItems/WeatherMenu.app → "Weather").
+    /// nil for a host that is its own app. One LaunchServices lookup per
+    /// bundle, then cached: the board asks on every tile render.
+    private static var shippingAppNames: [String: String?] = [:]
+    private static func shippingAppName(for bundle: String) -> String? {
+        if let cached = shippingAppNames[bundle] { return cached }
+        var name: String?
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) {
+            let parts = url.pathComponents
+            // <App>.app / Contents / Library / LoginItems / <Extra>.app
+            if parts.count >= 5, parts[parts.count - 2] == "LoginItems", parts[parts.count - 3] == "Library",
+               parts[parts.count - 4] == "Contents", parts[parts.count - 5].hasSuffix(".app") {
+                let app = url.deletingLastPathComponent().deletingLastPathComponent()
+                    .deletingLastPathComponent().deletingLastPathComponent()
+                name = FileManager.default.displayName(atPath: app.path)
+            }
+        }
+        shippingAppNames[bundle] = name
+        return name
+    }
 
     private var isSystemIcon: Bool {
         MenuBarPolicy.systemItem(for: item.id) != nil
@@ -466,11 +489,11 @@ private struct ItemTile: View {
         hasLauncher && !isAppLauncher
     }
 
-    /// macOS pins this host's spot (SystemUIServer's Siri and Time Machine,
-    /// the Kerberos extra). It hides, it just can't be dragged — so the tile
-    /// says so rather than looking as movable as its neighbours.
+    /// macOS pins this host's spot (SystemUIServer's Siri and Time
+    /// Machine). It hides, it just can't be dragged — so the tile says so
+    /// rather than looking as movable as its neighbours.
     private var isPinnedBySystem: Bool {
-        MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID)
+        MenuBarPolicy.isPinnedAppleHost(item.id.bundleID)
     }
 
     /// Only SystemUIServer's pair has no capturable icon; the other pinned
@@ -625,7 +648,7 @@ private struct ItemTile: View {
                 hasLauncher: hasLauncher,
                 helperHosted: appState.isBundlelessHost(item.id),
                 immovable: isImmovable && !isUnhideable,
-                pinnedBySystem: MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID),
+                pinnedBySystem: isPinnedBySystem,
                 missingReplacements: item.id.bundleID == PelmetBundle.systemUIServerID
                     ? appState.missingAppleReplacements
                     : [],
