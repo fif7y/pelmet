@@ -236,10 +236,12 @@ final class AppState {
         bandMonitor.start()
         self.bandMonitor = bandMonitor
 
-        let clockRelay = ClockClickRelay { [weak self] point in
-            self?.clockClicked(at: point)
+        let clockRelay = ClockClickRelay { [weak self] point, pointer in
+            self?.clockClicked(at: point, pointer: pointer)
         }
-        clockRelay.setEnabled(true)
+        // The tap always runs (it is also the active-display observer);
+        // the setting only decides whether a clock click is relayed.
+        clockRelay.setEnabled(settings.clockClickOpensNotificationCenter)
         self.clockRelay = clockRelay
 
         let hotkey = HotkeyManager { [weak self] slot in
@@ -705,7 +707,7 @@ final class AppState {
         PelmetLog.log("ax: trusted=\(granted)")
         statusItem?.updateAccessibilityWarning(granted: granted)
         guard granted else { return }
-        clockRelay?.setEnabled(true)
+        clockRelay?.setEnabled(settings.clockClickOpensNotificationCenter)
         Task {
             updateSnapshot(await engine.snapshot())
             await engine.setModel(settings.sectionModel)
@@ -724,11 +726,36 @@ final class AppState {
     /// Clock blink (see ClockClickRelay): cover the strip, drop the
     /// assertion, replay the swallowed click, re-acquire, lift the cover once
     /// the bar is quiet beneath it. With nothing held the click just replays.
-    private func clockClicked(at point: CGPoint) {
+    private func clockClicked(at point: CGPoint, pointer: CGPoint) {
         Task { @MainActor in
+            // Dot zone (target ≠ where the click landed): press the clock
+            // through AX so the pointer never moves; the click is the
+            // fallback. The element is resolved now, on a static bar.
+            let clockElement = point == pointer ? nil : ClockClickRelay.clockElement(at: point)
             let cover = await transitions.beginBarCover()
             let blinked = await engine.beginClockBlink()
-            ClockClickRelay.postClick(at: point)
+            if let clockElement {
+                // Only once the physical button is up: pressed while the
+                // finger is still down (the tap swallows the up ~80ms
+                // later), the clock merely highlighted. Then let the agent
+                // apply the drop (the queued click got that latency for
+                // free), and press once more if Notification Center has
+                // not shown — the first press missed about one time in two
+                // and the second always took (Gab, 2026-09-19).
+                await ClockClickRelay.waitForButtonRelease()
+                try? await Task.sleep(for: AppTiming.clockPressSettle)
+                var opened = false
+                for attempt in 1...2 where !opened {
+                    let pressed = ClockClickRelay.press(clockElement)
+                    try? await Task.sleep(for: AppTiming.clockPressVerify)
+                    opened = ClockClickRelay.notificationCenterIsOpen()
+                    PelmetLog.log("clock: dot press \(attempt) \(pressed ? "sent" : "refused") - NC \(opened ? "open" : "not open")")
+                }
+                if !opened { ClockClickRelay.postClick(at: point, pointer: pointer) }
+            } else {
+                if point != pointer { PelmetLog.log("clock: dot click - no clock element under the target, replaying the click") }
+                ClockClickRelay.postClick(at: point, pointer: pointer)
+            }
             guard blinked else { cover?.dismiss(); return }
             try? await Task.sleep(for: AppTiming.clockBlinkReacquire)
             await engine.endClockBlink()
@@ -836,6 +863,7 @@ final class AppState {
                 }
             }
         }
+        clockRelay?.setEnabled(settings.clockClickOpensNotificationCenter)
         settingsApplyWork?.cancel()
         settingsApplyWork = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
@@ -886,6 +914,8 @@ final class AppState {
                 guard let bundle = id.bundleID,
                       !PelmetBundle.ownIDs.contains(bundle),
                       !MenuBarPolicy.isUnmanagedAppleBundle(bundle),
+                      // Apple's own hosts never get a launcher offer either.
+                      !MenuBarPolicy.isBundleHideableAppleHost(bundle),
                       !unhideableKeys.contains(id.sectionKey),
                       !bundlelessHosts.contains(bundle)
                 else { return nil }
@@ -1463,7 +1493,7 @@ final class AppState {
     /// Learned (bounced drags) or known (the agent pins SystemUIServer).
     func isImmovable(_ id: ItemID) -> Bool {
         guard let bundle = id.bundleID else { return false }
-        return immovableBundles.contains(bundle) || MenuBarPolicy.isBundleHideableAppleHost(bundle)
+        return immovableBundles.contains(bundle) || MenuBarPolicy.isPinnedAppleHost(bundle)
     }
 
     func setImmovable(_ bundle: String, _ immovable: Bool) {

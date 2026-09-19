@@ -3597,6 +3597,64 @@
         }
       }
     },
+    "Clicking the clock opens Notification Center": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klick auf die Uhr öffnet die Mitteilungszentrale"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hacer clic en el reloj abre el centro de notificaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un clic sur l’horloge ouvre le centre de notifications"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un clic sull’orologio apre Centro Notifiche"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時計をクリックすると通知センターを開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시계를 클릭하면 알림 센터 열기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clicar no relógio abre a Central de Notificações"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Щелчок по часам открывает Центр уведомлений"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击时钟打开通知中心"
+          }
+        }
+      }
+    },
     "Collapse": {
       "localizations": {
         "de": {
@@ -10383,60 +10441,60 @@
         }
       }
     },
-    "Rest the pointer on the right half of the menu bar.": {
+    "Rest the pointer on the menu bar between the middle of the screen and Pelmet's icon.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zeiger auf der rechten Hälfte der Menüleiste ruhen lassen."
+            "value": "Zeiger auf der Menüleiste zwischen Bildschirmmitte und dem Pelmet-Symbol ruhen lassen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deja el puntero sobre la mitad derecha de la barra de menús."
+            "value": "Deja el puntero sobre la barra de menús, entre el centro de la pantalla y el icono de Pelmet."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Laisse le pointeur sur la moitié droite de la barre des menus."
+            "value": "Laisse le pointeur sur la barre des menus, entre le milieu de l’écran et l’icône de Pelmet."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lascia il puntatore sulla metà destra della barra dei menu."
+            "value": "Lascia il puntatore sulla barra dei menu, tra il centro dello schermo e l’icona di Pelmet."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メニューバーの右半分にポインタを置きます。"
+            "value": "画面の中央からPelmetのアイコンまでの間のメニューバーにポインタを置きます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "메뉴 막대 오른쪽 절반에 포인터를 올려 두세요."
+            "value": "화면 가운데와 Pelmet 아이콘 사이의 메뉴 막대에 포인터를 올려 두세요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deixe o ponteiro na metade direita da barra de menus."
+            "value": "Deixe o ponteiro na barra de menus, entre o meio da tela e o ícone do Pelmet."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Задержите указатель на правой половине строки меню."
+            "value": "Задержите указатель на строке меню между серединой экрана и значком Pelmet."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "将指针停在菜单栏右半部分。"
+            "value": "将指针停在菜单栏上，位于屏幕中央与 Pelmet 图标之间。"
           }
         }
       }
@@ -14903,6 +14961,122 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pelmet 请求隐藏时，macOS 仍将它保留在菜单栏中。"
+          }
+        }
+      }
+    },
+    "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ignoriert diesen Klick, solange Symbole ausgeblendet sind. Pelmet gibt sie deshalb für einen Augenblick frei und klickt für dich."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ignora ese clic mientras hay iconos ocultos, así que Pelmet los libera un instante y hace clic por ti."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ignore ce clic tant que des icônes sont masquées ; Pelmet les libère donc un instant et clique pour vous."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ignora quel clic finché ci sono icone nascoste, quindi Pelmet le libera per un istante e fa clic al posto tuo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンが隠れている間、macOSはそのクリックを無視します。そのためPelmetが一瞬だけ解除して代わりにクリックします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘이 숨겨진 동안 macOS는 그 클릭을 무시하므로 Pelmet이 잠시 풀어 주고 대신 클릭합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O macOS ignora esse clique enquanto há ícones ocultos, então o Pelmet os libera por um instante e clica por você."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS игнорирует этот щелчок, пока значки скрыты, поэтому Pelmet на миг отпускает их и щёлкает за вас."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图标隐藏时 macOS 会忽略这次点击，所以 Pelmet 会短暂放开它们并替你点击。"
+          }
+        }
+      }
+    },
+    "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you. Without Screen Recording that instant shows. Off, the two-finger swipe from the trackpad's right edge still works.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ignoriert diesen Klick, solange Symbole ausgeblendet sind. Pelmet gibt sie deshalb für einen Augenblick frei und klickt für dich. Ohne Bildschirmaufnahme ist dieser Augenblick sichtbar. Ausgeschaltet funktioniert weiterhin das Wischen mit zwei Fingern vom rechten Trackpad-Rand."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ignora ese clic mientras hay iconos ocultos, así que Pelmet los libera un instante y hace clic por ti. Sin Grabación de pantalla ese instante se ve. Desactivado, el deslizamiento con dos dedos desde el borde derecho del trackpad sigue funcionando."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ignore ce clic tant que des icônes sont masquées ; Pelmet les libère donc un instant et clique pour vous. Sans l’enregistrement de l’écran, cet instant est visible. Désactivé, le balayage à deux doigts depuis le bord droit du trackpad fonctionne toujours."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ignora quel clic finché ci sono icone nascoste, quindi Pelmet le libera per un istante e fa clic al posto tuo. Senza Registrazione schermo quell’istante si vede. Disattivato, lo scorrimento con due dita dal bordo destro del trackpad funziona comunque."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンが隠れている間、macOSはそのクリックを無視します。そのためPelmetが一瞬だけ解除して代わりにクリックします。画面収録の許可がないとその一瞬が見えます。オフにしても、トラックパッドの右端からの2本指スワイプは使えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘이 숨겨진 동안 macOS는 그 클릭을 무시하므로 Pelmet이 잠시 풀어 주고 대신 클릭합니다. 화면 기록 권한이 없으면 그 순간이 보입니다. 끄더라도 트랙패드 오른쪽 가장자리에서 두 손가락으로 쓸어넘기기는 계속 작동합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O macOS ignora esse clique enquanto há ícones ocultos, então o Pelmet os libera por um instante e clica por você. Sem a Gravação de Tela, esse instante aparece. Desativado, o deslize com dois dedos a partir da borda direita do trackpad continua funcionando."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS игнорирует этот щелчок, пока значки скрыты, поэтому Pelmet на миг отпускает их и щёлкает за вас. Без записи экрана этот миг заметен. Если выключить, смахивание двумя пальцами от правого края трекпада по-прежнему работает."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图标隐藏时 macOS 会忽略这次点击，所以 Pelmet 会短暂放开它们并替你点击。未授权屏幕录制时这一瞬间会被看到。关闭后，从触控板右边缘双指轻扫仍然有效。"
           }
         }
       }

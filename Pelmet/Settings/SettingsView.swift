@@ -703,7 +703,7 @@ private struct BehaviorPane: View {
         SettingsCard(title: "Reveal") {
             SettingToggleRow(
                 title: "Reveal on hover",
-                caption: "Rest the pointer on the right half of the menu bar.",
+                caption: "Rest the pointer on the menu bar between the middle of the screen and Pelmet's icon.",
                 isOn: binding(\.revealTriggers.hoverEnabled)
             )
             if appState.settings.revealTriggers.hoverEnabled {
@@ -747,6 +747,13 @@ private struct BehaviorPane: View {
                     ]
                 )
             }
+            SettingToggleRow(
+                title: "Clicking the clock opens Notification Center",
+                caption: appState.screenRecordingGranted
+                    ? "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you."
+                    : "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you. Without Screen Recording that instant shows. Off, the two-finger swipe from the trackpad's right edge still works.",
+                isOn: binding(\.clockClickOpensNotificationCenter)
+            )
         }
     }
 

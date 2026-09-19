@@ -326,6 +326,15 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     /// stored value does not apply.
     public var barRightClickMenu: Bool = true
 
+    /// Clicking the clock opens Notification Center — except that macOS
+    /// refuses the click while any icon is hidden, so Pelmet lets go of the
+    /// hide for an instant and replays the click (ClockClickRelay). Under a
+    /// picture of the bar that instant is invisible; without Screen
+    /// Recording the hidden icons flash by (#37). Off, the clock click is
+    /// left to macOS (dead while icons are hidden; the two-finger swipe from
+    /// the trackpad's right edge still opens Notification Center).
+    public var clockClickOpensNotificationCenter: Bool = true
+
     /// A found update posts a user notification instead of Sparkle's window
     /// interrupting whatever the user is doing. Off: only the About pane
     /// shows it. (Auto-download is Sparkle's own preference.)
@@ -378,6 +387,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case displayTemplate, displayOverrides
         case notifyOnUpdates, barRightClickMenu
         case statusIconStyle
+        case clockClickOpensNotificationCenter
     }
 
     public init(from decoder: Decoder) throws {
@@ -410,6 +420,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         notifyOnUpdates = field(Bool.self, .notifyOnUpdates, defaults.notifyOnUpdates)
         barRightClickMenu = field(Bool.self, .barRightClickMenu, defaults.barRightClickMenu)
         statusIconStyle = field(StatusIconStyle.self, .statusIconStyle, defaults.statusIconStyle)
+        clockClickOpensNotificationCenter = field(Bool.self, .clockClickOpensNotificationCenter, defaults.clockClickOpensNotificationCenter)
     }
 
     // MARK: - Persistence

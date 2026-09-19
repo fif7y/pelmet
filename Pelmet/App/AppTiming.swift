@@ -13,6 +13,11 @@ enum AppTiming {
     /// R=0/100/250ms all measured ~0.5s); it only keeps the click ahead.
     static let clockReplayHold: TimeInterval = 0.06
     static let clockBlinkReacquire: Duration = .milliseconds(120)
+    /// Dot-zone clicks press the clock through AX after the drop: give the
+    /// agent this long to apply the drop first, then this long for
+    /// Notification Center's panel to show before pressing again.
+    static let clockPressSettle: Duration = .milliseconds(120)
+    static let clockPressVerify: Duration = .milliseconds(300)
     /// Longest the blink cover waits for the concealed items to leave the
     /// AX tree after the re-acquire before lifting anyway.
     static let clockBlinkCoverDeadline: TimeInterval = 1.5

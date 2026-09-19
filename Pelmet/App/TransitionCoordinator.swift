@@ -347,7 +347,16 @@ final class TransitionCoordinator {
               let leftmost = frames.map(\.minX).min(),
               let band = lastConcealedStripRect ?? frames.first
         else { return nil }
-        let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24
+        // Whatever the assertion still hides slides in to the LEFT of the
+        // leftmost live icon when it drops. Concealed, that is the hidden
+        // section and `revealCoverRect` already spans it; revealed (the
+        // editor holds the bar, a hover), it is the always-hidden icons
+        // and the system extras, which no strip rect budgets for — the
+        // blink flashed every icon with Settings open (Gab, 2026-09-19).
+        // Budget the concealed count in; the capture clamps to the notch
+        // and the display edge, and a wider picture of static bar is free.
+        let concealedGrowth = CGFloat(appState.snapshot?.concealed.count ?? 0) * 40
+        let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24 - concealedGrowth
         // The capture pads 6pt past the rect on both sides (continuous
         // background); the right edge must land short of the clock AFTER
         // that padding or the picture eats the date's first letter.

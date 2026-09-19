@@ -183,9 +183,13 @@ final class MenuBarBandMonitor {
         }
     }
 
-    /// Where a dwell opens the bar: the band, right of the screen's middle.
+    /// Where a dwell opens the bar: the band, right of the screen's middle,
+    /// up to the chevron (#37, 2026-09-19: a pointer parked on the clock to
+    /// read it, on its way to Notification Center, or resting on a visible
+    /// icon is not asking for the hidden icons — only the chevron and the
+    /// strip left of it are).
     private func isHoverZone(_ point: NSPoint, of screen: NSScreen) -> Bool {
-        point.x >= screen.frame.midX
+        point.x >= screen.frame.midX && !isPastRevealTriggerZone(point, on: screen)
     }
 
     /// True while rehide should hold off: pointer in the band, over a
@@ -319,8 +323,8 @@ final class MenuBarBandMonitor {
                 PelmetLog.log("band: click refused — on \(overlay)")
                 return
             }
-            if let screen, isRightOfClock(location, on: screen) {
-                PelmetLog.log("band: click refused — right of the clock")
+            if let screen, isInPinnedRightZone(location, on: screen) {
+                PelmetLog.log("band: click refused — on Control Center, the clock or right of them")
                 return
             }
             guard isEmptyMenuBarArea(location, on: screen) else { return }
@@ -335,6 +339,12 @@ final class MenuBarBandMonitor {
                 return
             }
             guard appState.settings.revealTriggers.clickEnabled else { return }
+            // Empty bar between visible icons is not a summons either:
+            // the trigger zone ends at the chevron (see isHoverZone).
+            if let screen, isPastRevealTriggerZone(location, on: screen) {
+                PelmetLog.log("band: click refused — right of the chevron")
+                return
+            }
             PelmetLog.log("band: empty-area click count=\(event.clickCount)")
             if event.clickCount >= 2 {
                 // Second click of a double: the deferred conceal (below) is
@@ -460,18 +470,72 @@ final class MenuBarBandMonitor {
     /// clock that lands a few points wide summoned the hidden icons instead
     /// (reported 2026-09-17). Nothing of Pelmet's is reachable right of the
     /// clock, so the whole zone is out of bounds for the click trigger.
+    /// The clock and Control Center themselves are out of bounds too (#37,
+    /// 2026-09-19): macOS pins both, nothing of Pelmet's can sit on them,
+    /// and a click there mid-reflow (the clock relay drops the assertion
+    /// right before it replays the click) can hit-test as the agent's bare
+    /// backdrop and summon the hidden icons — so the zone starts at the
+    /// leftmost of the two, not at the clock's right edge.
     /// Mirrored per display by right-edge inset, the way ClockClickRelay
     /// does it: the bar repeats on every screen at the same inset, while the
-    /// walk only ever hands back the main display's copy of the clock.
-    /// No clock in the walk (hidden, locked screen, empty AX) is no rule.
-    private func isRightOfClock(_ point: NSPoint, on screen: NSScreen) -> Bool {
-        guard let primary = NSScreen.screens.first,
-              let clock = appState?.snapshot?.items.first(where: {
-                  $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock")
-              })?.frame
-        else { return false }
-        let insetFromRight = primary.frame.maxX - clock.maxX
-        return point.x > screen.frame.maxX - insetFromRight
+    /// walk only ever hands back the main display's copy of the pair.
+    /// Neither in the walk (locked screen, empty AX) is no rule.
+    private func isInPinnedRightZone(_ point: NSPoint, on screen: NSScreen) -> Bool {
+        guard let zoneMinX = pinnedZoneMinX() else { return false }
+        return isAtOrRight(of: zoneMinX, point, on: screen)
+    }
+
+    /// The reveal triggers (hover dwell, empty-area click) work on the
+    /// strip left of the chevron only — the middle of the screen to
+    /// Pelmet's icon, where the hidden icons land. The icon itself and
+    /// everything right of it — the visible section, the system items,
+    /// Control Center, the clock — is a place the user goes for its own
+    /// sake (Gab, 2026-09-19); the icon's click toggles through its own
+    /// button. With the chevron switched off the bound is the visible
+    /// section's leftmost live icon, and with nothing in Visible either it
+    /// falls back to the pinned pair.
+    private func isPastRevealTriggerZone(_ point: NSPoint, on screen: NSScreen) -> Bool {
+        guard let bound = revealTriggerMaxX() ?? pinnedZoneMinX() else { return false }
+        return isAtOrRight(of: bound, point, on: screen)
+    }
+
+    /// Main-display x past which the reveal triggers stop: the chevron's
+    /// left edge, else the leftmost live icon assigned to Visible.
+    private func revealTriggerMaxX() -> CGFloat? {
+        guard let appState, let items = appState.snapshot?.items,
+              let primaryMaxX = NSScreen.screens.first?.frame.maxX else { return nil }
+        let live = items.compactMap { item -> (id: ItemID, frame: CGRect)? in
+            guard let frame = item.frame, MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX) else { return nil }
+            return (item.id, frame)
+        }
+        if let chevron = live.first(where: { MenuBarPolicy.isChevronID($0.id, pelmetBundleID: PelmetBundle.mainID) }) {
+            return chevron.frame.minX
+        }
+        let model = appState.settings.sectionModel
+        return live.filter { model.section(of: $0.id) == .visible }.map(\.frame.minX).min()
+    }
+
+    /// Main-display x where Control Center / the clock begin (the leftmost
+    /// of the two that is in the walk), nil when neither is.
+    private func pinnedZoneMinX() -> CGFloat? {
+        guard let primary = NSScreen.screens.first, let items = appState?.snapshot?.items else { return nil }
+        let primaryMaxX = primary.frame.maxX
+        return items.compactMap { item -> CGFloat? in
+            guard item.id.rawValue.hasSuffix("::com.apple.menuextra.clock")
+                    || item.id.rawValue.hasSuffix("::com.apple.menuextra.controlcenter"),
+                  let frame = item.frame, MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX)
+            else { return nil }
+            return frame.minX
+        }.min()
+    }
+
+    /// A main-display bound mirrored onto `screen` by right-edge inset, the
+    /// way ClockClickRelay does it: the bar repeats on every screen at the
+    /// same inset, while the walk only ever hands back the main copy.
+    private func isAtOrRight(of mainX: CGFloat, _ point: NSPoint, on screen: NSScreen) -> Bool {
+        guard let primary = NSScreen.screens.first else { return false }
+        let insetFromRight = primary.frame.maxX - mainX
+        return point.x >= screen.frame.maxX - insetFromRight
     }
 
     private func isEmptyMenuBarArea(_ point: NSPoint, on screen: NSScreen?) -> Bool {

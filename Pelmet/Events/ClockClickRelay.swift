@@ -45,7 +45,8 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     private var swallowUpUntil: Date?
     private static let swallowUpWindow: TimeInterval = 1
     private var _lastMouseDownDisplay: CGDirectDisplayID?
-    private let onClick: @MainActor (CGPoint) -> Void
+    /// (replay target on the clock, where the physical click landed)
+    private let onClick: @MainActor (CGPoint, CGPoint) -> Void
 
     /// The display the last physical click landed on. macOS draws the bar
     /// at full intensity on the display it considers active — where the
@@ -57,13 +58,16 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     /// a global NSEvent monitor never sees clicks on Pelmet's own items.
     var lastMouseDownDisplay: CGDirectDisplayID? { lock.withLock { _lastMouseDownDisplay } }
 
-    init(onClick: @escaping @MainActor (CGPoint) -> Void) {
+    init(onClick: @escaping @MainActor (CGPoint, CGPoint) -> Void) {
         self.onClick = onClick
     }
 
+    /// The tap runs either way — it is also the active-display observer
+    /// (`lastMouseDownDisplay`); `on` only decides whether clock clicks are
+    /// swallowed and relayed (the `clockClickOpensNotificationCenter` setting).
     func setEnabled(_ on: Bool) {
         lock.withLock { enabled = on }
-        if on, tap == nil { startTap() }
+        if tap == nil { startTap() }
     }
 
     /// Called with the latest engine snapshot's clock frame (nil when the
@@ -165,20 +169,40 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
         }
         guard decision else { return Unmanaged.passUnretained(event) }
         if type == .leftMouseDown {
-            Task { @MainActor [onClick] in onClick(location) }
+            let target = lock.withLock { clockCenter(near: location) ?? location }
+            Task { @MainActor [onClick] in onClick(target, location) }
         }
         return nil
     }
 
     /// Pure geometry under the lock: the display containing the point, then
-    /// the clock's right-edge inset on that display.
+    /// the clock's right-edge inset on that display. The zone runs from the
+    /// clock's left edge to the display's right edge: the strip past the
+    /// clock holds only the privacy dot, whose native click is a popover
+    /// naming the app capturing the screen — Pelmet itself, on any Mac it
+    /// runs on — and it sits a few points from the clock, so a click there
+    /// is a clock click that landed wide (Gab, 2026-09-19). The replay
+    /// goes to the clock's centre (`clockCenter(near:)`).
     private func isOnClock(_ point: CGPoint) -> Bool {
         guard let insetFromRight, width > 0, bandHeight > 0 else { return false }
         guard let display = Self.display(under: point) else { return false }
         let bounds = CGDisplayBounds(display)
         guard point.y >= bounds.minY, point.y < bounds.minY + bandHeight else { return false }
         let maxX = bounds.maxX - insetFromRight
-        return point.x >= maxX - width && point.x < maxX
+        return point.x >= maxX - width
+    }
+
+    /// Where the replay lands for a swallowed click past the clock's right
+    /// edge (the dot zone): the clock's centre on that display, so it opens
+    /// Notification Center the way a click on the clock does. nil for a
+    /// click on the clock itself — that one replays where it landed.
+    private func clockCenter(near point: CGPoint) -> CGPoint? {
+        guard let insetFromRight, width > 0, bandHeight > 0,
+              let display = Self.display(under: point) else { return nil }
+        let bounds = CGDisplayBounds(display)
+        let clockMaxX = bounds.maxX - insetFromRight
+        guard point.x >= clockMaxX else { return nil }
+        return CGPoint(x: clockMaxX - width / 2, y: bounds.minY + bandHeight / 2)
     }
 
     private static func display(under point: CGPoint) -> CGDirectDisplayID? {
@@ -190,9 +214,58 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
 
     // MARK: - Replay
 
+    /// The clock's AX press, for a click that landed in the dot zone: it
+    /// opens Notification Center without any mouse event, so the pointer
+    /// stays where the user put it (a click replayed at the clock's centre
+    /// dragged the cursor there, and the move posted to bring it back rang
+    /// the system alert — 2026-09-19). Works only with the assertion
+    /// dropped, exactly like the click (probed both ways 2026-09-19).
+    /// False when the element under the clock is not the clock.
+    /// The physical left button as the HID layer sees it — swallowed events
+    /// or not. Bounded: a stuck reading must not hold the blink open.
+    @MainActor static func waitForButtonRelease(deadline: TimeInterval = 0.6) async {
+        let end = Date().addingTimeInterval(deadline)
+        while Date() < end, CGEventSource.buttonState(.hidSystemState, button: .left) {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
+    /// Notification Center's panel is on screen (its process shows one
+    /// tall window while open, none while closed).
+    @MainActor static func notificationCenterIsOpen() -> Bool {
+        guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return false }
+        return windows.contains { window in
+            guard window[kCGWindowOwnerName as String] as? String == "Notification Center",
+                  let bounds = window[kCGWindowBounds as String] as? [String: CGFloat],
+                  let height = bounds["Height"] else { return false }
+            return height > 300
+        }
+    }
+
+    /// The clock's AX element under `point`, nil when something else is
+    /// there. Resolve it BEFORE the assertion drops: mid-reflow the
+    /// hit-test hands back the agent's backdrop instead (2026-09-19). The
+    /// reference stays valid across the drop.
+    @MainActor static func clockElement(at point: CGPoint) -> AXUIElement? {
+        var element: AXUIElement?
+        guard AXUIElementCopyElementAtPosition(AXUIElementCreateSystemWide(), Float(point.x), Float(point.y), &element) == .success,
+              let element else { return nil }
+        var identifier: CFTypeRef?
+        AXUIElementCopyAttributeValue(element, "AXIdentifier" as CFString, &identifier)
+        return identifier as? String == "com.apple.menuextra.clock" ? element : nil
+    }
+
+    @MainActor static func press(_ element: AXUIElement) -> Bool {
+        AXUIElementPerformAction(element, kAXPressAction as CFString) == .success
+    }
+
     /// A real HID-source click with click state set — the agent ignores
     /// anything less (verified: a bare CGEvent click never opens NC).
-    @MainActor static func postClick(at point: CGPoint) {
+    /// `pointer` is where the physical click landed: a posted mouse event
+    /// drags the cursor to its own location, so a dot-zone click replayed
+    /// at the clock's centre left the pointer on the clock (Gab,
+    /// 2026-09-19) — a move back restores it once the click is in.
+    @MainActor static func postClick(at point: CGPoint, pointer: CGPoint) {
         let source = CGEventSource(stateID: .hidSystemState)
         source?.userData = SyntheticInput.tag
         guard
@@ -206,5 +279,12 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
         down.post(tap: .cghidEventTap)
         usleep(useconds_t(AppTiming.clockReplayHold * 1_000_000))
         up.post(tap: .cghidEventTap)
+        if point != pointer {
+            // A warp, not a posted move: a synthetic mouseMoved on the heels
+            // of the click rang the system alert on every click (2026-09-19).
+            CGWarpMouseCursorPosition(pointer)
+            // The warp suspends real mouse input for ~0.25s unless re-associated.
+            CGAssociateMouseAndMouseCursorPosition(1)
+        }
     }
 }
