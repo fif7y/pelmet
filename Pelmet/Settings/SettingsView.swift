@@ -737,15 +737,19 @@ private struct BehaviorPane: View {
         SettingsCard(title: "System extras") {
             SettingRow(
                 title: "Now Playing, camera controls, AirDrop, Focus, Timer",
-                caption: "macOS hides these whenever any icons are concealed — they can only appear while the whole bar is revealed."
+                caption: appState.settings.replacesCollateralExtras
+                    ? "Always hidden while a Pelmet item stands in for one of them. Turn those items off under Menu Bar to show the system's while the bar is revealed."
+                    : "macOS hides these whenever any icons are concealed — they can only appear while the whole bar is revealed."
             ) {
                 PelmetMenuPicker(
-                    selection: binding(\.hideSystemExtras),
+                    selection: appState.settings.replacesCollateralExtras
+                        ? .constant(true) : binding(\.hideSystemExtras),
                     options: [
                         (true, LocalizedStringKey("Always hidden")),
                         (false, LocalizedStringKey("Show while revealed")),
                     ]
                 )
+                .disabled(appState.settings.replacesCollateralExtras)
             }
             SettingToggleRow(
                 title: "Clicking the clock opens Notification Center",

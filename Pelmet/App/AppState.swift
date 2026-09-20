@@ -495,7 +495,10 @@ final class AppState {
                     revealed: revealed
                 )
             }
-            await engine.setSteadyExtras(settings.hideSystemExtras)
+            await engine.setSteadyExtras(settings.effectiveHideSystemExtras)
+            if !settings.hideSystemExtras, settings.replacesCollateralExtras {
+                PelmetLog.log("extras: system extras held hidden — a Pelmet item replaces one")
+            }
             // Apps that first appeared while Pelmet wasn't running route to the
             // new-items section before the first converge. VISIBLE newcomers
             // get their placement drag now (still live-framed); concealed
@@ -872,7 +875,7 @@ final class AppState {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled, let self else { return }
             self.settings.save()
-            await self.engine.setSteadyExtras(self.settings.hideSystemExtras)
+            await self.engine.setSteadyExtras(self.settings.effectiveHideSystemExtras)
             await self.engine.setModel(self.settings.sectionModel)
         }
     }

@@ -201,6 +201,16 @@ public enum ExtraStyle: String, Codable, CaseIterable, Sendable {
     case animated
 }
 
+extension ExtraKind {
+    /// The kinds that stand in for a collateral-hidden system extra
+    /// (Now Playing, the camera pill, AirDrop, Focus, the Clock timer, fast
+    /// user switching). Siri and Time Machine replace SystemUIServer items,
+    /// which hide by the allowlist like any app.
+    public static let collateralReplicas: Set<ExtraKind> = [
+        .mediaControls, .cameraMicIndicator, .airdrop, .focus, .timer, .userSwitching,
+    ]
+}
+
 public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
     public var kind: ExtraKind
@@ -318,6 +328,21 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     /// Keeps macOS's collateral extras (Now Playing, camera pill, AirDrop…)
     /// consistently hidden instead of jumping in and out on every transition.
     public var hideSystemExtras: Bool = SettingsDefaults.hideSystemExtras
+
+    /// A Pelmet item that stands in for one of those collateral extras is
+    /// on. It exists to replace the system's, so the system's must stay
+    /// out: with "Show while revealed" the camera pill came back on every
+    /// hover, the replica deferred to it, and the two swapped places on
+    /// every transition (#39).
+    public var replacesCollateralExtras: Bool {
+        extraItems.contains { ExtraKind.collateralReplicas.contains($0.kind) }
+    }
+
+    /// What the engine holds: the user's choice, forced on while a replica
+    /// is on.
+    public var effectiveHideSystemExtras: Bool {
+        hideSystemExtras || replacesCollateralExtras
+    }
 
     /// Right-clicking an empty spot on the menu bar opens Pelmet's menu.
     /// Off for people running an app that draws its own surface across the
