@@ -84,6 +84,16 @@ public enum BarAdoption {
             guard let chevronX, let previousChevronX, draggedID != chevron?.id else { return false }
             return abs(chevronX - previousChevronX) > 4
         }()
+        // The user dragged the boundary itself. Every item now on the other
+        // side of it crossed it, by the user's hand, in one gesture: adopt
+        // in this pass. The two-pass confirmation below never lands for
+        // them — the bar conceals first, the still-hidden icons leave the
+        // walk, and the next revealed pass reads the chevron as moved and
+        // voids the pending reading (four chevron drags, 2026-09-20, each
+        // ending in "confirming on the next pass" and nothing after).
+        // Only a real ⌘-drag names the chevron as `draggedID`; synthetic
+        // walks never do (the band monitor ignores them).
+        let chevronDragged = draggedID != nil && draggedID == chevron?.id
         // The inputs, before any rule runs: both #13 logs ended on
         // `adopt: pass` with nothing after it. One line here turns the next
         // trap into a five-minute read.
@@ -192,7 +202,7 @@ public enum BarAdoption {
             // present — three hidden items adopted into Always Hidden in one
             // pass and flapped back over the next two (2026-09-09). The
             // baseline stays put until the next pass reads the same zone.
-            let awaitingConfirmation = confident && !isFirstPass && !boundaryOnly
+            let awaitingConfirmation = confident && !isFirstPass && !boundaryOnly && !chevronDragged
                 && item.id != draggedID && previousZone != nil && previousZone != zone && zone != current
             if awaitingConfirmation, pending[item.id.rawValue] != zone {
                 pending[item.id.rawValue] = zone
@@ -222,6 +232,12 @@ public enum BarAdoption {
                 // the zone-change rule alone could never move the leftmost
                 // hidden item into Always Hidden (Sconce, 2026-09-05).
                 guard confident else { continue }
+            } else if chevronDragged {
+                // A reading on the far side of a boundary the user just
+                // moved is the change itself; no baseline needed. Which
+                // concealable section may be a guess (no cluster to
+                // measure) — the side is not.
+                guard concealableSide != nil else { continue }
             } else {
                 // First sighting establishes a baseline; only a zone CHANGE
                 // adopts — and only against a boundary that stood still.
