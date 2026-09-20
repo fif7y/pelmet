@@ -1284,7 +1284,12 @@ final class AppState {
             if report.failed.isEmpty {
                 settings.orderEdits = OrderEdits()
                 settings.save()
-                // Seed future fresh registrations with the order just laid down.
+            }
+            // Seed future fresh registrations with the order just laid down —
+            // after ANY move, not only a clean pass: a Camera moved at 18:35
+            // went back to its old slot on relaunch because every later pass
+            // failed on another item and never reseeded (2026-09-20).
+            if !report.applied.isEmpty {
                 await engine.writeOrderHint()
             }
             applyReport = report
