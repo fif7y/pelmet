@@ -218,10 +218,14 @@ struct MenuBarTab: View {
         }
         .animation(.spring(duration: 0.3), value: appState.settings.sectionModel)
         .environment(dragSession)
-        // Editing the bar shows the bar: reveal everything while this tab is
-        // open so drags in the editor and in the real menubar stay in sync.
+        // Sets core: the editor is a drawing, nothing in the bar needs to be
+        // on screen for it. Apply reveals what it must measure, then puts
+        // the bar back (Gab, 2026-09-20). The old core revealed everything
+        // here so its immediate drags could measure.
         .onAppear {
-            appState.reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
+            if !CoreMode.setsOnly {
+                appState.reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
+            }
         }
         .onDisappear {
             // Collapse the « if a placement expanded it during this session.

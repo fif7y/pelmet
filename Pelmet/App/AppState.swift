@@ -27,7 +27,11 @@ final class AppState {
     /// Only the layout editor holds the bar open: it previews the full bar
     /// and drags there must stay in sync with it. On any other tab (or with
     /// the window closed) hover-rehide behaves normally (Gab, 2026-09-02).
-    var editorHoldsBar: Bool { settingsWindowVisible && settingsTab == .menuBar }
+    /// Sets core: the editor no longer shows the bar, so it holds it only
+    /// for the span of an Apply pass.
+    var editorHoldsBar: Bool {
+        settingsWindowVisible && settingsTab == .menuBar && (!CoreMode.setsOnly || applying)
+    }
 
     /// The shortcut in settings could not be registered (another app holds
     /// it) — the General row says so beside the recorder.

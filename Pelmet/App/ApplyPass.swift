@@ -118,10 +118,14 @@ enum ApplyPass {
 
         // Hidden items have frames only under a reveal, and the plan is the
         // whole bar. Reveal everything and let the editor hold it.
-        if !appState.currentRevealedSections.isSuperset(of: [.hidden, .alwaysHidden]) {
+        let revealedForPass = !appState.currentRevealedSections.isSuperset(of: [.hidden, .alwaysHidden])
+        if revealedForPass {
             appState.reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
             try? await Task.sleep(for: AppTiming.tidyRevealWait)
         }
+        // What the pass opened, the pass closes (a display set to always
+        // show keeps its policy).
+        defer { if revealedForPass { appState.applyPointerDisplayPolicyAfterDismissal() } }
 
         var snap = await engine.snapshot()
         appState.updateSnapshot(snap)
