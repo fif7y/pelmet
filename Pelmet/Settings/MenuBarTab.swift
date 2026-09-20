@@ -21,6 +21,19 @@ struct ApplyBarButton: View {
         let failed = appState.applyReport.map { !$0.failed.isEmpty } ?? false
         let count = appState.pendingMoveCount
         HStack(spacing: 10) {
+            // The pass runs silently with the cursor hidden (blind spot 3):
+            // say what it did, or people press it twice.
+            if !appState.applying, let report = appState.applyReport {
+                Group {
+                    if report.failed.isEmpty {
+                        Text("Moved \(report.applied.count)")
+                    } else {
+                        Text("Moved \(report.applied.count), \(report.failed.count) not moved")
+                    }
+                }
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            }
             Toggle("Tidy", isOn: $appState.settings.orderEdits.tidy)
                 .toggleStyle(.checkbox)
                 .font(.callout)
