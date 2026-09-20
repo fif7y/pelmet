@@ -486,6 +486,14 @@ final class TransitionCoordinator {
     /// (an editor move, an adopted drag or a new app changes the picture;
     /// the conceal's own item churn does not).
     private var revealedStripSignature: [ItemID] = []
+    /// The chevron's x when the picture was taken. A visible-section
+    /// change (an indicator appearing, a placement drag) shifts the chevron,
+    /// and a picture from before it paints the glyph at the old x next to
+    /// the live one (two chevrons for a beat, #39 video at 18:45:56).
+    private var revealedStripChevronX: CGFloat?
+    private var liveChevronMinX: CGFloat? {
+        appState?.snapshot?.items.first(where: { $0.id == AppState.chevronItemID })?.frame?.minX
+    }
 
     private var hiddenSectionSignature: [ItemID] {
         guard let model = appState?.settings.sectionModel else { return [] }
@@ -508,6 +516,9 @@ final class TransitionCoordinator {
             return "hidden section changed since the picture — was \(revealedStripSignature.map(\.rawValue)) now \(hiddenSectionSignature.map(\.rawValue))"
         }
         guard revealedStripActiveDisplay == appState?.lastMouseDownDisplay else { return "picture from another active display" }
+        if let then = revealedStripChevronX, let now = liveChevronMinX, abs(then - now) > 1 {
+            return "chevron moved since the picture (\(then) → \(now))"
+        }
         return nil
     }
 
@@ -518,6 +529,7 @@ final class TransitionCoordinator {
         // The reveal cover's footprint, so the two pictures overlay
         // exactly (same rect, same padding).
         revealedStripSignature = hiddenSectionSignature
+        revealedStripChevronX = liveChevronMinX
         revealedStripActiveDisplay = appState.lastMouseDownDisplay
         revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
         revealedStripBackground = []
@@ -621,6 +633,7 @@ final class TransitionCoordinator {
             return
         }
         revealedStripSignature = hiddenSectionSignature
+        revealedStripChevronX = liveChevronMinX
         revealedStripActiveDisplay = appState.lastMouseDownDisplay ?? Self.displayUnderPointer
         revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: rect)
         revealedStripBackground = []

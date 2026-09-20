@@ -78,6 +78,21 @@ struct MenuBarPolicyTests {
         #expect(!MenuBarPolicy.isUnmanagedAppleBundle(nil))
     }
 
+    // Agents are classified by where they live, not by name: whatever
+    // CoreServices process puts up an item next is the system's too.
+    @Test func registeredSystemAgentsAreUnmanagedExceptThePinnedHost() {
+        MenuBarPolicy.resetSystemAgentsForTesting()
+        #expect(!MenuBarPolicy.isUnmanagedAppleBundle("com.apple.AirPlayUIAgent"))
+        MenuBarPolicy.registerSystemAgents(["com.apple.AirPlayUIAgent", "com.apple.systemuiserver"])
+        #expect(MenuBarPolicy.isUnmanagedAppleBundle("com.apple.AirPlayUIAgent"))
+        #expect(!MenuBarPolicy.isUnmanagedAppleBundle("com.apple.systemuiserver"))
+        #expect(!MenuBarPolicy.isSectionManageable(.status(bundle: "com.apple.AirPlayUIAgent", title: "Item-0")))
+        #expect(MenuBarPolicy.isSystemAgentLocation("/System/Library/CoreServices/screencaptureui.app"))
+        #expect(!MenuBarPolicy.isSystemAgentLocation("/System/Applications/Weather.app/Contents/PlugIns/WeatherMenu.appex"))
+        #expect(!MenuBarPolicy.isSystemAgentLocation("/System/Library/PrivateFrameworks/AppSSOKerberos.framework/Support/KerberosMenuExtra.app"))
+        MenuBarPolicy.resetSystemAgentsForTesting()
+    }
+
     @Test func kerberosMenuExtraIsSectionManageable() {
         let item = ItemID.status(bundle: "com.apple.KerberosMenuExtra", title: "Item-0")
         #expect(MenuBarPolicy.isSectionManageable(item))

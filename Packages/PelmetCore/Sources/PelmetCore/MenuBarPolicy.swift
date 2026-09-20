@@ -114,7 +114,29 @@ public enum MenuBarPolicy {
     /// by name to become hideable and could never be moved.
     public static func isUnmanagedAppleBundle(_ bundle: String?) -> Bool {
         guard let bundle else { return false }
-        return systemItemHosts.contains(bundle)
+        if systemItemHosts.contains(bundle) { return true }
+        return !isPinnedAppleHost(bundle) && systemAgentRegistry.withLock { $0.contains(bundle) }
+    }
+
+    /// Where macOS keeps its menu bar agents: MenuBarAgent, Control Center,
+    /// the input menu agent, the screen-recording pill, Siri, the Wi-Fi and
+    /// AirPlay agents all live here. An item from a process in this folder
+    /// is the system's UI, not an app's icon — never routed as a new app,
+    /// never placed. Apple's apps with an icon of their own live elsewhere
+    /// (/System/Applications, a framework's Support folder) and stay apps.
+    /// SystemUIServer is here too and keeps its pinned-host role (#19).
+    public static let systemAgentLocation = "/System/Library/CoreServices/"
+    public static func isSystemAgentLocation(_ path: String) -> Bool {
+        path.hasPrefix(systemAgentLocation)
+    }
+    private static let systemAgentRegistry = LockedSet()
+    /// The app registers running processes found at `systemAgentLocation`
+    /// (boot sweep, then every launch notification).
+    public static func registerSystemAgents(_ bundles: some Sequence<String>) {
+        systemAgentRegistry.withLock { $0.formUnion(bundles) }
+    }
+    public static func resetSystemAgentsForTesting() {
+        systemAgentRegistry.withLock { $0.removeAll() }
     }
 
     /// Apple processes whose bar items are the system's, not theirs.
@@ -210,5 +232,15 @@ public enum MenuBarGeometry {
     /// the walk (its main copy sits in the overflow menu).
     public static func isInPrimaryBand(_ frame: CGRect, primaryMaxX: CGFloat) -> Bool {
         isInBand(frame) && frame.midX > 0 && frame.midX < primaryMaxX
+    }
+}
+
+/// A lock-guarded set for policy state written by the app and read anywhere.
+final class LockedSet: @unchecked Sendable {
+    private var storage = Set<String>()
+    private let lock = NSLock()
+    func withLock<T>(_ body: (inout Set<String>) -> T) -> T {
+        lock.lock(); defer { lock.unlock() }
+        return body(&storage)
     }
 }

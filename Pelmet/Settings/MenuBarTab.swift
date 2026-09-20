@@ -110,6 +110,14 @@ struct MenuBarTab: View {
                     .font(.callout)
                     .foregroundStyle(.orange)
                 }
+                if appState.overflowTrappedCount > 0 {
+                    Label(
+                        "Your menu bar is full: \(appState.overflowTrappedCount) icons sit behind macOS's « until there's room. Pelmet leaves them where they are.",
+                        systemImage: "rectangle.compress.vertical"
+                    )
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                }
 
                 EditorSectionView(
                     section: .visible,

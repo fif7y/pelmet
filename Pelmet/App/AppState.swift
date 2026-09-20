@@ -263,13 +263,17 @@ final class AppState {
         // neighbor targeting for every later placement near it. Queue its
         // items for a re-slot; the flush places them at the next reveal
         // settle (or right away for the visible section).
+        let agents = Self.systemAgentBundles(in: NSWorkspace.shared.runningApplications)
+        MenuBarPolicy.registerSystemAgents(agents)
+        PelmetLog.log("policy: \(agents.count) system agent(s) registered from \(MenuBarPolicy.systemAgentLocation)")
         relaunchObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didLaunchApplicationNotification,
             object: nil,
             queue: .main
         ) { [weak self] note in
-            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                  let bundle = app.bundleIdentifier, Self.isBundleMainProcess(app) else { return }
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+            MenuBarPolicy.registerSystemAgents(Self.systemAgentBundles(in: [app]))
+            guard let bundle = app.bundleIdentifier, Self.isBundleMainProcess(app) else { return }
             MainActor.assumeIsolated { self?.queueRelaunchedBundlePlacement(bundle) }
         }
         observeRunningApplications()
@@ -281,6 +285,16 @@ final class AppState {
     /// Desktop's tool runs spawn one every few seconds, and each read as a
     /// relaunch — an adoption window per spawn, the assertion dropped and
     /// every hidden icon flashed under a cover (2026-09-18).
+    /// Bundle ids of the processes that live where macOS keeps its menu bar
+    /// agents (`MenuBarPolicy.systemAgentLocation`).
+    nonisolated static func systemAgentBundles(in apps: [NSRunningApplication]) -> Set<String> {
+        Set(apps.compactMap { app in
+            guard let id = app.bundleIdentifier, let path = app.bundleURL?.standardizedFileURL.path,
+                  MenuBarPolicy.isSystemAgentLocation(path) else { return nil }
+            return id
+        })
+    }
+
     nonisolated static func isBundleMainProcess(_ app: NSRunningApplication) -> Bool {
         guard let bundleURL = app.bundleURL, let exe = app.executableURL,
               let own = Bundle(url: bundleURL)?.executableURL else { return true }
@@ -1518,8 +1532,42 @@ final class AppState {
         id.bundleID.map { bundlelessHosts.contains($0) } ?? false
     }
 
+    /// Items the native « holds on the primary band, from the latest
+    /// snapshot (`PlacementGeometry.overflowTrappedCount`). While non-zero
+    /// the bar is full: the « decides who is on screen, every synthetic
+    /// drag is undone by the next reflow, and a frameless item is trapped,
+    /// not missing. Drift corrections, rescues, background placements and
+    /// adoption windows all wait for room (#42: 23 drags, 3 « clicks and
+    /// an adoption window every 2 minutes on a 28-icon 14" bar).
+    private(set) var overflowTrappedCount = 0
+    private var lastOverflowRead = 0
+    var barOverflows: Bool { overflowTrappedCount > 0 }
+
+    private func noteOverflow(in snap: EngineSnapshot) {
+        let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        let trapped = PlacementGeometry.overflowTrappedCount(
+            snap.items.compactMap { item in
+                guard let f = item.frame, f.width > 4,
+                      PlacementGeometry.isPrimary(f, screenMaxX: primaryMaxX) else { return nil }
+                return f.minX
+            }
+        )
+        // Two consecutive reads to enter (a mid-attach walk at boot read two
+        // items at one x for 200ms), one to leave.
+        defer { lastOverflowRead = trapped }
+        if trapped > 0, overflowTrappedCount == 0, lastOverflowRead == 0 { return }
+        guard trapped != overflowTrappedCount else { return }
+        if (trapped > 0) != (overflowTrappedCount > 0) {
+            PelmetLog.log(trapped > 0
+                ? "overflow: \(trapped) icon(s) behind the native « — placements and corrections wait for room"
+                : "overflow: cleared")
+        }
+        overflowTrappedCount = trapped
+    }
+
     func updateSnapshot(_ snap: EngineSnapshot) {
         let now = Date.now
+        noteOverflow(in: snap)
         for item in snap.items {
             lastSeenAt[item.id.sectionKey] = now
             if item.pid > 0, let bundle = item.id.bundleID { lastSeenPID[bundle] = item.pid }

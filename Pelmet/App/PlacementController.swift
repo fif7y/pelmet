@@ -126,10 +126,22 @@ final class PlacementController {
             // found at the same settle) are taken in the same pass. Each id
             // gets one attempt per flush — a requeued id waits for the next.
             var attempted = Set<ItemID>()
+            var overflowLogged = false
             while let id = pendingPlacements.subtracting(attempted).sorted(by: { $0.rawValue < $1.rawValue }).first {
                 attempted.insert(id)
                 ledger.dequeue(id)
                 guard let appState else { return }
+                // A full bar: the drag would land on whatever the « shows
+                // there and the next reflow would undo it. Editor drops
+                // don't ride this queue, so nothing the user is doing waits.
+                if overflowing {
+                    if !overflowLogged {
+                        overflowLogged = true
+                        PelmetLog.log("place: bar overflows — \(pendingPlacements.count + 1) placement(s) wait for room")
+                    }
+                    ledger.queue(id)
+                    continue
+                }
                 let section = appState.settings.sectionModel.section(of: id)
                 // Held for the hidden cluster to materialize (see the
                 // hidden-zone rule in physicallyPlaceNow): don't burn a
@@ -174,7 +186,7 @@ final class PlacementController {
                     // the registration is parked — ask for an adoption
                     // window (rate-limited per bundle), and retry slowly.
                     let onScreen = section == .visible || appState.currentRevealedSections.contains(section)
-                    if onScreen, let bundle = id.bundleID, bundle != PelmetBundle.mainID,
+                    if onScreen, !overflowing, let bundle = id.bundleID, bundle != PelmetBundle.mainID,
                        framelessFor > 2,
                        (readoptRequested[bundle].map { Date.now.timeIntervalSince($0) > Self.readoptInterval } ?? true) {
                         readoptRequested[bundle] = .now
@@ -302,6 +314,8 @@ final class PlacementController {
 
     /// Logged once per overflow episode, not per pass.
     private var overflowPauseLogged = false
+    /// The bar is full (`AppState.barOverflows`): nothing dragged stays put.
+    private var overflowing: Bool { appState?.barOverflows ?? false }
 
     /// A verdict needs two agreeing reads: a reveal that follows a conceal
     /// within the same reflow measured the chevron at 1329 and, a second
@@ -340,7 +354,7 @@ final class PlacementController {
         // correction we drag is undone by the next reflow (#42: 23 drags
         // in 25 minutes, the icons visibly shuffling). Pause until it
         // de-crowds; the conceal-settle rescue keeps its own budget.
-        if a.trappedCount > 0 {
+        if a.trappedCount > 0 || overflowing {
             if !overflowPauseLogged {
                 overflowPauseLogged = true
                 PelmetLog.log("drift: bar overflows (\(a.trappedCount) item(s) trapped in «) — corrections paused until it de-crowds")
@@ -408,6 +422,17 @@ final class PlacementController {
         Task { [weak self] in
             guard let self else { return }
             defer { self.rescuing = false }
+            // The conceal just de-crowded the bar — or didn't. Read it
+            // before dragging: with the « still holding items the rescue
+            // burns attempts and warps the pointer for nothing (#42).
+            if let appState {
+                appState.updateSnapshot(await engine.snapshot())
+                if overflowing {
+                    PelmetLog.log("rescue: bar still overflows — \(queued.count) trapped item(s) wait for room")
+                    for id in queued { ledger[id].rescueQueued = true }
+                    return
+                }
+            }
             PelmetLog.log("rescue: attempting \(queued.count) trapped item(s)")
             for id in queued {
                 guard let appState else { return }
@@ -548,7 +573,11 @@ final class PlacementController {
             // a real frame and the normal drag proceeds. Only resolvable
             // while Pelmet is frontmost (editor flows) — background placements
             // fall through to the conceal-settle rescue.
-            if allowExpansion, await OverflowChevron.expandForPlacement() {
+            // The « click warps the user's pointer: only inside the editor,
+            // where the drop already committed it to synthetic motion. A
+            // background rescue clicked it three times in 25 seconds under
+            // someone's own clicks (#42).
+            if allowExpansion, appState.editorHoldsBar, await OverflowChevron.expandForPlacement() {
                 try? await Task.sleep(for: AppTiming.overflowExpandSettle)
                 return await physicallyPlaceNow(id, in: section, allowExpansion: false)
             }
@@ -850,7 +879,7 @@ final class PlacementController {
             PelmetLog.log("place: \(id.rawValue) never moved (x=\(finalX)) — trapped or bounced")
             // Same inline «-expansion as the phantom path — a SINGLE trapped
             // item often has no duplicate to trip the pre-check on.
-            if allowExpansion, await OverflowChevron.expandForPlacement() {
+            if allowExpansion, appState.editorHoldsBar, await OverflowChevron.expandForPlacement() {
                 try? await Task.sleep(for: AppTiming.overflowExpandSettle)
                 return await physicallyPlaceNow(id, in: section, allowExpansion: false)
             }

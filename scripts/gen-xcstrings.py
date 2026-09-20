@@ -149,6 +149,28 @@ T = {
 
     # ── Menu Bar tab (editor) ───────────────────────────────────────
     "Hiding is unavailable on this macOS build — reordering still works.": dict(de="Ausblenden ist auf diesem macOS-Build nicht verfügbar – Umsortieren funktioniert weiterhin.", fr="Le masquage n’est pas disponible sur cette version de macOS : le réordonnancement fonctionne toujours.", es="Ocultar no está disponible en esta versión de macOS: reordenar sigue funcionando.", it="Nascondere non è disponibile in questa build di macOS: riordinare funziona ancora.", pt="Ocultar não está disponível nesta versão do macOS: reordenar continua funcionando.", ja="このmacOSビルドでは非表示は使えません。並べ替えは引き続き可能です。", zh="此 macOS 版本不支持隐藏，但仍可重新排序。", ko="이 macOS 빌드에서는 숨기기를 사용할 수 없습니다. 순서 변경은 계속 가능합니다.", ru="Скрытие недоступно в этой сборке macOS: переупорядочивание по-прежнему работает."),
+    "Your menu bar is full: %lld icons sit behind macOS's « until there's room. Pelmet leaves them where they are.": dict(
+        de="Deine Menüleiste ist voll: %lld Symbole bleiben hinter dem « von macOS, bis wieder Platz ist. Pelmet lässt sie dort.",
+        fr="Votre barre des menus est pleine : %lld icônes restent derrière le « de macOS jusqu’à ce qu’il y ait de la place. Pelmet les laisse là.",
+        es="Tu barra de menús está llena: %lld iconos quedan detrás del « de macOS hasta que haya sitio. Pelmet los deja ahí.",
+        it="La barra dei menu è piena: %lld icone restano dietro il « di macOS finché non c’è spazio. Pelmet le lascia lì.",
+        pt="Sua barra de menus está cheia: %lld ícones ficam atrás do « do macOS até haver espaço. O Pelmet os deixa onde estão.",
+        ja="メニューバーがいっぱいです：%lld 個のアイコンは、空きができるまで macOS の « の後ろにあります。Pelmet はそのままにします。",
+        zh="菜单栏已满：%lld 个图标在有空间之前会留在 macOS 的 « 后面。Pelmet 不会移动它们。",
+        ko="메뉴 막대가 가득 찼습니다: 아이콘 %lld개는 공간이 생길 때까지 macOS의 « 뒤에 남습니다. Pelmet은 그대로 둡니다.",
+        ru="Строка меню заполнена: %lld значков остаются за « macOS, пока не появится место. Pelmet их не трогает.",
+    ),
+    "Always hidden while a Pelmet item stands in for one of them. Turn those items off under Menu Bar to show the system's while the bar is revealed.": dict(
+        de="Immer ausgeblendet, solange ein Pelmet-Element eines davon ersetzt. Schalte diese Elemente unter „Menüleiste“ aus, um die von macOS bei aufgedeckter Leiste zu zeigen.",
+        fr="Toujours masqués tant qu’un élément Pelmet remplace l’un d’eux. Désactivez ces éléments dans « Barre des menus » pour afficher ceux du système quand la barre est dévoilée.",
+        es="Siempre ocultos mientras un elemento de Pelmet sustituya a uno de ellos. Desactiva esos elementos en «Barra de menús» para mostrar los del sistema con la barra revelada.",
+        it="Sempre nascosti finché un elemento Pelmet ne sostituisce uno. Disattiva quegli elementi in «Barra dei menu» per mostrare quelli di sistema a barra rivelata.",
+        pt="Sempre ocultos enquanto um item do Pelmet substituir um deles. Desative esses itens em “Barra de menus” para mostrar os do sistema com a barra revelada.",
+        ja="Pelmet の項目がいずれかの代わりをしている間は常に非表示です。バーを表示中にシステムのものを出すには、「メニューバー」でその項目をオフにしてください。",
+        zh="只要有 Pelmet 项目替代其中之一，就始终隐藏。要在菜单栏展开时显示系统自带的，请在“菜单栏”中关闭那些项目。",
+        ko="Pelmet 항목이 그중 하나를 대신하는 동안에는 항상 숨김 상태입니다. 막대를 펼쳤을 때 시스템 항목을 보려면 ‘메뉴 막대’에서 해당 항목을 끄세요.",
+        ru="Всегда скрыты, пока элемент Pelmet заменяет один из них. Отключите эти элементы в разделе «Строка меню», чтобы показывать системные при раскрытой строке.",
+    ),
     "Tidying…": dict(de="Wird aufgeräumt …", fr="Rangement…", es="Ordenando…", it="Riordino…", pt="Organizando…", ja="整理中…", zh="正在整理…", ko="정리 중…", ru="Упорядочивание…"),
     "Tidy bar order": dict(de="Leiste aufräumen", fr="Ranger la barre", es="Ordenar la barra", it="Riordina la barra", pt="Organizar a barra", ja="バーの並びを整理", zh="整理菜单栏顺序", ko="막대 순서 정리", ru="Упорядочить строку"),
     "Physically arranges the bar to match the sections — icons that sit out of place slide their neighbors on every reveal.": dict(de="Ordnet die Leiste physisch nach den Bereichen – falsch platzierte Symbole verschieben bei jedem Einblenden ihre Nachbarn.", fr="Réorganise physiquement la barre selon les sections : les icônes mal placées décalent leurs voisines à chaque affichage.", es="Reordena físicamente la barra según las secciones: los iconos fuera de sitio desplazan a sus vecinos en cada aparición.", it="Riordina fisicamente la barra secondo le sezioni: le icone fuori posto spostano le vicine a ogni comparsa.", pt="Reorganiza fisicamente a barra conforme as seções: ícones fora do lugar deslocam os vizinhos a cada revelação.", ja="セクションに合わせてバーを実際に並べ替えます。位置がずれたアイコンは表示のたびに隣のアイコンを動かします。", zh="按分区实际重排菜单栏，位置不当的图标每次显示时都会推挤相邻图标。", ko="섹션에 맞게 막대를 실제로 재배치합니다. 위치가 어긋난 아이콘은 표시될 때마다 이웃을 밀어냅니다.", ru="Физически выстраивает строку по секциям: значки не на своём месте сдвигают соседей при каждом показе."),

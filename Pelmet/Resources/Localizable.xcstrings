@@ -1741,6 +1741,64 @@
         }
       }
     },
+    "Always hidden while a Pelmet item stands in for one of them. Turn those items off under Menu Bar to show the system's while the bar is revealed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immer ausgeblendet, solange ein Pelmet-Element eines davon ersetzt. Schalte diese Elemente unter „Menüleiste“ aus, um die von macOS bei aufgedeckter Leiste zu zeigen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siempre ocultos mientras un elemento de Pelmet sustituya a uno de ellos. Desactiva esos elementos en «Barra de menús» para mostrar los del sistema con la barra revelada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toujours masqués tant qu’un élément Pelmet remplace l’un d’eux. Désactivez ces éléments dans « Barre des menus » pour afficher ceux du système quand la barre est dévoilée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sempre nascosti finché un elemento Pelmet ne sostituisce uno. Disattiva quegli elementi in «Barra dei menu» per mostrare quelli di sistema a barra rivelata."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet の項目がいずれかの代わりをしている間は常に非表示です。バーを表示中にシステムのものを出すには、「メニューバー」でその項目をオフにしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet 항목이 그중 하나를 대신하는 동안에는 항상 숨김 상태입니다. 막대를 펼쳤을 때 시스템 항목을 보려면 ‘메뉴 막대’에서 해당 항목을 끄세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sempre ocultos enquanto um item do Pelmet substituir um deles. Desative esses itens em “Barra de menus” para mostrar os do sistema com a barra revelada."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Всегда скрыты, пока элемент Pelmet заменяет один из них. Отключите эти элементы в разделе «Строка меню», чтобы показывать системные при раскрытой строке."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要有 Pelmet 项目替代其中之一，就始终隐藏。要在菜单栏展开时显示系统自带的，请在“菜单栏”中关闭那些项目。"
+          }
+        }
+      }
+    },
     "Always in the menu bar": {
       "localizations": {
         "de": {
@@ -14729,6 +14787,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "已是最新版本"
+          }
+        }
+      }
+    },
+    "Your menu bar is full: %lld icons sit behind macOS's « until there's room. Pelmet leaves them where they are.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Menüleiste ist voll: %lld Symbole bleiben hinter dem « von macOS, bis wieder Platz ist. Pelmet lässt sie dort."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu barra de menús está llena: %lld iconos quedan detrás del « de macOS hasta que haya sitio. Pelmet los deja ahí."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre barre des menus est pleine : %lld icônes restent derrière le « de macOS jusqu’à ce qu’il y ait de la place. Pelmet les laisse là."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La barra dei menu è piena: %lld icone restano dietro il « di macOS finché non c’è spazio. Pelmet le lascia lì."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーがいっぱいです：%lld 個のアイコンは、空きができるまで macOS の « の後ろにあります。Pelmet はそのままにします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대가 가득 찼습니다: 아이콘 %lld개는 공간이 생길 때까지 macOS의 « 뒤에 남습니다. Pelmet은 그대로 둡니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua barra de menus está cheia: %lld ícones ficam atrás do « do macOS até haver espaço. O Pelmet os deixa onde estão."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Строка меню заполнена: %lld значков остаются за « macOS, пока не появится место. Pelmet их не трогает."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单栏已满：%lld 个图标在有空间之前会留在 macOS 的 « 后面。Pelmet 不会移动它们。"
           }
         }
       }
