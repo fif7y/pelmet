@@ -70,6 +70,8 @@ struct MenuBarPolicyTests {
         #expect(MenuBarPolicy.isUnmanagedAppleBundle(PelmetBundle.agentID))
         #expect(MenuBarPolicy.isUnmanagedAppleBundle(PelmetBundle.textInputAgentID))
         #expect(MenuBarPolicy.isUnmanagedAppleBundle("com.apple.controlcenter"))
+        #expect(MenuBarPolicy.isUnmanagedAppleBundle("com.apple.screencaptureui"))
+        #expect(!MenuBarPolicy.isSectionManageable(.status(bundle: "com.apple.screencaptureui", title: "Item-0")))
         #expect(!MenuBarPolicy.isUnmanagedAppleBundle("com.apple.weather.menu"))
         #expect(!MenuBarPolicy.isUnmanagedAppleBundle("com.apple.systemuiserver"))
         #expect(!MenuBarPolicy.isUnmanagedAppleBundle("com.example.App"))

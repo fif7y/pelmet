@@ -120,8 +120,16 @@ public enum MenuBarPolicy {
     /// Apple processes whose bar items are the system's, not theirs.
     static let systemItemHosts: Set<String> = [
         PelmetBundle.agentID, PelmetBundle.textInputAgentID, controlCenterID,
+        screenCaptureUIID,
     ]
     public static let controlCenterID = "com.apple.controlcenter"
+    /// The system's screen-recording pill (the "Stop recording" item any
+    /// ScreenCaptureKit recording puts up, QuickRecorder included). It
+    /// registered as a new app, routed to Hidden and was synthetic-dragged
+    /// from a phantom frame for the whole recording — clicks landed on the
+    /// wrong item while the pill was up (#42). A recording control is
+    /// nobody's to hide or move.
+    public static let screenCaptureUIID = "com.apple.screencaptureui"
 
     /// An Apple process with an item of its own — SystemUIServer (Siri,
     /// Time Machine, #19), the Kerberos ticket extra (#24, a standalone

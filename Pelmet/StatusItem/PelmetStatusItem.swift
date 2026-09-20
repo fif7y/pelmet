@@ -145,6 +145,9 @@ final class PelmetStatusItem {
             item.menu = Self.contextMenu(appState: appState)
             item.button?.performClick(nil)
             item.menu = nil
+            // performClick returns once the menu is dismissed; it fades for
+            // a beat after that (see `ConcealGhostOverlay.menuClosedAt`).
+            ConcealGhostOverlay.menuClosedAt = Date()
         } else if event?.modifierFlags.contains(.option) == true {
             appState.reveal([.hidden, .alwaysHidden], reason: .statusItem)
         } else {

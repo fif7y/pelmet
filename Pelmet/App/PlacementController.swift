@@ -81,9 +81,35 @@ final class PlacementController {
     /// section can't be measured, so it waits here until a reveal gives the
     /// section live frames.
     var pendingPlacements: Set<ItemID> { ledger.pending }
-    func queuePlacement(_ id: ItemID) { ledger.queue(id) }
+    /// Queued items that only need to be on the right SIDE of the chevron:
+    /// the camera/mic indicator re-enters layout on every hardware edge and
+    /// its walk back to the exact slot rode the next hover reveal as a
+    /// synthetic drag — the "laggy" reveal and the icon "moving itself" in
+    /// #39. A live indicator anywhere in its zone is right where it belongs.
+    private var zoneOnlyPlacements: Set<ItemID> = []
+    func queuePlacement(_ id: ItemID, zoneOnly: Bool = false) {
+        ledger.queue(id)
+        if zoneOnly { zoneOnlyPlacements.insert(id) } else { zoneOnlyPlacements.remove(id) }
+    }
     func queuePlacements(_ ids: some Sequence<ItemID>) { ledger.queue(ids) }
-    func dropPlacement(_ id: ItemID) { ledger.dequeue(id) }
+    func dropPlacement(_ id: ItemID) {
+        ledger.dequeue(id)
+        zoneOnlyPlacements.remove(id)
+    }
+
+    /// True when `id` sits on its section's side of the chevron on the
+    /// primary band (nil frames read as "not in zone").
+    private func isInZone(_ id: ItemID, section: PelmetCore.Section, in snap: EngineSnapshot) -> Bool {
+        guard let appState,
+              let chevron = appState.pelmetChevronItem(in: snap)?.frame,
+              MenuBarGeometry.isInBand(chevron)
+        else { return false }
+        let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        guard let frame = Self.liveItem(for: id, in: snap.items, matchingFrame: {
+            PlacementGeometry.isPrimary($0, screenMaxX: primaryMaxX)
+        })?.frame else { return false }
+        return section == .visible ? frame.minX > chevron.midX : frame.maxX < chevron.midX
+    }
 
     /// Called on every reveal settle: place pending newcomers whose section
     /// is now measurable. Items meanwhile moved by the user (editor drop
@@ -127,6 +153,11 @@ final class PlacementController {
                 // a deliberate reveal — a reveal-settle walk grabbed the
                 // cursor mid-hover (2026-09-06).
                 if id == AppState.chevronItemID { continue }
+                if zoneOnlyPlacements.remove(id) != nil,
+                   isInZone(id, section: section, in: await engine.snapshot()) {
+                    PelmetLog.log("place: \(id.rawValue) in its zone — not dragged (indicator)")
+                    continue
+                }
                 guard section == .visible
                     || appState.revealedSectionsForExtras.contains(section) else {
                     ledger.queue(id)
@@ -232,6 +263,8 @@ final class PlacementController {
         let chevronMinX: CGFloat
         let misplaced: [ItemID]
         let measuredCount: Int
+        /// Items the native « holds (`PlacementGeometry.overflowTrappedCount`).
+        let trappedCount: Int
     }
 
     private func readDrift(_ snap: EngineSnapshot) -> DriftReading? {
@@ -254,15 +287,21 @@ final class PlacementController {
             items: measured, chevronMinX: chevron.minX,
             model: model, pelmetBundleID: PelmetBundle.mainID
         )
+        // The camera/mic indicator is zone-only (see `zoneOnlyPlacements`):
+        // its slot within the section is never worth a drag.
         let ownOutOfOrder = OrderDrift.ownItemsOutOfOrder(
             items: measured, model: model, pelmetBundleID: PelmetBundle.mainID
-        ).filter { !misplaced.contains($0) }
+        ).filter { !misplaced.contains($0) && !$0.rawValue.hasSuffix("::Pelmet.CameraMic") }
         return DriftReading(
             chevronMinX: chevron.minX,
             misplaced: misplaced + ownOutOfOrder,
-            measuredCount: measured.filter { $0.minX != nil }.count
+            measuredCount: measured.filter { $0.minX != nil }.count,
+            trappedCount: PlacementGeometry.overflowTrappedCount(measured.compactMap(\.minX))
         )
     }
+
+    /// Logged once per overflow episode, not per pass.
+    private var overflowPauseLogged = false
 
     /// A verdict needs two agreeing reads: a reveal that follows a conceal
     /// within the same reflow measured the chevron at 1329 and, a second
@@ -293,9 +332,22 @@ final class PlacementController {
         }
         if a.misplaced.isEmpty {
             ledger.resetDriftBudget(except: [])
-            PelmetLog.log("drift: none (chevron@\(a.chevronMinX), \(a.measuredCount) measured)")
+            overflowPauseLogged = false
+            PelmetLog.log("drift: none (chevron@\(a.chevronMinX), \(a.measuredCount) measured\(a.trappedCount > 0 ? ", \(a.trappedCount) trapped in «" : ""))")
             return
         }
+        // The bar overflows: the « decides who is on screen, and every
+        // correction we drag is undone by the next reflow (#42: 23 drags
+        // in 25 minutes, the icons visibly shuffling). Pause until it
+        // de-crowds; the conceal-settle rescue keeps its own budget.
+        if a.trappedCount > 0 {
+            if !overflowPauseLogged {
+                overflowPauseLogged = true
+                PelmetLog.log("drift: bar overflows (\(a.trappedCount) item(s) trapped in «) — corrections paused until it de-crowds")
+            }
+            return
+        }
+        overflowPauseLogged = false
         try? await Task.sleep(for: Self.driftConfirmDelay)
         guard !syntheticDragInFlight, !appState.isTransitioning,
               appState.currentRevealedSections.contains(.hidden) else { return }

@@ -121,15 +121,23 @@ final class ConcealGhostOverlay {
         guard let list = list ?? onScreenWindows() else { return [] }
         let me = ProcessInfo.processInfo.processIdentifier
         let barLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
+        let menuLevel = Int(CGWindowLevelForKey(.popUpMenuWindow))
         return list.compactMap { w in
-            guard let pid = w[kCGWindowOwnerPID as String] as? Int32, pid != me,
+            guard let pid = w[kCGWindowOwnerPID as String] as? Int32,
                   let id = (w[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
                   let layer = w[kCGWindowLayer as String] as? Int, layer >= barLevel,
                   let b = w[kCGWindowBounds as String] as? [String: CGFloat],
                   let x = b["X"], let y = b["Y"], let width = b["Width"], let height = b["Height"],
-                  height > bandHeight + 1, y < rect.minY + bandHeight / 2,
                   CGRect(x: x, y: y, width: width, height: height).intersects(rect)
             else { return nil }
+            // Pelmet's own windows are the covers, except a menu: the
+            // status item's context menu hangs into the band's last rows
+            // while it fades out, and a picture taken at that conceal
+            // replayed its top edge on the next hover reveal (#40).
+            if pid == me {
+                return layer >= menuLevel ? (id, "Pelmet menu") : nil
+            }
+            guard height > bandHeight + 1, y < rect.minY + bandHeight / 2 else { return nil }
             return (id, w[kCGWindowOwnerName as String] as? String ?? "pid \(pid)")
         }
     }
@@ -220,8 +228,23 @@ final class ConcealGhostOverlay {
         lastCaptureAt.map { Date().timeIntervalSince($0) < AppTiming.captureIndicatorHold } ?? false
     }
 
+    /// When the status item's context menu last closed. NSMenu fades out
+    /// for a beat after the click that dismisses it, still on screen for
+    /// the window list, and a picture taken inside that beat carried the
+    /// menu's top rows into the next hover reveal (#40). Captures wait it
+    /// out; `foreignBandWindows` leaves the menu out should one overlap.
+    static var menuClosedAt: Date?
+    static let menuFadeHold: TimeInterval = 0.5
+
     static func snapshotSet(of rect: CGRect?) async -> [BarSnapshot] {
         guard let rect, rect.width > 8 else { return [] }
+        if let closed = menuClosedAt {
+            let remaining = menuFadeHold - Date().timeIntervalSince(closed)
+            if remaining > 0 {
+                PelmetLog.log("ghost: capture waits \(Int(remaining * 1000))ms for the menu to fade")
+                try? await Task.sleep(for: .milliseconds(Int(remaining * 1000)))
+            }
+        }
         guard ScreenRecordingAccess.isGranted else {
             ScreenRecordingAccess.promptOnce()
             return []

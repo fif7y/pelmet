@@ -258,7 +258,9 @@ final class ExtrasManager {
                         try? await Task.sleep(for: AppTiming.cameraIndicatorPlaceDebounce)
                         guard let self, !Task.isCancelled,
                               self.lastCameraIndicatorVisible else { return }
-                        self.appState?.queueDynamicExtraPlacement(itemID)
+                        // Zone only: the walk to the exact slot rode the
+                        // next hover reveal as a visible drag (#39).
+                        self.appState?.queueDynamicExtraPlacement(itemID, zoneOnly: true)
                     }
                 } else if !visible, lastCameraIndicatorVisible {
                     cameraPlacementDebounce?.cancel()

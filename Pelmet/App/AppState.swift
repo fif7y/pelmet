@@ -1149,8 +1149,8 @@ final class AppState {
     /// synthetic ⌘-drag warps the pointer mid-task — same rule as the «
     /// expansion. The next reveal settle places it, riding motion the user
     /// started. Editor drops still place immediately via moveItem.
-    func queueDynamicExtraPlacement(_ id: ItemID) {
-        placement.queuePlacement(id)
+    func queueDynamicExtraPlacement(_ id: ItemID, zoneOnly: Bool = false) {
+        placement.queuePlacement(id, zoneOnly: zoneOnly)
     }
 
     /// An own item that just (re-)entered a REVEALED bar sits at the agent's

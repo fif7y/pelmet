@@ -122,6 +122,10 @@ struct PlacementGeometryTests {
         #expect(PlacementGeometry.isPhantom(f, amongOthers: [rect(1195.2), rect(900)]))
         #expect(!PlacementGeometry.isPhantom(f, amongOthers: [rect(1196), rect(900)]))
         #expect(!PlacementGeometry.isPhantom(f, amongOthers: [CGRect(x: 1195, y: 500, width: 30, height: 24)]))
+        // Trapped count: every frame that shares a minX with another one.
+        #expect(PlacementGeometry.overflowTrappedCount([909, 909.2, 950, 1005, 909.1]) == 3)
+        #expect(PlacementGeometry.overflowTrappedCount([900, 950, 1005]) == 0)
+        #expect(PlacementGeometry.overflowTrappedCount([]) == 0)
     }
 
     @Test func liftedShiftsOnlyRightNeighborsOfThirdPartyDrags() {

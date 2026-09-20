@@ -111,6 +111,20 @@ public enum PlacementGeometry {
         others.contains { abs($0.minX - frame.minX) < 0.5 && abs($0.midY - frame.midY) < 30 }
     }
 
+    /// How many measured items the native « has trapped: the bar overflows
+    /// exactly when two or more in-band frames share a minX. A 28-icon bar
+    /// on a 14" display kept seven items trapped and the drift corrector
+    /// dragged the rest back and forth every few seconds (#42) — while this
+    /// is non-zero, nothing Pelmet drags will stay put.
+    public static func overflowTrappedCount(_ minXs: [CGFloat]) -> Int {
+        var count = 0
+        for (i, x) in minXs.enumerated()
+        where minXs.enumerated().contains(where: { $0.offset != i && abs($0.element - x) < 0.5 }) {
+            count += 1
+        }
+        return count
+    }
+
     /// A neighbor frame in the "lifted" coordinate space: once the drag
     /// picks the item up the gap it leaves closes, shifting everything
     /// right of its origin left by one item width. EXCEPT for Pelmet's own

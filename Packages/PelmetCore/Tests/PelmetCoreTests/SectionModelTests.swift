@@ -138,6 +138,23 @@ import Testing
         #expect(model.knownBundles == ["com.sindresorhus.Velja"])
     }
 
+    // The screen-recording pill routed as a new app before #42; the
+    // menuextra allowlist keys (Sound) stay because the policy manages them.
+    @Test func canonicalizeDropsUnmanageableSystemHostKeys() {
+        let pill = ItemID.bundleKey(MenuBarPolicy.screenCaptureUIID)
+        let sound = ItemID(rawValue: "status:\(PelmetBundle.agentID)::com.apple.menuextra.sound")
+        let velja = ItemID.bundleKey("com.sindresorhus.Velja")
+        var model = SectionModel(
+            assignments: [pill: .hidden, sound: .hidden, velja: .hidden],
+            order: [.hidden: [pill, sound, velja]],
+            knownBundles: [MenuBarPolicy.screenCaptureUIID, "com.sindresorhus.Velja"]
+        )
+        model.canonicalize()
+        #expect(model.assignments == [sound: .hidden, velja: .hidden])
+        #expect(model.order[.hidden] == [sound, velja])
+        #expect(model.knownBundles.contains(MenuBarPolicy.screenCaptureUIID))
+    }
+
     @Test func canonicalizeIsIdempotent() {
         let old = ItemID(rawValue: "status:com.sindresorhus.Velja::Left and right arrows in a filled circle")
         let new = ItemID(rawValue: "status:com.sindresorhus.Velja::Item-0")

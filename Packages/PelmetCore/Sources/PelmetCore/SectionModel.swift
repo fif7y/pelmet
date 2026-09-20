@@ -172,6 +172,18 @@ public struct SectionModel: Codable, Equatable, Sendable {
             order[home] = list.filter { !strays.contains($0) }
         }
         knownBundles.subtract(PelmetBundle.ownIDs)
+        // A system host that once routed as a new app (the screen-recording
+        // pill before #42) left a `bundle:` key the policy can't manage:
+        // its items key by menuextra id or not at all. Drop it everywhere.
+        let hostStrays = Set(assignments.keys.filter { !MenuBarPolicy.isSectionManageable($0) })
+            .union(order.values.joined().filter { !MenuBarPolicy.isSectionManageable($0) })
+            .filter { $0.bundleID.map(MenuBarPolicy.isUnmanagedAppleBundle) == true }
+        if !hostStrays.isEmpty {
+            assignments = assignments.filter { !hostStrays.contains($0.key) }
+            for (home, list) in order {
+                order[home] = list.filter { !hostStrays.contains($0) }
+            }
+        }
     }
 
     /// Gives `key` a home: `section` (nil keeps whatever the model says) and
