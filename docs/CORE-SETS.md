@@ -1,6 +1,6 @@
 # Core plan: sets, not positions
 
-Status: design, 2026-09-20. Nothing built yet. Decision: option 1 (revealed items reappear in place) with Tidy folded into Apply.
+Status: design, 2026-09-20. Nothing built yet. Decision: option 1 (revealed items reappear in place) with Tidy folded into Apply; "Keep sections grouped" ON by default so the shipped look is unchanged.
 
 Naming rule for this work: every type, file, log prefix and UI string is Pelmet's own. Nothing seen in any other product's binaries, logs or UI is reused, including release codenames. `EngineGoldenGate.swift` becomes `AgentBarEngine.swift` as part of this plan.
 
@@ -45,7 +45,7 @@ A `Tidy` checkbox inside Apply adds one grouping step: hidden and always-hidden 
 
 **User ⌘-drags and boundaries.** The chevron and the always-hidden marker remain boundaries for the user's own ⌘-drags: an item dragged across one changes membership, read from the bar on the next snapshot. Pelmet never moves anything in response; it only records the new membership. Icons a user parks left of the chevron stay there and reveal as a group. This is the surviving half of today's adoption code (boundary crossing); the slotting half goes.
 
-**Keep sections grouped (option, off by default).** Same `ApplyPass` with `tidy`, triggered automatically whenever the roster and the physical bar disagree (new item, membership change, user drag). It runs only through the one door: pointer idle, cursor hidden, local input suppressed, never during a reveal or conceal, never while a menu is open, never while the bar overflows, bounded retries, then it gives up until the next change. With it on, the chevron is a true boundary and reveals stay grouped, at the cost of occasional contained background drags. The core stays sets; grouping is a policy on top and can be switched off without migration.
+**Keep sections grouped (option, ON by default).** Same `ApplyPass` with `tidy`, triggered automatically whenever the roster and the physical bar disagree (new item, membership change, user drag). It runs only through the one door: pointer idle, cursor hidden, local input suppressed, never during a reveal or conceal, never while a menu is open, never while the bar overflows, bounded retries, then it gives up until the next change. Scope: it relocates only icons whose physical side disagrees with their section (in practice one icon per editor drag between sections; user drags are exact by definition and new icons land on the hidden side), never re-sorts within a section (Apply only), and stops after a bounded number of attempts per change, leaving the "not in place" badge. With it on, the chevron is a true boundary, reveals stay grouped, and 0.3.0 shows no visible change on upgrade. Off = never a synthetic drag outside Apply. The core stays sets; grouping is a policy on top and can be switched either way without migration.
 
 **Live items** (camera/mic indicator, Now Playing, Timer, Focus, recording pill, AirDrop, VPN): appear where the agent puts them, `RosterRule` decides visibility, nothing moves. The collateral tracker stays (which system extras hide with which assertion), the placement side of it goes.
 
