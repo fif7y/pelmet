@@ -64,9 +64,16 @@ public enum ItemMover {
         // resets cursor visibility (and mouse association) on that flip — a
         // single pre-drag hide never survived it. Re-assert after every post;
         // SetsCursorInBackground (see DragShield) makes the re-hide stick.
-        shield.reassert()
+        // The flip lands asynchronously — when Pelmet itself was frontmost
+        // (the first drag of an Apply pass, clicked from the editor) it landed
+        // AFTER a single re-assert and the cursor read VISIBLE at 180ms; every
+        // later drag of the pass, started from the background, read hidden
+        // (log, 2026-09-20). Re-assert through the hold instead of once.
         // Hold briefly so the drag registers as a deliberate grab.
-        try? await Task.sleep(for: .milliseconds(180))
+        for _ in 0..<3 {
+            shield.reassert()
+            try? await Task.sleep(for: .milliseconds(60))
+        }
         PelmetLog.log("mover: mid-drag cursor \(DragShield.cursorVisible ? "VISIBLE" : "hidden")")
         // Ease toward the target — single-jump drags are sometimes ignored,
         // and LONG drags need finer motion for the agent to track slot
