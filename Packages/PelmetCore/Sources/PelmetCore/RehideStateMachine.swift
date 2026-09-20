@@ -15,6 +15,9 @@ public enum RevealReason: Hashable, Sendable {
     case hotkey
     case statusItem
     case settingsPreview
+    /// The user started a ⌘-drag in the bar: the hidden run is only a drop
+    /// target while it is on screen.
+    case barDrag
 }
 
 public enum RehideTrigger: Hashable, Sendable {

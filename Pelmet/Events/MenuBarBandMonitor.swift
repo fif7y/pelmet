@@ -81,6 +81,13 @@ final class MenuBarBandMonitor {
                 dragSinceAdoption = true
                 appState.pointerReturnedToBand()  // cancels any rehide countdown
                 PelmetLog.log("band: ⌘-drag started")
+                // Nothing walks icons into the hidden run any more, so the
+                // run must be on screen to be a drop target. A deliberate
+                // reveal: the countdown re-arms at the drop (below) and the
+                // band gate holds it while the pointer is still up here.
+                if !appState.isRevealed {
+                    appState.reveal([.hidden], reason: .barDrag)
+                }
             }
         case .leftMouseUp:
             guard cmdDragActive else { return }
