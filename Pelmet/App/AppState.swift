@@ -1621,6 +1621,11 @@ final class AppState {
         return immovableBundles.contains(bundle) || MenuBarPolicy.isPinnedAppleHost(bundle)
     }
 
+    /// See PlacementController.noteBounce — Apply reports through the same
+    /// budget, so a tray that swallows drags stops being retried every pass.
+    @discardableResult
+    func noteBounce(_ id: ItemID, at x: CGFloat) -> Bool { placement.noteBounce(id, at: x) }
+
     func setImmovable(_ bundle: String, _ immovable: Bool) {
         guard !PelmetBundle.ownIDs.contains(bundle),
               immovableBundles.contains(bundle) != immovable else { return }

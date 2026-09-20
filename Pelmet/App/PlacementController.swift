@@ -897,14 +897,22 @@ final class PlacementController {
         if !placed, !dragIsPelmetOwned, let bundle = id.bundleID,
            let finalX = primaryFrame(of: liveID, in: after)?.minX,
            abs(finalX - frame.minX) < 0.5 {
-            let bounce = ledger.noteBounce(id)
-            PelmetLog.log("place: \(id.rawValue) bounced both drags (x=\(finalX)) — \(bounce.count)/\(PlacementLedger.maxBounces)")
-            if bounce.immovable {
-                appState.setImmovable(bundle, true)
-                return true
-            }
+            if noteBounce(id, at: finalX) { return true }
         }
         return placed
+    }
+
+    /// A third-party item's drags both landed back where they started. Spends
+    /// one of its bounces; after the budget the bundle is marked immovable
+    /// and stays where its app put it. Shared with Apply, so a bounce on
+    /// either door counts the same. Returns true once the mark is set.
+    @discardableResult
+    func noteBounce(_ id: ItemID, at x: CGFloat) -> Bool {
+        guard let bundle = id.bundleID else { return false }
+        let bounce = ledger.noteBounce(id)
+        PelmetLog.log("place: \(id.rawValue) bounced both drags (x=\(x)) — \(bounce.count)/\(PlacementLedger.maxBounces)")
+        if bounce.immovable { appState?.setImmovable(bundle, true) }
+        return bounce.immovable
     }
 
     /// The drag clicked outside Pelmet — hand focus back to the settings

@@ -207,8 +207,22 @@ enum ApplyPass {
                 frames = primaryFrames(snap)
                 landed = inSlot(frames)
             }
-            PelmetLog.log("apply: \(move.item.rawValue) landed at x=\(frames[move.item]?.midX ?? -1) verified=\(landed)")
-            if landed { report.applied.append(move.item) } else { report.failed.append(move.item) }
+            let finalX = frames[move.item]?.midX ?? -1
+            PelmetLog.log("apply: \(move.item.rawValue) landed at x=\(finalX) verified=\(landed)")
+            if landed {
+                report.applied.append(move.item)
+                continue
+            }
+            // Both drags landed back at the start: the item swallowed them
+            // (OpenClip, 2026-09-20 18:54, two passes). Same bounce budget as
+            // placement; once marked immovable it is a bound, not a failure —
+            // the edit can clear instead of offering Retry forever.
+            if !ownItem, move.item.bundleID != nil, abs(finalX - frame.midX) < 0.5,
+               appState.noteBounce(move.item, at: finalX) {
+                report.skipped.append(.init(item: move.item, why: .pinned))
+            } else {
+                report.failed.append(move.item)
+            }
         }
         return report
     }
