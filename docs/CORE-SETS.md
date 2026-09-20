@@ -1,6 +1,6 @@
 # Core plan: sets, not positions
 
-Status: design, 2026-09-20. Nothing built yet. Decision: option 1 (revealed items reappear in place) with Tidy folded into Apply; "Keep sections grouped" ON by default so the shipped look is unchanged.
+Status: M0 spike running live since 2026-09-20 13:51 (branch `roster`, `18319e8`; `defaults write app.fif7y.Pelmet core.setsOnly -bool false` turns the old paths back on). Decision: option 1 (revealed items reappear in place) with Tidy folded into Apply; "Keep sections grouped" ON by default so the shipped look is unchanged.
 
 Naming rule for this work: every type, file, log prefix and UI string is Pelmet's own. Nothing seen in any other product's binaries, logs or UI is reused, including release codenames. `AgentBarEngine.swift` becomes `AgentBarEngine.swift` as part of this plan.
 
