@@ -111,8 +111,18 @@ public enum MovePlan {
                 weights: current.map { anchor($0) == nil ? 1 : run.count + 1 }
             )
             let staying = Set(keep.map { current[$0] })
+            // Bounds must already be where the run says when the drag
+            // happens: a kept item, or a mover placed earlier in this list
+            // (the list runs left to right). Aiming between two run
+            // neighbours that were both still out of place put Snib left of
+            // a Siri that had not moved yet — verify false, no retry
+            // (2026-09-20 18:42, three passes to settle two moves).
+            var placed = staying
             for (i, id) in run.enumerated() where !staying.contains(id) && anchor(id) == nil {
-                moves.append(Move(item: id, after: i > 0 ? run[i - 1] : nil, before: i + 1 < run.count ? run[i + 1] : nil))
+                let after = run[..<i].last(where: placed.contains)
+                let before = run[(i + 1)...].first(where: staying.contains)
+                moves.append(Move(item: id, after: after, before: before))
+                placed.insert(id)
             }
         }
         return Plan(moves: moves, skipped: skipped)

@@ -155,4 +155,23 @@ import Testing
         )
         #expect(plan.moves == [Move(item: c, after: chevron, before: v1)])
     }
+
+    @Test func boundsAreKeptItemsOrEarlierMovers() {
+        // Bar: c, a, b, d? — desired a, b, c means c moves; but with two
+        // movers each bound must already be in place when its drag runs.
+        // bar [b, c, a], desired [a, b, c]: keep one of them (say b or c),
+        // the movers' bounds are never a not-yet-moved item.
+        let plan = MovePlan.compute(
+            bar: [b, c, a, chevron],
+            edits: OrderEdits(order: [.hidden: [a, b, c]]),
+            roster: roster, chevron: chevron
+        )
+        let movers = plan.moves.map(\.item)
+        var placed = Set([b, c, a, chevron]).subtracting(movers)
+        for move in plan.moves {
+            if let after = move.after { #expect(placed.contains(after)) }
+            if let before = move.before { #expect(placed.contains(before) && !movers.contains(before)) }
+            placed.insert(move.item)
+        }
+    }
 }
