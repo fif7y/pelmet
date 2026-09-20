@@ -10,14 +10,14 @@ import SwiftUI
 
 /// Sits on the pane's title row (the settings shell places it). Sets core
 /// (docs/CORE-SETS.md M1): the editor is a drawing; this is the one door
-/// through which the bar moves. Shows the pending move count, Discard
-/// beside it, and the Tidy checkbox that adds the grouping step.
+/// through which the bar moves. Shows the pending move count (drawn edits
+/// plus icons on the wrong side of the chevron) and Discard beside it.
 struct ApplyBarButton: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
         @Bindable var appState = appState
-        let pending = !appState.settings.orderEdits.isEmpty
+        let pending = appState.applyPending
         let failed = appState.applyReport.map { !$0.failed.isEmpty } ?? false
         let count = appState.pendingMoveCount
         HStack(spacing: 10) {
@@ -34,13 +34,7 @@ struct ApplyBarButton: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
             }
-            Toggle("Tidy", isOn: $appState.settings.orderEdits.tidy)
-                .toggleStyle(.checkbox)
-                .font(.callout)
-                .disabled(appState.applying)
-                .onChange(of: appState.settings.orderEdits.tidy) { appState.settings.save() }
-                .help("Also group the bar: hidden icons left of the chevron in their editor order, visible ones right of it")
-            if pending, !appState.applying {
+            if !appState.settings.orderEdits.isEmpty, !appState.applying {
                 Button("Discard") { appState.discardOrderEdits() }
                     .font(.callout)
                     .help("Forget the pending order changes; the editor shows the bar as it is")
@@ -64,7 +58,7 @@ struct ApplyBarButton: View {
                 .font(.callout)
             }
             .disabled(appState.applying || !pending)
-            .help("Move the bar to match the editor. Each icon is dragged once with the cursor hidden; nothing moves until you press this.")
+            .help("Move the bar to match the editor: your order, and every icon on its section's side of the chevron. Each icon is dragged once with the cursor hidden; nothing moves until you press this.")
         }
     }
 }
@@ -693,7 +687,7 @@ private struct ItemTile: View {
                         .padding(2)
                         .background(Circle().fill(.background))
                         .offset(x: -4, y: -4)
-                        .help("Not in place yet — it hides with this section, but sits on the other side of the chevron until Apply with Tidy moves it")
+                        .help("Not in place yet — it hides with this section, but sits on the other side of the chevron until Apply moves it")
                 }
                 if isSystemIcon {
                     Image(systemName: "apple.logo")

@@ -25,7 +25,7 @@ struct SettingsStoreTests {
     @Test func orderEditsRoundTripAndDefault() throws {
         var settings = SettingsStore()
         let a = ItemID.bundleKey("com.a"), b = ItemID.bundleKey("com.b")
-        settings.orderEdits = OrderEdits(order: [.hidden: [b, a]], tidy: true)
+        settings.orderEdits = OrderEdits(order: [.hidden: [b, a]])
         let data = try JSONEncoder().encode(settings)
         let back = try JSONDecoder().decode(SettingsStore.self, from: data)
         #expect(back.orderEdits == settings.orderEdits)

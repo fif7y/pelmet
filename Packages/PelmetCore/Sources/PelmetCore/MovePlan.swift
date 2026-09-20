@@ -12,16 +12,12 @@ public struct OrderEdits: Codable, Equatable, Sendable {
     /// Per section, the left-to-right order the user drew (canonical keys).
     /// Sections absent here have no pending change.
     public var order: [Section: [ItemID]]
-    /// Group the bar as well: hidden and always-hidden left of the chevron
-    /// in their editor order, visible right of it.
-    public var tidy: Bool
 
-    public init(order: [Section: [ItemID]] = [:], tidy: Bool = false) {
+    public init(order: [Section: [ItemID]] = [:]) {
         self.order = order
-        self.tidy = tidy
     }
 
-    public var isEmpty: Bool { order.isEmpty && !tidy }
+    public var isEmpty: Bool { order.isEmpty }
 }
 
 /// One item to one slot: land it right of `after` (nil = left end of the
@@ -53,8 +49,11 @@ public enum MovePlan {
 
     /// `bar` is the observed primary-band order, left to right, canonical
     /// keys, only items with a frame. `pinned` are the hosts the agent
-    /// refuses to move. Within-section edits order an item only relative to
-    /// its section-mates; `tidy` orders the whole bar around the chevron.
+    /// refuses to move. The plan is always the whole bar as one run:
+    /// always-hidden, hidden, chevron, visible — edited sections in their
+    /// drawn order, the others as they sit. So an icon on the wrong side of
+    /// the chevron is a move even with no edit (folded in from the Tidy
+    /// checkbox, Gab 2026-09-20: Apply means "make the bar match the editor").
     public static func compute(
         bar: [ItemID],
         edits: OrderEdits,
@@ -81,10 +80,8 @@ public enum MovePlan {
             }
         }
 
-        // Desired sequence per run. Without tidy, each edited section is its
-        // own run over its live members; other sections are untouched. With
-        // tidy the whole bar is one run: concealable sections left of the
-        // chevron in editor order (edited or current), visible right of it.
+        // Desired sequence: concealable sections left of the chevron in
+        // editor order (drawn or current), visible right of it.
         func desired(_ section: Section) -> [ItemID] {
             let current = bar.filter { roster.section(of: $0) == section && $0 != chevron }
             guard let drawn = edits.order[section] else { return current }
@@ -97,15 +94,10 @@ public enum MovePlan {
             // Members the editor didn't list keep their relative bar order, after the drawn ones.
             return drawnLive + current.filter { !drawnLive.contains($0) }
         }
-        var runs: [[ItemID]] = []
-        if edits.tidy {
-            var run = desired(.alwaysHidden) + desired(.hidden)
-            if let chevron, live.contains(chevron) { run.append(chevron) }
-            run += desired(.visible)
-            runs = [run]
-        } else {
-            runs = edits.order.keys.sorted { $0.rawValue < $1.rawValue }.map(desired)
-        }
+        var run = desired(.alwaysHidden) + desired(.hidden)
+        if let chevron, live.contains(chevron) { run.append(chevron) }
+        run += desired(.visible)
+        let runs = [run]
 
         var moves: [Move] = []
         for run in runs {

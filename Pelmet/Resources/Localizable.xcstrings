@@ -1567,64 +1567,6 @@
         }
       }
     },
-    "Also group the bar: hidden icons left of the chevron in their editor order, visible ones right of it": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Leiste zusätzlich gruppieren: ausgeblendete Symbole links vom Chevron in Editor-Reihenfolge, sichtbare rechts davon"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupar también la barra: iconos ocultos a la izquierda del chevrón en el orden del editor, visibles a la derecha"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Regrouper aussi la barre : icônes masquées à gauche du chevron dans l’ordre de l’éditeur, visibles à droite"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Raggruppa anche la barra: icone nascoste a sinistra del chevron nell’ordine dell’editor, visibili a destra"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バーもグループ化：非表示アイコンはシェブロンの左にエディタの順で、表示アイコンは右に"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "막대도 그룹화: 숨긴 아이콘은 편집기 순서대로 셰브런 왼쪽에, 보이는 아이콘은 오른쪽에"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupar também a barra: ícones ocultos à esquerda do chevron na ordem do editor, visíveis à direita"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Также сгруппировать строку: скрытые значки слева от шеврона в порядке редактора, видимые справа"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同时分组菜单栏：隐藏图标按编辑器顺序放在箭头左侧，可见图标放在右侧"
-          }
-        }
-      }
-    },
     "Always": {
       "localizations": {
         "de": {
@@ -7831,60 +7773,60 @@
         }
       }
     },
-    "Move the bar to match the editor. Each icon is dragged once with the cursor hidden; nothing moves until you press this.": {
+    "Move the bar to match the editor: your order, and every icon on its section's side of the chevron. Each icon is dragged once with the cursor hidden; nothing moves until you press this.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Leiste an den Editor angleichen. Jedes Symbol wird einmal bei verstecktem Cursor gezogen; nichts bewegt sich, bevor du hier klickst."
+            "value": "Leiste an den Editor angleichen: deine Reihenfolge, und jedes Symbol auf der Seite des Chevrons, die seiner Sektion entspricht. Jedes Symbol wird einmal bei verstecktem Cursor gezogen; nichts bewegt sich, bevor du hier klickst."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajustar la barra al editor. Cada icono se arrastra una vez con el cursor oculto; nada se mueve hasta que pulses aquí."
+            "value": "Ajustar la barra al editor: tu orden, y cada icono en el lado del chevrón que corresponde a su sección. Cada icono se arrastra una vez con el cursor oculto; nada se mueve hasta que pulses aquí."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aligner la barre sur l’éditeur. Chaque icône est glissée une fois, curseur masqué ; rien ne bouge avant ce clic."
+            "value": "Aligner la barre sur l’éditeur : votre ordre, et chaque icône du côté du chevron qui correspond à sa section. Chaque icône est glissée une fois, curseur masqué ; rien ne bouge avant ce clic."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allinea la barra all’editor. Ogni icona viene trascinata una volta con il cursore nascosto; nulla si muove finché non premi qui."
+            "value": "Allinea la barra all’editor: il tuo ordine, e ogni icona sul lato del chevron della sua sezione. Ogni icona viene trascinata una volta con il cursore nascosto; nulla si muove finché non premi qui."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バーをエディタに合わせます。各アイコンはカーソルを隠して一度だけドラッグされ、押すまで何も動きません。"
+            "value": "バーをエディタに合わせます：あなたの並び順で、各アイコンをそのセクション側のシェブロン側に置きます。各アイコンはカーソルを隠して一度だけドラッグされ、押すまで何も動きません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "막대를 편집기와 맞춥니다. 각 아이콘은 커서를 숨긴 채 한 번만 끌리며, 누르기 전에는 아무것도 움직이지 않습니다."
+            "value": "막대를 편집기와 맞춥니다: 내 순서대로, 각 아이콘을 셰브런에서 해당 섹션 쪽에 둡니다. 각 아이콘은 커서를 숨긴 채 한 번만 끌리며, 누르기 전에는 아무것도 움직이지 않습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajustar a barra ao editor. Cada ícone é arrastado uma vez com o cursor oculto; nada se move até você clicar aqui."
+            "value": "Ajustar a barra ao editor: sua ordem, e cada ícone no lado do chevron da sua seção. Cada ícone é arrastado uma vez com o cursor oculto; nada se move até você clicar aqui."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Привести строку в соответствие с редактором. Каждый значок перетаскивается один раз со скрытым курсором; ничего не двигается, пока вы не нажмёте."
+            "value": "Привести строку в соответствие с редактором: ваш порядок, и каждый значок на стороне шеврона своей секции. Каждый значок перетаскивается один раз со скрытым курсором; ничего не двигается, пока вы не нажмёте."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "让菜单栏与编辑器一致。每个图标在隐藏光标的情况下只拖动一次；按下之前不会移动任何内容。"
+            "value": "让菜单栏与编辑器一致：按你的顺序，并把每个图标放到箭头上其分区所在的一侧。每个图标在隐藏光标的情况下只拖动一次；按下之前不会移动任何内容。"
           }
         }
       }
@@ -8411,60 +8353,60 @@
         }
       }
     },
-    "Not in place yet — it hides with this section, but sits on the other side of the chevron until Apply with Tidy moves it": {
+    "Not in place yet — it hides with this section, but sits on the other side of the chevron until Apply moves it": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noch nicht an Ort und Stelle — es wird mit dieser Sektion ausgeblendet, sitzt aber auf der anderen Seite des Chevrons, bis Anwenden mit Aufräumen es verschiebt"
+            "value": "Noch nicht an Ort und Stelle — es wird mit dieser Sektion ausgeblendet, sitzt aber auf der anderen Seite des Chevrons, bis Anwenden es verschiebt"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aún no está en su sitio — se oculta con esta sección, pero queda al otro lado del chevrón hasta que Aplicar con Ordenar lo mueva"
+            "value": "Aún no está en su sitio — se oculta con esta sección, pero queda al otro lado del chevrón hasta que Aplicar lo mueva"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pas encore en place — il se masque avec cette section, mais reste de l’autre côté du chevron jusqu’à Appliquer avec Ranger"
+            "value": "Pas encore en place — il se masque avec cette section, mais reste de l’autre côté du chevron jusqu’à Appliquer"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Non ancora al suo posto — si nasconde con questa sezione, ma resta dall’altro lato del chevron finché Applica con Riordina non lo sposta"
+            "value": "Non ancora al suo posto — si nasconde con questa sezione, ma resta dall’altro lato del chevron finché Applica non lo sposta"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "まだ所定の位置にありません。このセクションと一緒に隠れますが、整理付きで適用するまでシェブロンの反対側にあります"
+            "value": "まだ所定の位置にありません。このセクションと一緒に隠れますが、適用するまでシェブロンの反対側にあります"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "아직 제자리가 아닙니다. 이 섹션과 함께 숨겨지지만 정리와 함께 적용할 때까지 셰브런 반대편에 있습니다"
+            "value": "아직 제자리가 아닙니다. 이 섹션과 함께 숨겨지지만 적용할 때까지 셰브런 반대편에 있습니다"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ainda não está no lugar — oculta com esta seção, mas fica do outro lado do chevron até Aplicar com Organizar movê-lo"
+            "value": "Ainda não está no lugar — oculta com esta seção, mas fica do outro lado do chevron até Aplicar movê-lo"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ещё не на месте — скрывается с этой секцией, но остаётся по другую сторону шеврона, пока Применить с Упорядочить его не переместит"
+            "value": "Ещё не на месте — скрывается с этой секцией, но остаётся по другую сторону шеврона, пока Применить его не переместит"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "尚未就位——它随此分区隐藏，但在使用“整理”应用之前仍位于箭头另一侧"
+            "value": "尚未就位——它随此分区隐藏，但在应用之前仍位于箭头另一侧"
           }
         }
       }
@@ -13801,64 +13743,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "然后在 %@ 的设置中关闭原图标。"
-          }
-        }
-      }
-    },
-    "Tidy": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufräumen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ordenar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ranger"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Riordina"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "정리"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Organizar"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Упорядочить"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整理"
           }
         }
       }

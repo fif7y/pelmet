@@ -41,7 +41,7 @@ What we verified before choosing this (2026-09-20, live, instrumented):
 2. Waits for the pointer to be idle (public `CGEventSource.secondsSinceLastEventType`), configurable, default 1.5 s.
 3. Hides the cursor, suppresses local input for the pass (public `CGEventSource` suppression interval), performs each `Move` as a real ⌘-drag, verifies each by AX, restores the cursor.
 4. Reports per item: applied, skipped (behind «, pinned host, item vanished), failed (user moved). Failed moves stay pending; the button offers Retry.
-A `Tidy` checkbox inside Apply adds one grouping step: hidden and always-hidden items are dragged left of the chevron in their editor order. Off by default.
+Grouping is part of the same pass (the Tidy checkbox was folded in, Gab 2026-09-20: on a grouped bar it did nothing visible, and an editor drop across sections already crossed the chevron through the drawn order): the plan is the whole bar as one run, so any icon sitting on the wrong side of the chevron is a move even with no edit, and the button counts it.
 
 **User ⌘-drags and boundaries.** The chevron and the always-hidden marker remain boundaries for the user's own ⌘-drags: an item dragged across one changes membership, read from the bar on the next snapshot. Pelmet never moves anything in response; it only records the new membership. Icons a user parks left of the chevron stay there and reveal as a group. This is the surviving half of today's adoption code (boundary crossing); the slotting half goes.
 

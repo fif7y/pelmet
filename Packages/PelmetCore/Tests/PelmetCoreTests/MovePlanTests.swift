@@ -40,17 +40,28 @@ import Testing
         #expect(plan.moves.map(\.item).contains(a) == false || plan.moves.map(\.item).contains(c) == false)
     }
 
-    @Test func withinSectionOrderIgnoresOtherSectionsBetween() {
-        // Interleaved bar: v1 sits inside the hidden run. Ordering Hidden
-        // never plans a move for v1, and neighbours are section-mates.
+    @Test func interleavedVisibleItemCrossesTheChevron() {
+        // Interleaved bar: v1 sits inside the hidden run. The plan is the
+        // whole bar, so v1 is a move to its side even with no edit for
+        // Visible; the hidden edit orders a and b with section-mate bounds.
         let plan = MovePlan.compute(
             bar: [b, v1, a, chevron, v2],
             edits: OrderEdits(order: [.hidden: [a, b]]),
             roster: roster, chevron: chevron
         )
-        #expect(plan.moves.map(\.item) == [a] || plan.moves.map(\.item) == [b])
-        #expect(plan.moves.allSatisfy { $0.item != v1 })
-        #expect(plan.moves.first?.after == nil || plan.moves.first?.before == nil)
+        #expect(plan.moves.contains(Move(item: v1, after: chevron, before: v2)))
+        let hiddenMoves = plan.moves.filter { $0.item != v1 }
+        #expect(hiddenMoves.map(\.item) == [a] || hiddenMoves.map(\.item) == [b])
+        #expect(hiddenMoves.first?.after == nil || hiddenMoves.first?.before == chevron)
+    }
+
+    @Test func groupingAloneIsAMoveWithNoEdit() {
+        // No drawing at all: an icon on the wrong side of the chevron still
+        // counts (Apply lights up), a grouped bar plans nothing.
+        let misplaced = MovePlan.compute(bar: [a, v1, b, chevron, v2], edits: OrderEdits(), roster: roster, chevron: chevron)
+        #expect(misplaced.moves == [Move(item: v1, after: chevron, before: v2)])
+        let grouped = MovePlan.compute(bar: [d, a, b, chevron, v1, v2], edits: OrderEdits(), roster: roster, chevron: chevron)
+        #expect(grouped.moves.isEmpty)
     }
 
     @Test func unlistedMembersFollowTheDrawnOnes() {
@@ -86,7 +97,7 @@ import Testing
         // (always-hidden first, then Hidden in bar order) and visible [v1, v2].
         let plan = MovePlan.compute(
             bar: [b, v1, c, chevron, a, v2, d],
-            edits: OrderEdits(tidy: true),
+            edits: OrderEdits(),
             roster: roster, chevron: chevron
         )
         let moved = Set(plan.moves.map(\.item))
@@ -102,7 +113,7 @@ import Testing
     @Test func tidyUsesTheDrawnOrderForEditedSections() {
         let plan = MovePlan.compute(
             bar: [a, b, chevron, v1],
-            edits: OrderEdits(order: [.hidden: [b, a]], tidy: true),
+            edits: OrderEdits(order: [.hidden: [b, a]]),
             roster: roster, chevron: chevron
         )
         #expect(plan.moves == [Move(item: b, after: nil, before: a)] || plan.moves == [Move(item: a, after: b, before: chevron)])
@@ -128,7 +139,7 @@ import Testing
         )
         #expect(Set(plan.moves.map(\.item)) == [a, b])
         #expect(plan.moves.contains(Move(item: a, after: nil, before: host)))
-        #expect(plan.moves.contains(Move(item: b, after: host, before: nil)))
+        #expect(plan.moves.contains(Move(item: b, after: host, before: chevron)))
         #expect(plan.skipped.contains { $0.0 == host && $0.1 == .pinned })
     }
 
@@ -139,7 +150,7 @@ import Testing
         roster.assign(c, to: .visible)
         let plan = MovePlan.compute(
             bar: [d, a, b, c, chevron, v1],
-            edits: OrderEdits(order: [.hidden: [c, a, b], .visible: [c, v1]], tidy: true),
+            edits: OrderEdits(order: [.hidden: [c, a, b], .visible: [c, v1]]),
             roster: roster, chevron: chevron
         )
         #expect(plan.moves == [Move(item: c, after: chevron, before: v1)])

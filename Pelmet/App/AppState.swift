@@ -1140,8 +1140,7 @@ final class AppState {
         settings.sectionModel = model
         // Sets core: the drop is a drawing, the bar moves at Apply. A
         // between-section drop changes membership now and the destination's
-        // drawn order is what Apply will lay down (with Tidy, across the
-        // chevron too).
+        // drawn order is what Apply will lay down, across the chevron too.
         if CoreMode.setsOnly {
             // The key leaves every other section's edit too: a stale entry
             // put Siri in two tidy runs at once and MovePlan trapped on the
@@ -1255,18 +1254,23 @@ final class AppState {
     private(set) var applying = false
     private(set) var applyReport: ApplyReport?
 
-    /// Moves the current edits would need on the bar as it stands (0 with
-    /// nothing pending or nothing on screen to move).
+    /// Moves the bar needs to match the editor as it stands: drawn edits
+    /// plus any icon on the wrong side of the chevron (0 with nothing on
+    /// screen to move).
     var pendingMoveCount: Int {
-        guard !settings.orderEdits.isEmpty, let snapshot else { return 0 }
+        guard let snapshot else { return 0 }
         return ApplyPass.plan(for: self, snapshot: snapshot).moves.count
     }
+
+    /// Apply has something to do: a drawing not yet applied, or the bar
+    /// disagreeing with the sections.
+    var applyPending: Bool { !settings.orderEdits.isEmpty || pendingMoveCount > 0 }
 
     /// The Apply button: reveal what needs measuring, plan, drag each move
     /// through the one shielded door, verify, report. Failed moves keep the
     /// edits pending so the button offers Retry.
     func applyOrderEdits() {
-        guard !applying, !settings.orderEdits.isEmpty else { return }
+        guard !applying, applyPending else { return }
         applying = true
         applyReport = nil
         PelmetLog.log("apply: starting")
@@ -1305,7 +1309,7 @@ final class AppState {
 
     /// The icon's physical side disagrees with its section (an editor drop
     /// between sections hides it at once but leaves it where it was): the
-    /// tile says so until Apply with Tidy relocates it. Needs the chevron
+    /// tile says so until Apply relocates it. Needs the chevron
     /// and the item both on screen to tell.
     func isOutOfPlace(_ id: ItemID) -> Bool {
         guard CoreMode.setsOnly, let snapshot,

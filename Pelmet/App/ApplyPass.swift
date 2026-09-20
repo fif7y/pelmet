@@ -114,13 +114,11 @@ enum ApplyPass {
     static func run(appState: AppState) async -> ApplyReport {
         let engine = appState.engine
         var report = ApplyReport()
-        let edits = appState.settings.orderEdits
         let screenMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
 
-        // Hidden items have frames only under a reveal; tidy needs every
-        // section live. Reveal everything and let the editor hold it.
-        let needsReveal = edits.tidy || edits.order.keys.contains { $0 != .visible }
-        if needsReveal, !appState.currentRevealedSections.isSuperset(of: [.hidden, .alwaysHidden]) {
+        // Hidden items have frames only under a reveal, and the plan is the
+        // whole bar. Reveal everything and let the editor hold it.
+        if !appState.currentRevealedSections.isSuperset(of: [.hidden, .alwaysHidden]) {
             appState.reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
             try? await Task.sleep(for: AppTiming.tidyRevealWait)
         }
@@ -130,7 +128,7 @@ enum ApplyPass {
         let plan = plan(for: appState, snapshot: snap)
         report.planned = plan.moves.count
         report.skipped = plan.skipped.map { ApplyReport.Skipped(item: $0.0, why: $0.1) }
-        PelmetLog.log("apply: plan \(plan.moves.count) move(s), \(plan.skipped.count) skipped\(edits.tidy ? ", tidy" : "")")
+        PelmetLog.log("apply: plan \(plan.moves.count) move(s), \(plan.skipped.count) skipped")
         for (id, why) in plan.skipped {
             PelmetLog.log("apply: skip \(id.rawValue) (\(why))")
         }
