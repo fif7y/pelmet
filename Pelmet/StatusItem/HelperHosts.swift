@@ -7,7 +7,7 @@
 //
 // Adoption: the agent defers adopting a registration made while an
 // assertion holds, so a helper's fresh items need an adoption window
-// (`EngineGoldenGate.openAdoptionWindow`) when they arrive mid-session —
+// (`AgentBarEngine.openAdoptionWindow`) when they arrive mid-session —
 // same as a relaunched third-party app. At boot the engine waits for the
 // helpers before its first converge (`waitUntilHosted`).
 

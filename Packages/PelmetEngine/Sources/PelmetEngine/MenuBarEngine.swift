@@ -1,6 +1,6 @@
 // MenuBarEngine.swift
 // The macOS-28 seam: everything above this protocol is version-agnostic.
-// One implementation exists today (EngineGoldenGate, macOS 27).
+// One implementation exists today (AgentBarEngine, macOS 27).
 
 import Foundation
 import PelmetCore

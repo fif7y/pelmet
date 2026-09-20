@@ -151,7 +151,7 @@ case "engine-test":
     // are main-queue delivered. Blocking main with a semaphore deadlocks.
     nonisolated(unsafe) var testDone = false
     Task {
-        let engine = EngineGoldenGate()
+        let engine = AgentBarEngine()
         Task {
             for await event in engine.events {
                 print("  [engine event] \(event)")

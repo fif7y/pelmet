@@ -2,7 +2,7 @@
 
 Status: design, 2026-09-20. Nothing built yet. Decision: option 1 (revealed items reappear in place) with Tidy folded into Apply; "Keep sections grouped" ON by default so the shipped look is unchanged.
 
-Naming rule for this work: every type, file, log prefix and UI string is Pelmet's own. Nothing seen in any other product's binaries, logs or UI is reused, including release codenames. `EngineGoldenGate.swift` becomes `AgentBarEngine.swift` as part of this plan.
+Naming rule for this work: every type, file, log prefix and UI string is Pelmet's own. Nothing seen in any other product's binaries, logs or UI is reused, including release codenames. `AgentBarEngine.swift` becomes `AgentBarEngine.swift` as part of this plan.
 
 ## Why
 
@@ -83,7 +83,7 @@ A `Tidy` checkbox inside Apply adds one grouping step: hidden and always-hidden 
 | Core/PlacementLedger.swift, OrderDrift.swift | 251 | delete |
 | Core/PlacementGeometry.swift | 180 | keep the neighbour math, drop trapped-count helpers |
 | Core/RehideStateMachine.swift | 254 | keep |
-| Engine/EngineGoldenGate.swift | 564 | rename `AgentBarEngine.swift`; loses steady-extras placement hooks |
+| Engine/AgentBarEngine.swift | 564 | renamed from `EngineGoldenGate.swift` (M0); loses steady-extras placement hooks |
 | Engine/ItemMover.swift | 284 | keep, used only by `ApplyPass`; add cursor hide + input suppression |
 | Engine/ConvergePlan.swift | 118 | keep (assertion allowlist from Roster) |
 | Engine/AgentPositionStore/AgentPositions/AgentPrefsWatcher.swift | 188 | keep only the own-item hint writer; delete the read side |

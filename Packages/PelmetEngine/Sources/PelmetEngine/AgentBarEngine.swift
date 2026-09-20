@@ -1,4 +1,4 @@
-// EngineGoldenGate.swift
+// AgentBarEngine.swift
 // The macOS 27 engine: converges the real menubar toward the desired
 // SectionModel using assessment-mode assertions (hide), positions-plist writes
 // (order), and AX (observe/click). One actor — every mutation is serialized,
@@ -8,7 +8,7 @@ import AppKit
 import Foundation
 import PelmetCore
 
-public actor EngineGoldenGate: MenuBarEngine {
+public actor AgentBarEngine: MenuBarEngine {
     public nonisolated let capabilities = EngineCapabilities(
         canHide: AssessmentMode.isAvailable,
         hideGranularity: .bundleID,

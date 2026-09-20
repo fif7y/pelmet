@@ -1,5 +1,5 @@
 // ConvergePlan.swift
-// The pure decision half of EngineGoldenGate.converge(): everything that can
+// The pure decision half of AgentBarEngine.converge(): everything that can
 // be computed from inputs without touching AX, the private API, or actor
 // state. The actor gathers inputs, calls `compute`, and executes the plan —
 // which is what makes the engine's brain unit-testable.

@@ -42,9 +42,9 @@ struct AnimationRecipe {
 @MainActor
 final class TransitionCoordinator {
     private weak var appState: AppState?
-    private let engine: EngineGoldenGate
+    private let engine: AgentBarEngine
 
-    init(appState: AppState, engine: EngineGoldenGate) {
+    init(appState: AppState, engine: AgentBarEngine) {
         self.appState = appState
         self.engine = engine
         backdropWatch.start()

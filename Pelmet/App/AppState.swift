@@ -9,7 +9,7 @@ import SwiftUI
 
 @Observable
 final class AppState {
-    let engine = EngineGoldenGate()
+    let engine = AgentBarEngine()
     var settings = SettingsStore.load()
     private(set) var snapshot: EngineSnapshot?
     private(set) var accessibilityGranted = AccessibilityAccess.isGranted
@@ -158,6 +158,9 @@ final class AppState {
         // title-variant twin entries left by older builds.
         settings.sectionModel.canonicalize()
         settings.save()
+        if CoreMode.setsOnly {
+            PelmetLog.log("core: sets only — membership hides, no placement path starts a drag")
+        }
     }
 
     private func applyPolicyAndStartUpdater() {
@@ -402,7 +405,9 @@ final class AppState {
         lastRelaunchQueue[bundle] = .now
         let queuedAt = Date.now
         placement.queuePlacements(keys)
-        PelmetLog.log("place: \(bundle) relaunched — queued \(keys.count) item(s) for re-slot")
+        if !CoreMode.setsOnly {
+            PelmetLog.log("place: \(bundle) relaunched — queued \(keys.count) item(s) for re-slot")
+        }
         // The relaunched item registers UNDER an active assertion and parks
         // offscreen — it never enters the bar or the AX tree on its own (so
         // no itemsChanged fires, and the editor can't see it either). Open

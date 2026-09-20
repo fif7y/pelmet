@@ -11,9 +11,9 @@ import PelmetEngine
 @MainActor
 final class PlacementController {
     private weak var appState: AppState?
-    private let engine: EngineGoldenGate
+    private let engine: AgentBarEngine
 
-    init(appState: AppState, engine: EngineGoldenGate) {
+    init(appState: AppState, engine: AgentBarEngine) {
         self.appState = appState
         self.engine = engine
     }
@@ -42,6 +42,7 @@ final class PlacementController {
     /// measure against), so callers can keep it queued for a retry.
     @discardableResult
     func physicallyPlace(_ id: ItemID, in section: PelmetCore.Section) async -> Bool {
+        guard !CoreMode.setsOnly else { return false }
         // Synthetic drags post raw CGEvents with sleeps between them — two
         // interleaved sequences corrupt each other (second mouse-down while
         // the first drag's button is logically down, targets ping-ponging).
@@ -88,10 +89,14 @@ final class PlacementController {
     /// #39. A live indicator anywhere in its zone is right where it belongs.
     private var zoneOnlyPlacements: Set<ItemID> = []
     func queuePlacement(_ id: ItemID, zoneOnly: Bool = false) {
+        guard !CoreMode.setsOnly else { return }
         ledger.queue(id)
         if zoneOnly { zoneOnlyPlacements.insert(id) } else { zoneOnlyPlacements.remove(id) }
     }
-    func queuePlacements(_ ids: some Sequence<ItemID>) { ledger.queue(ids) }
+    func queuePlacements(_ ids: some Sequence<ItemID>) {
+        guard !CoreMode.setsOnly else { return }
+        ledger.queue(ids)
+    }
     func dropPlacement(_ id: ItemID) {
         ledger.dequeue(id)
         zoneOnlyPlacements.remove(id)
@@ -324,6 +329,7 @@ final class PlacementController {
     private static let driftConfirmDelay: Duration = .milliseconds(400)
 
     func correctDrift() async {
+        guard !CoreMode.setsOnly else { return }
         guard let appState, !syntheticDragInFlight, !appState.isTransitioning,
               appState.currentRevealedSections.contains(.hidden)
         else { return }
