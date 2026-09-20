@@ -47,7 +47,14 @@ enum ApplyPass {
         let frames = primaryFrames(snap)
         let bar = barOrder(frames)
         let chevron = appState.pelmetChevronItem(in: snap)?.id.sectionKey
-        let pinned = Set(bar.filter { PlacementController.isProtectedSystemItem($0) || appState.isImmovable($0) })
+        // The trailing system cluster only pins while it IS the cluster: a
+        // system item the user hides moves like any icon (Sound drawn at the
+        // end of Hidden planned four drags around itself, 2026-09-20).
+        let roster = appState.settings.sectionModel.roster
+        let pinned = Set(bar.filter {
+            appState.isImmovable($0)
+                || (PlacementController.isProtectedSystemItem($0) && roster.section(of: $0) == .visible)
+        })
         // Anchors among Pelmet's own items: the chevron (passed separately)
         // and the separators — they are boundaries. Extras, replicas and
         // launchers drag like any icon until M2 places own items by
@@ -57,7 +64,7 @@ enum ApplyPass {
         return MovePlan.compute(
             bar: bar,
             edits: appState.settings.orderEdits,
-            roster: appState.settings.sectionModel.roster,
+            roster: roster,
             chevron: chevron,
             pinned: pinned,
             ownItems: own

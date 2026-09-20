@@ -1554,7 +1554,10 @@ final class AppState {
 
     /// The band monitor skips drag-end adoption for Pelmet's own synthetic
     /// drags — see PlacementController.syntheticDragInFlight.
-    var syntheticDragInFlight: Bool { placement.syntheticDragInFlight }
+    /// Apply's drags count too: the band monitor adopted one as a user
+    /// ⌘-drag and reconciled the hidden order from the bar mid-pass, which
+    /// snapped the editor's drawing back (Sound, 2026-09-20 16:56).
+    var syntheticDragInFlight: Bool { placement.syntheticDragInFlight || applying }
 
     /// The one write path for the engine snapshot mirror (PlacementController
     /// and engine-event handling route through here). Content-gated: every
