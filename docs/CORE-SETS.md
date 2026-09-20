@@ -43,6 +43,10 @@ What we verified before choosing this (2026-09-20, live, instrumented):
 4. Reports per item: applied, skipped (behind «, pinned host, item vanished), failed (user moved). Failed moves stay pending; the button offers Retry.
 A `Tidy` checkbox inside Apply adds one grouping step: hidden and always-hidden items are dragged left of the chevron in their editor order. Off by default.
 
+**User ⌘-drags and boundaries.** The chevron and the always-hidden marker remain boundaries for the user's own ⌘-drags: an item dragged across one changes membership, read from the bar on the next snapshot. Pelmet never moves anything in response; it only records the new membership. Icons a user parks left of the chevron stay there and reveal as a group. This is the surviving half of today's adoption code (boundary crossing); the slotting half goes.
+
+**Keep sections grouped (option, off by default).** Same `ApplyPass` with `tidy`, triggered automatically whenever the roster and the physical bar disagree (new item, membership change, user drag). It runs only through the one door: pointer idle, cursor hidden, local input suppressed, never during a reveal or conceal, never while a menu is open, never while the bar overflows, bounded retries, then it gives up until the next change. With it on, the chevron is a true boundary and reveals stay grouped, at the cost of occasional contained background drags. The core stays sets; grouping is a policy on top and can be switched off without migration.
+
 **Live items** (camera/mic indicator, Now Playing, Timer, Focus, recording pill, AirDrop, VPN): appear where the agent puts them, `RosterRule` decides visibility, nothing moves. The collateral tracker stays (which system extras hide with which assertion), the placement side of it goes.
 
 **Own items.** Registered with a preferred position derived from the roster: chevron at the roster boundary, replicas next to the system extra they replace, launchers where the user dropped them in the editor. Re-registration is the move primitive for own items. No drags.
@@ -104,6 +108,17 @@ Anything that only existed for walks: settle timers for placement, the forced sy
 - **M2 own items by registration**: chevron, replicas, launchers, helper hosts placed by preferred position. Exit: fresh boot puts every own item where the roster says without a drag.
 - **M3 deletions + cover decision**: remove the survive/delete "delete" rows, decide the reveal-animation cover by measuring the system animation (measure before building over it).
 - **M4 release 0.3.0**: migration seed, release notes, README copy for the reveal change.
+
+## Blind spots to close before M1 (2026-09-20 review)
+
+1. **Measure the in-place reveal.** Several items re-appearing across the bar means neighbours slide in several places at once. M0 exists to look at this on a full bar before committing. If it reads as busy, the answer is a short cross-fade cover, never a walk.
+2. **Own-item registration is a distance from the right edge, not "next to X".** Pelmet reads the neighbour's frame, converts to a distance, registers, and the bar can change in between; multi-display makes the distance per display. Prove it on a Developer ID build from /Applications with a full bar, and prove re-registration doesn't blink the media bars or drop the chevron's hover state.
+3. **Apply's feel.** Idle wait plus a hidden cursor can mean a few silent seconds. Visible progress and a per-item result, or people press it twice.
+4. **Upgrade expectations.** Some users chose Pelmet for the block reveal. Release notes say it up front; first launch of 0.3.0 offers "Tidy now" once, and points at "Keep sections grouped".
+5. **Separators and the helper process.** Physically they mean nothing unless grouping holds. Decide before M2: editor-only visuals, or in the bar only while "Keep sections grouped" is on. The helper process survives as an item host either way.
+6. **Order edits for hidden items can't be verified until a reveal.** Apply with Tidy reveals, drags, verifies, conceals in one pass, under the assertion so nothing else is visible.
+7. **Foreign manager detection** stays a notice, not a fight. With no background walks, coexistence is mostly harmless, but the assertion still flips.
+8. **Marketing assets** (README GIF, hero SVG, promo video) show the block reveal. Re-render for 0.3.0 or show the grouped option.
 
 ## Tests
 
