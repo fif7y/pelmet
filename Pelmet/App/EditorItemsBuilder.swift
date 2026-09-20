@@ -115,9 +115,12 @@ enum EditorItemsBuilder {
         // never half-concealed, so a frame-nil entry whose bundle has a live
         // item is an old alias, not a second icon. (Pelmet's own extras are
         // exempt — they legitimately mix live and hidden items.)
+        // Apple's item hosts are exempt too: their items hide one by one, so
+        // a concealed Sound next to a live Wi-Fi is not an alias (the tile
+        // vanished from Hidden whenever the bar was collapsed, 2026-09-20).
         let liveBundles = Set(
             snapshotItems.compactMap(\.id.bundleID)
-        ).subtracting([pelmetBundleID])
+        ).subtracting(MenuBarPolicy.identityExemptBundles(pelmetBundleID: pelmetBundleID))
         // Two frame-nil twins of one bundle (both "concealed") are one item
         // under a drifted tag plus its stale alias — the engine can't prune
         // the alias until the item is next observed live, so collapse here.
@@ -168,8 +171,12 @@ enum EditorItemsBuilder {
             let li = explicit.firstIndex(of: lhs.id.sectionKey) ?? Int.max
             let ri = explicit.firstIndex(of: rhs.id.sectionKey) ?? Int.max
             if li != ri { return li < ri }
-            return (lhs.frame?.minX ?? .greatestFiniteMagnitude)
-                < (rhs.frame?.minX ?? .greatestFiniteMagnitude)
+            let lx = lhs.frame?.minX ?? .greatestFiniteMagnitude
+            let rx = rhs.frame?.minX ?? .greatestFiniteMagnitude
+            if lx != rx { return lx < rx }
+            // Neither ordered nor on screen: a stable tiebreak, or the board
+            // reshuffles on every rebuild (dictionary order).
+            return lhs.id.rawValue < rhs.id.rawValue
         }
     }
 }

@@ -1300,8 +1300,16 @@ final class AppState {
     func discardOrderEdits() {
         guard !applying else { return }
         var model = settings.sectionModel
-        for section in settings.orderEdits.order.keys {
-            model.order[section] = nil
+        // Back to the bar's order where the bar can be read; a concealed
+        // section keeps its drawing until the next reveal reconciles it.
+        // Clearing the order outright left the board reshuffling (2026-09-20).
+        if let snapshot {
+            let frames = ApplyPass.primaryFrames(snapshot)
+            for section in settings.orderEdits.order.keys {
+                let members = editorItems(in: section).map(\.id.sectionKey)
+                guard members.allSatisfy({ frames[$0] != nil }) else { continue }
+                model.order[section] = members.sorted { frames[$0]!.minX < frames[$1]!.minX }
+            }
         }
         settings.sectionModel = model
         settings.orderEdits = OrderEdits()
