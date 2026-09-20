@@ -47,13 +47,19 @@ enum ApplyPass {
         let frames = primaryFrames(snap)
         let bar = barOrder(frames)
         let chevron = appState.pelmetChevronItem(in: snap)?.id.sectionKey
-        // The trailing system cluster only pins while it IS the cluster: a
-        // system item the user hides moves like any icon (Sound drawn at the
-        // end of Hidden planned four drags around itself, 2026-09-20).
+        // The trailing system cluster only pins while it IS the cluster:
+        // right of the chevron. A system item the user parked left of it
+        // (hidden, or just dropped into Visible in the editor) moves like
+        // any icon (Sound, 2026-09-20 16:56 and 17:00).
         let roster = appState.settings.sectionModel.roster
+        let chevronMidX = chevron.flatMap { frames[$0]?.midX }
+        func inTrailingCluster(_ id: ItemID) -> Bool {
+            guard let chevronMidX, let x = frames[id]?.midX else { return roster.section(of: id) == .visible }
+            return x > chevronMidX
+        }
         let pinned = Set(bar.filter {
             appState.isImmovable($0)
-                || (PlacementController.isProtectedSystemItem($0) && roster.section(of: $0) == .visible)
+                || (PlacementController.isProtectedSystemItem($0) && inTrailingCluster($0))
         })
         // Anchors among Pelmet's own items: the chevron (passed separately)
         // and the separators — they are boundaries. Extras, replicas and
