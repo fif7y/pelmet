@@ -34,7 +34,7 @@ What we verified before choosing this (2026-09-20, live, instrumented):
 
 **Reveal / conceal.** Assertion off / assertion on. Nothing else. A revealed item reappears where it lives, animated by the system. No drift correction, no rescues, no adoption windows, no « clicks, no zone-only rules.
 
-**Editor.** Shows the real bar order (AX read) per section. Dragging an item **between sections** changes membership and takes effect immediately. Dragging **within a section** records an `OrderEdit` and lights the Apply button. Nothing in the bar moves until Apply.
+**Editor.** Shows the real bar order (AX read) per section. Dragging an item **between sections** changes membership and takes effect immediately; the icon keeps its physical spot and is marked "not in place" until Apply or the grouped option relocates it. Dragging **within a section** records an `OrderEdit` and lights the Apply button. Nothing in the bar moves until Apply.
 
 **Apply.** One visible button, replaces Tidy bar order. Shows the pending count. Runs one `ApplyPass`:
 1. Reads the bar, builds the `MovePlan`.
@@ -115,7 +115,7 @@ Anything that only existed for walks: settle timers for placement, the forced sy
 2. **Own-item registration is a distance from the right edge, not "next to X".** Pelmet reads the neighbour's frame, converts to a distance, registers, and the bar can change in between; multi-display makes the distance per display. Prove it on a Developer ID build from /Applications with a full bar, and prove re-registration doesn't blink the media bars or drop the chevron's hover state.
 3. **Apply's feel.** Idle wait plus a hidden cursor can mean a few silent seconds. Visible progress and a per-item result, or people press it twice.
 4. **Upgrade expectations.** Some users chose Pelmet for the block reveal. Release notes say it up front; first launch of 0.3.0 offers "Tidy now" once, and points at "Keep sections grouped".
-5. **Separators and the helper process.** Physically they mean nothing unless grouping holds. Decide before M2: editor-only visuals, or in the bar only while "Keep sections grouped" is on. The helper process survives as an item host either way.
+5. **Separators stay a feature.** Chevron and always-hidden separator remain Pelmet's own items: drag boundaries for the user's ⌘-drags, right-click menu, hosted on the helpers, placed by registration. What changes is only their *exactness*: "everything left of me is hidden" holds whenever the bar is grouped (user-arranged, Tidy, or "Keep sections grouped"). The one source of disagreement is an editor drag between sections, which hides instantly but leaves the icon physically where it was. New items land at the left end of the bar (to confirm in M0), which is the hidden side, so they are grouped from the start. The editor marks a not-yet-in-place icon and Apply (or the grouped option) relocates it.
 6. **Order edits for hidden items can't be verified until a reveal.** Apply with Tidy reveals, drags, verifies, conceals in one pass, under the assertion so nothing else is visible.
 7. **Foreign manager detection** stays a notice, not a fight. With no background walks, coexistence is mostly harmless, but the assertion still flips.
 8. **Marketing assets** (README GIF, hero SVG, promo video) show the block reveal. Re-render for 0.3.0 or show the grouped option.
