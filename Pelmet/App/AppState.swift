@@ -1854,7 +1854,16 @@ final class AppState {
             // A ⌘-drag across the chevron can move a separator between
             // sections; its host follows the section (see `moveItem`).
             separators?.sync(with: settings.separators)
-            Task { await engine.setModel(result.model) }
+            Task {
+                await engine.setModel(result.model)
+                // M2 (docs/CORE-SETS.md): a user drag or membership change
+                // is what goes stale in the own-item order hint — the media
+                // replica re-registered inside the hidden run after two
+                // drags of it (2026-09-20 15:41) while the camera indicator,
+                // whose hint was fresh, came back at its slot. Reseed now so
+                // the next fresh registration lands where the bar says.
+                if CoreMode.setsOnly { await engine.writeOrderHint() }
+            }
         }
     }
 
