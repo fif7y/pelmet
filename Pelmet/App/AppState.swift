@@ -1143,6 +1143,12 @@ final class AppState {
         // drawn order is what Apply will lay down (with Tidy, across the
         // chevron too).
         if CoreMode.setsOnly {
+            // The key leaves every other section's edit too: a stale entry
+            // put Siri in two tidy runs at once and MovePlan trapped on the
+            // duplicate key (crash 2026-09-20 17:29).
+            for edited in settings.orderEdits.order.keys where edited != section {
+                settings.orderEdits.order[edited]?.removeAll { $0 == key }
+            }
             settings.orderEdits.order[section] = order
             applyReport = nil
         }
@@ -1849,7 +1855,16 @@ final class AppState {
         lastAdoptionPositions = result.positions
         lastAdoptionPending = result.pendingZones
         if result.changed {
-            settings.sectionModel = result.model
+            var model = result.model
+            // Sets core: the editor's drawing outranks the bar until Apply.
+            // The periodic pass reconciled the hidden order from the bar
+            // between two drops and every tile jumped back (2026-09-20 17:28).
+            if CoreMode.setsOnly {
+                for section in settings.orderEdits.order.keys {
+                    model.order[section] = settings.sectionModel.order[section]
+                }
+            }
+            settings.sectionModel = model
             settings.save()
             // A ⌘-drag across the chevron can move a separator between
             // sections; its host follows the section (see `moveItem`).

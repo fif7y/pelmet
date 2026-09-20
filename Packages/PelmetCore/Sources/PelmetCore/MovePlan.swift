@@ -88,7 +88,12 @@ public enum MovePlan {
         func desired(_ section: Section) -> [ItemID] {
             let current = bar.filter { roster.section(of: $0) == section && $0 != chevron }
             guard let drawn = edits.order[section] else { return current }
-            let drawnLive = drawn.filter(live.contains)
+            // A drawn entry that left the section (or was drawn twice)
+            // must not survive into the run: it would sit in two runs.
+            var seen = Set<ItemID>()
+            let drawnLive = drawn.filter {
+                live.contains($0) && roster.section(of: $0) == section && $0 != chevron && seen.insert($0).inserted
+            }
             // Members the editor didn't list keep their relative bar order, after the drawn ones.
             return drawnLive + current.filter { !drawnLive.contains($0) }
         }
@@ -106,7 +111,7 @@ public enum MovePlan {
         for run in runs {
             // The current bar order restricted to this run's members.
             let current = bar.filter(run.contains)
-            let index = Dictionary(uniqueKeysWithValues: run.enumerated().map { ($1, $0) })
+            let index = Dictionary(run.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
             // Heaviest subsequence already in desired order stays; anchors
             // outweigh everything else so they are always part of it.
             let keep = heaviestIncreasing(

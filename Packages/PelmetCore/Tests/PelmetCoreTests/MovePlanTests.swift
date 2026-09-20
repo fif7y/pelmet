@@ -131,4 +131,17 @@ import Testing
         #expect(plan.moves.contains(Move(item: b, after: host, before: nil)))
         #expect(plan.skipped.contains { $0.0 == host && $0.1 == .pinned })
     }
+
+    @Test func staleEntryInAnotherSectionDoesNotDuplicateTheRun() {
+        // c was drawn in hidden, then moved to visible: the hidden edit still
+        // lists it. Tidy must plan one run without c twice (this trapped).
+        var roster = roster
+        roster.assign(c, to: .visible)
+        let plan = MovePlan.compute(
+            bar: [d, a, b, c, chevron, v1],
+            edits: OrderEdits(order: [.hidden: [c, a, b], .visible: [c, v1]], tidy: true),
+            roster: roster, chevron: chevron
+        )
+        #expect(plan.moves == [Move(item: c, after: chevron, before: v1)])
+    }
 }
