@@ -486,12 +486,14 @@ final class MenuBarBandMonitor {
     }
 
     /// The reveal triggers (hover dwell, empty-area click) work on the
-    /// strip left of the chevron only — the middle of the screen to
-    /// Pelmet's icon, where the hidden icons land. The icon itself and
-    /// everything right of it — the visible section, the system items,
-    /// Control Center, the clock — is a place the user goes for its own
-    /// sake (Gab, 2026-09-19); the icon's click toggles through its own
-    /// button. With the chevron switched off the bound is the visible
+    /// strip up to and including the chevron — the middle of the screen to
+    /// Pelmet's icon, where the hidden icons land. Everything right of the
+    /// icon — the visible section, the system items, Control Center, the
+    /// clock — is a place the user goes for its own sake (Gab, 2026-09-19);
+    /// the icon's click toggles through its own button. The icon was left
+    /// out of the hover zone at first; with the chevron on, a hover that
+    /// stops on the icon itself and reveals nothing read as broken (Gab,
+    /// 2026-09-20). With the chevron switched off the bound is the visible
     /// section's leftmost live icon, and with nothing in Visible either it
     /// falls back to the pinned pair.
     private func isPastRevealTriggerZone(_ point: NSPoint, on screen: NSScreen) -> Bool {
@@ -500,7 +502,7 @@ final class MenuBarBandMonitor {
     }
 
     /// Main-display x past which the reveal triggers stop: the chevron's
-    /// left edge, else the leftmost live icon assigned to Visible.
+    /// right edge, else the leftmost live icon assigned to Visible.
     private func revealTriggerMaxX() -> CGFloat? {
         guard let appState, let items = appState.snapshot?.items,
               let primaryMaxX = NSScreen.screens.first?.frame.maxX else { return nil }
@@ -509,7 +511,7 @@ final class MenuBarBandMonitor {
             return (item.id, frame)
         }
         if let chevron = live.first(where: { MenuBarPolicy.isChevronID($0.id, pelmetBundleID: PelmetBundle.mainID) }) {
-            return chevron.frame.minX
+            return chevron.frame.maxX
         }
         let model = appState.settings.sectionModel
         return live.filter { model.section(of: $0.id) == .visible }.map(\.frame.minX).min()
