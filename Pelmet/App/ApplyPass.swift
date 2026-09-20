@@ -48,7 +48,12 @@ enum ApplyPass {
         let bar = barOrder(frames)
         let chevron = appState.pelmetChevronItem(in: snap)?.id.sectionKey
         let pinned = Set(bar.filter { PlacementController.isProtectedSystemItem($0) || appState.isImmovable($0) })
-        let own = Set(bar.filter { $0.bundleID.map(PelmetBundle.ownIDs.contains) ?? false })
+        // Anchors among Pelmet's own items: the chevron (passed separately)
+        // and the separators — they are boundaries. Extras, replicas and
+        // launchers drag like any icon until M2 places own items by
+        // registration (docs/CORE-SETS.md); a Siri edit planned nothing
+        // and logged `skip … (ownItem)` (2026-09-20 16:12).
+        let own = Set(bar.filter { $0.isPelmetSeparator })
         return MovePlan.compute(
             bar: bar,
             edits: appState.settings.orderEdits,
@@ -172,7 +177,8 @@ enum ApplyPass {
                 continue
             }
             PelmetLog.log("apply: drag \(move.item.rawValue) x=\(frame.midX) → \(targetX) (after \(move.after?.rawValue ?? "-"), before \(move.before?.rawValue ?? "-"))")
-            await ItemMover.cmdDrag(from: CGPoint(x: frame.midX, y: 12), to: CGPoint(x: targetX, y: 12))
+            let ownItem = move.item.bundleID.map(PelmetBundle.ownIDs.contains) ?? false
+            await ItemMover.cmdDrag(from: CGPoint(x: frame.midX, y: 12), to: CGPoint(x: targetX, y: 12), ownItem: ownItem)
             snap = await quiesced(engine, watching: move.item)
             appState.updateSnapshot(snap)
             frames = primaryFrames(snap)
@@ -180,7 +186,7 @@ enum ApplyPass {
             // One retry, re-aimed at the bounds as they sit after the reflow.
             if !landed, let x = frames[move.item]?.midX, let retryX = aim(frames), abs(retryX - x) > 4 {
                 PelmetLog.log("apply: retry \(move.item.rawValue) x=\(x) → \(retryX)")
-                await ItemMover.cmdDrag(from: CGPoint(x: x, y: 12), to: CGPoint(x: retryX, y: 12))
+                await ItemMover.cmdDrag(from: CGPoint(x: x, y: 12), to: CGPoint(x: retryX, y: 12), ownItem: ownItem)
                 snap = await quiesced(engine, watching: move.item)
                 appState.updateSnapshot(snap)
                 frames = primaryFrames(snap)

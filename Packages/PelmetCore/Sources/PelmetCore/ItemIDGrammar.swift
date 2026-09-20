@@ -110,7 +110,7 @@ public extension ItemID {
 
     /// A user-added separator. Section-managed like an extra, but never a
     /// placement target when it has no frame (see PlacementController).
-    var isPelmetSeparator: Bool { pelmetItem == .separator }
+    public var isPelmetSeparator: Bool { pelmetItem == .separator }
 
     /// One of Pelmet's app launchers.
     var isPelmetAppLauncher: Bool { pelmetItem == .appLauncher }
