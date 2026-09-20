@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import PelmetCore
 
@@ -17,5 +18,18 @@ struct SettingsStoreTests {
         settings.hideSystemExtras = true
         settings.extraItems = []
         #expect(settings.effectiveHideSystemExtras)
+    }
+
+    // Pending order edits survive a quit (docs/CORE-SETS.md M1), and a blob
+    // saved before the field existed decodes with none pending.
+    @Test func orderEditsRoundTripAndDefault() throws {
+        var settings = SettingsStore()
+        let a = ItemID.bundleKey("com.a"), b = ItemID.bundleKey("com.b")
+        settings.orderEdits = OrderEdits(order: [.hidden: [b, a]], tidy: true)
+        let data = try JSONEncoder().encode(settings)
+        let back = try JSONDecoder().decode(SettingsStore.self, from: data)
+        #expect(back.orderEdits == settings.orderEdits)
+        let legacy = try JSONDecoder().decode(SettingsStore.self, from: Data("{}".utf8))
+        #expect(legacy.orderEdits.isEmpty)
     }
 }

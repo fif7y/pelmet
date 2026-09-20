@@ -90,6 +90,11 @@ enum AppTiming {
     /// Physical placement: pre-measure bar settle, then bounded lookup
     /// retries for a freshly-shown item, then post-drag reflow settle.
     static let placementPreSettle: Duration = .milliseconds(450)
+    /// Apply (docs/CORE-SETS.md): the pass borrows the pointer only after
+    /// this much quiet, bounded so a restless pointer still gets the
+    /// shielded drag rather than a pass that never starts.
+    static let applyIdleGap: TimeInterval = 1.5
+    static let applyIdleMaxWait: TimeInterval = 8
     static let placementLookupRetries = 3
     static let placementLookupRetryDelay: Duration = .milliseconds(550)
     /// Post-drag read: the agent animates the drop (~300ms slide, measured

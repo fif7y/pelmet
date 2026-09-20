@@ -1138,6 +1138,14 @@ final class AppState {
         }
         model.order[section] = order
         settings.sectionModel = model
+        // Sets core: the drop is a drawing, the bar moves at Apply. A
+        // between-section drop changes membership now and the destination's
+        // drawn order is what Apply will lay down (with Tidy, across the
+        // chevron too).
+        if CoreMode.setsOnly {
+            settings.orderEdits.order[section] = order
+            applyReport = nil
+        }
         settings.save()
         // A section move is a re-host for a separator (main ↔ helper bundle);
         // `sync` is idempotent and a no-op for every other item. Without it
@@ -1234,6 +1242,73 @@ final class AppState {
     /// Contiguity is what makes hide/reveal animations uniform — an icon that
     /// toggles mid-bar displaces its neighbors and reads as sliding.
     private(set) var tidying = false
+
+    // MARK: - Apply (sets core, docs/CORE-SETS.md M1)
+
+    /// One pass at a time; the button reads these.
+    private(set) var applying = false
+    private(set) var applyReport: ApplyReport?
+
+    /// Moves the current edits would need on the bar as it stands (0 with
+    /// nothing pending or nothing on screen to move).
+    var pendingMoveCount: Int {
+        guard !settings.orderEdits.isEmpty, let snapshot else { return 0 }
+        return ApplyPass.plan(for: self, snapshot: snapshot).moves.count
+    }
+
+    /// The Apply button: reveal what needs measuring, plan, drag each move
+    /// through the one shielded door, verify, report. Failed moves keep the
+    /// edits pending so the button offers Retry.
+    func applyOrderEdits() {
+        guard !applying, !settings.orderEdits.isEmpty else { return }
+        applying = true
+        applyReport = nil
+        PelmetLog.log("apply: starting")
+        Task {
+            let report = await ApplyPass.run(appState: self)
+            PelmetLog.log("apply: done applied=\(report.applied.count) failed=\(report.failed.count) skipped=\(report.skipped.count)")
+            if report.failed.isEmpty {
+                settings.orderEdits = OrderEdits()
+                settings.save()
+                // Seed future fresh registrations with the order just laid down.
+                await engine.writeOrderHint()
+            }
+            applyReport = report
+            applying = false
+            if !settingsWindowVisible {
+                applyPointerDisplayPolicyAfterDismissal()
+            }
+        }
+    }
+
+    /// Drops the pending edits; the editor goes back to drawing the bar's
+    /// real order for those sections.
+    func discardOrderEdits() {
+        guard !applying else { return }
+        var model = settings.sectionModel
+        for section in settings.orderEdits.order.keys {
+            model.order[section] = nil
+        }
+        settings.sectionModel = model
+        settings.orderEdits = OrderEdits()
+        applyReport = nil
+        settings.save()
+        PelmetLog.log("apply: edits discarded")
+        Task { await engine.setModel(model) }
+    }
+
+    /// The icon's physical side disagrees with its section (an editor drop
+    /// between sections hides it at once but leaves it where it was): the
+    /// tile says so until Apply with Tidy relocates it. Needs the chevron
+    /// and the item both on screen to tell.
+    func isOutOfPlace(_ id: ItemID) -> Bool {
+        guard CoreMode.setsOnly, let snapshot,
+              let chevron = pelmetChevronItem(in: snapshot)?.frame else { return false }
+        let frames = ApplyPass.primaryFrames(snapshot)
+        guard let frame = frames[id.sectionKey] else { return false }
+        let wantsLeft = settings.sectionModel.section(of: id) != .visible
+        return wantsLeft ? frame.midX > chevron.midX : frame.midX < chevron.midX
+    }
 
     func tidyBar() {
         guard !tidying else { return }

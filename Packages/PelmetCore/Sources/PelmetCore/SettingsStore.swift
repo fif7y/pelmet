@@ -374,6 +374,9 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     public var extraItems: [ExtraItemSpec] = []
 
     public var sectionModel = SectionModel()
+    /// Order changes drawn in the editor and not yet applied to the bar
+    /// (docs/CORE-SETS.md M1). Cleared by Apply or Discard.
+    public var orderEdits = OrderEdits()
     public var separators: [SeparatorSpec] = []
 
     /// Behavior template + per-display overrides, keyed by display UUID string.
@@ -413,6 +416,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case notifyOnUpdates, barRightClickMenu
         case statusIconStyle
         case clockClickOpensNotificationCenter
+        case orderEdits
     }
 
     public init(from decoder: Decoder) throws {
@@ -446,6 +450,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         barRightClickMenu = field(Bool.self, .barRightClickMenu, defaults.barRightClickMenu)
         statusIconStyle = field(StatusIconStyle.self, .statusIconStyle, defaults.statusIconStyle)
         clockClickOpensNotificationCenter = field(Bool.self, .clockClickOpensNotificationCenter, defaults.clockClickOpensNotificationCenter)
+        orderEdits = field(OrderEdits.self, .orderEdits, defaults.orderEdits)
     }
 
     // MARK: - Persistence

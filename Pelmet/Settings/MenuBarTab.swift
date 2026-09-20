@@ -8,6 +8,54 @@ import PelmetCore
 import PelmetEngine
 import SwiftUI
 
+/// Sits on the pane's title row (the settings shell places it). Sets core
+/// (docs/CORE-SETS.md M1): the editor is a drawing; this is the one door
+/// through which the bar moves. Shows the pending move count, Discard
+/// beside it, and the Tidy checkbox that adds the grouping step.
+struct ApplyBarButton: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        @Bindable var appState = appState
+        let pending = !appState.settings.orderEdits.isEmpty
+        let failed = appState.applyReport.map { !$0.failed.isEmpty } ?? false
+        let count = appState.pendingMoveCount
+        HStack(spacing: 10) {
+            Toggle("Tidy", isOn: $appState.settings.orderEdits.tidy)
+                .toggleStyle(.checkbox)
+                .font(.callout)
+                .disabled(appState.applying)
+                .onChange(of: appState.settings.orderEdits.tidy) { appState.settings.save() }
+                .help("Also group the bar: hidden icons left of the chevron in their editor order, visible ones right of it")
+            if pending, !appState.applying {
+                Button("Discard") { appState.discardOrderEdits() }
+                    .font(.callout)
+                    .help("Forget the pending order changes; the editor shows the bar as it is")
+            }
+            Button {
+                appState.applyOrderEdits()
+            } label: {
+                Label {
+                    if appState.applying {
+                        Text("Applying…")
+                    } else if failed {
+                        Text("Retry")
+                    } else if count > 0 {
+                        Text("Apply (\(count))")
+                    } else {
+                        Text("Apply")
+                    }
+                } icon: {
+                    Image(systemName: failed ? "arrow.clockwise" : "wand.and.stars")
+                }
+                .font(.callout)
+            }
+            .disabled(appState.applying || !pending)
+            .help("Move the bar to match the editor. Each icon is dragged once with the cursor hidden; nothing moves until you press this.")
+        }
+    }
+}
+
 /// Sits on the pane's title row (the settings shell places it) — the one
 /// bar-wide action, out of the sections' way.
 struct TidyBarButton: View {
@@ -624,6 +672,15 @@ private struct ItemTile: View {
                         .background(Circle().fill(.background))
                         .offset(x: 4, y: -4)
                         .help("Icons from the same app hide together")
+                }
+                if appState.isOutOfPlace(item.id) {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .padding(2)
+                        .background(Circle().fill(.background))
+                        .offset(x: -4, y: -4)
+                        .help("Not in place yet — it hides with this section, but sits on the other side of the chevron until Apply with Tidy moves it")
                 }
                 if isSystemIcon {
                     Image(systemName: "apple.logo")
