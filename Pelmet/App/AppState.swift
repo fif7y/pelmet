@@ -37,6 +37,7 @@ final class AppState {
     /// it) — the General row says so beside the recorder.
     private(set) var hotkeyConflict = false
     private(set) var settingsHotkeyConflict = false
+    private(set) var notificationCenterHotkeyConflict = false
 
     var settingsWindowVisible = false {
         didSet {
@@ -246,12 +247,15 @@ final class AppState {
             switch slot {
             case .toggle: self?.toggle(reason: .hotkey)
             case .settings: self?.openSettings()
+            case .notificationCenter: self?.openNotificationCenter()
             }
         }
         hotkeyConflict = !hotkey.register(settings.hotkey, slot: .toggle)
         settingsHotkeyConflict = !hotkey.register(settings.settingsHotkey, slot: .settings)
+        notificationCenterHotkeyConflict = !hotkey.register(activeNotificationCenterHotkey, slot: .notificationCenter)
         registeredHotkey = settings.hotkey
         registeredSettingsHotkey = settings.settingsHotkey
+        registeredNotificationCenterHotkey = activeNotificationCenterHotkey
         self.hotkey = hotkey
 
         // A relaunched app's status item is a FRESH registration made under
@@ -710,6 +714,11 @@ final class AppState {
     private var settingsApplyWork: Task<Void, Never>?
     private var registeredHotkey: HotkeySpec?
     private var registeredSettingsHotkey: HotkeySpec?
+    private var registeredNotificationCenterHotkey: HotkeySpec?
+    /// The shortcut rides on the clock relay: off with it, not on its own.
+    private var activeNotificationCenterHotkey: HotkeySpec? {
+        settings.clockClickOpensNotificationCenter ? settings.notificationCenterHotkey : nil
+    }
 
     /// Persist + apply a changed settings store. Cheap, latency-sensitive
     /// bits apply immediately; the save and the engine converge are debounced
@@ -718,6 +727,23 @@ final class AppState {
     /// Clock blink (see ClockClickRelay): cover the strip, drop the
     /// assertion, replay the swallowed click, re-acquire, lift the cover once
     /// the bar is quiet beneath it. With nothing held the click just replays.
+    /// The Notification Center shortcut (#44): the OS one is refused while
+    /// the assertion holds, whatever presses it. Runs the clock relay's
+    /// dot-zone path — AX press on the clock, the pointer never moves —
+    /// aimed at the clock's centre from the latest walk.
+    private func openNotificationCenter() {
+        guard let frame = snapshot?.items.first(where: { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") })?.frame else {
+            PelmetLog.log("clock: shortcut — no clock in the walk, nothing to press")
+            return
+        }
+        let target = CGPoint(x: frame.midX, y: frame.midY)
+        // The pointer's own place, in the clock's (top-left) space; a target
+        // it happens to sit on replays a click there instead of pressing.
+        let pointer = CGEvent(source: nil)?.location ?? CGPoint(x: -1, y: -1)
+        PelmetLog.log("clock: shortcut → press at \(Int(target.x)),\(Int(target.y))")
+        clockClicked(at: target, pointer: pointer == target ? CGPoint(x: -1, y: -1) : pointer)
+    }
+
     private func clockClicked(at point: CGPoint, pointer: CGPoint) {
         Task { @MainActor in
             // Dot zone (target ≠ where the click landed): press the clock
@@ -739,8 +765,14 @@ final class AppState {
                 var opened = false
                 for attempt in 1...2 where !opened {
                     let pressed = ClockClickRelay.press(clockElement)
-                    try? await Task.sleep(for: AppTiming.clockPressVerify)
-                    opened = ClockClickRelay.notificationCenterIsOpen()
+                    // Poll for the panel rather than sleeping the whole
+                    // verify budget: it shows well inside it, and every ms
+                    // here is picture time on the bar (#46).
+                    let verifyUntil = Date().addingTimeInterval(AppTiming.clockPressVerify)
+                    repeat {
+                        try? await Task.sleep(for: .milliseconds(30))
+                        opened = ClockClickRelay.notificationCenterIsOpen()
+                    } while !opened && Date() < verifyUntil
                     PelmetLog.log("clock: dot press \(attempt) \(pressed ? "sent" : "refused") - NC \(opened ? "open" : "not open")")
                 }
                 if !opened { ClockClickRelay.postClick(at: point, pointer: pointer) }
@@ -857,6 +889,10 @@ final class AppState {
         if settings.settingsHotkey != registeredSettingsHotkey {
             settingsHotkeyConflict = !(hotkey?.register(settings.settingsHotkey, slot: .settings) ?? true)
             registeredSettingsHotkey = settings.settingsHotkey
+        }
+        if activeNotificationCenterHotkey != registeredNotificationCenterHotkey {
+            notificationCenterHotkeyConflict = !(hotkey?.register(activeNotificationCenterHotkey, slot: .notificationCenter) ?? true)
+            registeredNotificationCenterHotkey = activeNotificationCenterHotkey
         }
         // Newly created separators and toggled-on extras get hosted wherever
         // macOS pleases (the order hint when it is fresh, the hidden side

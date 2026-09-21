@@ -8933,6 +8933,64 @@
         }
       }
     },
+    "Opens Notification Center while the icons are hidden, which the macOS shortcut can't.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet die Mitteilungszentrale bei ausgeblendeten Symbolen, was das macOS-Kürzel nicht kann."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre el centro de notificaciones con los iconos ocultos, algo que el atajo de macOS no puede hacer."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvre le centre de notifications même icônes masquées, ce que le raccourci macOS ne peut pas faire."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre il Centro Notifiche con le icone nascoste, cosa che la scorciatoia di macOS non può fare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンが隠れていても通知センターを開きます。macOSのショートカットではできません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘이 숨겨진 상태에서도 알림 센터를 엽니다. macOS 단축키로는 할 수 없습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre a Central de Notificações com os ícones ocultos, o que o atalho do macOS não consegue."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открывает Центр уведомлений при скрытых значках, чего не может системное сочетание macOS."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图标隐藏时也能打开通知中心，macOS 自带的快捷键做不到这一点。"
+          }
+        }
+      }
+    },
     "Optional": {
       "localizations": {
         "de": {

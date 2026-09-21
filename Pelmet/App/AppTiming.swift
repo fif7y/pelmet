@@ -17,10 +17,16 @@ enum AppTiming {
     /// agent this long to apply the drop first, then this long for
     /// Notification Center's panel to show before pressing again.
     static let clockPressSettle: Duration = .milliseconds(120)
-    static let clockPressVerify: Duration = .milliseconds(300)
+    static let clockPressVerify: TimeInterval = 0.3
     /// Longest the blink cover waits for the concealed items to leave the
     /// AX tree after the re-acquire before lifting anyway.
     static let clockBlinkCoverDeadline: TimeInterval = 1.5
+    /// How long the blink cover stays after the concealed items have left
+    /// the AX tree. Was `exitCoverHold` (0.42s) — the picture sat 1.0–1.5s
+    /// on every clock click (#46). Measured 2026-09-21 at 60fps: lifting
+    /// the moment they are gone shows no tail, the agent's fade is done by
+    /// then. Kept as a knob at 0.
+    static let clockBlinkLiftHold: TimeInterval = 0
     /// Adoption-window cover watchdog. The window itself runs up to
     /// `EngineTiming.adoptionWindowDeadline` (2.5s) and the converge that
     /// re-asserts follows it, so the blink's 2.5s would lift the picture

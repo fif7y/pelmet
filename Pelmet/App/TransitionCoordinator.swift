@@ -442,7 +442,7 @@ final class TransitionCoordinator {
                 try? await Task.sleep(for: .milliseconds(60))
             }
             let gone = Int(-started.timeIntervalSinceNow * 1000)
-            try? await Task.sleep(for: .seconds(AppTiming.exitCoverHold))
+            try? await Task.sleep(for: .seconds(AppTiming.clockBlinkLiftHold))
             cover.dismiss()
             PelmetLog.log("\(label): cover down — concealed gone at \(gone)ms, lifted at \(Int(-started.timeIntervalSinceNow * 1000))ms")
         }

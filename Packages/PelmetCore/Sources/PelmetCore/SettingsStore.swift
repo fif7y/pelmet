@@ -25,6 +25,10 @@ public struct HotkeySpec: Codable, Equatable, Sendable {
     public static let `default` = HotkeySpec(keyCode: 0x2B, modifiers: 0x900, display: "⌥⌘,")
     /// ⇧⌥⌘, opens Settings — the toggle combo plus shift (shiftKey = 0x200).
     public static let settingsDefault = HotkeySpec(keyCode: 0x2B, modifiers: 0xB00, display: "⇧⌥⌘,")
+    /// ⌥⌘N opens Notification Center (#44): macOS's own shortcut is refused
+    /// while a hide assertion holds, so Pelmet offers one that runs the
+    /// clock relay. kVK_ANSI_N = 0x2D.
+    public static let notificationCenterDefault = HotkeySpec(keyCode: 0x2D, modifiers: 0x900, display: "⌥⌘N")
 
     private enum CodingKeys: String, CodingKey { case keyCode, modifiers, display }
 
@@ -359,6 +363,9 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     /// left to macOS (dead while icons are hidden; the two-finger swipe from
     /// the trackpad's right edge still opens Notification Center).
     public var clockClickOpensNotificationCenter: Bool = true
+    /// Registered only while `clockClickOpensNotificationCenter` is on; the
+    /// row lives under that toggle. Never off there (⌫ restores the default).
+    public var notificationCenterHotkey: HotkeySpec? = .notificationCenterDefault
 
     /// A found update posts a user notification instead of Sparkle's window
     /// interrupting whatever the user is doing. Off: only the About pane
@@ -420,7 +427,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case displayTemplate, displayOverrides
         case notifyOnUpdates, barRightClickMenu, betaUpdates
         case statusIconStyle
-        case clockClickOpensNotificationCenter
+        case clockClickOpensNotificationCenter, notificationCenterHotkey
         case orderEdits
     }
 
@@ -456,6 +463,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         barRightClickMenu = field(Bool.self, .barRightClickMenu, defaults.barRightClickMenu)
         statusIconStyle = field(StatusIconStyle.self, .statusIconStyle, defaults.statusIconStyle)
         clockClickOpensNotificationCenter = field(Bool.self, .clockClickOpensNotificationCenter, defaults.clockClickOpensNotificationCenter)
+        notificationCenterHotkey = field(HotkeySpec?.self, .notificationCenterHotkey, defaults.notificationCenterHotkey) ?? defaults.notificationCenterHotkey
         orderEdits = field(OrderEdits.self, .orderEdits, defaults.orderEdits)
     }
 

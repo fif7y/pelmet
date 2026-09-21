@@ -845,6 +845,16 @@ private struct BehaviorPane: View {
                     : "Notification Center still opens from the clock, even with icons hidden. Pelmet handles the click; without Screen Recording the hidden icons flash by for an instant. Off, the two-finger swipe from the trackpad's right edge still works.",
                 isOn: binding(\.clockClickOpensNotificationCenter)
             )
+            if appState.settings.clockClickOpensNotificationCenter {
+                SettingRow(
+                    title: "Keyboard shortcut",
+                    caption: appState.notificationCenterHotkeyConflict
+                        ? "Held by another app — record a different one."
+                        : "Opens Notification Center while the icons are hidden, which the macOS shortcut can't."
+                ) {
+                    ShortcutRecorder(shortcut: binding(\.notificationCenterHotkey), fallback: .notificationCenterDefault)
+                }
+            }
         }
     }
 
