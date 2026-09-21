@@ -795,18 +795,9 @@ final class AppState {
         // its section, moved there at Apply, forgotten by Discard. It used
         // to go through the own-item door at the next reveal, which read
         // as the bar changing by itself (Gab, 2026-09-21).
-        // The edit starts from the bar's order, not the model's drawing:
-        // a drawing that drifted from the bar without an edit is harmless
-        // until an edit makes the plan honour it, and then "Apply (2)" for
-        // one new separator (2026-09-21). Members the bar has no frame for
-        // keep their drawn place after the framed ones.
-        let members = model.order[home] ?? currentOrder(in: home)
-        var before = members
-        if let snapshot {
-            let onBar = ApplyPass.barOrder(ApplyPass.rememberedFrames(snapshot, appState: self))
-                .filter(members.contains)
-            before = onBar + members.filter { !onBar.contains($0) }
-        }
+        // The edit starts from the bar's order (`barBasedOrder`) unless the
+        // section already has a drawing pending.
+        let before = settings.orderEdits.order[home] ?? barBasedOrder(in: home, model: model)
         var order = before
         order.removeAll { $0 == key }
         order.insert(key, at: 0)
@@ -1105,7 +1096,7 @@ final class AppState {
         // started, there is nothing to put back.
         let previous = model.section(of: id)
         for touched in Set([previous, section]) where settings.orderEdits.previousOrder[touched] == nil {
-            settings.orderEdits.previousOrder[touched] = model.order[touched] ?? currentOrder(in: touched)
+            settings.orderEdits.previousOrder[touched] = barBasedOrder(in: touched, model: model)
         }
         if previous != section {
             if let origin = settings.orderEdits.previousSection[key] {
@@ -1122,7 +1113,10 @@ final class AppState {
         for sectionKey in model.order.keys {
             model.order[sectionKey]?.removeAll { $0 == key }
         }
-        var order = model.order[section] ?? currentOrder(in: section)
+        // A drawing already pending is the user's; otherwise the drop
+        // starts from the bar's order, so it counts as one move.
+        var order = settings.orderEdits.order[section]
+            ?? barBasedOrder(in: section, model: settings.sectionModel)
         order.removeAll { $0 == key }
         if let beforeKey = beforeID?.sectionKey, let index = order.firstIndex(of: beforeKey) {
             order.insert(key, at: index)
@@ -1257,6 +1251,19 @@ final class AppState {
         return copies.first(where: {
             $0.frame.map { MenuBarGeometry.isInBand($0) && $0.midX > 0 && $0.midX < primaryMaxX } == true
         }) ?? copies.first
+    }
+
+    /// A section's members in the bar's order — the baseline every edit
+    /// starts from. A drawing that drifted from the bar without an edit is
+    /// harmless until an edit makes the plan honour it, and then one drop
+    /// read "Apply (2)" (2026-09-21). Members the bar has no frame for keep
+    /// their drawn place after the framed ones.
+    func barBasedOrder(in section: PelmetCore.Section, model: SectionModel) -> [ItemID] {
+        let members = model.order[section] ?? currentOrder(in: section)
+        guard let snapshot else { return members }
+        let onBar = ApplyPass.barOrder(ApplyPass.rememberedFrames(snapshot, appState: self))
+            .filter(members.contains)
+        return onBar + members.filter { !onBar.contains($0) }
     }
 
     /// The on-screen left-to-right order of a section right now (fallback when
