@@ -153,7 +153,7 @@ final class TransitionCoordinator {
         widestStripMinX = min(widestStripMinX ?? strip.minX, strip.minX)
     }
 
-    func performReveal(_ sections: Set<PelmetCore.Section>) {
+    func performReveal(_ sections: Set<PelmetCore.Section>, trace: PerfTrace) {
         Task {
             guard let appState else { return }
             let style = appState.settings.revealAnimation
@@ -169,6 +169,7 @@ final class TransitionCoordinator {
             var cover: ConcealGhostOverlay.GhostSet?
             var finished: ConcealGhostOverlay.GhostSet?
             let emptyBar = freshEmptyBarSnapshots()
+            let coverSource = !emptyBar.isEmpty ? "precaptured" : style != .smooth ? "live capture" : "none"
             if !emptyBar.isEmpty {
                 // The still shows the collapsed glyph; a hole over the
                 // glyph's core lets the live chevron (flipped at the swap)
@@ -218,13 +219,17 @@ final class TransitionCoordinator {
                 cover?.dismiss()
                 cover = nil
             }
+            trace.mark("cover", detail: "\(coverSource)\(finished != nil ? ", finished" : "")")
             if cover == nil {
                 // Nothing hides the agent's slide-in: own items join the
                 // layout first so it animates around them.
                 await appState.preattachOwnItems(revealing: sections)
+                trace.mark("preattach")
             }
             PelmetLog.log("effect reveal \(sections) → engine (anim=\(style.rawValue), cover=\(cover != nil), finished=\(finished != nil))")
             await engine.reveal(sections)
+            trace.mark("engine")
+            trace.note(await engine.lastConvergeTiming)
             appState.updateSnapshot(await engine.snapshot())
             if let cover {
                 // Hold until the engine is swap-quiet (under rapid hover
@@ -246,15 +251,18 @@ final class TransitionCoordinator {
                     } else {
                         cover.dismiss()
                     }
+                    trace.finish("lift")
                 }
             }
             PelmetLog.log("effect reveal settled")
             onRevealSettled?()
+            trace.mark("settled")
+            if cover == nil { trace.finish("uncovered") }
             scheduleRevealedStripPrecapture()
         }
     }
 
-    func performConceal() {
+    func performConceal(trace: PerfTrace) {
         Task {
             guard let appState else { return }
             let style = appState.settings.revealAnimation
@@ -265,6 +273,7 @@ final class TransitionCoordinator {
             // from the moment the swap lands. Nothing to capture → the
             // agent's fade shows as is.
             let stripRect = await concealStripFrames()
+            trace.mark("strip walk")
             rememberStrip(stripRect)
             // A reveal shorter than the settle precapture (~1s) never got
             // its finished picture, and every reveal after paid the
@@ -296,8 +305,11 @@ final class TransitionCoordinator {
                     }
                 }
             }
+            trace.mark("cover", detail: "\(emptyBar.isEmpty ? "none" : "precaptured")\(strip != nil ? ", strip captured live" : "")")
             PelmetLog.log("effect conceal → engine (anim=\(style.rawValue), cover=\(cover != nil), strip=\(strip != nil))")
             await engine.conceal()
+            trace.mark("engine")
+            trace.note(await engine.lastConvergeTiming)
             // The strip's move starts the moment the swap has landed — the
             // real icons fade beneath an opaque picture, nothing can bounce.
             // Before the snapshot walk: that AX pass alone is ~100ms.
@@ -314,10 +326,13 @@ final class TransitionCoordinator {
                     let remaining = liftAt.timeIntervalSinceNow
                     if remaining > 0 { try? await Task.sleep(for: .seconds(remaining)) }
                     cover.dismiss()
+                    trace.finish("lift")
                 }
             }
             PelmetLog.log("effect conceal settled")
             onConcealSettled?()
+            trace.mark("settled")
+            if cover == nil { trace.finish("uncovered") }
             scheduleRevealCoverPrecapture()
         }
     }

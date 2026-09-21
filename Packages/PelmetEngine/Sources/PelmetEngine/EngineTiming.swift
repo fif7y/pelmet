@@ -16,9 +16,9 @@ enum EngineTiming {
     static let emptyAXRetryDelay: Duration = .milliseconds(500)
     /// Ignore teardown signals inside this window after a swap (AX drop-out lag).
     static let teardownSettleWindow: TimeInterval = 3
-    /// Assertion activation completion: bounded wait + poll (observed <100ms).
+    /// Assertion activation completion: deadline for a dud completion
+    /// (observed latency a few ms; the wait resumes on the completion itself).
     static let activationDeadline: TimeInterval = 3
-    static let activationPoll: Duration = .milliseconds(50)
     /// verifyConcealment: bounded poll until concealed bundles drop out of AX.
     static let verifyWindow: TimeInterval = 3
     static let verifyPoll: Duration = .milliseconds(150)

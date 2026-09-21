@@ -269,6 +269,7 @@ final class MenuBarBandMonitor {
         hoverTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { _ in
             Task { @MainActor [weak self] in
                 guard let self, let appState = self.appState, self.pointerInHoverZone else { return }
+                PerfTrace.markTrigger("hover")
                 // Re-verify against the LIVE pointer, not just the
                 // tracked flag — the flag lags by one event-delivery
                 // latency, which is exactly a fast swipe-through. A
@@ -318,6 +319,9 @@ final class MenuBarBandMonitor {
             // item's phantom position has no element under it) and toggle a
             // reveal under the running drag (seen live during rescue).
             guard !appState.syntheticDragInFlight else { return }
+            // Stamped before the gates so the perf line counts the
+            // hit-test IPCs a click pays on its way to `dispatch`.
+            PerfTrace.markTrigger("click")
             // The window-server hit-test is the arbiter for clicks too. On
             // its own `isEmptyMenuBarArea` reads any foreign AXWindow/AXGroup
             // — and a nil hit — as empty bar, so a right-click on an app that

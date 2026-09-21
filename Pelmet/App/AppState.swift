@@ -544,6 +544,7 @@ final class AppState {
     // MARK: - Intents (UI + monitors call these)
 
     func toggle(reason: RevealReason) {
+        PerfTrace.markTrigger("\(reason)")
         // A click landing in the first moments of a hover reveal: the
         // pointer reached the chevron, the hover fired ~100ms later, and
         // the click was already on its way. The machine's rule for a
@@ -577,6 +578,7 @@ final class AppState {
     }
 
     func reveal(_ sections: Set<PelmetCore.Section>, reason: RevealReason) {
+        PerfTrace.markTrigger("\(reason)")
         dispatch(rehide.handle(.revealRequested(sections, reason)))
     }
 
@@ -1532,10 +1534,12 @@ final class AppState {
             case .none:
                 break
             case .reveal(let sections):
-                if case .transitioning(target: .reveal(_, .hover), _) = rehide.state { hoverRevealStartedAt = .now }
-                transitions.performReveal(sections)
+                var reason: RevealReason?
+                if case .transitioning(target: .reveal(_, let r), _) = rehide.state { reason = r }
+                if reason == .hover { hoverRevealStartedAt = .now }
+                transitions.performReveal(sections, trace: PerfTrace(kind: "reveal", reason: reason))
             case .conceal:
-                transitions.performConceal()
+                transitions.performConceal(trace: PerfTrace(kind: "conceal", reason: nil))
             case .armTimer(let deadline):
                 rehideDeferLogged = false
                 scheduleRehideTimer(at: deadline)

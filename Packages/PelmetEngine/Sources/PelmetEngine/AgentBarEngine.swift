@@ -8,6 +8,37 @@ import AppKit
 import Foundation
 import PelmetCore
 
+/// Phase timings of one converge, for the app's per-transition perf line.
+/// Diagnostics only — nothing reads it to decide anything.
+public struct ConvergeTiming: Sendable {
+    public enum Outcome: String, Sendable {
+        case swapped, noop, dropped, emptyWalk, unavailable, activationNil, superseded
+    }
+    /// The pre-swap AX walk (`refreshSnapshot`), ms.
+    public var walkMS = 0
+    /// `ConvergePlan.compute` plus the running-apps fetch, ms.
+    public var planMS = 0
+    /// From the activate call to the completion (or the deadline), ms.
+    public var activateMS = 0
+    public var activated = false
+    /// `previous.invalidate()` (the old assertion's XPC), ms.
+    public var invalidateMS = 0
+    /// The post-swap AX walk, ms.
+    public var afterWalkMS = 0
+    public var outcome: Outcome = .superseded
+
+    public var summary: String {
+        switch outcome {
+        case .swapped:
+            return "walk \(walkMS)ms plan \(planMS)ms activate \(activateMS)ms\(activated ? "" : " (unconfirmed)") invalidate \(invalidateMS)ms walk2 \(afterWalkMS)ms"
+        case .noop, .dropped:
+            return "walk \(walkMS)ms plan \(planMS)ms \(outcome.rawValue)"
+        default:
+            return "walk \(walkMS)ms \(outcome.rawValue)"
+        }
+    }
+}
+
 public actor AgentBarEngine: MenuBarEngine {
     public nonisolated let capabilities = EngineCapabilities(
         canHide: AssessmentMode.isAvailable,
@@ -74,6 +105,15 @@ public actor AgentBarEngine: MenuBarEngine {
     /// readable yet (launch, locked screen) — planning from it swaps in an
     /// allow-all assertion that un-hides everything for a beat.
     private var emptyAXRetriesRemaining = EngineTiming.emptyAXRetries
+
+    /// Timings of the most recent converge that ran to a decision (PerfTrace
+    /// reads it right after `reveal`/`conceal` return).
+    public private(set) var lastConvergeTiming: ConvergeTiming?
+    private var timing = ConvergeTiming()
+
+    private static func ms(since start: Date) -> Int {
+        Int((-start.timeIntervalSinceNow * 1000).rounded())
+    }
 
     public init() {
         var continuation: AsyncStream<EngineEvent>.Continuation!
@@ -228,15 +268,24 @@ public actor AgentBarEngine: MenuBarEngine {
     private func converge() async {
         convergeEpoch += 1
         let epoch = convergeEpoch
+        timing = ConvergeTiming()
+        // Stamped whatever the outcome — a superseded converge reads
+        // `superseded` rather than leaving the previous one's numbers
+        // under the next perf line.
+        defer { lastConvergeTiming = timing }
+        var phase = Date()
         let snapshot = await refreshSnapshot()
+        timing.walkMS = Self.ms(since: phase)
         guard epoch == convergeEpoch else { return }
         if snapshot.items.isEmpty {
+            timing.outcome = .emptyWalk
             deferEmptyWalkRetry()
             return
         }
         emptyAXRetriesRemaining = EngineTiming.emptyAXRetries
         // Running-app set: consulted by the stale prune below (quit apps) and
         // the allowlist build. Fetched once, up front.
+        phase = Date()
         let runningBundles = await MainActor.run {
             Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         }
@@ -254,17 +303,20 @@ public actor AgentBarEngine: MenuBarEngine {
             steadyExtras: steadyExtras,
             exemptBundles: Self.identityExemptBundles
         )
+        timing.planMS = Self.ms(since: phase)
         for (id, reason) in plan.stale {
             PelmetLog.log("converge: pruned concealed \(reason == .staleAlias ? "stale alias" : "entry for quit app") \(id.rawValue)")
         }
 
         guard AssessmentMode.isAvailable else {
+            timing.outcome = .unavailable
             if assertion != nil { invalidateAssertion() }
             eventContinuation.yield(.availabilityChanged(false))
             return
         }
 
         if plan.dropAssertion {
+            timing.outcome = .dropped
             await dropAssertionPath(epoch: epoch)
             return
         }
@@ -341,6 +393,7 @@ public actor AgentBarEngine: MenuBarEngine {
            activeConcealable == concealable,
            activeSystemAllow == Set(allowedSystem.map(\.rawValue)),
            let activeAllowlist, activeAllowlist.isSuperset(of: allowedBundles) {
+            timing.outcome = .noop
             PelmetLog.log("converge: no-op (concealable=\(concealable.count), allow=\(allowedBundles.count))")
             // The assertion stands, but the bookkeeping may not: a carried
             // id whose section is now revealed is no longer concealed, and
@@ -364,6 +417,7 @@ public actor AgentBarEngine: MenuBarEngine {
         // activation must never wedge the converge path. 3s is generous; the
         // observed completion latency is <100ms.
         let activationBox = ActivationBox()
+        let activateStarted = Date()
         let handle = AssessmentMode.activate(allowing: allowedSystem, bundleIDs: Array(allowedBundles)) { error in
             activationBox.resolve(error == nil)
         }
@@ -377,6 +431,7 @@ public actor AgentBarEngine: MenuBarEngine {
             // the next converge toward this target won't match the no-op
             // guard, so retrying stays possible. Invalidating `previous` here
             // used to kill the still-current assertion and wedge the state.
+            timing.outcome = .activationNil
             PelmetLog.log("converge: activation returned nil handle — keeping previous assertion")
             eventContinuation.yield(.convergeFailed("assertion activation failed"))
             return
@@ -386,18 +441,16 @@ public actor AgentBarEngine: MenuBarEngine {
         activeConcealable = concealable
         activeSystemAllow = Set(allowedSystem.map(\.rawValue))
         lastSwapAt = Date()
-        var activated = false
-        let deadline = Date().addingTimeInterval(EngineTiming.activationDeadline)
-        while Date() < deadline {
-            if let result = activationBox.result {
-                activated = result
-                break
-            }
-            try? await Task.sleep(for: EngineTiming.activationPoll)
-        }
+        // Resumed by the completion the moment it lands (measured 2026-09-21:
+        // the old 50ms poll made every swap read 50–55ms) or by the deadline.
+        let activated = await activationBox.wait(deadline: .seconds(EngineTiming.activationDeadline))
+        timing.activateMS = Self.ms(since: activateStarted)
+        timing.activated = activated
         // Swap order matters: activate the new state, then drop the old
         // assertion so there is no flash of everything-visible in between.
+        let invalidateStarted = Date()
         previous?.invalidate()
+        timing.invalidateMS = Self.ms(since: invalidateStarted)
         guard epoch == convergeEpoch else { return }
 
         if !activated {
@@ -416,8 +469,11 @@ public actor AgentBarEngine: MenuBarEngine {
         // holding converge (and therefore the settle report) hostage to up to
         // 3s of verify polling made every queued transition — hover right
         // after a conceal, rapid toggles — wait a visible beat before moving.
+        let afterWalkStarted = Date()
         let after = await refreshSnapshot()
+        timing.afterWalkMS = Self.ms(since: afterWalkStarted)
         guard epoch == convergeEpoch else { return }
+        timing.outcome = .swapped
         lastSnapshot = EngineSnapshot(
             items: after.items,
             concealed: plan.concealed,
@@ -460,16 +516,41 @@ public actor AgentBarEngine: MenuBarEngine {
         eventContinuation.yield(.convergeFailed("concealed items still visible after verify window"))
     }
 
-    /// Thread-safe one-shot result for the assertion completion (delivered on
-    /// an arbitrary queue by the private framework).
+    /// Thread-safe one-shot for the assertion completion (delivered on an
+    /// arbitrary queue by the private framework, possibly late, possibly
+    /// never, possibly twice). The first `resolve` wins; `wait` resumes on
+    /// it at once, or with `false` at the deadline — a dud completion that
+    /// lands after the deadline is ignored, as before.
     private final class ActivationBox: @unchecked Sendable {
         private let lock = NSLock()
         private var value: Bool?
-        var result: Bool? {
-            lock.withLock { value }
-        }
+        private var waiter: CheckedContinuation<Bool, Never>?
+
         func resolve(_ success: Bool) {
-            lock.withLock { if value == nil { value = success } }
+            lock.lock()
+            guard value == nil else { lock.unlock(); return }
+            value = success
+            let waiter = self.waiter
+            self.waiter = nil
+            lock.unlock()
+            waiter?.resume(returning: success)
+        }
+
+        func wait(deadline: Duration) async -> Bool {
+            await withCheckedContinuation { continuation in
+                lock.lock()
+                if let value {
+                    lock.unlock()
+                    continuation.resume(returning: value)
+                    return
+                }
+                waiter = continuation
+                lock.unlock()
+                Task {
+                    try? await Task.sleep(for: deadline)
+                    self.resolve(false)
+                }
+            }
         }
     }
 
