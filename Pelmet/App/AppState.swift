@@ -130,6 +130,11 @@ final class AppState {
         }
     }
 
+    /// `X.Y.Z-beta.N` builds (RELEASE.md § Beta).
+    static var isPrereleaseBuild: Bool {
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?.contains("-") ?? false
+    }
+
     private func runOneShotMigrations() {
         // One-shot: snappier hover default (0.2 → 0.1) for stores saved
         // before the default changed.
@@ -139,6 +144,19 @@ final class AppState {
             settings.save()
         }
         UserDefaults.standard.set(true, forKey: "pelmet.migratedHoverDelay01")
+
+        // A beta build turns "Get beta releases" on, once per store: whoever
+        // runs one took it from GitHub or from the channel itself, and with
+        // the toggle off the next stable would drop them out of the betas.
+        // Their own later choice stands (the seed never re-runs).
+        if Self.isPrereleaseBuild {
+            if !UserDefaults.standard.bool(forKey: "pelmet.seededBetaOptIn"), !settings.betaUpdates {
+                settings.betaUpdates = true
+                settings.save()
+                PelmetLog.log("start: beta build, Get beta releases turned on")
+            }
+            UserDefaults.standard.set(true, forKey: "pelmet.seededBetaOptIn")
+        }
 
         // Sliders are stepped now (hover 0.1–0.5, rehide 0–5): snap stores
         // saved under the old free ranges onto the grid.
