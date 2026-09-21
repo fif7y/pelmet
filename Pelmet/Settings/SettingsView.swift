@@ -27,8 +27,8 @@ enum PelmetAccent {
 
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "General"
-    case behavior = "Behavior"
     case menuBar = "Menu Bar"
+    case behavior = "Behavior"
     case displays = "Displays"
     case thanks = "Thanks"
     case about = "About"

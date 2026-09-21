@@ -200,11 +200,11 @@ struct MenuBarTab: View {
                     }
                 }
 
+                SeparatorStrip()
+
                 AppLaunchersStrip()
 
                 PelmetItemsStrip()
-
-                SeparatorStrip()
         }
         .animation(.spring(duration: 0.3), value: appState.settings.sectionModel)
         .environment(dragSession)
