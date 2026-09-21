@@ -50,9 +50,11 @@ final class TrayController {
         guard sections.isSubset(of: appState.settings.floatingBarSections) else { return false }
         // Nothing on the bar to show: the in-bar reveal handles the empty
         // case (and the editor's chip) as before.
-        let present = Set((appState.snapshot?.items ?? []).map(\.id.sectionKey))
-        guard sections.contains(where: { section in appState.editorItems(in: section).contains { present.contains($0.id.sectionKey) } })
-        else { return false }
+        guard sections.contains(where: { section in appState.editorItems(in: section).contains { presentKeys.contains($0.id.sectionKey) } })
+        else {
+            PelmetLog.log("tray: \(sections.map(\.rawValue).sorted()) has nothing on the bar — in-bar reveal")
+            return false
+        }
         switch reason {
         case .hover, .click, .doubleClick, .hotkey, .statusItem, .none: return true
         case .displayPolicy, .settingsPreview, .barDrag: return false
@@ -106,9 +108,17 @@ final class TrayController {
 
     // MARK: - Cells
 
+    /// Items on the bar right now, concealed ones included: a concealed
+    /// item drops out of the AX tree, so it is in the snapshot's concealed
+    /// set, not its item list.
+    private var presentKeys: Set<ItemID> {
+        guard let snap = appState?.snapshot else { return [] }
+        return Set(snap.items.map(\.id.sectionKey)).union(snap.concealed.map(\.sectionKey))
+    }
+
     private func buildCells() -> [TrayPanel.Cell] {
         guard let appState else { return [] }
-        let present = Set((appState.snapshot?.items ?? []).map(\.id.sectionKey))
+        let present = presentKeys
         var cells: [TrayPanel.Cell] = []
         cellSections = [:]
         for section in [PelmetCore.Section.hidden, .alwaysHidden] where sections.contains(section) {
