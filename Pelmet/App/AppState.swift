@@ -302,6 +302,12 @@ final class AppState {
             \.runningApplications, options: [.old, .new]
         ) { [weak self] _, change in
             let before = Set((change.oldValue ?? []).compactMap(\.bundleIdentifier))
+            // `newValue` is the CHANGE (the inserted or removed apps), not
+            // the array — pushed as the running set it emptied the engine's
+            // allowlist to two bundles (2026-09-21 11:38). Read the whole
+            // list.
+            let now = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+            Task { [engine = self?.engine] in await engine?.setRunningBundles(now) }
             let appeared = (change.newValue ?? [])
                 .filter { Self.isBundleMainProcess($0) }
                 .compactMap(\.bundleIdentifier)

@@ -47,6 +47,20 @@ enum MediaKey: Int32 {
 final class ExtrasManager {
     private weak var appState: AppState?
     private var items: [UUID: NSStatusItem] = [:]
+    /// What each item's button last showed, by a key of the inputs that
+    /// picked the image. Every `button.image` swap costs ~5ms of main
+    /// thread on macOS 27 (replicant snapshot + scene IPC), and the reflow
+    /// companion re-applies every item on every swap; an unchanged glyph
+    /// is skipped (2026-09-21). A button whose image is nil (fresh item)
+    /// always draws.
+    private var glyphKeys: [UUID: String] = [:]
+
+    private func setGlyph(_ item: NSStatusItem, id: UUID, key: String, make: () -> NSImage?) {
+        guard let button = item.button else { return }
+        if glyphKeys[id] == key, button.image != nil { return }
+        button.image = make()
+        glyphKeys[id] = key
+    }
     private var specs: [UUID: ExtraItemSpec] = [:]
     private var lastVisible: [UUID: Bool] = [:]
     /// Every extra allows the native ⌘-drag off the bar; AppKit reports it
@@ -120,6 +134,7 @@ final class ExtrasManager {
         for (id, item) in items where !wanted.contains(id) {
             NSStatusBar.system.removeStatusItem(item)
             items.removeValue(forKey: id)
+            glyphKeys.removeValue(forKey: id)
             specs.removeValue(forKey: id)
             lastVisible.removeValue(forKey: id)
             lastRunning.removeValue(forKey: id)
@@ -816,10 +831,11 @@ final class ExtrasManager {
     /// The active mode's own symbol (macOS names it in the log line); an
     /// outlined moon while off, the way Apple's always-shown item rests.
     private func updateFocusGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
-        guard let button = item.button else { return }
         let symbol = focusStatus?.active?.symbol ?? "moon"
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: spec.itemTitle)
-            ?? NSImage(systemSymbolName: "moon.fill", accessibilityDescription: spec.itemTitle)
+        setGlyph(item, id: spec.id, key: "focus:\(symbol)") {
+            NSImage(systemSymbolName: symbol, accessibilityDescription: spec.itemTitle)
+                ?? NSImage(systemSymbolName: "moon.fill", accessibilityDescription: spec.itemTitle)
+        }
     }
 
     private func focusChanged() {
@@ -839,10 +855,9 @@ final class ExtrasManager {
         guard let button = item.button else { return }
         let text = pelmetTimer?.display
         let done = pelmetTimer?.state == .done
-        button.image = NSImage(
-            systemSymbolName: done ? "bell.fill" : "timer",
-            accessibilityDescription: spec.itemTitle
-        )
+        setGlyph(item, id: spec.id, key: "timer:\(done)") {
+            NSImage(systemSymbolName: done ? "bell.fill" : "timer", accessibilityDescription: spec.itemTitle)
+        }
         if let text {
             let size = NSFont.menuBarFont(ofSize: 0).pointSize
             button.attributedTitle = NSAttributedString(
@@ -887,15 +902,15 @@ final class ExtrasManager {
             return
         }
         animators[spec.id]?.stop()
-        button.image = NSImage(
-            systemSymbolName: mediaPlaying ? "pause.fill" : "play.fill",
-            accessibilityDescription: spec.itemTitle
-        )
+        let playing = mediaPlaying
+        setGlyph(item, id: spec.id, key: "media:\(playing)") {
+            NSImage(systemSymbolName: playing ? "pause.fill" : "play.fill", accessibilityDescription: spec.itemTitle)
+        }
     }
 
     /// The drawn AirDrop mark.
     private func updateAirDropGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
-        item.button?.image = ExtraGlyph.airdrop
+        setGlyph(item, id: spec.id, key: "airdrop") { ExtraGlyph.airdrop }
     }
 
     /// Apple's own faces: the clock while idle, the arrows while a backup
@@ -927,6 +942,8 @@ final class ExtrasManager {
         let camera = monitor?.cameraActive ?? false
         let mic = monitor?.micActive ?? false
         let symbol = camera ? "video.fill" : (mic ? "mic.fill" : "video.fill")
+        let key = "camera:\(symbol):\(camera):\(mic)"
+        guard glyphKeys[spec.id] != key || item.button?.image == nil else { return }
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: String(localized: "Camera & Mic"))
         if camera || mic {
             image?.isTemplate = false
@@ -935,6 +952,7 @@ final class ExtrasManager {
             item.button?.contentTintColor = nil
         }
         item.button?.image = image
+        glyphKeys[spec.id] = key
     }
 
     // MARK: Actions

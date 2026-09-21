@@ -170,6 +170,14 @@ public actor AgentBarEngine: MenuBarEngine {
         await converge()
     }
 
+    /// Bundle ids of the running applications, pushed by the app from its
+    /// KVO on `NSWorkspace.runningApplications`.
+    private var runningBundles: Set<String>?
+
+    public func setRunningBundles(_ bundles: Set<String>) {
+        runningBundles = bundles
+    }
+
     public func quiesced(for interval: TimeInterval) -> Bool {
         Date().timeIntervalSince(lastSwapAt) > interval
     }
@@ -181,7 +189,7 @@ public actor AgentBarEngine: MenuBarEngine {
     /// app launches and user drags reach the mirror through the walks the
     /// app already runs for them.
     public var restSnapshot: EngineSnapshot? {
-        guard let last = lastSnapshot,
+        guard let last = lastSnapshot, !last.items.isEmpty,
               last.takenAt.timeIntervalSince(lastSwapAt) >= EngineTiming.restWalkDelay,
               Date().timeIntervalSince(last.takenAt) < EngineTiming.restSnapshotReuse
         else { return nil }
@@ -311,8 +319,17 @@ public actor AgentBarEngine: MenuBarEngine {
         // Running-app set: consulted by the stale prune below (quit apps) and
         // the allowlist build. Fetched once, up front.
         phase = Date()
-        let runningBundles = await MainActor.run {
-            Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        // The app keeps this set from its KVO on runningApplications; the
+        // main-actor hop it replaced waited on a busy main thread (plan
+        // read 1–19ms, 2026-09-21). Fetched once when nothing was pushed.
+        let runningBundles: Set<String>
+        if let known = self.runningBundles {
+            runningBundles = known
+        } else {
+            runningBundles = await MainActor.run {
+                Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+            }
+            self.runningBundles = runningBundles
         }
         guard epoch == convergeEpoch else { return }
         // The pure decision step — "existing" set (observed ∪ carried
