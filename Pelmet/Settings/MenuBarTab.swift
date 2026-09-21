@@ -25,10 +25,12 @@ struct ApplyBarButton: View {
             // say what it did, or people press it twice.
             if !appState.applying, let report = appState.applyReport {
                 Group {
-                    if report.failed.isEmpty {
+                    let notMoved = report.failed.count + report.skipped.filter { $0.why == .notOnScreen }.count
+                    if notMoved == 0 {
                         Text("Moved \(report.applied.count)")
                     } else {
-                        Text("Moved \(report.applied.count), \(report.failed.count) not moved")
+                        Text("Moved \(report.applied.count), \(notMoved) not moved")
+                            .help("Icons behind macOS's « have no place to be dragged from yet")
                     }
                 }
                 .font(.callout)

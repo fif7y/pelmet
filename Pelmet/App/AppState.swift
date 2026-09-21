@@ -1239,8 +1239,18 @@ final class AppState {
         Task {
             let report = await ApplyPass.run(appState: self)
             PelmetLog.log("apply: done applied=\(report.applied.count) failed=\(report.failed.count) skipped=\(report.skipped.count)")
-            if report.failed.isEmpty {
+            // An edit whose item the pass could not reach (behind the «)
+            // is not done either: it stays pending like a failed move.
+            let unreachable = report.skipped.filter { $0.why == .notOnScreen }.map(\.item)
+            if report.failed.isEmpty, unreachable.isEmpty {
                 settings.orderEdits = OrderEdits()
+                settings.save()
+            } else if report.failed.isEmpty {
+                var edits = settings.orderEdits
+                for (section, drawn) in edits.order where !drawn.contains(where: unreachable.contains) {
+                    edits.order.removeValue(forKey: section)
+                }
+                settings.orderEdits = edits
                 settings.save()
             }
             // Seed future fresh registrations with the order just laid down —
@@ -1270,7 +1280,13 @@ final class AppState {
         for (section, drawn) in edits.order {
             let onBar = bar.filter { roster.section(of: $0) == section }
             let drawnSet = Set(drawn), barSet = Set(onBar)
-            if onBar.filter(drawnSet.contains) == drawn.filter(barSet.contains) {
+            // A drawn item the bar cannot see (behind the «, or never
+            // framed) is exactly what the edit is about — it stays pending
+            // until a pass can reach it. Only an edit the bar already
+            // satisfies in full clears itself (Velja, Pure Paste, Unclutter,
+            // DBngin dragged in Always Hidden never lit Apply, 2026-09-21).
+            guard drawnSet.isSubset(of: barSet) else { continue }
+            if onBar.filter(drawnSet.contains) == drawn {
                 edits.order.removeValue(forKey: section)
             }
         }
