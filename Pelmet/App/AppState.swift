@@ -1810,13 +1810,12 @@ final class AppState {
 
     private func noteOverflow(in snap: EngineSnapshot) {
         let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
-        let trapped = PlacementGeometry.overflowTrappedCount(
-            snap.items.compactMap { item in
-                guard let f = item.frame, f.width > 4,
-                      PlacementGeometry.isPrimary(f, screenMaxX: primaryMaxX) else { return nil }
-                return f.minX
-            }
-        )
+        let framed = snap.items.filter { item in
+            guard let f = item.frame, f.width > 4 else { return false }
+            return PlacementGeometry.isPrimary(f, screenMaxX: primaryMaxX)
+        }
+        let trappedItems = PlacementGeometry.overflowTrapped(framed.map { $0.frame! }).map { framed[$0].id }
+        let trapped = trappedItems.count
         // Two consecutive reads to enter (a mid-attach walk at boot read two
         // items at one x for 200ms), one to leave.
         defer { lastOverflowRead = trapped }
@@ -1824,7 +1823,7 @@ final class AppState {
         guard trapped != overflowTrappedCount else { return }
         if (trapped > 0) != (overflowTrappedCount > 0) {
             PelmetLog.log(trapped > 0
-                ? "overflow: \(trapped) icon(s) behind the native «"
+                ? "overflow: \(trapped) icon(s) behind the native « — \(trappedItems.map(\.rawValue).joined(separator: ", "))"
                 : "overflow: cleared")
         }
         overflowTrappedCount = trapped

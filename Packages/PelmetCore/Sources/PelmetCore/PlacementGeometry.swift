@@ -30,16 +30,29 @@ public enum PlacementGeometry {
         MenuBarGeometry.isInBand(f) && f.midX > 0 && f.midX < screenMaxX
     }
 
-    /// How many measured items the native « has trapped: the bar overflows
-    /// exactly when two or more in-band frames share a minX (real items
-    /// never share an x; verified 2026-08-21: 8 trapped separators at
-    /// exactly one x). The editor's overflow note reads this.
-    public static func overflowTrappedCount(_ minXs: [CGFloat]) -> Int {
-        var count = 0
-        for (i, x) in minXs.enumerated()
-        where minXs.enumerated().contains(where: { $0.offset != i && abs($0.element - x) < 0.5 }) {
-            count += 1
+    /// Indices of the frames the native « holds. Trapped items report
+    /// frames that overlap each other: one shared minX (2026-08-21: 8
+    /// trapped separators at exactly one x) or staggered 5–6pt apart
+    /// (2026-09-21: Velja 1044–1081, DBngin 1049–1073, a separator
+    /// 1055–1081, the first real icon at 1087). Real neighbours overlap
+    /// by at most ~2pt of AX padding (OpenClip 1087+36 next to Herd at
+    /// 1121); phantoms by 18pt and more.
+    public static func overflowTrapped(_ frames: [CGRect]) -> Set<Int> {
+        let tolerance: CGFloat = 4
+        var trapped = Set<Int>()
+        for (i, a) in frames.enumerated() {
+            for (j, b) in frames.enumerated() where j != i
+                && min(a.maxX, b.maxX) - max(a.minX, b.minX) > tolerance {
+                trapped.insert(i)
+                break
+            }
         }
-        return count
+        return trapped
+    }
+
+    /// How many measured items the native « has trapped. The editor's
+    /// overflow note reads this.
+    public static func overflowTrappedCount(_ frames: [CGRect]) -> Int {
+        overflowTrapped(frames).count
     }
 }

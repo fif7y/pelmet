@@ -42,20 +42,22 @@ enum ApplyPass {
             if let existing = frames[key], existing.minX <= f.minX { continue }
             frames[key] = f
         }
-        // Items the native « holds all report one phantom frame at its left
-        // edge (real items never share a minX). They are not on screen:
+        // Items the native « holds report overlapping phantom frames (one
+        // shared minX, or staggered a few points apart; see
+        // `PlacementGeometry.overflowTrapped`). They are not on screen:
         // dragging them "bounced" and marked Velja immovable (20:43,
-        // 2026-09-20). Drop them here so no plan, count or verify sees them.
+        // 2026-09-20); staggered ones slipped through and every Apply
+        // aimed into the « (13:36, 2026-09-21). Drop them here so no
+        // plan, count or verify sees them.
         for key in trappedKeys(in: frames) { frames.removeValue(forKey: key) }
         return frames
     }
 
-    /// Keys whose primary-band frame is the «'s phantom (two or more share
-    /// a minX): on the bar, not on screen.
+    /// Keys whose primary-band frame overlaps another's: the «'s phantom,
+    /// on the bar but not on screen.
     private static func trappedKeys(in frames: [ItemID: CGRect]) -> Set<ItemID> {
-        Set(frames.filter { (key, f) in
-            frames.contains { $0.key != key && abs($0.value.minX - f.minX) < 0.5 }
-        }.keys)
+        let entries = Array(frames)
+        return Set(PlacementGeometry.overflowTrapped(entries.map(\.value)).map { entries[$0].key })
     }
 
     /// Items behind the « right now, by canonical key.
@@ -69,6 +71,19 @@ enum ApplyPass {
             frames[key] = f
         }
         return trappedKeys(in: frames)
+    }
+
+    /// Drawn entries the plan skipped as notOnScreen that are not on the bar
+    /// at all (the app quit, the icon left): nothing to wait for, so they
+    /// leave the report — or Apply stays lit on "1 not moved" forever
+    /// (Sconce, 13:46 2026-09-21). Icons behind the « stay: they are on the
+    /// bar and a later pass reaches them.
+    static func dropAbsentSkips(_ report: inout ApplyReport, snap: EngineSnapshot) {
+        let onBar = Set(snap.items.map { $0.id.sectionKey })
+        let absent = report.skipped.filter { $0.why == .notOnScreen && !onBar.contains($0.item.sectionKey) }
+        guard !absent.isEmpty else { return }
+        for skip in absent { PelmetLog.log("apply: \(skip.item.rawValue) is not on the bar — edit dropped") }
+        report.skipped.removeAll { skip in absent.contains { $0.item == skip.item } }
     }
 
     /// Trapped icons a drawn edit names — the only reason a pass expands
@@ -283,6 +298,7 @@ enum ApplyPass {
         // re-plans on the shifted bar, and collapses it after. Never for a
         // pass whose edits stay clear of the «.
         let trappedForPass = trappedFor(snap)
+        dropAbsentSkips(&report, snap: snap)
         guard !plan.moves.isEmpty || !trappedForPass.isEmpty else { return report }
 
         await waitForIdlePointer()
@@ -308,6 +324,7 @@ enum ApplyPass {
                 plan = planFor(snap)
                 report.planned = plan.moves.count
                 report.skipped = plan.skipped.map { ApplyReport.Skipped(item: $0.0, why: $0.1) }
+                dropAbsentSkips(&report, snap: snap)
                 let framed = trappedForPass.filter { primaryFrames(snap)[$0] != nil }.count
                 PelmetLog.log("apply: « expanded — \(framed)/\(trappedForPass.count) framed, replanned \(plan.moves.count) move(s), \(plan.skipped.count) skipped")
             } else {

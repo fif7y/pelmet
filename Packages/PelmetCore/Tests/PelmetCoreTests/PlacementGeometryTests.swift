@@ -37,9 +37,16 @@ struct PlacementGeometryTests {
         #expect(!PlacementGeometry.isPrimary(rect(1800), screenMaxX: maxX))
     }
 
-    @Test func trappedCountIsEveryFrameSharingAMinX() {
-        #expect(PlacementGeometry.overflowTrappedCount([909, 909.2, 950, 1005, 909.1]) == 3)
-        #expect(PlacementGeometry.overflowTrappedCount([900, 950, 1005]) == 0)
+    @Test func trappedIsEveryFrameOverlappingAnother() {
+        func f(_ x: CGFloat, _ w: CGFloat = 30) -> CGRect { CGRect(x: x, y: 0, width: w, height: 24) }
+        // One shared minX (2026-08-21).
+        #expect(PlacementGeometry.overflowTrappedCount([f(909), f(909.2), f(950), f(1005), f(909.1)]) == 3)
+        // Staggered phantoms (2026-09-21): Velja, DBngin, a separator, then OpenClip.
+        let bar = [f(1044, 37), f(1049, 24), f(1055, 26), f(1087, 36), f(1121, 37)]
+        #expect(PlacementGeometry.overflowTrapped(bar) == [0, 1, 2])
+        // Edge to edge, or the ~2pt of AX padding real neighbours share, is not an overlap.
+        #expect(PlacementGeometry.overflowTrappedCount([f(900, 50), f(950, 55), f(1005)]) == 0)
+        #expect(PlacementGeometry.overflowTrappedCount([f(1232, 34), f(1264, 39), f(1339, 44)]) == 0)
         #expect(PlacementGeometry.overflowTrappedCount([]) == 0)
     }
 }

@@ -174,6 +174,12 @@ enum EditorItemsBuilder {
             }
         }
         let explicit = model.order[section] ?? []
+        // Icons behind the native « report overlapping phantom frames at
+        // its left edge; sorted by x they jump to the front of the section
+        // (Pure Paste / Unclutter after a Discard, 13:47 2026-09-21). They
+        // sort as unframed instead: explicit order, then the stable tiebreak.
+        let framed = byKey.values.filter { $0.frame != nil }
+        let trapped = Set(PlacementGeometry.overflowTrapped(framed.map { $0.frame! }).map { framed[$0].id.sectionKey })
         return byKey.values.sorted { lhs, rhs in
             // The user's explicit order is authoritative — nothing outranks it.
             // (A left-pin experiment for extras once did, and it broke drag
@@ -181,8 +187,8 @@ enum EditorItemsBuilder {
             let li = explicit.firstIndex(of: lhs.id.sectionKey) ?? Int.max
             let ri = explicit.firstIndex(of: rhs.id.sectionKey) ?? Int.max
             if li != ri { return li < ri }
-            let lx = lhs.frame?.minX ?? .greatestFiniteMagnitude
-            let rx = rhs.frame?.minX ?? .greatestFiniteMagnitude
+            let lx = trapped.contains(lhs.id.sectionKey) ? .greatestFiniteMagnitude : lhs.frame?.minX ?? .greatestFiniteMagnitude
+            let rx = trapped.contains(rhs.id.sectionKey) ? .greatestFiniteMagnitude : rhs.frame?.minX ?? .greatestFiniteMagnitude
             if lx != rx { return lx < rx }
             // Neither ordered nor on screen: a stable tiebreak, or the board
             // reshuffles on every rebuild (dictionary order).
