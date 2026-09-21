@@ -1205,7 +1205,9 @@ final class AppState {
     /// screen to move).
     var pendingMoveCount: Int {
         guard let snapshot else { return 0 }
+        // Drawn icons behind the « count too: the pass expands it for them.
         return ApplyPass.plan(for: self, snapshot: snapshot, remembered: true).moves.count
+            + ApplyPass.trappedEdited(snapshot, edits: settings.orderEdits).count
     }
 
     /// Last primary-band frame per item, kept across conceals so the Apply

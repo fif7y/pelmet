@@ -46,11 +46,36 @@ enum ApplyPass {
         // edge (real items never share a minX). They are not on screen:
         // dragging them "bounced" and marked Velja immovable (20:43,
         // 2026-09-20). Drop them here so no plan, count or verify sees them.
-        let trapped = Set(frames.filter { (key, f) in
+        for key in trappedKeys(in: frames) { frames.removeValue(forKey: key) }
+        return frames
+    }
+
+    /// Keys whose primary-band frame is the «'s phantom (two or more share
+    /// a minX): on the bar, not on screen.
+    private static func trappedKeys(in frames: [ItemID: CGRect]) -> Set<ItemID> {
+        Set(frames.filter { (key, f) in
             frames.contains { $0.key != key && abs($0.value.minX - f.minX) < 0.5 }
         }.keys)
-        for key in trapped { frames.removeValue(forKey: key) }
-        return frames
+    }
+
+    /// Items behind the « right now, by canonical key.
+    static func trapped(_ snap: EngineSnapshot) -> Set<ItemID> {
+        let maxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        var frames: [ItemID: CGRect] = [:]
+        for item in snap.items {
+            guard let f = item.frame, PlacementGeometry.isPrimary(f, screenMaxX: maxX) else { continue }
+            let key = item.id.sectionKey
+            if let existing = frames[key], existing.minX <= f.minX { continue }
+            frames[key] = f
+        }
+        return trappedKeys(in: frames)
+    }
+
+    /// Trapped icons a drawn edit names — the only reason a pass expands
+    /// the « (Gab, 2026-09-21: never for moves that do not need it).
+    static func trappedEdited(_ snap: EngineSnapshot, edits: OrderEdits) -> Set<ItemID> {
+        let drawn = Set(edits.order.values.flatMap { $0 })
+        return trapped(snap).intersection(drawn)
     }
 
     /// `primaryFrames` plus the last frame remembered for each item that is
@@ -239,7 +264,16 @@ enum ApplyPass {
         for (id, why) in plan.skipped {
             PelmetLog.log("apply: skip \(id.rawValue) (\(why))")
         }
-        guard !plan.moves.isEmpty else { return report }
+        // Icons behind the « that a drawn edit names: the pass expands the
+        // « (one shielded click), which gives them frames left of the
+        // notch (probed 2026-09-20, drags across the notch land first try),
+        // re-plans on the shifted bar, and collapses it after. Never for a
+        // pass whose edits stay clear of the «.
+        var trappedForPass: Set<ItemID> = []
+        if case .wholeBar = scope {
+            trappedForPass = trappedEdited(snap, edits: appState.settings.orderEdits)
+        }
+        guard !plan.moves.isEmpty || !trappedForPass.isEmpty else { return report }
 
         await waitForIdlePointer()
         let holdsSettings = appState.settingsWindowVisible
@@ -251,7 +285,38 @@ enum ApplyPass {
             }
         }
 
-        for move in plan.moves {
+        var expandedToggle: OverflowToggle.Toggle?
+        if !trappedForPass.isEmpty {
+            PelmetLog.log("apply: \(trappedForPass.count) drawn icon(s) behind the « — expanding it")
+            expandedToggle = await OverflowToggle.expandForPass()
+            if expandedToggle != nil {
+                snap = await engine.snapshot()
+                appState.updateSnapshot(snap)
+                plan = self.plan(for: appState, snapshot: snap)
+                report.planned = plan.moves.count
+                report.skipped = plan.skipped.map { ApplyReport.Skipped(item: $0.0, why: $0.1) }
+                let framed = trappedForPass.filter { primaryFrames(snap)[$0] != nil }.count
+                PelmetLog.log("apply: « expanded — \(framed)/\(trappedForPass.count) framed, replanned \(plan.moves.count) move(s), \(plan.skipped.count) skipped")
+            } else {
+                PelmetLog.log("apply: « not expanded — trapped icons stay skipped")
+            }
+        }
+        // Not a defer: the collapse click needs the shielded door, so it
+        // runs after the drags, before the report leaves.
+        let moves = plan.moves
+        await performMoves(moves, appState: appState, engine: engine, screenMaxX: screenMaxX, report: &report)
+        if let expandedToggle {
+            await OverflowToggle.collapseAfterPass(expandedToggle)
+        }
+        return report
+    }
+
+    private static func performMoves(
+        _ moves: [Move], appState: AppState, engine: AgentBarEngine,
+        screenMaxX: CGFloat, report: inout ApplyReport
+    ) async {
+        var snap = await engine.snapshot()
+        for move in moves {
             snap = await engine.snapshot()
             appState.updateSnapshot(snap)
             var frames = primaryFrames(snap)
@@ -327,6 +392,5 @@ enum ApplyPass {
                 report.failed.append(move.item)
             }
         }
-        return report
     }
 }

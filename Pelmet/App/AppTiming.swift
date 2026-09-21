@@ -116,4 +116,7 @@ enum AppTiming {
     /// apps build their tray ~20s in).
     static let relaunchAdoptionDelay: Duration = .seconds(3)
     static let relaunchAdoptionRetry: Duration = .seconds(15)
+    /// « expansion → re-measure: the trapped items reflow in left of the
+    /// notch and the visible run shifts (~38pt) before frames are true.
+    static let overflowExpandSettle: Duration = .milliseconds(700)
 }

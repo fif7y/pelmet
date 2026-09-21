@@ -100,6 +100,35 @@ public enum ItemMover {
         }
     }
 
+    /// One plain click at a bar point under the same shield as a drag —
+    /// the native « toggle only answers real HID clicks (AXPress refused,
+    /// probed 2026-08-22 and 2026-09-20). Cursor hidden for the blip,
+    /// warped home after.
+    public static func shieldedClick(at point: CGPoint) async {
+        guard let source = CGEventSource(stateID: .hidSystemState) else { return }
+        source.userData = SyntheticInput.tag
+        let originalPosition = CGEvent(source: nil)?.location
+        let shield = DragShield()
+        shield.activate()
+        defer { shield.deactivate() }
+        func post(_ type: CGEventType) {
+            guard let event = CGEvent(
+                mouseEventSource: source, mouseType: type, mouseCursorPosition: point, mouseButton: .left
+            ) else { return }
+            event.post(tap: .cghidEventTap)
+        }
+        post(.leftMouseDown)
+        for _ in 0..<2 {
+            shield.reassert()
+            try? await Task.sleep(for: .milliseconds(30))
+        }
+        post(.leftMouseUp)
+        if let originalPosition {
+            try? await Task.sleep(for: .milliseconds(60))
+            CGWarpMouseCursorPosition(originalPosition)
+        }
+    }
+
     /// Seconds since the user (or anyone) last produced a mouse event. Our own
     /// synthetic events count too, but callers only reach here ≥450ms after
     /// the previous drag (placementPreSettle), past the quiet gap already.
