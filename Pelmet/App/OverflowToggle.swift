@@ -121,7 +121,10 @@ enum OverflowToggle {
     /// click missed once in three probe runs). Returns the toggle when the
     /// state was reached, nil when there is no « or it would not flip.
     private static func set(expanded: Bool, _ toggle: Toggle) async -> Bool {
-        if toggle.expanded == expanded { return true }
+        // Live state, never the one captured at find(): the collapse after
+        // the first live pass compared against "collapsed" and returned
+        // without a click, leaving the « open (2026-09-21 07:00).
+        if state(of: toggle.element) == expanded { return true }
         for attempt in 1...2 {
             let frame = currentFrame(of: toggle.element) ?? toggle.frame
             guard frame != .zero else { return false }
@@ -135,27 +138,55 @@ enum OverflowToggle {
         return false
     }
 
+    /// A pass expanded the « and could not collapse it (the bar de-crowded
+    /// and took the toggle away first, or the click missed): the next pass
+    /// that finds it expanded owns it and collapses it after. Persisted —
+    /// the agent keeps the state across Pelmet relaunches.
+    private static let leftExpandedKey = "pelmet.overflowLeftExpanded"
+    private static var leftExpanded: Bool {
+        get { UserDefaults.standard.bool(forKey: leftExpandedKey) }
+        set { UserDefaults.standard.set(newValue, forKey: leftExpandedKey) }
+    }
+
     /// Expand for a pass. Returns the toggle to collapse afterwards, nil
-    /// when nothing was expanded (no «, already expanded by the user, or
-    /// the click would not take).
+    /// when nothing was expanded (no «, expanded by the user, or the click
+    /// would not take).
     static func expandForPass() async -> Toggle? {
         guard let toggle = find() else {
             PelmetLog.log("overflow«: no toggle on the bar")
             return nil
         }
         if toggle.expanded {
-            PelmetLog.log("overflow«: already expanded — left as is")
+            if leftExpanded {
+                PelmetLog.log("overflow«: already expanded (left by an earlier pass) — collapses after")
+                return toggle
+            }
+            PelmetLog.log("overflow«: already expanded by the user — left as is")
             return nil
         }
-        return await set(expanded: true, toggle) ? toggle : nil
+        guard await set(expanded: true, toggle) else { return nil }
+        leftExpanded = true
+        return toggle
+    }
+
+    /// Any whole-bar pass that does not need the «: put back what an
+    /// earlier pass left open, while the bar is revealed and the toggle
+    /// on it.
+    static func collapseIfLeftExpanded() async {
+        guard leftExpanded, let toggle = find() else { return }
+        guard toggle.expanded else { leftExpanded = false; return }
+        PelmetLog.log("overflow«: left expanded by an earlier pass — collapsing")
+        if await set(expanded: false, toggle) { leftExpanded = false }
     }
 
     static func collapseAfterPass(_ toggle: Toggle) async {
-        // The pass may have de-crowded the bar and taken the « with it.
+        // The pass may have de-crowded the bar and taken the « with it; the
+        // agent still remembers it expanded, so the flag stays for the next
+        // pass that sees the toggle again.
         guard state(of: toggle.element) == true else {
-            PelmetLog.log("overflow«: already collapsed or gone after the pass")
+            PelmetLog.log("overflow«: gone after the pass — collapses at the next pass that finds it")
             return
         }
-        _ = await set(expanded: false, toggle)
+        if await set(expanded: false, toggle) { leftExpanded = false }
     }
 }

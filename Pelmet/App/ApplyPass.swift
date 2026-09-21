@@ -286,6 +286,9 @@ enum ApplyPass {
         }
 
         var expandedToggle: OverflowToggle.Toggle?
+        if trappedForPass.isEmpty, case .wholeBar = scope {
+            await OverflowToggle.collapseIfLeftExpanded()
+        }
         if !trappedForPass.isEmpty {
             PelmetLog.log("apply: \(trappedForPass.count) drawn icon(s) behind the « — expanding it")
             expandedToggle = await OverflowToggle.expandForPass()
