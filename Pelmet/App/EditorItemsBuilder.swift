@@ -46,10 +46,20 @@ enum EditorItemsBuilder {
         // in it, and without the running check its stand-in tile outlived the
         // app in the editor (Bitwarden quit, 2026-08-31). Same guard as the
         // stored path below; nil-bundle IDs stay (system modules filter later).
+        let ownSpecIDs = Set(
+            separators.map { SeparatorManager.itemID(for: $0).sectionKey }
+                + extraItems.map { ExtrasManager.itemID(for: $0).sectionKey }
+        )
         for raw in concealed {
             let id = canonical(raw)
             guard byID[id] == nil else { continue }
             if let bundle = id.bundleID, bundle != pelmetBundleID, !isRunning(bundle) { continue }
+            // Pelmet's bundle is exempt from the running check, so a
+            // separator or extra removed while concealed would keep its
+            // stand-in until the engine's carried set caught up: the spec
+            // is the item's existence, not the engine's memory of it.
+            if id.bundleID == pelmetBundleID, MenuBarPolicy.isPelmetExtraID(id),
+               !ownSpecIDs.contains(id.sectionKey) { continue }
             byID[id] = ObservedItem(id: id, frame: nil, appName: id.bundleID.flatMap(appName))
         }
         // Pelmet's extras are section-manageable (visibility-based hiding); when

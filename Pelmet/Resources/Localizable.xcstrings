@@ -1161,6 +1161,64 @@
         }
       }
     },
+    "Add a divider to the bar — click its tile to pick a style": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Trenner zur Leiste hinzufügen – auf seine Kachel klicken, um den Stil zu wählen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir un divisor a la barra: haz clic en su ficha para elegir un estilo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un séparateur à la barre – cliquez sur sa tuile pour choisir un style"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un divisore alla barra: fai clic sulla sua tessera per scegliere uno stile"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バーに区切りを追加します。タイルをクリックしてスタイルを選べます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "막대에 구분선을 추가합니다. 타일을 클릭해 스타일을 고르세요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar um divisor à barra: clique no seu bloco para escolher um estilo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить разделитель в строку меню — нажмите на его плитку, чтобы выбрать стиль"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向菜单栏添加分隔符，点击其图块可选择样式"
+          }
+        }
+      }
+    },
     "Add a launcher": {
       "localizations": {
         "de": {
@@ -4347,64 +4405,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "显示器"
-          }
-        }
-      }
-    },
-    "Dividers for the bar — ⌘-drag them anywhere": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trenner für die Leiste — mit ⌘ überallhin ziehen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Divisores para la barra — arrástralos con ⌘ a cualquier sitio"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Des séparateurs pour la barre — ⌘-glissez-les où vous voulez"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Divisori per la barra — trascinali con ⌘ dove vuoi"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バー用の区切り — ⌘を押しながらどこへでもドラッグ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "막대용 구분선 — ⌘를 누른 채 어디로든 드래그"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Divisores para a barra — arraste-os com ⌘ para onde quiser"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Разделители для строки — перетаскивайте с ⌘ куда угодно"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "菜单栏分隔线 — 按住 ⌘ 拖到任意位置"
           }
         }
       }
@@ -8005,118 +8005,60 @@
         }
       }
     },
-    "New menu bar icons go to": {
+    "New menu bar icons land in this section. Drag this marker to another section to change where they go.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Neue Menüleistensymbole landen in"
+            "value": "Neue Menüleistensymbole landen in diesem Bereich. Ziehe diese Markierung in einen anderen Bereich, um das zu ändern."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los iconos nuevos van a"
+            "value": "Los nuevos iconos de la barra de menús llegan a esta sección. Arrastra este marcador a otra sección para cambiar su destino."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les nouvelles icônes vont dans"
+            "value": "Les nouvelles icônes de la barre des menus arrivent dans cette section. Glissez ce repère vers une autre section pour changer leur destination."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le nuove icone vanno in"
+            "value": "Le nuove icone della barra dei menu arrivano in questa sezione. Trascina questo segnaposto in un'altra sezione per cambiarne la destinazione."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "新しいメニューバーアイコンの行き先"
+            "value": "新しいメニューバーアイコンはこのセクションに入ります。行き先を変えるには、このマーカーを別のセクションへドラッグしてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "새 메뉴 막대 아이콘 위치"
+            "value": "새 메뉴 막대 아이콘은 이 섹션에 들어갑니다. 이 표시를 다른 섹션으로 끌어 위치를 바꾸세요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ícones novos vão para"
+            "value": "Novos ícones da barra de menus chegam nesta seção. Arraste este marcador para outra seção para mudar o destino."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Новые значки попадают в"
+            "value": "Новые значки строки меню попадают в этот раздел. Перетащите этот маркер в другой раздел, чтобы изменить это."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "新的菜单栏图标放入"
-          }
-        }
-      }
-    },
-    "New menu bar icons land here — drag into another section to change it": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Menüleistensymbole landen hier – in einen anderen Bereich ziehen, um das zu ändern"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los iconos nuevos aparecen aquí; arrastra a otra sección para cambiarlo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les nouvelles icônes arrivent ici : glissez dans une autre section pour changer"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le nuove icone arrivano qui: trascina in un’altra sezione per cambiare"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新しいアイコンはここに入ります。変更するには別のセクションへドラッグ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 아이콘은 여기에 들어옵니다. 바꾸려면 다른 섹션으로 드래그하세요"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ícones novos chegam aqui; arraste para outra seção para mudar"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Новые значки попадают сюда: перетащите в другую секцию, чтобы изменить"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新图标会放在这里，拖到其他分区可更改"
+            "value": "新的菜单栏图标会进入此区域。将此标记拖到其他区域即可更改去向。"
           }
         }
       }
@@ -10905,6 +10847,122 @@
         }
       }
     },
+    "Remove": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제거"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除"
+          }
+        }
+      }
+    },
+    "Remove separator": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trenner entfernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar separador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer le séparateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi separatore"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "区切りを削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구분선 제거"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover separador"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить разделитель"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除分隔符"
+          }
+        }
+      }
+    },
     "Replay the intro": {
       "localizations": {
         "de": {
@@ -11829,64 +11887,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "分隔符在菜单栏中的不透明度"
-          }
-        }
-      }
-    },
-    "Separators": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trenner"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Separadores"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Séparateurs"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Separatori"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "区切り"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "구분선"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Separadores"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Разделители"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分隔符"
           }
         }
       }

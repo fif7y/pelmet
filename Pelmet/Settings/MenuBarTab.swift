@@ -21,6 +21,16 @@ struct ApplyBarButton: View {
         let failed = appState.applyReport.map { !$0.failed.isEmpty } ?? false
         let count = appState.pendingMoveCount
         HStack(spacing: 10) {
+            // Separators are edited on their tiles; adding one is the only
+            // action that needs a home, and the title row is it.
+            Button {
+                appState.addSeparator()
+            } label: {
+                AddTrigger(title: "Separator", menuChevron: false)
+            }
+            .buttonStyle(.plain)
+            .disabled(appState.applying)
+            .help("Add a divider to the bar — click its tile to pick a style")
             // The pass runs silently with the cursor hidden (blind spot 3):
             // say what it did, or people press it twice.
             if !appState.applying, let report = appState.applyReport {
@@ -116,24 +126,6 @@ struct MenuBarTab: View {
     @Environment(AppState.self) private var appState
     @State private var dragSession = EditorDragSession()
 
-    private var newItemsLabel: some View {
-        Text("New menu bar icons go to").font(.callout)
-    }
-
-    private var newItemsSegments: some View {
-        PelmetSegments(selection: Binding(
-            get: { appState.settings.sectionModel.newItemsDestination },
-            set: { destination in
-                appState.settings.sectionModel.newItemsDestination = destination
-                appState.settingsChanged()
-            }
-        ), options: [
-            (.visible, "Visible"),
-            (.hidden, "Hidden"),
-            (.alwaysHidden, "Always hidden"),
-        ])
-    }
-
     var body: some View {
         // No own ScrollView — the settings shell provides scrolling + padding.
         // Generous section rhythm — whitespace is structure, not waste.
@@ -183,25 +175,9 @@ struct MenuBarTab: View {
                 .opacity(appState.applying ? 0.5 : 1)
                 .animation(.easeOut(duration: 0.2), value: appState.applying)
 
-                // The "New" chip above is the same setting made draggable —
-                // this row is its discoverable, labeled twin.
-                // Label + three segments is ~550pt in German against a
-                // 468pt floor at the minimum window, and segments can't
-                // wrap. Side by side while it fits, stacked when it doesn't.
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
-                        newItemsLabel
-                        newItemsSegments
-                        Spacer()
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        newItemsLabel
-                        newItemsSegments
-                    }
-                }
-
-                SeparatorStrip()
-
+                // The dashed "New" tile in the strips IS the new-icons
+                // destination, and separators are edited on their own tiles:
+                // nothing sits between the strips and the launchers.
                 AppLaunchersStrip()
 
                 PelmetItemsStrip()
@@ -396,7 +372,7 @@ private struct NewItemsChip: View {
                 .lineLimit(1)
                 .frame(maxWidth: 52)
         }
-        .help("New menu bar icons land here — drag into another section to change it")
+        .help("New menu bar icons land in this section. Drag this marker to another section to change where they go.")
         .onDrag {
             session.begin(.newItemsChip)
             return NSItemProvider(object: Self.dragID as NSString)
@@ -440,6 +416,17 @@ private struct ItemTile: View {
     @State private var cardShown = false
     @State private var cardHovered = false
     @State private var cardWork: Task<Void, Never>?
+    /// A separator tile's options (style, opacity or width, Remove).
+    @State private var optionsShown = false
+
+    /// This tile's separator, when it is one: specs are keyed by the
+    /// ItemID they mint, so match on the section key.
+    private var separatorIndex: Int? {
+        guard item.id.isPelmetSeparator else { return nil }
+        return appState.settings.separators.firstIndex {
+            SeparatorManager.itemID(for: $0).sectionKey == item.id.sectionKey
+        }
+    }
 
     private var displayName: String {
         if item.id.bundleID == PelmetBundle.textInputAgentID {
@@ -725,13 +712,44 @@ private struct ItemTile: View {
                 scheduleCard()
             }
         }
+        .onTapGesture {
+            if separatorIndex != nil { optionsShown = true }
+        }
+        .popover(isPresented: $optionsShown, arrowEdge: .bottom) {
+            @Bindable var state = appState
+            if let i = separatorIndex {
+                SeparatorOptions(separator: $state.settings.separators[i]) {
+                    // Read the id BEFORE the removal: the predicate runs
+                    // inside a modify access on `settings`, and a binding
+                    // get in there re-enters the getter (exclusivity crash).
+                    let id = appState.settings.separators[i].id
+                    optionsShown = false
+                    appState.removeSeparator(id)
+                }
+            }
+        }
+        // A separator added from the title row opens its options once, so
+        // the style and width read as the user's to set.
+        .onChange(of: appState.newlyAddedSeparatorID, initial: true) { _, added in
+            guard let added, let i = separatorIndex,
+                  appState.settings.separators[i].id == added else { return }
+            appState.newlyAddedSeparatorID = nil
+            optionsShown = true
+        }
         .onDrag {
             hovered = false
             cardShown = false
+            optionsShown = false
             session.begin(.item(item.id, home: section, homeIndex: index))
             return NSItemProvider(object: item.id.rawValue as NSString)
         }
         .contextMenu {
+            if separatorIndex != nil {
+                Button("Remove separator") {
+                    let id = appState.settings.separators[separatorIndex!].id
+                    appState.removeSeparator(id)
+                }
+            }
             if isUnhideable || isSuperseded, let bundle = item.id.bundleID {
                 if hasLauncher {
                     Text("Launcher added — now turn this icon off in \(displayName)'s settings")
@@ -1449,83 +1467,16 @@ private struct SeparatorGlyph: View {
     }
 }
 
-private struct SeparatorStrip: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        @Bindable var state = appState
-        VStack(alignment: .leading, spacing: 8) {
-            CardHeader(
-                symbol: "divide", title: "Separators",
-                caption: "Dividers for the bar — ⌘-drag them anywhere"
-            ) {
-                Button {
-                    appState.addSeparator()
-                } label: {
-                    AddTrigger(title: "Separator", menuChevron: false)
-                }
-                .buttonStyle(.plain)
-            }
-
-            if !appState.settings.separators.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach($state.settings.separators) { $separator in
-                        SeparatorChip(separator: $separator) {
-                            // Read the binding BEFORE the removeAll: the
-                            // predicate runs inside a modify access on
-                            // `settings`, and a @Binding get in there re-enters
-                            // the settings getter — exclusivity crash.
-                            let id = separator.id
-                            appState.settings.separators.removeAll { $0.id == id }
-                            appState.settingsChanged()
-                        }
-                    }
-                    Spacer()
-                }
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.35)))
-            }
-        }
-    }
-}
-
-private struct SeparatorChip: View {
+/// A separator's options, shown in a popover on its editor tile: the
+/// style chooser (real glyphs, current one ring-selected), the one thing
+/// that style tunes, and Remove.
+private struct SeparatorOptions: View {
     @Environment(AppState.self) private var appState
     @Binding var separator: SeparatorSpec
-    let onDelete: () -> Void
-    @State private var showsChooser = false
-    @State private var hovered = false
+    let onRemove: () -> Void
 
     var body: some View {
-        Button {
-            showsChooser = true
-        } label: {
-            ZStack(alignment: .topTrailing) {
-                SeparatorGlyph(style: separator.style)
-                    .foregroundStyle(separator.style == .space ? .tertiary : .secondary)
-                    .opacity(separator.style == .space ? 1 : max(separator.opacity, 0.25))
-                    .frame(width: 30, height: 30)
-                    .background(
-                        RoundedRectangle(cornerRadius: 9)
-                            .fill(.background.opacity(0.8))
-                            .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-                    )
-                if hovered {
-                    Button(action: onDelete) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .offset(x: 5, y: -5)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .popover(isPresented: $showsChooser, arrowEdge: .bottom) {
-            // The chooser renders the real glyphs, current one ring-selected.
-            VStack(spacing: 10) {
+        VStack(spacing: 10) {
             HStack(spacing: 6) {
                 ForEach(SeparatorStyle.allCases, id: \.self) { style in
                     Button {
@@ -1590,17 +1541,23 @@ private struct SeparatorChip: View {
                 }
                 .help("Separator opacity in the menu bar")
             }
-            }
-            .padding(10)
-            .frame(width: 240)
-            // The popover focuses its first taker and rings it, which read as
-            // a second selection competing with the tint ring that marks the
-            // style actually in use (Gab, 2026-09-17: "the Focused state on
-            // the most left item that always remains there"). One signal per
-            // state. Disabling the EFFECT, not focusability, so the controls
-            // stay keyboard-reachable; it propagates to the whole subtree.
-            .focusEffectDisabled()
+            // Quiet text, not a bordered button: removal is the one
+            // destructive act here and red already says so.
+            Button("Remove", role: .destructive, action: onRemove)
+                .buttonStyle(.plain)
+                .font(.callout)
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(10)
+        .frame(width: 240)
+        // The popover focuses its first taker and rings it, which read as
+        // a second selection competing with the tint ring that marks the
+        // style actually in use (Gab, 2026-09-17: "the Focused state on
+        // the most left item that always remains there"). One signal per
+        // state. Disabling the EFFECT, not focusability, so the controls
+        // stay keyboard-reachable; it propagates to the whole subtree.
+        .focusEffectDisabled()
     }
 
     /// Localized twin of `SeparatorStyle.displayName` (PelmetCore has no catalog).

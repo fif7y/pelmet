@@ -779,9 +779,14 @@ final class AppState {
     /// A new separator lands where new icons land — the section the "New"
     /// chip sits in, at its front — instead of falling into Visible as an
     /// unassigned item (it showed up at the end of Visible, 2026-09-20).
+    /// The separator just added from the editor: its tile opens its options
+    /// once so people see the style and width are theirs to set.
+    var newlyAddedSeparatorID: UUID?
+
     func addSeparator() {
         let spec = SeparatorSpec(style: .dot)
         settings.separators.append(spec)
+        newlyAddedSeparatorID = spec.id
         var model = settings.sectionModel
         let home = model.newItemsDestination
         if home != .visible {
@@ -790,6 +795,11 @@ final class AppState {
             model.order[home, default: []].insert(id, at: 0)
             settings.sectionModel = model
         }
+        settingsChanged()
+    }
+
+    func removeSeparator(_ id: UUID) {
+        settings.separators.removeAll { $0.id == id }
         settingsChanged()
     }
 
