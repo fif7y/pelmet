@@ -27,9 +27,11 @@ no analytics.
 Three sections, one rule: **Visible** is always there, **Hidden** comes back
 on a hover or a click, and **Always Hidden** only appears when you ask for it
 (double-click or ⌥-click the chevron). Arrange them in the layout editor
-(real app-icon previews, drag-and-drop ordering), or skip the window entirely
-and ⌘-drag icons across the chevron right in the menu bar. Pelmet adopts the
-move either way.
+(real app-icon previews, drag-and-drop ordering): the editor is a drawing,
+and **Apply** lays the bar out to match it in one pass, or **Discard** puts
+the drawing back. Or skip the window entirely and ⌘-drag icons across the
+chevron right in the menu bar. Pelmet records the move and never moves an
+icon on its own.
 
 <p align="center">
   <img src="docs/assets/editor-anim.svg" alt="The layout editor: dragging an icon from Always Hidden to Hidden, both sections reflowing" width="640"><br>

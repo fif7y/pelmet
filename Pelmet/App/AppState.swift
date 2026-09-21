@@ -1359,6 +1359,47 @@ final class AppState {
         }
     }
 
+    /// 0.3.0 upgrade (docs/CORE-SETS.md §Upgrade): a 0.2.x build kept a
+    /// per-section order its own placement was still realising; the sets
+    /// core moves nothing on its own. Once, at the first snapshot that
+    /// frames every item (boot walks the whole bar before the assertion; a
+    /// reveal does the same later), each section whose stored drawing
+    /// disagrees with the bar becomes a pending edit: Apply reproduces the
+    /// old bar, Discard keeps it as it stands. Compared over the icons the
+    /// bar frames — an app not running today keeps its drawn slot and is
+    /// no edit. A section already mid-edit is left alone.
+    private static let orderSeedKey = "pelmet.migratedOrderEditsSeed030"
+    private func seedOrderEditsFromStoredOrderIfNeeded(_ snap: EngineSnapshot) {
+        guard engineStarted, !UserDefaults.standard.bool(forKey: Self.orderSeedKey) else { return }
+        guard !settings.sectionModel.order.isEmpty else {
+            UserDefaults.standard.set(true, forKey: Self.orderSeedKey)
+            return
+        }
+        let frames = ApplyPass.rememberedFrames(snap, appState: self)
+        let known = snap.items.map(\.id.sectionKey) + snap.concealed.map(\.sectionKey)
+        guard !known.isEmpty, known.allSatisfy({ frames[$0] != nil }) else { return }
+        let bar = ApplyPass.barOrder(frames)
+        var edits = settings.orderEdits
+        var seeded: [PelmetCore.Section] = []
+        for (section, drawn) in settings.sectionModel.order where edits.order[section] == nil {
+            let framed = drawn.filter { frames[$0] != nil && settings.sectionModel.section(of: $0) == section }
+            let framedSet = Set(framed)
+            let onBar = bar.filter(framedSet.contains)
+            guard framed.count > 1, onBar != framed else { continue }
+            edits.order[section] = framed
+            edits.previousOrder[section] = onBar + drawn.filter { !framedSet.contains($0) }
+            seeded.append(section)
+        }
+        UserDefaults.standard.set(true, forKey: Self.orderSeedKey)
+        guard !seeded.isEmpty else {
+            PelmetLog.log("migrate: stored order matches the bar — nothing to seed")
+            return
+        }
+        settings.orderEdits = edits
+        settings.save()
+        PelmetLog.log("migrate: stored order for \(seeded.map(\.rawValue).sorted()) differs from the bar — seeded as pending edits")
+    }
+
     /// A drawing that matches the bar again is no edit: an icon dragged
     /// out of a section and back to its slot lit Apply for a zero-move
     /// pass (Timer, 2026-09-20 21:45). Compared over the items both sides
@@ -1874,6 +1915,7 @@ final class AppState {
             PelmetLog.log("snapshot: destroyed by the bar \(destroyedKeys.map(\.rawValue))")
         }
         snapshot = snap
+        seedOrderEditsFromStoredOrderIfNeeded(snap)
         clockRelay?.updateClockFrame(
             snap.items.first { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }?.frame
         )
