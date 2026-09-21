@@ -82,59 +82,77 @@ struct SettingsView: View {
         .tint(PelmetAccent.accent)
     }
 
-    @ViewBuilder
+    /// The title row pins; its glass only shows once the pane has scrolled
+    /// under it (the row starts as plain content).
+    @State private var headerPinned = false
+    @State private var gapHeight: CGFloat = 0
+
     private var content: some View {
-        ScrollView {
-            // The title row is a pinned header: it carries the pane's one
-            // bar-wide action (Apply on Menu Bar) and must stay in reach
-            // however far the strips scroll. Glass under it once content
-            // slides beneath.
-            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: .sectionHeaders) {
-                // A pending update greets every pane, About excepted (it
-                // holds the button itself). One line, one action. Scrolls
-                // away with the top gap — the header stays lean.
-                VStack(alignment: .leading, spacing: 24) {
-                    if let version = SparkleController.shared.availableVersion,
-                       appState.settingsTab != .about {
-                        UpdateStrip(version: version) { appState.settingsTab = .about }
-                    }
-                }
-                .padding(.horizontal, 28)
-                .padding(.top, 44)
-                .padding(.bottom, 4)
-                .frame(maxWidth: 640, alignment: .leading)
-                Section {
-                    VStack(alignment: .leading, spacing: 24) {
-                        switch appState.settingsTab {
-                        case .general: GeneralPane()
-                        case .behavior: BehaviorPane()
-                        case .menuBar: MenuBarTab()
-                        case .displays: DisplaysPane()
-                        case .thanks: ThanksPane()
-                        case .about: AboutPane()
+        GeometryReader { geo in
+            // The content area runs under the transparent titlebar; the
+            // scroll view takes that band too so the pinned row covers it.
+            let safeTop = geo.safeAreaInsets.top
+            ScrollView {
+                // The title row is a pinned header: it carries the pane's one
+                // bar-wide action (Apply on Menu Bar) and must stay in reach
+                // however far the strips scroll.
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: .sectionHeaders) {
+                    // A pending update greets every pane, About excepted (it
+                    // holds the button itself). One line, one action. Scrolls
+                    // away with the top gap — the header stays lean.
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let version = SparkleController.shared.availableVersion,
+                           appState.settingsTab != .about {
+                            UpdateStrip(version: version) { appState.settingsTab = .about }
+                                .padding(.bottom, 14)
                         }
                     }
                     .padding(.horizontal, 28)
-                    .padding(.top, 12)
-                    .padding(.bottom, 28)
+                    .padding(.top, 28)
                     .frame(maxWidth: 640, alignment: .leading)
-                } header: {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(appState.settingsTab.title)
-                            .font(.system(size: 22, weight: .semibold))
-                        Spacer()
-                        if appState.settingsTab == .menuBar {
-                            ApplyBarButton()
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { gapHeight = $0 }
+                    Section {
+                        VStack(alignment: .leading, spacing: 24) {
+                            switch appState.settingsTab {
+                            case .general: GeneralPane()
+                            case .behavior: BehaviorPane()
+                            case .menuBar: MenuBarTab()
+                            case .displays: DisplaysPane()
+                            case .thanks: ThanksPane()
+                            case .about: AboutPane()
+                            }
                         }
+                        .padding(.horizontal, 28)
+                        .padding(.top, 12)
+                        .padding(.bottom, 28)
+                        .frame(maxWidth: 640, alignment: .leading)
+                    } header: {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(appState.settingsTab.title)
+                                .font(.system(size: 22, weight: .semibold))
+                            Spacer()
+                            if appState.settingsTab == .menuBar {
+                                ApplyBarButton()
+                            }
+                        }
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 10)
+                        // The titlebar band is part of the row, so pinned
+                        // glass reaches the window's top edge and nothing
+                        // peeks above it.
+                        .padding(.top, safeTop)
+                        .frame(maxWidth: 640, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.ultraThinMaterial.opacity(headerPinned ? 1 : 0))
+                        .animation(.easeOut(duration: 0.15), value: headerPinned)
                     }
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: 640, alignment: .leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.ultraThinMaterial)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .ignoresSafeArea(edges: .top)
+            .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y >= gapHeight - 0.5 } action: { _, pinned in
+                headerPinned = pinned
+            }
         }
         .background(Color(nsColor: .textBackgroundColor).opacity(0.35))
     }
@@ -154,19 +172,13 @@ private struct UpdateStrip: View {
             Text("Pelmet \(version) is available.")
                 .font(.callout)
             Spacer(minLength: 8)
-            Button(action: action) {
-                Text("Update")
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(.green, in: Capsule())
-            }
-            .buttonStyle(.plain)
+            // Same tinted chip as Apply and "Granted": tint on a low-alpha
+            // fill, no white-on-green.
+            TintChipButton(text: "Update", symbol: "arrow.down.circle.fill", tint: .green, action: action)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+        .background(.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -285,10 +297,10 @@ private struct SidebarRow: View {
         if let badge {
             Text(badge)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.green)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
-                .background(.green, in: Capsule())
+                .background(.green.opacity(0.13), in: Capsule())
         }
     }
 }
