@@ -25,11 +25,16 @@ struct SettingsStoreTests {
     @Test func orderEditsRoundTripAndDefault() throws {
         var settings = SettingsStore()
         let a = ItemID.bundleKey("com.a"), b = ItemID.bundleKey("com.b")
-        settings.orderEdits = OrderEdits(order: [.hidden: [b, a]])
+        settings.orderEdits = OrderEdits(order: [.hidden: [b, a]], previousSection: [a: .visible])
         let data = try JSONEncoder().encode(settings)
         let back = try JSONDecoder().decode(SettingsStore.self, from: data)
         #expect(back.orderEdits == settings.orderEdits)
         let legacy = try JSONDecoder().decode(SettingsStore.self, from: Data("{}".utf8))
         #expect(legacy.orderEdits.isEmpty)
+        // An edit set saved before `previousSection` existed still decodes.
+        let older = try JSONDecoder().decode(
+            OrderEdits.self, from: Data(#"{"order":[]}"#.utf8))
+        #expect(older.isEmpty)
+        #expect(!OrderEdits(previousSection: [a: .hidden]).isEmpty)
     }
 }

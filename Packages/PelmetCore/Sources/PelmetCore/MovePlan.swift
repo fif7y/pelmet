@@ -12,12 +12,28 @@ public struct OrderEdits: Codable, Equatable, Sendable {
     /// Per section, the left-to-right order the user drew (canonical keys).
     /// Sections absent here have no pending change.
     public var order: [Section: [ItemID]]
+    /// Where each icon lived before the editor moved it between sections,
+    /// so Discard can put it back. An entry leaves when the icon is drawn
+    /// back where it was, when the user moves it by hand in the bar, and
+    /// with every other edit at Apply.
+    public var previousSection: [ItemID: Section]
 
-    public init(order: [Section: [ItemID]] = [:]) {
+    public init(order: [Section: [ItemID]] = [:], previousSection: [ItemID: Section] = [:]) {
         self.order = order
+        self.previousSection = previousSection
     }
 
-    public var isEmpty: Bool { order.isEmpty }
+    public var isEmpty: Bool { order.isEmpty && previousSection.isEmpty }
+
+    private enum CodingKeys: String, CodingKey { case order, previousSection }
+
+    /// `previousSection` arrived after `order` shipped on the branch: an
+    /// edit set saved without it still decodes.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        order = try c.decodeIfPresent([Section: [ItemID]].self, forKey: .order) ?? [:]
+        previousSection = try c.decodeIfPresent([ItemID: Section].self, forKey: .previousSection) ?? [:]
+    }
 }
 
 /// One item to one slot: land it right of `after` (nil = left end of the

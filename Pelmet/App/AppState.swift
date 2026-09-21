@@ -1076,6 +1076,16 @@ final class AppState {
         // (drag payload) and may be any title-variant of its bundle.
         let key = id.sectionKey
         var model = settings.sectionModel
+        // Remember where it came from for Discard; drawn back where it
+        // started, there is nothing to put back.
+        let previous = model.section(of: id)
+        if previous != section {
+            if let origin = settings.orderEdits.previousSection[key] {
+                if origin == section { settings.orderEdits.previousSection.removeValue(forKey: key) }
+            } else {
+                settings.orderEdits.previousSection[key] = previous
+            }
+        }
         if section == .visible {
             model.assignments.removeValue(forKey: key)
         } else {
@@ -1286,6 +1296,7 @@ final class AppState {
                 for (section, drawn) in edits.order where !drawn.contains(where: unreachable.contains) {
                     edits.order.removeValue(forKey: section)
                 }
+                for id in report.applied { edits.previousSection.removeValue(forKey: id.sectionKey) }
                 settings.orderEdits = edits
                 settings.save()
             }
@@ -1371,10 +1382,27 @@ final class AppState {
                 model.order[section] = members.sorted { frames[$0]!.minX < frames[$1]!.minX }
             }
         }
+        // Every between-section drop goes back too: Discard is a reset of
+        // the drawing, and a separator drawn into another section returns
+        // to the one hosting it (its host never moved, Apply does that).
+        for (key, origin) in settings.orderEdits.previousSection {
+            if origin == .visible {
+                model.assignments.removeValue(forKey: key)
+            } else {
+                model.assignments[key] = origin
+            }
+            for section in model.order.keys where section != origin {
+                model.order[section]?.removeAll { $0 == key }
+            }
+            if model.order[origin] != nil, !model.order[origin]!.contains(key) {
+                model.order[origin]!.append(key)
+            }
+        }
         settings.sectionModel = model
         settings.orderEdits = OrderEdits()
         applyReport = nil
         settings.save()
+        separators?.sync(with: settings.separators)
         PelmetLog.log("apply: edits discarded")
         Task { await engine.setModel(model) }
     }
@@ -1921,6 +1949,9 @@ final class AppState {
         lastAdoptionPending = result.pendingZones
         if result.changed {
             var model = result.model
+            // The user moved it by hand: wherever it started, the bar is
+            // the truth now and Discard has nothing to put back.
+            if let draggedID { settings.orderEdits.previousSection.removeValue(forKey: draggedID.sectionKey) }
             // The editor's drawing outranks the bar until Apply. The
             // periodic pass reconciled the hidden order from the bar
             // between two drops and every tile jumped back (2026-09-20 17:28).
