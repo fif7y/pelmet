@@ -21,20 +21,25 @@ public struct OrderEdits: Codable, Equatable, Sendable {
     /// every icon back at the slot it had: reading the bar can't do that
     /// for a concealed section, and never knew the old index anyway.
     public var previousOrder: [Section: [ItemID]]
+    /// Own items (separators) created by this edit set: drawn, not yet in
+    /// the bar's order. Apply places them; Discard removes them again.
+    public var created: Set<ItemID>
 
     public init(
         order: [Section: [ItemID]] = [:],
         previousSection: [ItemID: Section] = [:],
-        previousOrder: [Section: [ItemID]] = [:]
+        previousOrder: [Section: [ItemID]] = [:],
+        created: Set<ItemID> = []
     ) {
         self.order = order
         self.previousSection = previousSection
         self.previousOrder = previousOrder
+        self.created = created
     }
 
     public var isEmpty: Bool { order.isEmpty && previousSection.isEmpty }
 
-    private enum CodingKeys: String, CodingKey { case order, previousSection, previousOrder }
+    private enum CodingKeys: String, CodingKey { case order, previousSection, previousOrder, created }
 
     /// `previousSection` arrived after `order` shipped on the branch: an
     /// edit set saved without it still decodes.
@@ -43,11 +48,15 @@ public struct OrderEdits: Codable, Equatable, Sendable {
         order = try c.decodeIfPresent([Section: [ItemID]].self, forKey: .order) ?? [:]
         previousSection = try c.decodeIfPresent([ItemID: Section].self, forKey: .previousSection) ?? [:]
         previousOrder = try c.decodeIfPresent([Section: [ItemID]].self, forKey: .previousOrder) ?? [:]
+        created = try c.decodeIfPresent(Set<ItemID>.self, forKey: .created) ?? []
     }
 
     /// The edit for `section` is done with (applied, or the bar matches):
     /// its drawing and its baseline go together.
     public mutating func clearOrder(for section: Section) {
+        // A created item drawn in this section is placed now: no longer
+        // Discard's to remove.
+        if let drawn = order[section] { created.subtract(drawn) }
         order.removeValue(forKey: section)
         previousOrder.removeValue(forKey: section)
     }

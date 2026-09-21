@@ -26,7 +26,8 @@ struct SettingsStoreTests {
         var settings = SettingsStore()
         let a = ItemID.bundleKey("com.a"), b = ItemID.bundleKey("com.b")
         settings.orderEdits = OrderEdits(
-            order: [.hidden: [b, a]], previousSection: [a: .visible], previousOrder: [.hidden: [b], .visible: [a]])
+            order: [.hidden: [b, a]], previousSection: [a: .visible], previousOrder: [.hidden: [b], .visible: [a]],
+            created: [b])
         let data = try JSONEncoder().encode(settings)
         let back = try JSONDecoder().decode(SettingsStore.self, from: data)
         #expect(back.orderEdits == settings.orderEdits)
@@ -40,5 +41,7 @@ struct SettingsStoreTests {
         var edits = settings.orderEdits
         edits.clearOrder(for: .hidden)
         #expect(edits.order[.hidden] == nil && edits.previousOrder[.hidden] == nil && edits.previousOrder[.visible] == [a])
+        // Placing the section that held the created item retires it from Discard.
+        #expect(edits.created.isEmpty)
     }
 }

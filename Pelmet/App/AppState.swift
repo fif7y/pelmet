@@ -789,13 +789,26 @@ final class AppState {
         newlyAddedSeparatorID = spec.id
         var model = settings.sectionModel
         let home = model.newItemsDestination
-        if home != .visible {
-            let id = SeparatorManager.itemID(for: spec).sectionKey
-            model.assignments[id] = home
-            model.order[home, default: []].insert(id, at: 0)
-            settings.sectionModel = model
+        let key = SeparatorManager.itemID(for: spec).sectionKey
+        if home != .visible { model.assignments[key] = home }
+        // A new separator is a drawing like any drop: drawn at the front of
+        // its section, moved there at Apply, forgotten by Discard. It used
+        // to go through the own-item door at the next reveal, which read
+        // as the bar changing by itself (Gab, 2026-09-21).
+        let before = model.order[home] ?? currentOrder(in: home)
+        var order = before
+        order.removeAll { $0 == key }
+        order.insert(key, at: 0)
+        model.order[home] = order
+        settings.sectionModel = model
+        if settings.orderEdits.previousOrder[home] == nil {
+            settings.orderEdits.previousOrder[home] = before
         }
+        settings.orderEdits.order[home] = order
+        settings.orderEdits.created.insert(key)
+        applyReport = nil
         settingsChanged()
+        PelmetLog.log("editor: separator added → \(home), pending Apply")
     }
 
     func removeSeparator(_ id: UUID) {
@@ -836,7 +849,8 @@ final class AppState {
         extras?.sync(with: settings.extraItems)
         pruneOrderEditsForRemovedOwnItems()
         let ownIDs = Set((extras?.managedItemIDs ?? []) + (separators?.managedItemIDs ?? []))
-        for id in ownIDs.subtracting(previousOwnIDs) { placeOwnItemSoon(id) }
+        // Separators are drawings: they move at Apply, never on their own.
+        for id in ownIDs.subtracting(previousOwnIDs) where !id.isPelmetSeparator { placeOwnItemSoon(id) }
         clockRelay?.setEnabled(settings.clockClickOpensNotificationCenter)
         settingsApplyWork?.cancel()
         settingsApplyWork = Task { [weak self] in
@@ -1389,6 +1403,17 @@ final class AppState {
             } else {
                 model.assignments[key] = origin
             }
+        }
+        // A separator created in this edit set was never in the bar's
+        // order: it goes, tile and item alike.
+        let created = settings.orderEdits.created
+        if !created.isEmpty {
+            settings.separators.removeAll { created.contains(SeparatorManager.itemID(for: $0).sectionKey) }
+            for key in created {
+                model.assignments.removeValue(forKey: key)
+                for section in model.order.keys { model.order[section]?.removeAll { $0 == key } }
+            }
+            PelmetLog.log("editor: \(created.count) created separator(s) discarded")
         }
         settings.sectionModel = model
         settings.orderEdits = OrderEdits()
