@@ -73,7 +73,7 @@ Grouping is part of the same pass (the Tidy checkbox was folded in, Gab 2026-09-
 | App/OverflowChevron.swift | 207 | delete (« is never clicked) |
 | App/EditorItemsBuilder.swift | 175 | rewrite on top of AX order + Roster |
 | App/CollateralTracker.swift | 102 | keep |
-| StatusItem/ConcealGhostOverlay.swift | 753 | keep only if the reveal-animation cover is kept; otherwise delete with the capture pipeline |
+| StatusItem/ConcealGhostOverlay.swift | 753 | keep (cover decided 2026-09-20: native conceal is a 450ms slide, Instant needs the cover) |
 | StatusItem/SeparatorManager.swift, HelperHosts.swift | 527 | keep; hosts follow the drawn section at Apply (`hostedSection`), not at the editor drop |
 | Settings/MenuBarTab.swift | 1557 | Tidy button → Apply button with count, Discard, Tidy checkbox; overflow note stays |
 | Settings/EditorDragSession.swift | 163 | between-section drop = membership; within-section drop = OrderEdit |
@@ -106,7 +106,7 @@ Anything that only existed for walks: settle timers for placement, the forced sy
 - **M0 spike (branch `roster`)**: Roster + RosterRule + reveal/conceal with every placement path disabled behind one flag. Live for a day on Gab's bar. Exit: no `place:`/`drift:`/`rescue:` log lines, hover and hotkey reveal work, live items behave.
 - **M1 editor + Apply**: OrderEdits, MovePlan, ApplyPass, Apply/Discard UI, Tidy checkbox. Exit: a five-move edit applies in one pass with the cursor hidden, failures reported.
 - **M2 own items through the door** (LANDED 2026-09-20): extras, replicas, launchers and separators dragged by Apply; idle extras attached for the pass; separators re-host at Apply. Exit met: an own item drawn anywhere in the editor lands there after one Apply, on or off screen.
-- **M3 deletions + cover decision**: remove the survive/delete "delete" rows, decide the reveal-animation cover by measuring the system animation (measure before building over it).
+- **M3 deletions + cover decision** (cover DECIDED 2026-09-20, deletions next): the reveal-animation cover stays. Measured at 60fps under Smooth (uncovered) on Gab's bar: grouped reveal = the hidden group fades in place ~130ms (no stagger, no slide; own extras glide in ~130ms after), grouped conceal = ~450ms native slide toward the chevron. Interleaved (an icon drawn Hidden but sitting in the visible cluster, Apply pending): reveal opens its gap by sliding the chevron and cluster ~60pt over ~400ms; conceal slides out ~200ms then the cluster drifts ~600ms closing the gap, and the strip cover double-draws the cluster for two frames while it moves (open nit). Under Instant every reveal and conceal lands in one frame, stale picture included. The sets core made the reveal side nearly free on a grouped bar; the conceal side is not, and Instant is the baseline, so `ConcealGhostOverlay` and the capture pipeline survive. Delete the remaining "delete" rows.
 - **M4 release 0.3.0**: migration seed, release notes, README copy for the reveal change.
 
 ## Blind spots to close before M1 (2026-09-20 review)
