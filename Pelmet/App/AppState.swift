@@ -1300,8 +1300,13 @@ final class AppState {
     /// screen to move).
     var pendingMoveCount: Int {
         guard let snapshot else { return 0 }
-        return ApplyPass.plan(for: self, snapshot: snapshot).moves.count
+        return ApplyPass.plan(for: self, snapshot: snapshot, remembered: true).moves.count
     }
+
+    /// Last primary-band frame per item, kept across conceals so the Apply
+    /// count can judge a concealed icon's side without a reveal
+    /// (ApplyPass.rememberedFrames). Refreshed from every snapshot.
+    private(set) var rememberedFrames: [ItemID: CGRect] = [:]
 
     /// Apply has something to do: a drawing not yet applied, or the bar
     /// disagreeing with the sections.
@@ -1725,6 +1730,7 @@ final class AppState {
     func updateSnapshot(_ snap: EngineSnapshot) {
         let now = Date.now
         noteOverflow(in: snap)
+        for (key, frame) in ApplyPass.primaryFrames(snap) { rememberedFrames[key] = frame }
         for item in snap.items {
             lastSeenAt[item.id.sectionKey] = now
             if item.pid > 0, let bundle = item.id.bundleID { lastSeenPID[bundle] = item.pid }

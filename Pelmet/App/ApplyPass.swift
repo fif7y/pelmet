@@ -34,6 +34,27 @@ enum ApplyPass {
             if let existing = frames[key], existing.minX <= f.minX { continue }
             frames[key] = f
         }
+        // Items the native « holds all report one phantom frame at its left
+        // edge (real items never share a minX). They are not on screen:
+        // dragging them "bounced" and marked Velja immovable (20:43,
+        // 2026-09-20). Drop them here so no plan, count or verify sees them.
+        let trapped = Set(frames.filter { (key, f) in
+            frames.contains { $0.key != key && abs($0.value.minX - f.minX) < 0.5 }
+        }.keys)
+        for key in trapped { frames.removeValue(forKey: key) }
+        return frames
+    }
+
+    /// `primaryFrames` plus the last frame remembered for each item that is
+    /// concealed right now — the collapsed-bar view of the whole bar, for
+    /// the Apply count (a wrong-side icon lights the button without a
+    /// reveal). The pass itself measures live.
+    static func rememberedFrames(_ snap: EngineSnapshot, appState: AppState) -> [ItemID: CGRect] {
+        var frames = primaryFrames(snap)
+        let live = Set(snap.items.map(\.id.sectionKey))
+        for id in snap.concealed where !live.contains(id.sectionKey) {
+            if let f = appState.rememberedFrames[id.sectionKey] { frames[id.sectionKey] = f }
+        }
         return frames
     }
 
@@ -43,8 +64,11 @@ enum ApplyPass {
         frames.sorted { $0.value.minX < $1.value.minX }.map(\.key)
     }
 
-    static func plan(for appState: AppState, snapshot snap: EngineSnapshot, edits: OrderEdits? = nil) -> MovePlan.Plan {
-        let frames = primaryFrames(snap)
+    static func plan(
+        for appState: AppState, snapshot snap: EngineSnapshot, edits: OrderEdits? = nil,
+        remembered: Bool = false
+    ) -> MovePlan.Plan {
+        let frames = remembered ? rememberedFrames(snap, appState: appState) : primaryFrames(snap)
         let bar = barOrder(frames)
         let chevron = appState.pelmetChevronItem(in: snap)?.id.sectionKey
         // The trailing system cluster only pins while it IS the cluster:
