@@ -61,12 +61,12 @@ enum ApplyPass {
             appState.isImmovable($0)
                 || (PlacementController.isProtectedSystemItem($0) && inTrailingCluster($0))
         })
-        // Anchors among Pelmet's own items: the chevron (passed separately)
-        // and the separators — they are boundaries. Extras, replicas and
-        // launchers drag like any icon until M2 places own items by
-        // registration (docs/CORE-SETS.md); a Siri edit planned nothing
-        // and logged `skip … (ownItem)` (2026-09-20 16:12).
-        let own = Set(bar.filter { $0.isPelmetSeparator })
+        // The one anchor is the chevron (passed separately). Every other own
+        // item — extras, replicas, launchers, separators — drags like any
+        // icon: registration never places an own item (a separator moved to
+        // the end of Hidden in the editor re-hosted at the far right and
+        // Apply skipped it as an anchor, 2026-09-20 20:19).
+        let own = Set<ItemID>()
         return MovePlan.compute(
             bar: bar,
             edits: edits ?? appState.settings.orderEdits,

@@ -1466,8 +1466,7 @@ private struct SeparatorStrip: View {
                 caption: "Dividers for the bar — ⌘-drag them anywhere"
             ) {
                 Button {
-                    appState.settings.separators.append(SeparatorSpec(style: .dot))
-                    appState.settingsChanged()
+                    appState.addSeparator()
                 } label: {
                     AddTrigger(title: "Separator", menuChevron: false)
                 }

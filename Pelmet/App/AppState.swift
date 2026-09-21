@@ -837,6 +837,23 @@ final class AppState {
     /// Pelmet's own chevron in the engine's id grammar.
     static let chevronItemID = ItemID(rawValue: "status:\(PelmetBundle.mainID)::Pelmet.StatusItem")
 
+    /// A new separator lands where new icons land — the section the "New"
+    /// chip sits in, at its front — instead of falling into Visible as an
+    /// unassigned item (it showed up at the end of Visible, 2026-09-20).
+    func addSeparator() {
+        let spec = SeparatorSpec(style: .dot)
+        settings.separators.append(spec)
+        var model = settings.sectionModel
+        let home = model.newItemsDestination
+        if home != .visible {
+            let id = SeparatorManager.itemID(for: spec).sectionKey
+            model.assignments[id] = home
+            model.order[home, default: []].insert(id, at: 0)
+            settings.sectionModel = model
+        }
+        settingsChanged()
+    }
+
     func settingsChanged() {
         rehide.policy = settings.rehidePolicy
         var newOwnIDs: Set<ItemID> = []
