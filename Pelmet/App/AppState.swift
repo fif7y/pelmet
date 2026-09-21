@@ -1610,13 +1610,14 @@ final class AppState {
             Task { @MainActor in
                 guard let self else { return }
                 // An Apply pass needs the frames it measured to stay put.
+                let bandReason = self.bandMonitor?.rehideDeferReason()
                 if self.editorHoldsBar
                     || self.pointerDisplayBehavior == .alwaysShowAll
                     || self.applying
-                    || self.bandMonitor?.shouldDeferRehide() == true {
+                    || bandReason != nil {
                     if !self.rehideDeferLogged {
                         self.rehideDeferLogged = true
-                        PelmetLog.log("rehide: deferred — editor=\(self.editorHoldsBar) policy=\(self.pointerDisplayBehavior) apply=\(self.applying) \(self.bandMonitor?.deferReason() ?? "band=?")")
+                        PelmetLog.log("rehide: deferred — editor=\(self.editorHoldsBar) policy=\(self.pointerDisplayBehavior) apply=\(self.applying) band=\(bandReason?.rawValue ?? "none")")
                     }
                     self.scheduleRehideTimer(at: Date().addingTimeInterval(AppTiming.rehideDeferRearm))
                 } else {

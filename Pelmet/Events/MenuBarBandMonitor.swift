@@ -199,19 +199,19 @@ final class MenuBarBandMonitor {
         point.x >= screen.frame.midX && !isPastRevealTriggerZone(point, on: screen)
     }
 
-    /// True while rehide should hold off: pointer in the band, over a
-    /// menubar-anchored menu/popover, or interacting with Pelmet's own windows.
-    func shouldDeferRehide() -> Bool {
-        if pointerInBand { return true }
+    /// Why rehide holds off: pointer in the band, Pelmet's own editor or
+    /// onboarding in front, or a menubar-anchored menu/popover under the
+    /// pointer. Nil when nothing holds. One window list per verdict: the
+    /// old Bool + diagnostic-twin pair walked the list twice per deferred
+    /// reveal (perf audit 2026-09-15, fix 4b).
+    enum DeferReason: String { case band, active, elevated }
+
+    func rehideDeferReason() -> DeferReason? {
+        if pointerInBand { return .band }
         // Pelmet frontmost only holds the bar for the layout editor and the
         // onboarding demo — the General tab is not a reason to stay revealed.
-        if NSApp.isActive, appState?.editorHoldsBar == true || OnboardingController.shared.isPresented { return true }
-        return pointerIsOverElevatedWindow()
-    }
-
-    /// Diagnostic twin of `shouldDeferRehide` — which gate held.
-    func deferReason() -> String {
-        "band=\(pointerInBand) active=\(NSApp.isActive) elevated=\(pointerIsOverElevatedWindow())"
+        if NSApp.isActive, appState?.editorHoldsBar == true || OnboardingController.shared.isPresented { return .active }
+        return pointerIsOverElevatedWindow() ? .elevated : nil
     }
 
     /// Deliberately narrow: only visible, menu/popover-sized windows at
@@ -438,13 +438,30 @@ final class MenuBarBandMonitor {
     }
 
     private var lastForeignOverlay: String?
+    /// The last window-info verdict, keyed by window number. The hit-test
+    /// IPC still runs on every move so a new window under the pointer is
+    /// seen at once; only the window-info fetch for the SAME window is
+    /// skipped for 250ms (perf audit 2026-09-15, fix 4a: the two IPCs were
+    /// half the in-band per-move cost). A live resize across the
+    /// band-height threshold is the one thing the TTL bounds.
+    private var overlayVerdict: (number: Int, verdict: String?, takenAt: TimeInterval)?
 
     /// Owner + size of another process's tall window under the point, or nil
     /// when the hit is the bar (or one of our own covers / ghosts).
     private func foreignOverlay(under point: NSPoint, of screen: NSScreen) -> String? {
         let number = NSWindow.windowNumber(at: point, belowWindowWithWindowNumber: 0)
-        guard number > 0,
-              let windows = CGWindowListCopyWindowInfo(.optionIncludingWindow, CGWindowID(number)) as? [[String: Any]],
+        guard number > 0 else { return nil }
+        let now = ProcessInfo.processInfo.systemUptime
+        if let cached = overlayVerdict, cached.number == number, now - cached.takenAt < 0.25 {
+            return cached.verdict
+        }
+        let verdict = foreignOverlayVerdict(windowNumber: number, of: screen)
+        overlayVerdict = (number, verdict, now)
+        return verdict
+    }
+
+    private func foreignOverlayVerdict(windowNumber number: Int, of screen: NSScreen) -> String? {
+        guard let windows = CGWindowListCopyWindowInfo(.optionIncludingWindow, CGWindowID(number)) as? [[String: Any]],
               let window = windows.first,
               let pid = window[kCGWindowOwnerPID as String] as? Int32,
               pid != ProcessInfo.processInfo.processIdentifier,
