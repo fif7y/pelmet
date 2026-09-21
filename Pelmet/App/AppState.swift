@@ -1119,10 +1119,18 @@ final class AppState {
         ownItemsAwaitingReveal.insert(id)
     }
 
-    /// Deactivation edge: an indicator that left layout has nothing to place.
+    /// Deactivation edge: an indicator that left layout has nothing to
+    /// place — the reveal-settle entry goes, and so does a pass still in
+    /// its lead time (the media control showed and hid in the same boot
+    /// apply and was dragged 600ms later to x=-1, 2026-09-21 07:05).
     func cancelOwnItemPlacement(_ id: ItemID) {
         ownItemsAwaitingReveal.remove(id)
+        ownItemPassLeads[id]?.cancel()
+        ownItemPassLeads.removeValue(forKey: id)
     }
+
+    /// One-item passes waiting out their lead time, by item.
+    private var ownItemPassLeads: [ItemID: Task<Void, Never>] = [:]
 
     private func placeOwnItemsAwaitingReveal() {
         // A pass reveals too; leave the queue for a user reveal then.
@@ -1137,8 +1145,11 @@ final class AppState {
     }
 
     func placeOwnItemSoon(_ id: ItemID) {
-        Task {
+        ownItemPassLeads[id]?.cancel()
+        ownItemPassLeads[id] = Task { [weak self] in
             try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
+            guard !Task.isCancelled, let self else { return }
+            ownItemPassLeads.removeValue(forKey: id)
             await placeOwnItemNow(id)
         }
     }
@@ -1147,6 +1158,12 @@ final class AppState {
     /// ownItem`). Never overlaps a running pass; a whole-bar pass covers it.
     private func placeOwnItemNow(_ id: ItemID) async {
         guard !applying else { return }
+        // An extra that left layout again (a show/hide flap inside one
+        // apply) has no frame to move; the next entry edge queues it anew.
+        if let extras, extras.managedItemIDs.contains(where: { $0.sectionKey == id.sectionKey }), !extras.isShowing(id) {
+            PelmetLog.log("apply: own \(id.rawValue) left layout before its pass — nothing to place")
+            return
+        }
         // The edge may have fired on a revealed bar that concealed before
         // the pass ran (a timer started 40ms before the hover delay
         // expired, 2026-09-20: "no live neighbour to aim at"). Off screen
