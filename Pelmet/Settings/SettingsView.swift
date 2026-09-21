@@ -1097,7 +1097,9 @@ private struct AboutPane: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 60)
+        // 60 scrolled the pane by a row once the beta toggle joined the
+        // Updates card (Gab, 2026-09-21): the default window shows it whole.
+        .padding(.top, 20)
         .onAppear { SparkleController.shared.probe() }
     }
 
