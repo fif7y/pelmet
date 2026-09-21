@@ -86,6 +86,12 @@ struct SettingsView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                // A pending update greets every pane, About excepted (it
+                // holds the button itself). One line, one action.
+                if let version = SparkleController.shared.availableVersion,
+                   appState.settingsTab != .about {
+                    UpdateStrip(version: version) { appState.settingsTab = .about }
+                }
                 HStack(alignment: .firstTextBaseline) {
                     Text(appState.settingsTab.title)
                         .font(.system(size: 22, weight: .semibold))
@@ -112,6 +118,36 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Color(nsColor: .textBackgroundColor).opacity(0.35))
+    }
+}
+
+/// Pending-update strip atop the non-About panes: green low-alpha fill
+/// (de-box), text left, the one action right — a trail to About.
+private struct UpdateStrip: View {
+    let version: String
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 15))
+                .foregroundStyle(.green)
+            Text("Pelmet \(version) is available.")
+                .font(.callout)
+            Spacer(minLength: 8)
+            Button(action: action) {
+                Text("Update")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(.green, in: Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
