@@ -28,7 +28,10 @@ VERSIONS=$(sed -n 's/^ *MARKETING_VERSION: "\(.*\)"/\1/p' project.yml | sort -u)
 [[ $(wc -l <<<"$VERSIONS") -eq 1 ]] || { echo "error: MARKETING_VERSION differs between targets in project.yml: $VERSIONS" >&2; exit 1; }
 VERSION=$VERSIONS
 [[ -n "$VERSION" ]] || { echo "error: MARKETING_VERSION not found in project.yml" >&2; exit 1; }
-echo "==> Releasing Pelmet $VERSION"
+# Empty = stable. "beta" tags the new appcast items with that channel; only
+# clients that opted in (Settings › About) see them. docs/RELEASE.md § Beta.
+CHANNEL="${CHANNEL:-}"
+echo "==> Releasing Pelmet $VERSION${CHANNEL:+ ($CHANNEL channel)}"
 
 echo "==> Generating project"
 xcodegen generate
@@ -86,13 +89,14 @@ if [[ -n "$GENERATE_APPCAST" ]]; then
     # from a file when SPARKLE_KEY_FILE is set (CI).
     APPCAST_ARGS=(--download-url-prefix "https://github.com/fif7y/pelmet/releases/download/v$VERSION/")
     [[ -n "${SPARKLE_KEY_FILE:-}" ]] && APPCAST_ARGS+=(--ed-key-file "$SPARKLE_KEY_FILE")
+    [[ -n "$CHANNEL" ]] && APPCAST_ARGS+=(--channel "$CHANNEL")
     "$GENERATE_APPCAST" "${APPCAST_ARGS[@]}" "$RELEASES_DIR"
     # generate_appcast stamps EVERY entry with the current release's
     # download-url-prefix, pointing prior versions' DMGs at a tag that
     # doesn't host them (404 for anyone updating from further back).
     # Re-point each Pelmet-X.Y.Z.dmg at its own vX.Y.Z tag.
     # (both names: nook-era DMGs still live in the releases dir and the appcast)
-    perl -pi -e 's#(releases/download/)v[\d.]+/((?:Nook|Pelmet)-([\d.]+)\.dmg)#$1v$3/$2#g' \
+    perl -pi -e 's#(releases/download/)v[\w.-]+/((?:Nook|Pelmet)-([\w.-]+)\.dmg)#$1v$3/$2#g' \
         "$RELEASES_DIR/appcast.xml"
     echo "==> Appcast written to $RELEASES_DIR/appcast.xml (prior-version URLs re-pointed)"
 else

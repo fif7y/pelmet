@@ -80,6 +80,22 @@ Everything below the one-time setup is: bump version → run script → publish.
 `SKIP_NOTARIZE=1 scripts/release.sh` smoke-tests the archive/export/DMG half
 without credentials.
 
+## Beta releases (opt-in channel, since 0.2.41)
+
+Plan and rationale: `docs/BETA-CHANNEL-PLAN.md`. Mechanics:
+
+- Version `X.Y.Z-beta.N` in `project.yml`, build number from the same
+  counter as stable (Sparkle compares `CFBundleVersion` across channels).
+- `CHANNEL=beta scripts/release.sh` — `generate_appcast --channel beta` tags
+  the new items; stable items stay untagged in the same `appcast.xml`.
+- GitHub release `vX.Y.Z-beta.N` with `--prerelease` (the download badge and
+  "Latest" stay on stable). Push the appcast to gh-pages and the nook mirror
+  as usual. Skip the Homebrew cask.
+- Notes in `docs/release-notes/vX.Y.Z-beta.N.md`; the stable's notes are the
+  roll-up.
+- Stable roll-up every one or two weeks, Tuesdays: a fresh build from the
+  last beta's commit with the plain version and the next build number.
+
 ## CI
 
 `.github/workflows/release.yml` runs the same pipeline on `v*` tags, but needs a

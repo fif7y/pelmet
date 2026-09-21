@@ -165,6 +165,7 @@ final class AppState {
         engineCanHide = engine.capabilities.canHide
         PelmetLog.log("start: axTrusted=\(accessibilityGranted) canHide=\(engineCanHide) assignments=\(settings.sectionModel.assignments.count)")
         SparkleController.shared.notifyOnUpdates = { [weak self] in self?.settings.notifyOnUpdates ?? true }
+        SparkleController.shared.betaUpdates = { [weak self] in self?.settings.betaUpdates ?? false }
         SparkleController.shared.onStatusChange = { [weak self] status in
             if case .available = status {
                 self?.statusItem?.showUpdateDot(true)
