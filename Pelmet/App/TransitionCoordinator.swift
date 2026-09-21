@@ -185,7 +185,17 @@ final class TransitionCoordinator {
             lastRevealedSections = sections
             if cover != nil, sections == [.hidden], revealedStripUsable {
                 var picture: [ConcealGhostOverlay.BarSnapshot]? = revealedStripSnapshot
-                if recipe.entrance.needsCutOut || revealedStripCutOut {
+                let shift = revealedStripShift
+                if shift != 0, let then = revealedStripChevronX {
+                    // Cut out at the picture's own geometry (punch and keep
+                    // in its coordinates: the hidden run is everything left
+                    // of the chevron as it was), then float shifted.
+                    let punch = chevronPunch.map { ($0.lowerBound - shift)...($0.upperBound - shift) }
+                    let keep: ClosedRange<CGFloat>? = revealedStripSnapshot.first.map { ($0.windowFrame.minX)...(then - 1) }
+                    picture = cutOutPicture(revealedStripSnapshot, background: emptyBar, punch: punch, keep: keep)?
+                        .map { ConcealGhostOverlay.BarSnapshot(image: $0.image, windowFrame: $0.windowFrame.offsetBy(dx: shift, dy: 0), takenAt: $0.takenAt) }
+                    PelmetLog.log("finished: chevron moved since the picture (\(then) → \(then + shift)) — \(picture == nil ? "cut-out failed, cover only" : "icons cut out and shifted \(Int(shift))pt")")
+                } else if recipe.entrance.needsCutOut || revealedStripCutOut {
                     // Against the empty bar the picture was taken over: the
                     // fresh cover when nothing moved (and for the boot
                     // picture), the kept one when the backdrop changed
@@ -562,10 +572,22 @@ final class TransitionCoordinator {
             return "hidden section changed since the picture — was \(revealedStripSignature.map(\.rawValue)) now \(hiddenSectionSignature.map(\.rawValue))"
         }
         guard revealedStripActiveDisplay == appState?.lastMouseDownDisplay else { return "picture from another active display" }
-        if let then = revealedStripChevronX, let now = liveChevronMinX, abs(then - now) > 1 {
-            return "chevron moved since the picture (\(then) → \(now))"
+        if let then = revealedStripChevronX, let now = liveChevronMinX, abs(then - now) > 1, freshEmptyBarSnapshots().isEmpty {
+            return "chevron moved since the picture (\(then) → \(now)) and no cover to cut out against"
         }
         return nil
+    }
+
+    /// How far the whole cluster has moved since the picture: the capture
+    /// indicator shifts it ~16pt for ~3s after any capture, an extra
+    /// showing or hiding shifts it by its width. The wallpaper stays put,
+    /// so the picture still cuts out cleanly against the empty-bar cover
+    /// at its own geometry; the icons are then floated shifted by this
+    /// much and land where the bar puts them (2026-09-21 — before, every
+    /// such reveal dropped the picture and ran cover-only).
+    private var revealedStripShift: CGFloat {
+        guard let then = revealedStripChevronX, let now = liveChevronMinX, abs(then - now) > 1 else { return 0 }
+        return now - then
     }
 
     /// The strip as it looks now — revealed, at rest, no picture over it —
