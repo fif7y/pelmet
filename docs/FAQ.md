@@ -109,6 +109,12 @@ is notarized by Apple, ships with the hardened runtime, and updates are signed
 Pelmet checks a signed appcast and offers updates in-app (Sparkle). You can
 check manually in Settings → About.
 
+**How do I get fixes sooner?**
+Turn on "Get beta releases" in Settings → About (0.2.41 or later). Betas are
+smaller updates, more often; a stable release rolls them up every week or
+two. Turning it off keeps you on your current build until the next stable
+passes it.
+
 **Is there a keyboard shortcut?**
 Two, and they work from any app. ⌥⌘, shows the hidden icons and puts them
 back on the next press (with auto-rehide set to Instant, they also go back
