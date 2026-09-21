@@ -22,7 +22,7 @@ issue is untouched by 0.3.0, **fixed by 0.3.0** = closes with the release.
 | 36 / 34 | Weather / Passwords can't hide | Apple hosts as apps, bundle keys | holds, live-proven today (`bundle:com.apple.Passwords.MenuBarExtra` in every converge) |
 | 35 | Delay hiding/showing | Finished-picture lifecycle | holds and better: warm reveal 225–305ms → 20–45ms today |
 | 33 | Window edge in the bar | BackdropWatch | holds, live (45 `backdrop: changed` lines today) |
-| 31 | Always-hidden flash on relaunch | Adoption window under a cover (`coveringAdoption`) | live check: relaunch an Always Hidden app, expect `adoptWindow` + an `adopt` cover, no flash (2 windows opened today, cover not read) |
+| 31 | Always-hidden flash on relaunch | Adoption window under a cover (`coveringAdoption`) | holds, live-proven 2026-09-21 14:26 (Velja relaunch on build 49): `adopt: cover up … ready in 201ms` → `adoptWindow: dropping assertion` → adopted 249ms later → `cover down — concealed gone at 3ms, lifted at 433ms`, no uncovered frame |
 | 30 / 14 | iStat, apps outside /Applications | Bundle-less host mark, absent bundles | holds (code kept; iStat itself still external) |
 | 29 / 28 / 22 / 23 / 4 | Focus, timers, live activities | Replicas + collateral tracker (`destroyed by the bar` 26 lines today) | holds; live check with the Timer/Focus replica on |
 | 27 | Notification Center on a side-by-side display | Display dedupe in the walk + clock relay | holds, live today; the new boot-wait rule (`98793fc`) uses the same display geometry |
@@ -68,6 +68,6 @@ issue is untouched by 0.3.0, **fixed by 0.3.0** = closes with the release.
 
 1. App test target with the host Pelmet quit (`xcodebuild test`), core
    tests already pass (128 + the new band test).
-2. Live checks above: #31 relaunch under a cover, #19 Siri toggle, a
+2. Live checks above: #31 relaunch under a cover (done 14:26), #19 Siri toggle, a
    music-on boot, one editor drop + Apply, one Discard.
 3. A day of eyes on the cover after today's picture work (#25 family).
