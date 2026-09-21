@@ -155,24 +155,33 @@ struct MenuBarTab: View {
                     .foregroundStyle(.secondary)
                 }
 
-                EditorSectionView(
-                    section: .visible,
-                    title: "Visible",
-                    caption: "Always in the menu bar",
-                    symbol: "eye"
-                )
-                EditorSectionView(
-                    section: .hidden,
-                    title: "Hidden",
-                    caption: "A hover or click away — or ⌘-drag icons left of the chevron",
-                    symbol: "eye.slash"
-                )
-                EditorSectionView(
-                    section: .alwaysHidden,
-                    title: "Always Hidden",
-                    caption: "Out of sight until you double-click or ⌥-click the chevron",
-                    symbol: "moon"
-                )
+                // Inert while a pass runs: the pass works off the edits it
+                // started with and clears them all on success, so a drop
+                // made meanwhile would be drawn, then forgotten. Dimmed, not
+                // covered — "Applying…" on the title row already says why.
+                Group {
+                    EditorSectionView(
+                        section: .visible,
+                        title: "Visible",
+                        caption: "Always in the menu bar",
+                        symbol: "eye"
+                    )
+                    EditorSectionView(
+                        section: .hidden,
+                        title: "Hidden",
+                        caption: "A hover or click away — or ⌘-drag icons left of the chevron",
+                        symbol: "eye.slash"
+                    )
+                    EditorSectionView(
+                        section: .alwaysHidden,
+                        title: "Always Hidden",
+                        caption: "Out of sight until you double-click or ⌥-click the chevron",
+                        symbol: "moon"
+                    )
+                }
+                .disabled(appState.applying)
+                .opacity(appState.applying ? 0.5 : 1)
+                .animation(.easeOut(duration: 0.2), value: appState.applying)
 
                 // The "New" chip above is the same setting made draggable —
                 // this row is its discoverable, labeled twin.

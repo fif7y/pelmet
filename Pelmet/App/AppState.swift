@@ -1055,6 +1055,13 @@ final class AppState {
     }
 
     func moveItem(_ id: ItemID, to section: PelmetCore.Section, before beforeID: ItemID?) {
+        // A drop that lands while a pass runs would be cleared with the
+        // pass's own edits on success; the editor is inert meanwhile, this
+        // is the backstop for a drop already in flight.
+        guard !applying else {
+            PelmetLog.log("editor: drop of \(id.rawValue) ignored during apply")
+            return
+        }
         // The model keys on canonical IDs; `id` arrives as a real bar item
         // (drag payload) and may be any title-variant of its bundle.
         let key = id.sectionKey
