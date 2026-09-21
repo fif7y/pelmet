@@ -298,12 +298,20 @@ final class MenuBarBandMonitor {
     /// A single click on a revealed bar, held for the double-click interval
     /// so a double's first click can't collapse what its second reopens.
     private var pendingConceal: Task<Void, Never>?
+    private var acceptedClickSequence = AcceptedClickSequence()
 
     private func clicked(_ event: NSEvent) {
         guard let appState else { return }
         let location = NSEvent.mouseLocation
         let screen = NSScreen.containing(location)
         let inBand = screen.map { isInMenuBarBand(location, of: $0) } ?? false
+
+        // Every path out of here that is not an accepted empty-bar click
+        // breaks the sequence — the refusals below, a right-click, a click
+        // outside the band. Done once, on the way out, so a refusal added
+        // later cannot forget to do it.
+        var accepted = false
+        defer { if !accepted { acceptedClickSequence.reset() } }
 
         if inBand {
             // Synthetic placement drags post real ⌘-mouse-downs in the band —
@@ -345,8 +353,14 @@ final class MenuBarBandMonitor {
                 PelmetLog.log("band: click refused — right of the chevron")
                 return
             }
-            PelmetLog.log("band: empty-area click count=\(event.clickCount)")
-            if event.clickCount >= 2 {
+            accepted = true
+            let acceptedCount = acceptedClickSequence.accept(
+                rawCount: event.clickCount,
+                timestamp: event.timestamp,
+                doubleClickInterval: NSEvent.doubleClickInterval
+            )
+            PelmetLog.log("band: empty-area click raw=\(event.clickCount) accepted=\(acceptedCount)")
+            if acceptedCount >= 2 {
                 // Second click of a double: the deferred conceal (below) is
                 // moot. With the feature off, ignore the click — acting
                 // again reads as an open-shut flash.
