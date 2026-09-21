@@ -34,9 +34,18 @@ chevron right in the menu bar. Pelmet records the move and never moves an
 icon on its own.
 
 <p align="center">
-  <img src="docs/assets/editor-anim.svg" alt="The layout editor: dragging an icon from Always Hidden to Hidden, both sections reflowing" width="640"><br>
-  <sub>The layout editor. Drag icons between Visible, Hidden and Always&nbsp;Hidden.</sub>
+  <img src="docs/assets/editor-anim.svg" alt="The layout editor: dragging an icon from Always Hidden to Hidden, the drawing updates and Apply lights up" width="640"><br>
+  <sub>The layout editor. Drag icons between Visible, Hidden and Always&nbsp;Hidden. Nothing moves in the bar until you press Apply.</sub>
 </p>
+
+Apply reveals what it needs, lays the whole bar out in one pass with the
+pointer hidden for a moment, and reports what it did next to the button. On a
+full bar it opens macOS's own « for an icon drawn behind it, moves it, and
+closes the « again. A "New items" tile shows where icons Pelmet has never seen
+will land. Upgrading from 0.2.x keeps your bar as it is: if the stored order
+differs from the screen, it shows up once as a pending edit. And a pending
+update shows as a banner on every Settings pane, with a daily reminder until
+you install it.
 
 System icons hide too. Sound, Battery and friends behave like any
 other icon. The few macOS protects (Clock, Control Center) are shown
@@ -54,7 +63,7 @@ and how it ends, either auto-rehide after a delay you set (instant to 5
 seconds) or the moment you click somewhere else.
 
 <p align="center">
-  <img src="docs/assets/screenshot-settings.png" alt="Behavior settings: Instant/Smooth/Fade animation cards with a live preview, reveal on hover with a stepped delay slider, click and double-click reveals, auto-rehide after a stepped delay, system extras" width="640"><br>
+  <img src="docs/assets/screenshot-settings.png" alt="Behavior pane: Instant/Smooth/Fade animation cards with a live preview, reveal on hover with a stepped delay slider, click and double-click reveals, auto-rehide after a stepped delay, system extras" width="640"><br>
   <sub>Your rules for revealing, and for putting everything back.</sub>
 </p>
 
@@ -70,7 +79,8 @@ seconds) or the moment you click somewhere else.
   like everything else. The fix for apps whose own icon can't be hidden (see
   the [FAQ](docs/FAQ.md#app-launchers)), and a handy launcher for the rest.
 - **Separators.** Visual dividers that behave like icons, with adjustable
-  opacity. ⌘-drag them anywhere in the bar.
+  opacity, edited on their tiles. A new one is part of the drawing until Apply
+  places it. ⌘-drag them anywhere in the bar.
 - **Nothing to phone home about.** No account, no analytics, no server.
   The only connection Pelmet ever makes is checking for its own updates.
 - **Signed updates.** Sparkle with EdDSA signatures, checked against a

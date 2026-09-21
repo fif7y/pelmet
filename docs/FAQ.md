@@ -54,7 +54,8 @@ bothers you, turn the permission off and keep going.
 
 **Some system icons can't be hidden.**
 Control Center never hides, so it has no tile. The clock hides like any
-system icon but always sits at the right edge, so its tile is locked in place.
+system icon but never moves and gets no launcher (icons macOS hosts itself
+share one bundle, so a launcher for one would draw nothing); its tile says so.
 Siri and Time Machine are a special case: macOS draws them from one process, so they hide together
 as one tile, and macOS pins their spot, so the editor can't move them. To
 manage them one by one, turn on Pelmet's own Time Machine and Siri items in
@@ -76,10 +77,29 @@ app. Pelmet draws its own icon for it, which hides like anything else, and a
 click opens the app. "Always shows" keeps the icon in the bar whether or not the app
 is open; "Only while app is running" mirrors what the app's own icon did. Right-click a launcher to quit the
 app. Shortcut: right-click the marked icon in the editor and choose "Add a
-launcher", it lands in the same section.
+launcher", it lands in the same section of the drawing and Apply places it.
 
 App launchers work for any app, not only problem ones — a launcher parked in
 a hidden section is a tidy way to reach an app you use now and then.
+
+**Why doesn't the bar change when I move an icon in the editor?**
+Since 0.3.0 the editor is a drawing. Reorder icons, move them between
+sections, add separators: nothing moves in the bar until you press Apply,
+which lays the whole bar out in one pass and reports what it did next to the
+button. Discard puts the drawing back to what the bar shows. An icon dragged to
+another section hides with that section at once but stays where it sits until
+Apply moves it; its tile says so.
+
+**After updating, Apply shows a pending change I didn't make.**
+0.2.x stored an order for each section and moved icons to match it. 0.3.0 only
+records where your icons are. If the stored order differs from what is on
+screen, it shows up once as a pending edit: Apply reproduces it, Discard keeps
+the bar as it stands.
+
+**My bar is full and an icon sits behind macOS's «. Can Pelmet move it?**
+Apply opens the « for an icon drawn behind it, moves it, and closes the «
+again. It only clicks the « while you press Apply, never on its own. An edit
+for an icon it could not reach stays pending.
 
 **Can I have different layouts on each display?**
 macOS mirrors the same items on every display, so layouts are global. What
