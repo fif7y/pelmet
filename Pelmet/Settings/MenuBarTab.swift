@@ -529,11 +529,13 @@ private struct ItemTile: View {
         hasLauncher && !isAppLauncher
     }
 
-    /// macOS pins this host's spot (SystemUIServer's Siri and Time
-    /// Machine). It hides, it just can't be dragged — so the tile says so
-    /// rather than looking as movable as its neighbours.
+    /// macOS pins this item's spot (SystemUIServer's Siri and Time
+    /// Machine, the clock at the bar's end). It hides, it just can't be
+    /// dragged — so the tile says so rather than looking as movable as its
+    /// neighbours.
     private var isPinnedBySystem: Bool {
         MenuBarPolicy.isPinnedAppleHost(item.id.bundleID)
+            || MenuBarPolicy.systemItem(for: item.id) == .clock
     }
 
     /// Only SystemUIServer's pair has no capturable icon; the other pinned

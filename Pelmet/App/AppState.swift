@@ -1626,10 +1626,13 @@ final class AppState {
     ).subtracting(PelmetBundle.ownIDs)
     private static let immovableKey = "pelmet.immovableBundles"
 
-    /// Learned (bounced drags) or known (the agent pins SystemUIServer).
+    /// Learned (bounced drags) or known: the agent pins SystemUIServer, and
+    /// the clock always ends the bar — it hides through the system allowlist
+    /// like Sound, but no drag (real or synthetic) ever lands right of it.
     func isImmovable(_ id: ItemID) -> Bool {
         guard let bundle = id.bundleID else { return false }
         return immovableBundles.contains(bundle) || MenuBarPolicy.isPinnedAppleHost(bundle)
+            || MenuBarPolicy.systemItem(for: id) == .clock
     }
 
     /// A third-party item's drags both landed back where they started.
