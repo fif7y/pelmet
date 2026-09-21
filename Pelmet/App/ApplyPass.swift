@@ -43,7 +43,7 @@ enum ApplyPass {
         frames.sorted { $0.value.minX < $1.value.minX }.map(\.key)
     }
 
-    static func plan(for appState: AppState, snapshot snap: EngineSnapshot) -> MovePlan.Plan {
+    static func plan(for appState: AppState, snapshot snap: EngineSnapshot, edits: OrderEdits? = nil) -> MovePlan.Plan {
         let frames = primaryFrames(snap)
         let bar = barOrder(frames)
         let chevron = appState.pelmetChevronItem(in: snap)?.id.sectionKey
@@ -69,7 +69,7 @@ enum ApplyPass {
         let own = Set(bar.filter { $0.isPelmetSeparator })
         return MovePlan.compute(
             bar: bar,
-            edits: appState.settings.orderEdits,
+            edits: edits ?? appState.settings.orderEdits,
             roster: roster,
             chevron: chevron,
             pinned: pinned,
@@ -110,15 +110,33 @@ enum ApplyPass {
         return snap
     }
 
+    /// What a pass covers.
+    enum Scope {
+        /// The Apply button: the whole bar, revealed for measuring.
+        case wholeBar
+        /// One own item that just entered the bar (a camera indicator
+        /// lighting up, a launcher's app starting): dragged to its roster
+        /// slot among the items already on screen, no reveal. Own items
+        /// re-enter at the slot the agent remembers, and a re-registration
+        /// under the same tag keeps that slot whatever the order hint says
+        /// (probed 2026-09-20), so the one door is the only way to move
+        /// them — docs/CORE-SETS.md §Own items.
+        case ownItem(ItemID)
+    }
+
     /// Runs the whole pass. The caller owns `applying` and the report.
-    static func run(appState: AppState) async -> ApplyReport {
+    static func run(appState: AppState, scope: Scope = .wholeBar) async -> ApplyReport {
         let engine = appState.engine
         var report = ApplyReport()
         let screenMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
 
         // Hidden items have frames only under a reveal, and the plan is the
-        // whole bar. Reveal everything and let the editor hold it.
-        let revealedForPass = !appState.currentRevealedSections.isSuperset(of: [.hidden, .alwaysHidden])
+        // whole bar. Reveal everything and let the editor hold it. An own
+        // item is placed among what is on screen right now.
+        var revealedForPass = false
+        if case .wholeBar = scope {
+            revealedForPass = !appState.currentRevealedSections.isSuperset(of: [.hidden, .alwaysHidden])
+        }
         if revealedForPass {
             appState.reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
             try? await Task.sleep(for: AppTiming.tidyRevealWait)
@@ -129,7 +147,30 @@ enum ApplyPass {
 
         var snap = await engine.snapshot()
         appState.updateSnapshot(snap)
-        let plan = plan(for: appState, snapshot: snap)
+        var plan: MovePlan.Plan
+        switch scope {
+        case .wholeBar:
+            plan = self.plan(for: appState, snapshot: snap)
+        case .ownItem(let own):
+            // The item's section as the editor draws it counts as the edit,
+            // so the plan puts the newcomer between its roster neighbours;
+            // only its own move runs, the rest of the bar is not touched.
+            let key = own.sectionKey
+            let model = appState.settings.sectionModel
+            let section = model.section(of: own)
+            var edits = appState.settings.orderEdits
+            if edits.order[section] == nil {
+                edits.order[section] = model.order[section] ?? appState.currentOrder(in: section)
+            }
+            plan = self.plan(for: appState, snapshot: snap, edits: edits)
+            plan.moves = plan.moves.filter { $0.item == key }
+            plan.skipped = plan.skipped.filter { $0.0 == key }
+            if plan.moves.isEmpty, plan.skipped.isEmpty {
+                PelmetLog.log("apply: \(key.rawValue) already in its slot (own)")
+                report.applied.append(key)
+                return report
+            }
+        }
         report.planned = plan.moves.count
         report.skipped = plan.skipped.map { ApplyReport.Skipped(item: $0.0, why: $0.1) }
         PelmetLog.log("apply: plan \(plan.moves.count) move(s), \(plan.skipped.count) skipped")

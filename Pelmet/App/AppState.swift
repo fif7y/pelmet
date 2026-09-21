@@ -1201,8 +1201,23 @@ final class AppState {
         placement.dropPlacement(id)
         Task {
             try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
-            await placement.physicallyPlace(id, in: settings.sectionModel.section(of: id))
+            if CoreMode.setsOnly {
+                await placeOwnItemNow(id)
+            } else {
+                await placement.physicallyPlace(id, in: settings.sectionModel.section(of: id))
+            }
         }
+    }
+
+    /// Sets core: one own item through the Apply door (`ApplyPass.Scope.
+    /// ownItem`). Never overlaps a running pass; a whole-bar pass covers it.
+    private func placeOwnItemNow(_ id: ItemID) async {
+        guard !applying else { return }
+        applying = true
+        defer { applying = false }
+        let report = await ApplyPass.run(appState: self, scope: .ownItem(id))
+        PelmetLog.log("apply: own \(id.rawValue) applied=\(report.applied.count) failed=\(report.failed.count) skipped=\(report.skipped.count)")
+        if !report.applied.isEmpty { await engine.writeOrderHint() }
     }
 
     /// Deactivation edge: a queued-but-never-placed indicator left in the
