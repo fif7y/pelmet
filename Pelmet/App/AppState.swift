@@ -1225,6 +1225,8 @@ final class AppState {
     /// no neighbour to measure, so they wait for the next reveal that shows
     /// their section (`onRevealSettled`) and go through the door then.
     private var ownItemsAwaitingReveal: Set<ItemID> = []
+    /// Own items that already got their one retry after a failed pass.
+    private var ownItemsRetried: Set<ItemID> = []
 
     /// Sets core: an own extra entering a concealed section.
     func placeOwnItemAtNextReveal(_ id: ItemID) {
@@ -1265,11 +1267,29 @@ final class AppState {
     /// ownItem`). Never overlaps a running pass; a whole-bar pass covers it.
     private func placeOwnItemNow(_ id: ItemID) async {
         guard !applying else { return }
+        // The edge may have fired on a revealed bar that concealed before
+        // the pass ran (a timer started 40ms before the hover delay
+        // expired, 2026-09-20: "no live neighbour to aim at"). Off screen
+        // there is nothing to measure; wait for the next reveal instead.
+        let section = settings.sectionModel.section(of: id)
+        let concealed = section != .visible && !currentRevealedSections.contains(section)
+        guard !concealed else {
+            PelmetLog.log("apply: own \(id.rawValue) section concealed — waits for a reveal")
+            ownItemsAwaitingReveal.insert(id)
+            return
+        }
         applying = true
         defer { applying = false }
         let report = await ApplyPass.run(appState: self, scope: .ownItem(id))
         PelmetLog.log("apply: own \(id.rawValue) applied=\(report.applied.count) failed=\(report.failed.count) skipped=\(report.skipped.count)")
         if !report.applied.isEmpty { await engine.writeOrderHint() }
+        // A failed move on a concealable section gets one more try at the
+        // next reveal settle (the bar may have concealed mid-pass).
+        if !report.failed.isEmpty, section != .visible, ownItemsRetried.insert(id).inserted {
+            ownItemsAwaitingReveal.insert(id)
+        } else if !report.applied.isEmpty {
+            ownItemsRetried.remove(id)
+        }
     }
 
     /// Deactivation edge: a queued-but-never-placed indicator left in the
@@ -1337,6 +1357,12 @@ final class AppState {
     /// count can judge a concealed icon's side without a reveal
     /// (ApplyPass.rememberedFrames). Refreshed from every snapshot.
     private(set) var rememberedFrames: [ItemID: CGRect] = [:]
+    /// The chevron's midX when each frame was remembered: concealed icons
+    /// sit left of the chevron and slide with it, so a frame remembered
+    /// before Apply moved an icon out of Hidden (chevron 1523 → 1451,
+    /// 2026-09-20 21:39) reads right of the new chevron and lit the button
+    /// again for nothing. The count shifts each frame by the chevron delta.
+    private(set) var rememberedChevronMidX: [ItemID: CGFloat] = [:]
 
     /// Apply has something to do: a drawing not yet applied, or the bar
     /// disagreeing with the sections.
@@ -1784,7 +1810,12 @@ final class AppState {
     func updateSnapshot(_ snap: EngineSnapshot) {
         let now = Date.now
         noteOverflow(in: snap)
-        for (key, frame) in ApplyPass.primaryFrames(snap) { rememberedFrames[key] = frame }
+        let primary = ApplyPass.primaryFrames(snap)
+        let chevronMidX = pelmetChevronItem(in: snap).flatMap { primary[$0.id.sectionKey]?.midX }
+        for (key, frame) in primary {
+            rememberedFrames[key] = frame
+            rememberedChevronMidX[key] = chevronMidX
+        }
         for item in snap.items {
             lastSeenAt[item.id.sectionKey] = now
             if item.pid > 0, let bundle = item.id.bundleID { lastSeenPID[bundle] = item.pid }

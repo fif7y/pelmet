@@ -52,8 +52,16 @@ enum ApplyPass {
     static func rememberedFrames(_ snap: EngineSnapshot, appState: AppState) -> [ItemID: CGRect] {
         var frames = primaryFrames(snap)
         let live = Set(snap.items.map(\.id.sectionKey))
+        let chevronNow = appState.pelmetChevronItem(in: snap).flatMap { frames[$0.id.sectionKey]?.midX }
         for id in snap.concealed where !live.contains(id.sectionKey) {
-            if let f = appState.rememberedFrames[id.sectionKey] { frames[id.sectionKey] = f }
+            let key = id.sectionKey
+            guard var f = appState.rememberedFrames[key] else { continue }
+            // Concealed icons slide with the chevron: re-anchor the frame
+            // to where the chevron is now (AppState.rememberedChevronMidX).
+            if let now = chevronNow, let then = appState.rememberedChevronMidX[key] {
+                f = f.offsetBy(dx: now - then, dy: 0)
+            }
+            frames[key] = f
         }
         return frames
     }
