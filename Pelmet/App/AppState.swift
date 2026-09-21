@@ -795,7 +795,18 @@ final class AppState {
         // its section, moved there at Apply, forgotten by Discard. It used
         // to go through the own-item door at the next reveal, which read
         // as the bar changing by itself (Gab, 2026-09-21).
-        let before = model.order[home] ?? currentOrder(in: home)
+        // The edit starts from the bar's order, not the model's drawing:
+        // a drawing that drifted from the bar without an edit is harmless
+        // until an edit makes the plan honour it, and then "Apply (2)" for
+        // one new separator (2026-09-21). Members the bar has no frame for
+        // keep their drawn place after the framed ones.
+        let members = model.order[home] ?? currentOrder(in: home)
+        var before = members
+        if let snapshot {
+            let onBar = ApplyPass.barOrder(ApplyPass.rememberedFrames(snapshot, appState: self))
+                .filter(members.contains)
+            before = onBar + members.filter { !onBar.contains($0) }
+        }
         var order = before
         order.removeAll { $0 == key }
         order.insert(key, at: 0)
