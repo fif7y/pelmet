@@ -818,10 +818,15 @@ final class AppState {
             registeredSettingsHotkey = settings.settingsHotkey
         }
         // Newly created separators and toggled-on extras get hosted wherever
-        // macOS pleases; the editor marks one not in place until Apply.
+        // macOS pleases (the order hint when it is fresh, the hidden side
+        // when not): through the Apply door like any own item entering the
+        // bar, one hidden-cursor drag while the user is still at the toggle.
+        let previousOwnIDs = Set((extras?.managedItemIDs ?? []) + (separators?.managedItemIDs ?? []))
         separators?.sync(with: settings.separators)
         extras?.sync(with: settings.extraItems)
         pruneOrderEditsForRemovedOwnItems()
+        let ownIDs = Set((extras?.managedItemIDs ?? []) + (separators?.managedItemIDs ?? []))
+        for id in ownIDs.subtracting(previousOwnIDs) { placeOwnItemSoon(id) }
         clockRelay?.setEnabled(settings.clockClickOpensNotificationCenter)
         settingsApplyWork?.cancel()
         settingsApplyWork = Task { [weak self] in
