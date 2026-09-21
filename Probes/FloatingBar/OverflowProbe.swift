@@ -116,6 +116,34 @@ func hidClick(at point: CGPoint, restoreCursor: Bool = true) {
     }
 }
 
+/// ItemMover.cmdDrag without the shield: ⌘ down at `from`, eased steps
+/// (distance/40, 6…24, 30ms apart), 120ms hold, up at `to`, cursor warped home.
+func cmdDrag(from: CGPoint, to: CGPoint) async {
+    guard let source = CGEventSource(stateID: .hidSystemState) else { return }
+    let home = CGEvent(source: nil)?.location
+    func post(_ type: CGEventType, at p: CGPoint) {
+        guard let e = CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: p, mouseButton: .left) else { return }
+        e.flags = .maskCommand
+        e.post(tap: .cghidEventTap)
+    }
+    post(.leftMouseDown, at: from)
+    try? await Task.sleep(for: .milliseconds(180))
+    let distance = abs(to.x - from.x) + abs(to.y - from.y)
+    let steps = min(24, max(6, Int(distance / 40)))
+    for step in 1...steps {
+        let t = CGFloat(step) / CGFloat(steps)
+        post(.leftMouseDragged, at: CGPoint(x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t))
+        try? await Task.sleep(for: .milliseconds(30))
+    }
+    try? await Task.sleep(for: .milliseconds(120))
+    post(.leftMouseUp, at: to)
+    if let home {
+        try? await Task.sleep(for: .milliseconds(60))
+        CGWarpMouseCursorPosition(home)
+        CGAssociateMouseAndMouseCursorPosition(1)
+    }
+}
+
 func snap(_ name: String, _ r: CGRect) {
     let p = Process()
     p.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
@@ -230,68 +258,70 @@ final class Delegate: NSObject, NSApplicationDelegate {
         let toggleNow = frame(of: toggle.element)
         log("« now at x=\(Int(toggleNow.minX))..\(Int(toggleNow.maxX))")
 
-        // Hold under an opaque cover from the leftmost status item to the clock.
-        let clockMinX = after.first(where: { $0.desc.lowercased().contains("clock") || $0.title.contains(":") })?.frame.minX ?? band.maxX - 120
-        let leftmost = after.map(\.frame.minX).filter { $0 > band.minX }.min() ?? band.minX
-        let coverAX = CGRect(x: leftmost - 8, y: 0, width: clockMinX - leftmost + 8, height: barH)
-        let w = NSWindow(contentRect: NSRect(x: coverAX.minX, y: screen.frame.maxY - barH, width: coverAX.width, height: barH),
-                         styleMask: .borderless, backing: .buffered, defer: false)
-        w.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) + 1)
-        w.isOpaque = true
-        w.backgroundColor = NSColor(calibratedRed: 0.10, green: 0.20, blue: 0.18, alpha: 1)
-        w.ignoresMouseEvents = true
-        w.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-        w.orderFrontRegardless()
-        cover = w
-        log("cover up over x=\(Int(coverAX.minX))..\(Int(coverAX.maxX))")
-        try? await Task.sleep(for: .milliseconds(500))
-        snap("covered", band)
-
-        func poll(_ label: String) {
-            let s = toggleState(toggle.element)
-            let vis = gained.filter { frame(of: $0.element).width > 0 && frame(of: $0.element).minX > band.minX }.count
-            log("\(label): expanded=\(String(describing: s)) gained-still-framed=\(vis)/\(gained.count)")
+        // MARK: cross-notch ⌘-drags (2026-09-20 night)
+        func items(_ list: [Item], _ bundle: String) -> [Item] {
+            list.filter { $0.bundle == bundle && $0.role == "AXMenuBarItem" && $0.frame.width > 0 }
+                .sorted { $0.frame.minX < $1.frame.minX }
         }
-        poll("under cover 0.5s")
-        try? await Task.sleep(for: .seconds(3))
-        poll("under cover 3.5s")
+        func report(_ label: String, _ bundle: String) -> [Item] {
+            let now = sweep(from: 0, to: band.maxX, agentScoped: true) + sweep(from: 0, to: band.maxX).filter { $0.pid != agentPID }
+            let mine = items(now, bundle)
+            let run = now.filter { $0.role == "AXMenuBarItem" && $0.frame.minX > 1000 && $0.frame.width > 0 }
+                .sorted { $0.frame.minX < $1.frame.minX }
+                .map { "\($0.bundle.split(separator: ".").last ?? "?")@\(Int($0.frame.minX))" }
+            log("\(label): \(bundle.split(separator: ".").last ?? "?") at \(mine.map { Int($0.frame.minX) }) « expanded=\(String(describing: toggleState(toggle.element)))")
+            log("  right run: \(run)")
+            return now
+        }
+        /// A slot between two items of the RIGHT run only (both past the notch).
+        func slot(_ list: [Item], after a: String, before b: String) -> CGPoint? {
+            guard let l = items(list, a).first(where: { $0.frame.minX > 1000 }),
+                  let r = items(list, b).first(where: { $0.frame.minX > 1000 }) else { return nil }
+            return CGPoint(x: (l.frame.midX + r.frame.midX) / 2, y: 12)
+        }
+        func frontOfRightRun(_ list: [Item]) -> CGPoint? {
+            let tgl = frame(of: toggle.element)
+            guard let first = list.filter({ $0.role == "AXMenuBarItem" && $0.frame.minX > tgl.maxX && $0.frame.width > 0 && $0.pid != agentPID })
+                .min(by: { $0.frame.minX < $1.frame.minX }) else { return nil }
+            return CGPoint(x: (tgl.midX + first.frame.midX) / 2, y: 12)
+        }
+        let probeBundle = Bundle.main.bundleIdentifier ?? "app.fif7y.PeriscopeProbe"
 
-        // Pointer leaves the bar.
-        CGWarpMouseCursorPosition(CGPoint(x: screen.frame.midX, y: screen.frame.midY))
-        try? await Task.sleep(for: .seconds(2))
-        poll("pointer away 2s")
+        // Drag 1: an own trapped item, left of the notch → between herd and Bitwarden.
+        if let filler = items(after, probeBundle).first, let target = slot(after, after: "de.beyondco.herd", before: "com.bitwarden.desktop") {
+            log("drag 1 (own): filler x=\(Int(filler.frame.midX)) → \(Int(target.x)) (\(Int(target.x - filler.frame.midX))pt across the notch)")
+            await cmdDrag(from: CGPoint(x: filler.frame.midX, y: 12), to: target)
+            try? await Task.sleep(for: .milliseconds(900))
+            _ = report("after drag 1", probeBundle)
+        } else { log("drag 1 skipped: no filler on the left or no slot") }
 
-        // Another app takes focus (a click on the desktop → Finder).
-        hidClick(at: CGPoint(x: screen.frame.midX, y: screen.frame.midY), restoreCursor: false)
-        try? await Task.sleep(for: .seconds(1.5))
-        log("frontmost now=\(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?")")
-        poll("after desktop click")
+        // Drag 2: a third-party trapped item (OpenClip landed at ~735) → between Pure Paste and Velja.
+        var now = sweep(from: 0, to: band.maxX, agentScoped: true) + sweep(from: 0, to: band.maxX).filter { $0.pid != agentPID }
+        if let oc = items(now, "com.openclip.OpenClip").first, oc.frame.minX < 1000,
+           let target = slot(now, after: "de.beyondco.herd", before: "com.bitwarden.desktop") {
+            log("drag 2 (third-party): OpenClip x=\(Int(oc.frame.midX)) → \(Int(target.x))")
+            await cmdDrag(from: CGPoint(x: oc.frame.midX, y: 12), to: target)
+            try? await Task.sleep(for: .milliseconds(900))
+            now = report("after drag 2", "com.openclip.OpenClip")
+            // Drag 3: put it back at the front of the run (just right of the «).
+            if let oc2 = items(now, "com.openclip.OpenClip").first, let target3 = frontOfRightRun(now) {
+                log("drag 3 (restore): OpenClip x=\(Int(oc2.frame.midX)) → \(Int(target3.x))")
+                await cmdDrag(from: CGPoint(x: oc2.frame.midX, y: 12), to: target3)
+                try? await Task.sleep(for: .milliseconds(900))
+                now = report("after drag 3", "com.openclip.OpenClip")
+            }
+        } else { log("drag 2 skipped: OpenClip not on the left (\(items(now, "com.openclip.OpenClip").map { Int($0.frame.minX) })) or no slot") }
+        snap("dragged", full)
 
-        // Pointer back into the bar band (over the cover), then time.
-        CGWarpMouseCursorPosition(CGPoint(x: coverAX.midX, y: 10))
-        try? await Task.sleep(for: .seconds(1))
-        poll("pointer over cover")
-        try? await Task.sleep(for: .seconds(5))
-        poll("after 5s more")
-        snap("held", band)
-
-        // Can the expanded items be read while covered? (element refs, not hit-tests)
-        for it in gained.prefix(4) { log("  covered read: \(it.bundle) frame=\(frame(of: it.element))") }
-
-        // Restore: cover down, collapse if still expanded.
-        w.orderOut(nil)
-        cover = nil
-        try? await Task.sleep(for: .milliseconds(300))
-        if toggleState(toggle.element) == true {
-            NSApp.activate(ignoringOtherApps: true)
-            try? await Task.sleep(for: .milliseconds(300))
+        // Collapse (verify, retry once) and read the final layout.
+        for attempt in 1...2 where toggleState(toggle.element) == true {
             let f = frame(of: toggle.element)
             hidClick(at: CGPoint(x: f.midX, y: f.midY))
-            try? await Task.sleep(for: .milliseconds(800))
-            log("collapse click → expanded=\(String(describing: toggleState(toggle.element)))")
-        } else {
-            log("already collapsed by the time the cover came down")
+            try? await Task.sleep(for: .milliseconds(900))
+            log("collapse click \(attempt) → expanded=\(String(describing: toggleState(toggle.element)))")
         }
+        _ = report("after collapse", probeBundle)
+        _ = report("after collapse", "com.openclip.OpenClip")
         snap("after", band)
         log("RESULT: done")
     }
