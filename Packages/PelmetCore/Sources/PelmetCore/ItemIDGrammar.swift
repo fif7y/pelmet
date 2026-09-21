@@ -108,8 +108,8 @@ public extension ItemID {
     /// Pelmet's chevron — the boundary every zone reading measures against.
     var isPelmetChevron: Bool { pelmetItem == .chevron }
 
-    /// A user-added separator. Section-managed like an extra, but never a
-    /// placement target when it has no frame (see PlacementController).
+    /// A user-added separator. Section-managed like an extra; it moves
+    /// through Apply like every own item.
     public var isPelmetSeparator: Bool { pelmetItem == .separator }
 
     /// One of Pelmet's app launchers.

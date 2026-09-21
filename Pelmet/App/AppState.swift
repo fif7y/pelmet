@@ -30,7 +30,7 @@ final class AppState {
     /// Sets core: the editor no longer shows the bar, so it holds it only
     /// for the span of an Apply pass.
     var editorHoldsBar: Bool {
-        settingsWindowVisible && settingsTab == .menuBar && (!CoreMode.setsOnly || applying)
+        settingsWindowVisible && settingsTab == .menuBar && applying
     }
 
     /// The shortcut in settings could not be registered (another app holds
@@ -54,7 +54,6 @@ final class AppState {
         settings.behavior(forDisplayUUID: NSScreen.underPointer?.displayUUIDString)
     }
 
-    @ObservationIgnored private lazy var placement = PlacementController(appState: self, engine: engine)
     @ObservationIgnored private lazy var transitions = TransitionCoordinator(appState: self, engine: engine)
     private var rehide = RehideStateMachine()
     private var rehideTimer: Timer?
@@ -86,9 +85,9 @@ final class AppState {
     /// monitors → event pump → async engine boot. Inside the engine boot:
     /// `waitForOwnItemAdoption` runs BEFORE `engine.start` (items registering
     /// under an active assertion park offscreen), `registerNewItems` before
-    /// `setModel` (routing must precede the first converge),
-    /// `flushPendingPlacements` after `setModel`, and the launch conceal
-    /// precedes the display-policy reveal so the policy lands on a settled bar.
+    /// `setModel` (routing must precede the first converge), and the launch
+    /// conceal precedes the display-policy reveal so the policy lands on a
+    /// settled bar.
     func start() {
         wireTransitionSettleCallbacks()
         runOneShotMigrations()
@@ -105,18 +104,7 @@ final class AppState {
             guard let self else { return }
             dispatch(rehide.handle(.transitionSettled))
             settleCatchUp()
-            // Newcomers routed into a then-concealed section finally
-            // have measurable neighbors — walk them to their slot.
-            placement.flushPendingPlacements()
             placeOwnItemsAwaitingReveal()
-            // Order supervisor: with the hidden cluster materialized, any
-            // item on the wrong side of the chevron is corrected now, under
-            // this reveal, from a fresh measurement.
-            Task { [weak self] in
-                guard let self else { return }
-                await placement.correctDrift()
-                placement.flushPendingPlacements()
-            }
             // Swipe-through hover: the pointer can be long gone by the
             // time the reveal settles — armIfNeeded gave the FULL delay.
             // Re-arm as a pointer-out so an accidental hover self-heals
@@ -132,9 +120,6 @@ final class AppState {
             guard let self else { return }
             dispatch(rehide.handle(.transitionSettled))
             settleCatchUp()
-            // The bar just de-crowded — items trapped in the native
-            // overflow now have real frames. Walk any queued rescues.
-            placement.flushPendingRescues()
             // Rapid hover out-in: if the pointer is back in the band by the
             // time this conceal lands, its entry edge is spent — re-arm the
             // hover reveal so the bar doesn't stay shut under the pointer.
@@ -163,9 +148,6 @@ final class AppState {
         // title-variant twin entries left by older builds.
         settings.sectionModel.canonicalize()
         settings.save()
-        if CoreMode.setsOnly {
-            PelmetLog.log("core: sets only — membership hides, no placement path starts a drag")
-        }
     }
 
     private func applyPolicyAndStartUpdater() {
@@ -264,13 +246,9 @@ final class AppState {
         registeredSettingsHotkey = settings.settingsHotkey
         self.hotkey = hotkey
 
-        // A relaunched app's status item is a FRESH registration — the agent
-        // parks it wherever it likes, not at the model slot (plist seeds are
-        // unreliable: Bitwarden relaunched into the middle of the always-hidden
-        // cluster, 2026-08-31), and the misplaced live frame then poisons
-        // neighbor targeting for every later placement near it. Queue its
-        // items for a re-slot; the flush places them at the next reveal
-        // settle (or right away for the visible section).
+        // A relaunched app's status item is a FRESH registration made under
+        // the assertion — it parks offscreen until an adoption window lets
+        // the agent attach it (see `adoptRelaunchedBundle`).
         let agents = Self.systemAgentBundles(in: NSWorkspace.shared.runningApplications)
         MenuBarPolicy.registerSystemAgents(agents)
         PelmetLog.log("policy: \(agents.count) system agent(s) registered from \(MenuBarPolicy.systemAgentLocation)")
@@ -282,7 +260,7 @@ final class AppState {
             guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
             MenuBarPolicy.registerSystemAgents(Self.systemAgentBundles(in: [app]))
             guard let bundle = app.bundleIdentifier, Self.isBundleMainProcess(app) else { return }
-            MainActor.assumeIsolated { self?.queueRelaunchedBundlePlacement(bundle) }
+            MainActor.assumeIsolated { self?.adoptRelaunchedBundle(bundle) }
         }
         observeRunningApplications()
     }
@@ -316,8 +294,8 @@ final class AppState {
 
     /// Menu-bar agent apps (LSUIElement / background-only) post no launch
     /// notification — Snib, OpenClip and Sconce relaunched all afternoon
-    /// without a single re-slot (2026-09-09). KVO on runningApplications
-    /// sees every activation policy; both paths feed the same queue.
+    /// without a single adoption (2026-09-09). KVO on runningApplications
+    /// sees every activation policy; both paths feed the same window.
     private func observeRunningApplications() {
         runningAppsObservation = NSWorkspace.shared.observe(
             \.runningApplications, options: [.old, .new]
@@ -329,7 +307,7 @@ final class AppState {
                 .filter { !before.contains($0) }
             guard !appeared.isEmpty else { return }
             Task { @MainActor [weak self] in
-                for bundle in appeared { self?.queueRelaunchedBundlePlacement(bundle) }
+                for bundle in appeared { self?.adoptRelaunchedBundle(bundle) }
             }
         }
     }
@@ -338,7 +316,7 @@ final class AppState {
     /// its section is revealed has re-registered under the assertion and
     /// parked (ChatGPT Classic re-creates its status item at runtime, 2026-09-09;
     /// the icon showed for a moment and never came back). Same remedy as a
-    /// relaunch: a brief adoption window, then place it.
+    /// relaunch: a brief adoption window.
     /// An adoption window drops the assertion outright — the agent refuses to
     /// attach a newly registered item while ANY assertion is held, allowlist
     /// or not — so for its whole life (up to 2.5s) every hidden AND
@@ -357,12 +335,9 @@ final class AppState {
     }
 
     func reopenAdoption(for bundle: String) async {
-        let keys = settings.sectionModel.assignments.keys.filter { $0.bundleID == bundle }
-        placement.queuePlacements(keys)
         if await coveringAdoption({ await engine.openAdoptionWindow(for: bundle) }) {
             absentBundles.remove(bundle)
             updateSnapshot(await engine.snapshot())
-            placement.flushPendingPlacements()
         } else {
             // Running, assigned, and still no registration with the
             // assertion dropped: the app has no bar icon right now (its
@@ -373,7 +348,7 @@ final class AppState {
         }
     }
 
-    static func relaunchPlacementKeys(for bundle: String, model: SectionModel) -> [ItemID] {
+    static func relaunchAdoptionKeys(for bundle: String, model: SectionModel) -> [ItemID] {
         // A system host may restart before any registration pass has folded
         // it into knownBundles (the input menu switched on, then its agent
         // relaunched). Its assignment is the proof the user manages it.
@@ -402,17 +377,13 @@ final class AppState {
     /// sibling reusing the id.
     private var lastSeenPID: [String: pid_t] = [:]
 
-    private func queueRelaunchedBundlePlacement(_ bundle: String) {
-        let keys = Self.relaunchPlacementKeys(for: bundle, model: settings.sectionModel)
+    private func adoptRelaunchedBundle(_ bundle: String) {
+        let keys = Self.relaunchAdoptionKeys(for: bundle, model: settings.sectionModel)
         guard !keys.isEmpty else { return }
         // The notification and the KVO path can both report one launch.
         if let last = lastRelaunchQueue[bundle], Date.now.timeIntervalSince(last) < 3 { return }
         lastRelaunchQueue[bundle] = .now
         let queuedAt = Date.now
-        placement.queuePlacements(keys)
-        if !CoreMode.setsOnly {
-            PelmetLog.log("place: \(bundle) relaunched — queued \(keys.count) item(s) for re-slot")
-        }
         // The relaunched item registers UNDER an active assertion and parks
         // offscreen — it never enters the bar or the AX tree on its own (so
         // no itemsChanged fires, and the editor can't see it either). Open
@@ -461,8 +432,8 @@ final class AppState {
                 // A system host (the input menu's agent) registers through
                 // the agent's own path the moment it has an item — it never
                 // parks and never bootstraps slowly. After the first wait it
-                // is either registered and already concealed (placement
-                // waits for a reveal) or it restarted without an item (the
+                // is either registered and already concealed or it
+                // restarted without an item (the
                 // menu switched off in System Settings). Neither needs the
                 // assertion dropped, let alone twice (2026-09-10). The
                 // pinned hosts get nothing from a window either: the slot
@@ -475,7 +446,6 @@ final class AppState {
                 }
                 if await self.coveringAdoption({ await self.engine.openAdoptionWindow(for: bundle) }) {
                     self.updateSnapshot(await self.engine.snapshot())
-                    self.placement.flushPendingPlacements()
                     return
                 }
             }
@@ -524,44 +494,15 @@ final class AppState {
                 PelmetLog.log("extras: system extras held hidden — a Pelmet item replaces one")
             }
             // Apps that first appeared while Pelmet wasn't running route to the
-            // new-items section before the first converge. VISIBLE newcomers
-            // get their placement drag now (still live-framed); concealed
-            // destinations queue until a reveal makes them measurable.
+            // new-items section before the first converge. Nothing moves:
+            // membership hides them where they sit (docs/CORE-SETS.md).
             let launchSnapshot = await engine.snapshot()
-            let launchNewItems = registerNewItems(from: launchSnapshot)
-            placement.queuePlacements(launchNewItems)
-            // Pelmet's own extras and separators are fresh registrations on
-            // every relaunch — the agent seeds their slot, not the model
-            // (the media control landed in the hidden zone, 2026-09-02).
-            // Nothing else walks own items back, so queue the ones that are
-            // actually in layout; `alreadyPlaced` short-circuits the ones
-            // that landed right. Out-of-layout ones (camera pill idle,
-            // width-collapsed hidden separators) have no frame to drag and
-            // would just requeue and log on every reveal settle.
-            let liveKeys = Set(
-                launchSnapshot.items
-                    .filter { $0.frame.map(MenuBarGeometry.isInBand) == true }
-                    .map(\.id.sectionKey)
-            )
-            let ownItems = (extras?.managedItemIDs ?? []) + (separators?.managedItemIDs ?? [])
-            placement.queuePlacements(ownItems.filter { liveKeys.contains($0.sectionKey) })
-            // The chevron's slot is the hidden cluster's right edge, only
-            // measurable while that cluster is live — and right now, before
-            // the first converge, everything is. Walk it HERE: doing it at a
-            // later hover grabbed the cursor for two seconds mid-hover
-            // (2026-09-06). Already-in-order skips without a drag.
-            if settings.showStatusItem {
-                await placement.physicallyPlace(Self.chevronItemID, in: .visible)
-            }
+            registerNewItems(from: launchSnapshot)
             // Last look at the fully live bar: the first reveal's picture
-            // (see TransitionCoordinator.takeBootPicture). A fresh walk,
-            // the chevron drag above may have shifted the run. The converge
+            // (see TransitionCoordinator.takeBootPicture). The converge
             // below is what conceals.
-            await transitions.takeBootPicture(from: await engine.snapshot())
+            await transitions.takeBootPicture(from: launchSnapshot)
             await engine.setModel(settings.sectionModel)
-            // Visible-destined newcomers place right away (the flush filter
-            // passes them without a reveal); concealed ones wait for one.
-            placement.flushPendingPlacements()
             updateSnapshot(await engine.snapshot())
             // Startup state: everything the model says is hidden, is hidden.
             dispatch(rehide.handle(.concealRequested))
@@ -802,11 +743,9 @@ final class AppState {
 
     /// A helper registered an item. Mid-session that registration sits
     /// under an active assertion, which defers its adoption — open the
-    /// window the way a relaunched app gets one, and queue its placement.
+    /// window the way a relaunched app gets one.
     func helperHosted(title: String, bundle: String) {
-        let id = ItemID.status(bundle: PelmetBundle.mainID, title: title)
         guard engineStarted else { return }
-        placement.queuePlacement(id)
         Task {
             // Wait for THIS registration: the helper's other items were
             // adopted long ago and would satisfy a bundle-level check at
@@ -815,7 +754,6 @@ final class AppState {
             if await engine.openAdoptionWindow(for: bundle, expecting: live) {
                 updateSnapshot(await engine.snapshot())
             }
-            placement.flushPendingPlacements()
         }
     }
 
@@ -857,28 +795,12 @@ final class AppState {
 
     func settingsChanged() {
         rehide.policy = settings.rehidePolicy
-        var newOwnIDs: Set<ItemID> = []
         if settings.showStatusItem, statusItem == nil {
-            statusItem = PelmetStatusItem(appState: self)
             // A chevron switched on mid-session is a fresh registration the
-            // agent hosts wherever it likes — it landed INSIDE the hidden
-            // cluster (Snib and the pipe right of it, 2026-09-06), then
-            // drifted with every reveal reflow. Walk it to the boundary NOW,
-            // under a deliberate reveal (its slot needs the hidden cluster
-            // live), while the user is looking at the toggle they just
-            // flipped — never at a later hover.
-            Task {
-                try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
-                reveal([.hidden], reason: .settingsPreview)
-                try? await Task.sleep(for: AppTiming.tidyRevealWait)
-                if await placement.physicallyPlace(Self.chevronItemID, in: .visible) {
-                    // Seed the next fresh registration's slot.
-                    await engine.writeOrderHint()
-                }
-                if !settingsWindowVisible {
-                    applyPointerDisplayPolicyAfterDismissal()
-                }
-            }
+            // agent hosts from the order hint (a Pelmet relaunch seeds it
+            // the same way); the chevron itself moves only by the user's
+            // own ⌘-drag (docs/CORE-SETS.md §Own items).
+            statusItem = PelmetStatusItem(appState: self)
         } else if !settings.showStatusItem {
             statusItem?.remove()
             statusItem = nil
@@ -896,26 +818,10 @@ final class AppState {
             registeredSettingsHotkey = settings.settingsHotkey
         }
         // Newly created separators and toggled-on extras get hosted wherever
-        // macOS pleases (left end of the trailing area — or straight into the
-        // overflow notch on a crowded bar) — physically place them into their
-        // section like any editor move would. A trapped newcomer queues for
-        // the conceal-settle overflow rescue instead.
-        let previousSeparatorIDs = Set(separators?.managedItemIDs ?? [])
+        // macOS pleases; the editor marks one not in place until Apply.
         separators?.sync(with: settings.separators)
-        let newSeparatorIDs = Set(separators?.managedItemIDs ?? []).subtracting(previousSeparatorIDs)
-        let previousExtraIDs = Set(extras?.managedItemIDs ?? [])
         extras?.sync(with: settings.extraItems)
-        let newExtraIDs = Set(extras?.managedItemIDs ?? []).subtracting(previousExtraIDs)
-        newOwnIDs.formUnion(newSeparatorIDs.union(newExtraIDs))
         pruneOrderEditsForRemovedOwnItems()
-        if !newOwnIDs.isEmpty {
-            Task {
-                try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
-                for id in newOwnIDs {
-                    await placement.physicallyPlace(id, in: settings.sectionModel.section(of: id))
-                }
-            }
-        }
         clockRelay?.setEnabled(settings.clockClickOpensNotificationCenter)
         settingsApplyWork?.cancel()
         settingsApplyWork = Task { [weak self] in
@@ -953,8 +859,7 @@ final class AppState {
     // MARK: - Layout editor intents
 
     /// Move an item to `section`, inserted before `beforeID` (nil = append).
-    /// Updates assignment + explicit order, then physically places the icon
-    /// via a synthetic ⌘-drag (no agent restart).
+    /// Updates assignment + drawn order; the bar moves at Apply.
     /// Bundles with an icon on the editor board (live or concealed) that
     /// Pelmet can actually manage — a launcher would be a duplicate. Icons
     /// marked incompatible are NOT here: those are exactly what launchers
@@ -1166,62 +1071,37 @@ final class AppState {
         }
         model.order[section] = order
         settings.sectionModel = model
-        // Sets core: the drop is a drawing, the bar moves at Apply. A
-        // between-section drop changes membership now and the destination's
-        // drawn order is what Apply will lay down, across the chevron too.
-        if CoreMode.setsOnly {
-            // The key leaves every other section's edit too: a stale entry
-            // put Siri in two tidy runs at once and MovePlan trapped on the
-            // duplicate key (crash 2026-09-20 17:29).
-            for edited in settings.orderEdits.order.keys where edited != section {
-                settings.orderEdits.order[edited]?.removeAll { $0 == key }
-            }
-            settings.orderEdits.order[section] = order
-            pruneSettledOrderEdits()
-            applyReport = nil
+        // The drop is a drawing, the bar moves at Apply. A between-section
+        // drop changes membership now and the destination's drawn order is
+        // what Apply will lay down, across the chevron too.
+        // The key leaves every other section's edit too: a stale entry
+        // put Siri in two tidy runs at once and MovePlan trapped on the
+        // duplicate key (crash 2026-09-20 17:29).
+        for edited in settings.orderEdits.order.keys where edited != section {
+            settings.orderEdits.order[edited]?.removeAll { $0 == key }
         }
+        settings.orderEdits.order[section] = order
+        pruneSettledOrderEdits()
+        applyReport = nil
         settings.save()
-        // A section move is a re-host for a separator (main ↔ helper bundle);
-        // `sync` is idempotent and a no-op for every other item. Without it
-        // the separator kept its old host until the next settings change and
-        // the placement below read it under the helper's bundle (log,
-        // 2026-09-14 23:52).
+        // A separator's host follows its drawn section at Apply
+        // (`SeparatorManager.hostedSection`); `sync` keeps the specs current.
         separators?.sync(with: settings.separators)
-        // A deliberate editor drop supersedes any queued newcomer placement.
-        placement.dropPlacement(id)
         PelmetLog.log("editor: move \(id.rawValue) → \(section) before=\(beforeID?.rawValue ?? "end")")
         // Extras visibility applies via the engine's reflow companion during
         // the converge below — same reflow, same motion as everything else.
         Task {
             await engine.setModel(model)
-            // EVERY item moves via the synthetic ⌘-drag — the only mover the
-            // agent honors. Live third-party order lives in the client
-            // processes' own registrations (proven 2026-08-21: plist rebuilds
-            // + agent restarts + conceal/reveal cycles never re-slot a live
-            // item; a real ⌘-drag survives restarts with no disk record).
-            // The plist hint still seeds slots for FUTURE fresh
-            // registrations (app relaunches, brand-new items).
+            // The plist hint seeds slots for FUTURE fresh registrations
+            // (app relaunches, brand-new items); live items move at Apply.
             await engine.writeOrderHint()
-            await placement.physicallyPlace(id, in: section)
         }
-    }
-
-    /// Dynamic extras (camera/mic indicator) re-enter layout when their
-    /// hardware activates, parked wherever the agent decides. QUEUE the walk
-    /// back to the model slot instead of dragging right away: the activation
-    /// is app-driven (another app opened the camera), and an uninitiated
-    /// synthetic ⌘-drag warps the pointer mid-task — same rule as the «
-    /// expansion. The next reveal settle places it, riding motion the user
-    /// started. Editor drops still place immediately via moveItem.
-    func queueDynamicExtraPlacement(_ id: ItemID, zoneOnly: Bool = false) {
-        placement.queuePlacement(id, zoneOnly: zoneOnly)
     }
 
     /// An own item that just (re-)entered a REVEALED bar sits at the agent's
     /// slot, not the model's — a launcher whose app launched mid-reveal
     /// surfaced at the end of Always Hidden (ChatGPT Classic, 2026-09-09).
-    /// Place it now, same beat as a freshly added extra; the reveal-settle
-    /// queue would only catch the next reveal.
+    /// Place it now, same beat as a freshly added extra.
     /// Own extras that entered the bar while their section was concealed:
     /// no neighbour to measure, so they wait for the next reveal that shows
     /// their section (`onRevealSettled`) and go through the door then.
@@ -1229,20 +1109,19 @@ final class AppState {
     /// Own items that already got their one retry after a failed pass.
     private var ownItemsRetried: Set<ItemID> = []
 
-    /// Sets core: an own extra entering a concealed section.
+    /// An own extra entering a concealed section.
     func placeOwnItemAtNextReveal(_ id: ItemID) {
-        guard CoreMode.setsOnly else { queueDynamicExtraPlacement(id); return }
         ownItemsAwaitingReveal.insert(id)
     }
 
+    /// Deactivation edge: an indicator that left layout has nothing to place.
     func cancelOwnItemPlacement(_ id: ItemID) {
         ownItemsAwaitingReveal.remove(id)
-        cancelDynamicExtraPlacement(id)
     }
 
     private func placeOwnItemsAwaitingReveal() {
         // A pass reveals too; leave the queue for a user reveal then.
-        guard CoreMode.setsOnly, !applying, !ownItemsAwaitingReveal.isEmpty else { return }
+        guard !applying, !ownItemsAwaitingReveal.isEmpty else { return }
         let revealed = currentRevealedSections
         let due = ownItemsAwaitingReveal.filter { revealed.contains(settings.sectionModel.section(of: $0)) }
         guard !due.isEmpty else { return }
@@ -1253,18 +1132,13 @@ final class AppState {
     }
 
     func placeOwnItemSoon(_ id: ItemID) {
-        placement.dropPlacement(id)
         Task {
             try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
-            if CoreMode.setsOnly {
-                await placeOwnItemNow(id)
-            } else {
-                await placement.physicallyPlace(id, in: settings.sectionModel.section(of: id))
-            }
+            await placeOwnItemNow(id)
         }
     }
 
-    /// Sets core: one own item through the Apply door (`ApplyPass.Scope.
+    /// One own item through the Apply door (`ApplyPass.Scope.
     /// ownItem`). Never overlaps a running pass; a whole-bar pass covers it.
     private func placeOwnItemNow(_ id: ItemID) async {
         guard !applying else { return }
@@ -1293,24 +1167,6 @@ final class AppState {
         }
     }
 
-    /// Deactivation edge: a queued-but-never-placed indicator left in the
-    /// queue would retry (and log) a frameless placement on every reveal
-    /// settle after it left layout.
-    func cancelDynamicExtraPlacement(_ id: ItemID) {
-        placement.dropPlacement(id)
-    }
-
-    /// Overflow rescue shims (PlacementController → SeparatorManager): expand
-    /// one hidden separator so its trapped registration becomes draggable,
-    /// then restore model-derived visibility.
-    func forceShowSeparator(_ id: ItemID) -> Bool {
-        separators?.forceShow(id) ?? false
-    }
-
-    func restoreSeparatorVisibility() {
-        separators?.restoreVisibility()
-    }
-
     /// Pelmet's chevron item in a snapshot — the visible/hidden boundary marker
     /// (never an extra or separator).
     func pelmetChevronItem(in snap: EngineSnapshot) -> ObservedItem? {
@@ -1332,13 +1188,6 @@ final class AppState {
         // Order arrays hold canonical keys; tiles carry real item IDs.
         editorItems(in: section).map(\.id.sectionKey)
     }
-
-    /// One-shot physical tidy: reveal everything, then walk the sections
-    /// left→right and drag every out-of-place icon into its slot so the bar's
-    /// physical order matches the sections ([always-hidden][hidden][visible]).
-    /// Contiguity is what makes hide/reveal animations uniform — an icon that
-    /// toggles mid-bar displaces its neighbors and reads as sliding.
-    private(set) var tidying = false
 
     // MARK: - Apply (sets core, docs/CORE-SETS.md M1)
 
@@ -1478,37 +1327,12 @@ final class AppState {
     /// tile says so until Apply relocates it. Needs the chevron
     /// and the item both on screen to tell.
     func isOutOfPlace(_ id: ItemID) -> Bool {
-        guard CoreMode.setsOnly, let snapshot,
+        guard let snapshot,
               let chevron = pelmetChevronItem(in: snapshot)?.frame else { return false }
         let frames = ApplyPass.primaryFrames(snapshot)
         guard let frame = frames[id.sectionKey] else { return false }
         let wantsLeft = settings.sectionModel.section(of: id) != .visible
         return wantsLeft ? frame.midX > chevron.midX : frame.midX < chevron.midX
-    }
-
-    func tidyBar() {
-        guard !tidying else { return }
-        tidying = true
-        PelmetLog.log("tidy: starting")
-        reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
-        Task {
-            try? await Task.sleep(for: AppTiming.tidyRevealWait)
-            // Drag walk, left→right through the desired global order — the
-            // synthetic ⌘-drag is the only mover the agent honors for live
-            // items (see moveItem). Already-placed items skip cheaply; each
-            // drag measures against the items the walk just settled.
-            await engine.writeOrderHint()
-            for section in [PelmetCore.Section.alwaysHidden, .hidden, .visible] {
-                for item in editorItems(in: section) {
-                    await placement.physicallyPlace(item.id, in: section)
-                }
-            }
-            PelmetLog.log("tidy: done")
-            tidying = false
-            if !settingsWindowVisible {
-                applyPointerDisplayPolicyAfterDismissal()
-            }
-        }
     }
 
     // (Alias healing removed: the model keys on ItemID.sectionKey — bundle-
@@ -1612,17 +1436,14 @@ final class AppState {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
-                // A synthetic placement drag needs the frames it measured
-                // to stay put: a rehide mid-drag collapsed the hidden
-                // cluster under the chevron's walk, and it landed in the
-                // concealed gap again (2026-09-06 01:17).
+                // An Apply pass needs the frames it measured to stay put.
                 if self.editorHoldsBar
                     || self.pointerDisplayBehavior == .alwaysShowAll
-                    || self.syntheticDragInFlight
+                    || self.applying
                     || self.bandMonitor?.shouldDeferRehide() == true {
                     if !self.rehideDeferLogged {
                         self.rehideDeferLogged = true
-                        PelmetLog.log("rehide: deferred — editor=\(self.editorHoldsBar) policy=\(self.pointerDisplayBehavior) drag=\(self.syntheticDragInFlight) \(self.bandMonitor?.deferReason() ?? "band=?")")
+                        PelmetLog.log("rehide: deferred — editor=\(self.editorHoldsBar) policy=\(self.pointerDisplayBehavior) apply=\(self.applying) \(self.bandMonitor?.deferReason() ?? "band=?")")
                     }
                     self.scheduleRehideTimer(at: Date().addingTimeInterval(AppTiming.rehideDeferRearm))
                 } else {
@@ -1640,7 +1461,7 @@ final class AppState {
     /// the boundary — an item dropped among/left of always-hidden members
     /// (only visible during a full reveal) adopts in, one dropped among the
     /// hidden cluster adopts out.
-    /// One adoption chain at a time — an externalOrderChange burst otherwise
+    /// One adoption chain at a time — a burst of drag ends otherwise
     /// spawns N concurrent retry chains, each pulling its own snapshot.
     private var adoptionInFlight = false
     /// A drag-end request that arrived while a chain was running: the
@@ -1666,11 +1487,8 @@ final class AppState {
             // Mid-transition bars give false frames — defer briefly. (Only
             // in-flight transitions block; a settled bar has stable frames.
             // The old post-settle quiet window starved adoption entirely.)
-            // Synthetic placements/rescues also block: a rescue force-shows
-            // a hidden separator mid-conceal — separators pass isPelmetExtraID,
-            // so the pass would read that as a zone change, and the order
-            // fold-in would re-sort toward the position being corrected.
-            if isTransitioning || syntheticDragInFlight {
+            // An Apply pass blocks too: its drags are not the user's.
+            if isTransitioning || applying {
                 guard retry < AppTiming.adoptMaxDeferrals else {
                     PelmetLog.log("adopt: gave up after \(retry) deferrals")
                     adoptionInFlight = false
@@ -1728,15 +1546,14 @@ final class AppState {
         return false
     }
 
-    /// The band monitor skips drag-end adoption for Pelmet's own synthetic
-    /// drags — see PlacementController.syntheticDragInFlight.
-    /// Apply's drags count too: the band monitor adopted one as a user
-    /// ⌘-drag and reconciled the hidden order from the bar mid-pass, which
-    /// snapped the editor's drawing back (Sound, 2026-09-20 16:56).
-    var syntheticDragInFlight: Bool { placement.syntheticDragInFlight || applying }
+    /// The band monitor skips drag-end adoption for Apply's own drags: it
+    /// adopted one as a user ⌘-drag and reconciled the hidden order from
+    /// the bar mid-pass, which snapped the editor's drawing back (Sound,
+    /// 2026-09-20 16:56).
+    var syntheticDragInFlight: Bool { applying }
 
-    /// The one write path for the engine snapshot mirror (PlacementController
-    /// and engine-event handling route through here). Content-gated: every
+    /// The one write path for the engine snapshot mirror (Apply and
+    /// engine-event handling route through here). Content-gated: every
     /// assignment fires @Observable invalidation (re-running the editor
     /// pipeline while settings is open), and most snapshots differ only by
     /// `takenAt`.
@@ -1758,12 +1575,12 @@ final class AppState {
         UserDefaults.standard.stringArray(forKey: AppState.bundlelessKey) ?? []
     ).subtracting(PelmetBundle.ownIDs)
     private static let bundlelessKey = "pelmet.bundlelessHosts"
-    /// Bundles whose bar item swallows synthetic ⌘-drags: every placement
+    /// Bundles whose bar item swallows synthetic ⌘-drags: every Apply move
     /// landed back where it started (Kap's Electron tray, #15). Left where
-    /// the app put it instead of dragged on every reveal; the editor says
-    /// so and offers a launcher. Sticky across launches — the item bounces
-    /// the same way every time, and re-learning it costs three visible
-    /// drags per session. Cleared by a verified move (a user's own ⌘-drag).
+    /// the app put it; the editor says so and offers a launcher. Sticky
+    /// across launches — the item bounces the same way every time, and
+    /// re-learning it costs visible drags per session. Cleared by a
+    /// verified move (a user's own ⌘-drag).
     private(set) var immovableBundles: Set<String> = Set(
         UserDefaults.standard.stringArray(forKey: AppState.immovableKey) ?? []
     ).subtracting(PelmetBundle.ownIDs)
@@ -1775,10 +1592,23 @@ final class AppState {
         return immovableBundles.contains(bundle) || MenuBarPolicy.isPinnedAppleHost(bundle)
     }
 
-    /// See PlacementController.noteBounce — Apply reports through the same
-    /// budget, so a tray that swallows drags stops being retried every pass.
+    /// A third-party item's drags both landed back where they started.
+    /// Spends one of its bounces; after the budget the bundle is marked
+    /// immovable and stays where its app put it, so a tray that swallows
+    /// drags stops being retried every pass. Returns true once marked.
+    private static let maxBounces = 3
+    private var bounces: [ItemID: Int] = [:]
+
     @discardableResult
-    func noteBounce(_ id: ItemID, at x: CGFloat) -> Bool { placement.noteBounce(id, at: x) }
+    func noteBounce(_ id: ItemID, at x: CGFloat) -> Bool {
+        guard let bundle = id.bundleID else { return false }
+        let count = (bounces[id.sectionKey] ?? 0) + 1
+        bounces[id.sectionKey] = count
+        PelmetLog.log("apply: \(id.rawValue) bounced both drags (x=\(x)) — \(count)/\(Self.maxBounces)")
+        guard count >= Self.maxBounces else { return false }
+        setImmovable(bundle, true)
+        return true
+    }
 
     func setImmovable(_ bundle: String, _ immovable: Bool) {
         guard !PelmetBundle.ownIDs.contains(bundle),
@@ -1797,15 +1627,10 @@ final class AppState {
     }
 
     /// Items the native « holds on the primary band, from the latest
-    /// snapshot (`PlacementGeometry.overflowTrappedCount`). While non-zero
-    /// the bar is full: the « decides who is on screen, every synthetic
-    /// drag is undone by the next reflow, and a frameless item is trapped,
-    /// not missing. Drift corrections, rescues, background placements and
-    /// adoption windows all wait for room (#42: 23 drags, 3 « clicks and
-    /// an adoption window every 2 minutes on a 28-icon 14" bar).
+    /// snapshot (`PlacementGeometry.overflowTrappedCount`). Information for
+    /// the editor's note only: Apply reports them as skipped.
     private(set) var overflowTrappedCount = 0
     private var lastOverflowRead = 0
-    var barOverflows: Bool { overflowTrappedCount > 0 }
 
     private func noteOverflow(in snap: EngineSnapshot) {
         let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
@@ -1823,7 +1648,7 @@ final class AppState {
         guard trapped != overflowTrappedCount else { return }
         if (trapped > 0) != (overflowTrappedCount > 0) {
             PelmetLog.log(trapped > 0
-                ? "overflow: \(trapped) icon(s) behind the native « — placements and corrections wait for room"
+                ? "overflow: \(trapped) icon(s) behind the native «"
                 : "overflow: cleared")
         }
         overflowTrappedCount = trapped
@@ -1932,10 +1757,9 @@ final class AppState {
     /// items assigned to `newItemsDestination`. Runs BEFORE converge so the
     /// engine never shows a new icon the user asked to have hidden. The very
     /// first pass (empty known set) is a silent baseline — nothing moves.
-    /// Returns the new items (empty on baseline) so callers can physically
-    /// slot them: macOS spawns new icons at the far left of the status area —
-    /// inside the hidden/always-hidden zone — so without a placement drag a
-    /// model-visible newcomer flaps sides of the chevron on every reveal.
+    /// Returns the new items (empty on baseline). Nothing moves them: macOS
+    /// spawns new icons at the far left of the status area, the hidden side,
+    /// and the editor marks a model-visible newcomer not in place until Apply.
     @discardableResult
     private func registerNewItems(from snap: EngineSnapshot) -> [ItemID] {
         let candidates = Self.registrationCandidates(snap.items.map(\.id))
@@ -2037,13 +1861,11 @@ final class AppState {
         lastAdoptionPending = result.pendingZones
         if result.changed {
             var model = result.model
-            // Sets core: the editor's drawing outranks the bar until Apply.
-            // The periodic pass reconciled the hidden order from the bar
+            // The editor's drawing outranks the bar until Apply. The
+            // periodic pass reconciled the hidden order from the bar
             // between two drops and every tile jumped back (2026-09-20 17:28).
-            if CoreMode.setsOnly {
-                for section in settings.orderEdits.order.keys {
-                    model.order[section] = settings.sectionModel.order[section]
-                }
+            for section in settings.orderEdits.order.keys {
+                model.order[section] = settings.sectionModel.order[section]
             }
             settings.sectionModel = model
             settings.save()
@@ -2058,7 +1880,7 @@ final class AppState {
                 // drags of it (2026-09-20 15:41) while the camera indicator,
                 // whose hint was fresh, came back at its slot. Reseed now so
                 // the next fresh registration lands where the bar says.
-                if CoreMode.setsOnly { await engine.writeOrderHint() }
+                await engine.writeOrderHint()
             }
         }
     }
@@ -2126,9 +1948,6 @@ final class AppState {
 
     private func handle(engineEvent: EngineEvent) {
         switch engineEvent {
-        case .externalOrderChange:
-            adoptSectionsFromBar()
-            Task { updateSnapshot(await engine.snapshot()) }
         case .itemsChanged:
             // Not before the first converge. `waitForOwnItemAdoption` polls
             // the engine every 500ms, and any id that flips mid-boot (an
@@ -2144,13 +1963,8 @@ final class AppState {
             // then re-converge so the change (or a known bundle rejoining the
             // allowlist) takes effect.
             Task {
-                let newItems = registerNewItems(from: await engine.snapshot())
-                placement.queuePlacements(newItems)
+                registerNewItems(from: await engine.snapshot())
                 await engine.setModel(settings.sectionModel)
-                // Visible-destined newcomers place right away; concealed
-                // destinations stay queued until a full reveal makes their
-                // slot deterministic.
-                placement.flushPendingPlacements()
                 updateSnapshot(await engine.snapshot())
                 // The system camera pill appearing/vanishing is an
                 // itemsChanged — Pelmet's indicator defers to it live. But NOT

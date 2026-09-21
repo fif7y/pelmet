@@ -29,7 +29,7 @@ final class SeparatorManager {
 
     /// A separator drawn in a section other than the one hosting it.
     var needsRehost: Bool {
-        guard CoreMode.setsOnly, let model = appState?.settings.sectionModel else { return false }
+        guard let model = appState?.settings.sectionModel else { return false }
         return specsByID.values.contains { hostedSection[$0.id] != model.section(of: Self.itemID(for: $0)) }
     }
 
@@ -57,35 +57,8 @@ final class SeparatorManager {
         specsByID.values.map { Self.itemID(for: $0) }
     }
 
-    /// Overflow rescue: expand one currently-hidden separator so its trapped
-    /// registration materializes with a draggable frame. Returns true only
-    /// when it acted (separator exists and was hidden) — the caller must
-    /// `restoreVisibility()` afterwards. Until then `apply()` skips this
-    /// separator: a conceal's companion apply mid-rescue would re-hide it
-    /// under the running drag (seen live on the first rescue).
-    private var forcedID: UUID?
     /// Attached ahead of an uncovered swap (see `preattach`).
     private var preattached: Set<UUID> = []
-
-    func forceShow(_ target: ItemID) -> Bool {
-        guard
-            let spec = specsByID.values.first(where: {
-                Self.itemID(for: $0).sectionKey == target.sectionKey
-            }),
-            let item = items[spec.id],
-            lastVisible[spec.id] == false
-        else { return false }
-        PelmetLog.log("separator: force-show \(spec.style.displayName) for rescue")
-        forcedID = spec.id
-        setVisible(true, for: spec.id, item: item, spec: spec)
-        return true
-    }
-
-    /// End a `forceShow`: re-apply model-derived visibility.
-    func restoreVisibility() {
-        forcedID = nil
-        applyCurrent()
-    }
 
     func sync(with specs: [SeparatorSpec]) {
         let model = appState?.settings.sectionModel ?? SectionModel()
@@ -93,7 +66,7 @@ final class SeparatorManager {
         var mainSpecs: [SeparatorSpec] = []
         for spec in specs {
             let drawn = model.section(of: Self.itemID(for: spec))
-            let section = CoreMode.setsOnly ? (hostedSection[spec.id] ?? drawn) : drawn
+            let section = hostedSection[spec.id] ?? drawn
             hostedSection[spec.id] = section
             if section == .visible {
                 mainSpecs.append(spec)
@@ -193,7 +166,7 @@ final class SeparatorManager {
     /// the assertion swap, then leave layout once the bar has settled.
     func apply(model: SectionModel, revealed: Set<PelmetCore.Section>) {
         for (id, item) in items {
-            guard let spec = specsByID[id], id != forcedID else { continue }
+            guard let spec = specsByID[id] else { continue }
             let section = model.section(of: Self.itemID(for: spec))
             setVisible(section == .visible || revealed.contains(section), for: id, item: item, spec: spec)
         }
@@ -212,7 +185,7 @@ final class SeparatorManager {
     func preattach(model: SectionModel, revealing: Set<PelmetCore.Section>) -> [NSStatusItem] {
         var attached: [NSStatusItem] = []
         for (id, item) in items {
-            guard let spec = specsByID[id], id != forcedID, lastVisible[id] != true,
+            guard let spec = specsByID[id], lastVisible[id] != true,
                   revealing.contains(model.section(of: Self.itemID(for: spec))) else { continue }
             StatusItemFader.attach(item, shownLength: Self.shownLength(for: spec))
             preattached.insert(id)

@@ -20,7 +20,6 @@ public actor AgentBarEngine: MenuBarEngine {
     private nonisolated let eventContinuation: AsyncStream<EngineEvent>.Continuation
 
     private let enumerator = ItemEnumerator()
-    private var prefsWatcher: AgentPrefsWatcher?
 
     /// Called on the main actor at the exact moment an assertion swap is
     /// issued (and on assertion drop), passing the revealed sections. App-side
@@ -87,11 +86,6 @@ public actor AgentBarEngine: MenuBarEngine {
     public func start() async {
         guard !started else { return }
         started = true
-        let watcher = AgentPrefsWatcher { [weak self] in
-            Task { await self?.handleExternalPrefsChange() }
-        }
-        watcher.start()
-        prefsWatcher = watcher
         _ = await refreshSnapshot()
     }
 
@@ -100,8 +94,6 @@ public actor AgentBarEngine: MenuBarEngine {
     /// stays true so a later `start()` is a no-op instead of running with a
     /// dead stream.
     public func stop() async {
-        prefsWatcher?.stop()
-        prefsWatcher = nil
         invalidateAssertion()
         // Ends any `for await` over `events` instead of hanging it forever.
         eventContinuation.finish()
@@ -225,7 +217,6 @@ public actor AgentBarEngine: MenuBarEngine {
     /// it, so the hint keeps future spawns landing in model order.
     public func writeOrderHint() async {
         let snapshot = await refreshSnapshot()
-        prefsWatcher?.suppress()
         AgentPositionStore.writeOrder(desiredOrderedTags(from: snapshot))
     }
 
@@ -553,12 +544,5 @@ public actor AgentBarEngine: MenuBarEngine {
         }
         lastSnapshot = snapshot
         return snapshot
-    }
-
-    private func handleExternalPrefsChange() async {
-        // Adopt, don't correct: notify the app layer so it can pull the new
-        // order into the model. No engine-side counter-writes.
-        eventContinuation.yield(.externalOrderChange)
-        _ = await refreshSnapshot()
     }
 }

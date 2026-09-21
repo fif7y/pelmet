@@ -77,11 +77,3 @@ public enum RosterRule {
         return newItemsDestination
     }
 }
-
-/// The M0 switch (docs/CORE-SETS.md): with sets only, membership drives hiding
-/// and no path ever starts a synthetic ⌘-drag. Defaults key `core.setsOnly`,
-/// on unless written false.
-public enum CoreMode {
-    public static let setsOnly: Bool =
-        (UserDefaults.standard.object(forKey: "core.setsOnly") as? Bool) ?? true
-}

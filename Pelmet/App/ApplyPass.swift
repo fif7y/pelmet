@@ -23,6 +23,14 @@ struct ApplyReport: Equatable {
 
 @MainActor
 enum ApplyPass {
+    /// A host the agent pins to the trailing cluster, or a system module.
+    /// The input menu is movable; it must not become the trailing clamp
+    /// when the agent re-registers it to the left of the chevron.
+    static func isProtectedSystemItem(_ id: ItemID) -> Bool {
+        if id.bundleID == PelmetBundle.textInputAgentID { return false }
+        return MenuBarPolicy.isPositionPinnedAppleBundle(id.bundleID) || id.isSystemModule
+    }
+
     /// Primary-band frames by canonical key, leftmost representative per
     /// key (title-variant twins collapse the same way the editor does).
     static func primaryFrames(_ snap: EngineSnapshot) -> [ItemID: CGRect] {
@@ -94,7 +102,7 @@ enum ApplyPass {
         // every pass, "Moved 0" with Apply (1) coming back (2026-09-20 21:03).
         let pinned = Set(bar.filter {
             appState.isImmovable($0)
-                || (PlacementController.isProtectedSystemItem($0) && inTrailingCluster($0)
+                || (isProtectedSystemItem($0) && inTrailingCluster($0)
                     && roster.section(of: $0) == .visible)
         })
         // The one anchor is the chevron (passed separately). Every other own

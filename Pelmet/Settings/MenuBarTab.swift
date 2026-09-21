@@ -62,26 +62,6 @@ struct ApplyBarButton: View {
     }
 }
 
-/// Sits on the pane's title row (the settings shell places it) — the one
-/// bar-wide action, out of the sections' way.
-struct TidyBarButton: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        Button {
-            appState.tidyBar()
-        } label: {
-            Label(
-                appState.tidying ? "Tidying…" : "Tidy bar order",
-                systemImage: "wand.and.stars"
-            )
-            .font(.callout)
-        }
-        .disabled(appState.tidying)
-        .help("Physically arranges the bar to match the sections — icons that sit out of place slide their neighbors on every reveal.")
-    }
-}
-
 /// One header for every card below the editor: title and action on one
 /// line, a single short caption underneath. Hierarchy comes from type
 /// size and the caption's own line, not from cramming both into a row.
@@ -217,18 +197,10 @@ struct MenuBarTab: View {
         }
         .animation(.spring(duration: 0.3), value: appState.settings.sectionModel)
         .environment(dragSession)
-        // Sets core: the editor is a drawing, nothing in the bar needs to be
-        // on screen for it. Apply reveals what it must measure, then puts
-        // the bar back (Gab, 2026-09-20). The old core revealed everything
-        // here so its immediate drags could measure.
-        .onAppear {
-            if !CoreMode.setsOnly {
-                appState.reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
-            }
-        }
+        // The editor is a drawing, nothing in the bar needs to be on screen
+        // for it. Apply reveals what it must measure, then puts the bar
+        // back (Gab, 2026-09-20).
         .onDisappear {
-            // Collapse the « if a placement expanded it during this session.
-            OverflowChevron.restoreAfterEditing()
             appState.applyPointerDisplayPolicyAfterDismissal()
         }
     }

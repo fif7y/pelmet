@@ -1,6 +1,6 @@
 # Core plan: sets, not positions
 
-Status: M0 spike running live since 2026-09-20 13:51 (branch `roster`, `18319e8`; `defaults write app.fif7y.Pelmet core.setsOnly -bool false` turns the old paths back on). Decision: option 1 (revealed items reappear in place) with Tidy folded into Apply; "Keep sections grouped" ON by default so the shipped look is unchanged.
+Status: the sets core is the only core since 2026-09-20 (branch `roster`; M3 deleted the placement paths and the `core.setsOnly` switch with them — there is no way back to walks). Decision: option 1 (revealed items reappear in place) with Tidy folded into Apply; "Keep sections grouped" ON by default so the shipped look is unchanged.
 
 Naming rule for this work: every type, file, log prefix and UI string is Pelmet's own. Nothing seen in any other product's binaries, logs or UI is reused, including release codenames. `AgentBarEngine.swift` becomes `AgentBarEngine.swift` as part of this plan.
 
@@ -63,32 +63,25 @@ Grouping is part of the same pass (the Tidy checkbox was folded in, Gab 2026-09-
 
 **Upgrade.** Existing users keep their physical bar as-is. Stored order becomes a one-time `OrderEdits` seed shown as pending, so the first Apply reproduces their old grouped bar if they want it. Nothing moves on its own.
 
-## Survive / delete map
+## Survive / delete map (done 2026-09-20, M3)
 
-| File | Lines | Fate |
-|---|---|---|
-| App/PlacementController.swift | 918 | delete; `ApplyPass` (new, ~200) replaces it |
-| App/TransitionCoordinator.swift | 670 | shrink to reveal/conceal + optional reveal-animation cover; picture lifecycle deleted |
-| App/AppState.swift | 1891 | loses overflow gate, placement queues, drift, adoption windows, dynamic extra placement; keeps roster, hover, editor state |
-| App/OverflowChevron.swift | 207 | delete (« is never clicked) |
-| App/EditorItemsBuilder.swift | 175 | rewrite on top of AX order + Roster |
-| App/CollateralTracker.swift | 102 | keep |
-| StatusItem/ConcealGhostOverlay.swift | 753 | keep (cover decided 2026-09-20: native conceal is a 450ms slide, Instant needs the cover) |
-| StatusItem/SeparatorManager.swift, HelperHosts.swift | 527 | keep; hosts follow the drawn section at Apply (`hostedSection`), not at the editor drop |
-| Settings/MenuBarTab.swift | 1557 | Tidy button → Apply button with count, Discard, Tidy checkbox; overflow note stays |
-| Settings/EditorDragSession.swift | 163 | between-section drop = membership; within-section drop = OrderEdit |
-| Core/SectionModel.swift | 249 | split: canonicalization → Roster, positional order → OrderEdits |
-| Core/MenuBarPolicy.swift | 246 | classification only |
-| Core/BarAdoption.swift | 299 | delete |
-| Core/PlacementLedger.swift, OrderDrift.swift | 251 | delete |
-| Core/PlacementGeometry.swift | 180 | keep the neighbour math, drop trapped-count helpers |
-| Core/RehideStateMachine.swift | 254 | keep |
-| Engine/AgentBarEngine.swift | 564 | renamed from `EngineGoldenGate.swift` (M0); loses steady-extras placement hooks |
-| Engine/ItemMover.swift | 284 | keep, used only by `ApplyPass`; add cursor hide + input suppression |
-| Engine/ConvergePlan.swift | 118 | keep (assertion allowlist from Roster) |
-| Engine/AgentPositionStore/AgentPositions/AgentPrefsWatcher.swift | 188 | keep only the own-item hint writer; delete the read side |
+| File | Fate |
+|---|---|
+| App/PlacementController.swift (932) | DELETED; `ApplyPass` (324) is the one mover |
+| App/OverflowChevron.swift (207) | DELETED (« is never clicked; the editor's overflow note reads `overflowTrappedCount`) |
+| Core/PlacementLedger.swift, OrderDrift.swift (251 + tests) | DELETED; the bounce budget is three lines in `AppState.noteBounce` |
+| Engine/AgentPrefsWatcher.swift (+ `externalOrderChange`) | DELETED; user drags adopt from the band monitor's drag end |
+| App/AppState.swift | lost the placement queues, drift, rescues, tidy, the overflow gate and the flag branches; keeps adoption windows (a relaunched item parks under the assertion until one), roster, hover, editor state |
+| Core/PlacementGeometry.swift | trimmed to `inSlot`, `betweenCentersX`, `isPrimary`, `overflowTrappedCount` |
+| Core/BarAdoption.swift | KEPT (was "delete"): `reconcile` is the surviving half — membership read from the bar after a user ⌘-drag; `chevronDragged` adopts crossed items |
+| App/TransitionCoordinator.swift, StatusItem/ConcealGhostOverlay.swift | KEPT whole (cover decision above; the picture lifecycle feeds the cover) |
+| StatusItem/SeparatorManager.swift, HelperHosts.swift | keep; hosts follow the drawn section at Apply (`hostedSection`); overflow force-show gone |
+| Settings/MenuBarTab.swift | Apply button (count, Retry, Discard) on the title row; Tidy button and the editor reveal gone; overflow note stays |
+| Core/SectionModel.swift, MenuBarPolicy.swift, RehideStateMachine.swift, CollateralTracker.swift | keep |
+| Engine/AgentBarEngine.swift, ItemMover.swift, ConvergePlan.swift | keep; `ItemMover` is used only by `ApplyPass` |
+| Engine/AgentPositionStore/AgentPositions.swift | keep: the own-item hint writer (`writeOrderHint`) still seeds fresh registrations |
 
-Net: roughly 3,500 lines out, under 800 in.
+Net for M3 alone: 2,345 lines out, 147 in (20 files). `CoreMode` is gone; nothing reads `core.setsOnly` any more.
 
 ## Settings that go
 
@@ -106,7 +99,7 @@ Anything that only existed for walks: settle timers for placement, the forced sy
 - **M0 spike (branch `roster`)**: Roster + RosterRule + reveal/conceal with every placement path disabled behind one flag. Live for a day on Gab's bar. Exit: no `place:`/`drift:`/`rescue:` log lines, hover and hotkey reveal work, live items behave.
 - **M1 editor + Apply**: OrderEdits, MovePlan, ApplyPass, Apply/Discard UI, Tidy checkbox. Exit: a five-move edit applies in one pass with the cursor hidden, failures reported.
 - **M2 own items through the door** (LANDED 2026-09-20): extras, replicas, launchers and separators dragged by Apply; idle extras attached for the pass; separators re-host at Apply. Exit met: an own item drawn anywhere in the editor lands there after one Apply, on or off screen.
-- **M3 deletions + cover decision** (cover DECIDED 2026-09-20, deletions next): the reveal-animation cover stays. Measured at 60fps under Smooth (uncovered) on Gab's bar: grouped reveal = the hidden group fades in place ~130ms (no stagger, no slide; own extras glide in ~130ms after), grouped conceal = ~450ms native slide toward the chevron. Interleaved (an icon drawn Hidden but sitting in the visible cluster, Apply pending): reveal opens its gap by sliding the chevron and cluster ~60pt over ~400ms; conceal slides out ~200ms then the cluster drifts ~600ms closing the gap, and the strip cover double-draws the cluster for two frames while it moves (open nit). Under Instant every reveal and conceal lands in one frame, stale picture included. The sets core made the reveal side nearly free on a grouped bar; the conceal side is not, and Instant is the baseline, so `ConcealGhostOverlay` and the capture pipeline survive. Delete the remaining "delete" rows.
+- **M3 deletions + cover decision** (DONE 2026-09-20: cover kept, deletions landed — see the map above): the reveal-animation cover stays. Measured at 60fps under Smooth (uncovered) on Gab's bar: grouped reveal = the hidden group fades in place ~130ms (no stagger, no slide; own extras glide in ~130ms after), grouped conceal = ~450ms native slide toward the chevron. Interleaved (an icon drawn Hidden but sitting in the visible cluster, Apply pending): reveal opens its gap by sliding the chevron and cluster ~60pt over ~400ms; conceal slides out ~200ms then the cluster drifts ~600ms closing the gap, and the strip cover double-draws the cluster for two frames while it moves (open nit). Under Instant every reveal and conceal lands in one frame, stale picture included. The sets core made the reveal side nearly free on a grouped bar; the conceal side is not, and Instant is the baseline, so `ConcealGhostOverlay` and the capture pipeline survive. Delete the remaining "delete" rows.
 - **M4 release 0.3.0**: migration seed, release notes, README copy for the reveal change.
 
 ## Blind spots to close before M1 (2026-09-20 review)

@@ -63,9 +63,9 @@ enum AppTiming {
     /// next Instant/Fade reveal. Long-lived: engine item changes invalidate it
     /// explicitly; the cap only guards wallpaper/appearance drift.
     static let revealedStripFreshness: TimeInterval = 900
-    /// Tidy waits for the full reveal to land before rebuilding.
+    /// Apply waits for the full reveal to land before measuring.
     static let tidyRevealWait: Duration = .seconds(1.2)
-    /// Newly toggled-on extras become hostable before placing.
+    /// An own extra entering the bar is hosted before its one-item pass.
     static let newExtraPlacementDelay: Duration = .milliseconds(600)
     /// Apply: a separator re-hosted onto a helper needs the helper up and
     /// its item registered before the bar is measured (launch → ready →
@@ -91,16 +91,11 @@ enum AppTiming {
     /// walks, so the app reads TCC directly; 2s keeps a flipped toggle in
     /// System Settings visible within a breath without a hot loop.
     static let accessibilityPoll: Duration = .seconds(2)
-    /// Physical placement: pre-measure bar settle, then bounded lookup
-    /// retries for a freshly-shown item, then post-drag reflow settle.
-    static let placementPreSettle: Duration = .milliseconds(450)
     /// Apply (docs/CORE-SETS.md): the pass borrows the pointer only after
     /// this much quiet, bounded so a restless pointer still gets the
     /// shielded drag rather than a pass that never starts.
     static let applyIdleGap: TimeInterval = 1.5
     static let applyIdleMaxWait: TimeInterval = 8
-    static let placementLookupRetries = 3
-    static let placementLookupRetryDelay: Duration = .milliseconds(550)
     /// Post-drag read: the agent animates the drop (~300ms slide, measured
     /// 2026-09-08) and a single fixed-delay read judged mid-flight frames as
     /// misses. Wait the floor, then re-read every poll until the dragged
@@ -112,7 +107,7 @@ enum AppTiming {
     /// Precapture waits this long after quiesce so the ghost's fade never
     /// bakes into the snapshot.
     static let precaptureGhostClearance: Duration = .milliseconds(300)
-    /// Camera/mic indicator activation edge → placement queue: the system
+    /// Camera/mic indicator activation edge → one-item pass: the system
     /// camera pill often takes over within ~50ms and the indicator defers to
     /// it again — queuing before the flap settles queues a dead walk.
     static let cameraIndicatorPlaceDebounce: Duration = .milliseconds(500)
@@ -121,9 +116,4 @@ enum AppTiming {
     /// apps build their tray ~20s in).
     static let relaunchAdoptionDelay: Duration = .seconds(3)
     static let relaunchAdoptionRetry: Duration = .seconds(15)
-    /// Rescue force-show → measure: the attach + fade + agent reflow must
-    /// finish or the frame still reads as a phantom (burned attempt 1 live).
-    static let rescueForceShowSettle: Duration = .milliseconds(600)
-    /// « expansion → re-measure: the overflow items reflow into the bar.
-    static let overflowExpandSettle: Duration = .milliseconds(700)
 }

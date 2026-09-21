@@ -93,7 +93,7 @@ struct SettingsView: View {
                     // The pane's one bar-wide action rides the title row —
                     // vertical space below belongs to the sections.
                     if appState.settingsTab == .menuBar {
-                        if CoreMode.setsOnly { ApplyBarButton() } else { TidyBarButton() }
+                        ApplyBarButton()
                     }
                 }
                 .padding(.bottom, 2)

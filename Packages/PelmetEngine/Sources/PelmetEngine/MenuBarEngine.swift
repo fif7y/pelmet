@@ -52,8 +52,6 @@ public struct EngineSnapshot: Equatable, Sendable {
 public enum EngineEvent: Equatable, Sendable {
     /// The set of menubar items changed (app launched/quit, item added/removed).
     case itemsChanged
-    /// The user (or the OS) reordered items outside Pelmet — adopt, don't correct.
-    case externalOrderChange
     /// Our hide assertion was torn down externally (DND/assessment churn).
     case assertionTornDown
     /// MenuBarClientCore availability flipped (e.g. after an OS update).

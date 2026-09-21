@@ -262,14 +262,9 @@ final class ExtrasManager {
                         try? await Task.sleep(for: AppTiming.cameraIndicatorPlaceDebounce)
                         guard let self, !Task.isCancelled,
                               self.lastCameraIndicatorVisible else { return }
-                        // Zone only: the walk to the exact slot rode the
-                        // next hover reveal as a visible drag (#39). Sets
-                        // core: the indicator is on screen, place it now.
-                        if CoreMode.setsOnly {
-                            self.appState?.placeOwnItemSoon(itemID)
-                        } else {
-                            self.appState?.queueDynamicExtraPlacement(itemID, zoneOnly: true)
-                        }
+                        // The indicator is on screen: through the Apply
+                        // door now (docs/CORE-SETS.md §Own items).
+                        self.appState?.placeOwnItemSoon(itemID)
                     }
                 } else if !visible, lastCameraIndicatorVisible {
                     cameraPlacementDebounce?.cancel()
@@ -295,11 +290,7 @@ final class ExtrasManager {
                     // model's.
                     let itemID = Self.itemID(for: spec)
                     if visible, lastVisible[id] != true {
-                        if CoreMode.setsOnly {
-                            appState?.placeOwnItemSoon(itemID)
-                        } else {
-                            appState?.queueDynamicExtraPlacement(itemID)
-                        }
+                        appState?.placeOwnItemSoon(itemID)
                     } else if !visible, lastVisible[id] == true {
                         appState?.cancelOwnItemPlacement(itemID)
                     }
