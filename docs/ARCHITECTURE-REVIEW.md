@@ -75,6 +75,8 @@ One hover reveal converged `noop` right after a quick in/out conceal (10:34:55) 
 
 **After 4.3 (10:50, build with the continuation):** activate 50–55 → **1ms**, invalidate 0ms. Engine total unchanged (232–264ms) because walk2 rose to 166–193ms: started 50ms earlier, it blocks on the agent's reflow. The saving only shows once 4.2 takes walk2 off the settle path (expected settle ≈ 30–40ms after dispatch). ~25ms still unattributed inside `engine` = the actor→main hop landing on a busy main thread (4.5, 4.8).
 
+**After 4.2 (10:57, post-swap walk behind the swap):** reveal settled **83–104ms** (engine = walk 31–36 + ~45 unattributed hop), conceal settled 176–215ms (strip walk 71–132 + walk 37–100 still before the swap). Background walk 66–193ms. One conceal converge `superseded` by the itemsChanged→setModel converge the background walk triggers — gate that handler while transitioning (4.1).
+
 Re-ranked by measured payoff: 4.3 (−50ms/swap, deterministic) → 4.5 (−20–45ms before the picture shows) → 4.2 (−50–160ms to settle) → 4.1 (−15–120ms before the swap).
 
 With a fresh picture the user *sees* the finished picture at A + F + G (≈110–120ms) and B/C/D run under the cover. Without one (E or H) the user sees nothing until A + B + activation + the agent's own ~130ms slide.

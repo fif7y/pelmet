@@ -23,14 +23,12 @@ public struct ConvergeTiming: Sendable {
     public var activated = false
     /// `previous.invalidate()` (the old assertion's XPC), ms.
     public var invalidateMS = 0
-    /// The post-swap AX walk, ms.
-    public var afterWalkMS = 0
     public var outcome: Outcome = .superseded
 
     public var summary: String {
         switch outcome {
         case .swapped:
-            return "walk \(walkMS)ms plan \(planMS)ms activate \(activateMS)ms\(activated ? "" : " (unconfirmed)") invalidate \(invalidateMS)ms walk2 \(afterWalkMS)ms"
+            return "walk \(walkMS)ms plan \(planMS)ms activate \(activateMS)ms\(activated ? "" : " (unconfirmed)") invalidate \(invalidateMS)ms"
         case .noop, .dropped:
             return "walk \(walkMS)ms plan \(planMS)ms \(outcome.rawValue)"
         default:
@@ -464,30 +462,37 @@ public actor AgentBarEngine: MenuBarEngine {
             PelmetLog.log("converge: assertion active")
         }
         // Stamp the concealed set NOW — observers must union it from the
-        // moment the swap is issued. The slow part (polling AX until the
-        // concealed bundles actually drop out) moves OFF the critical path:
-        // holding converge (and therefore the settle report) hostage to up to
-        // 3s of verify polling made every queued transition — hover right
-        // after a conceal, rapid toggles — wait a visible beat before moving.
-        let afterWalkStarted = Date()
-        let after = await refreshSnapshot()
-        timing.afterWalkMS = Self.ms(since: afterWalkStarted)
-        guard epoch == convergeEpoch else { return }
+        // moment the swap is issued — on the pre-swap items: the post-swap
+        // walk blocks on the agent's reflow (measured 2026-09-21: 53–193ms,
+        // longer the sooner it starts) and holding converge for it held the
+        // settle report, the rehide countdown and every queued transition.
+        // The walk runs behind the swap instead and refreshes the mirror
+        // when it lands (it fires itemsChanged as it always did).
         timing.outcome = .swapped
         lastSnapshot = EngineSnapshot(
-            items: after.items,
+            items: snapshot.items,
             concealed: plan.concealed,
-            takenAt: after.takenAt
+            takenAt: snapshot.takenAt
         )
-        // The post-swap walk is the verify's first poll: when it already
-        // shows every concealable bundle gone there is nothing to poll for,
-        // and a hover cycle skips a full AX walk (~100ms on the actor).
+        Task { await self.walkAfterSwap(concealable: concealable, epoch: epoch) }
+    }
+
+    /// The post-swap walk, off the critical path. It is the verify's first
+    /// poll: when it already shows every concealable bundle gone there is
+    /// nothing to poll for. A newer converge owns the state (and walks for
+    /// itself) once the epoch has moved.
+    private func walkAfterSwap(concealable: Set<String>, epoch: Int) async {
+        guard epoch == convergeEpoch else { return }
+        let started = Date()
+        let after = await refreshSnapshot()
+        PelmetLog.log("converge: post-swap walk \(Self.ms(since: started))ms (background)")
+        guard epoch == convergeEpoch else { return }
         let stillVisible = after.items.contains { item in
             guard let bundle = item.id.bundleID else { return false }
             return concealable.contains(bundle)
         }
         if stillVisible {
-            Task { await self.verifyConcealment(of: concealable) }
+            await verifyConcealment(of: concealable)
         }
     }
 
