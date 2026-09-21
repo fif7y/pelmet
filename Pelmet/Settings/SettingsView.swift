@@ -85,36 +85,55 @@ struct SettingsView: View {
     @ViewBuilder
     private var content: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            // The title row is a pinned header: it carries the pane's one
+            // bar-wide action (Apply on Menu Bar) and must stay in reach
+            // however far the strips scroll. Glass under it once content
+            // slides beneath.
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: .sectionHeaders) {
                 // A pending update greets every pane, About excepted (it
-                // holds the button itself). One line, one action.
-                if let version = SparkleController.shared.availableVersion,
-                   appState.settingsTab != .about {
-                    UpdateStrip(version: version) { appState.settingsTab = .about }
-                }
-                HStack(alignment: .firstTextBaseline) {
-                    Text(appState.settingsTab.title)
-                        .font(.system(size: 22, weight: .semibold))
-                    Spacer()
-                    // The pane's one bar-wide action rides the title row —
-                    // vertical space below belongs to the sections.
-                    if appState.settingsTab == .menuBar {
-                        ApplyBarButton()
+                // holds the button itself). One line, one action. Scrolls
+                // away with the top gap — the header stays lean.
+                VStack(alignment: .leading, spacing: 24) {
+                    if let version = SparkleController.shared.availableVersion,
+                       appState.settingsTab != .about {
+                        UpdateStrip(version: version) { appState.settingsTab = .about }
                     }
                 }
-                .padding(.bottom, 2)
-                switch appState.settingsTab {
-                case .general: GeneralPane()
-                case .behavior: BehaviorPane()
-                case .menuBar: MenuBarTab()
-                case .displays: DisplaysPane()
-                case .thanks: ThanksPane()
-                case .about: AboutPane()
+                .padding(.horizontal, 28)
+                .padding(.top, 44)
+                .padding(.bottom, 4)
+                .frame(maxWidth: 640, alignment: .leading)
+                Section {
+                    VStack(alignment: .leading, spacing: 24) {
+                        switch appState.settingsTab {
+                        case .general: GeneralPane()
+                        case .behavior: BehaviorPane()
+                        case .menuBar: MenuBarTab()
+                        case .displays: DisplaysPane()
+                        case .thanks: ThanksPane()
+                        case .about: AboutPane()
+                        }
+                    }
+                    .padding(.horizontal, 28)
+                    .padding(.top, 12)
+                    .padding(.bottom, 28)
+                    .frame(maxWidth: 640, alignment: .leading)
+                } header: {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(appState.settingsTab.title)
+                            .font(.system(size: 22, weight: .semibold))
+                        Spacer()
+                        if appState.settingsTab == .menuBar {
+                            ApplyBarButton()
+                        }
+                    }
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: 640, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.ultraThinMaterial)
                 }
             }
-            .padding(28)
-            .padding(.top, 16)
-            .frame(maxWidth: 640, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Color(nsColor: .textBackgroundColor).opacity(0.35))
