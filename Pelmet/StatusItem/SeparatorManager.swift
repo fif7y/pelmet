@@ -20,6 +20,27 @@ final class SeparatorManager {
     private var lastVisible: [UUID: Bool] = [:]
     private var removalObservations: [UUID: NSKeyValueObservation] = [:]
     private weak var appState: AppState?
+    /// Where each separator is physically hosted. Under the sets core an
+    /// editor move only redraws the tile; the host follows at Apply
+    /// (`rehostToModel`), because a re-host is a fresh registration that
+    /// lands wherever the agent puts it and reflows the bar at once (a Dot
+    /// moved between sections jumped and blinked without Apply, 2026-09-20).
+    private var hostedSection: [UUID: PelmetCore.Section] = [:]
+
+    /// A separator drawn in a section other than the one hosting it.
+    var needsRehost: Bool {
+        guard CoreMode.setsOnly, let model = appState?.settings.sectionModel else { return false }
+        return specsByID.values.contains { hostedSection[$0.id] != model.section(of: Self.itemID(for: $0)) }
+    }
+
+    /// Apply: move every separator's host to its drawn section. Returns
+    /// whether anything re-hosted (the caller waits for the registration).
+    func rehostToModel() -> Bool {
+        guard needsRehost, let specs = appState?.settings.separators else { return false }
+        hostedSection.removeAll()
+        sync(with: specs)
+        return true
+    }
 
     init(appState: AppState) {
         self.appState = appState
@@ -71,7 +92,9 @@ final class SeparatorManager {
         var helperItems: [PelmetCore.Section: [HostedItem]] = [.hidden: [], .alwaysHidden: []]
         var mainSpecs: [SeparatorSpec] = []
         for spec in specs {
-            let section = model.section(of: Self.itemID(for: spec))
+            let drawn = model.section(of: Self.itemID(for: spec))
+            let section = CoreMode.setsOnly ? (hostedSection[spec.id] ?? drawn) : drawn
+            hostedSection[spec.id] = section
             if section == .visible {
                 mainSpecs.append(spec)
             } else {
@@ -84,7 +107,10 @@ final class SeparatorManager {
             )
         }
         let stale = Set(specsByID.keys).subtracting(specs.map(\.id))
-        for id in stale { specsByID.removeValue(forKey: id) }
+        for id in stale {
+            specsByID.removeValue(forKey: id)
+            hostedSection.removeValue(forKey: id)
+        }
         for (section, hosted) in helperItems {
             appState?.helperHosts?.set(hosted, for: section, source: "separators")
         }

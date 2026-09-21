@@ -144,6 +144,13 @@ enum ApplyPass {
         // What the pass opened, the pass closes (a display set to always
         // show keeps its policy).
         defer { if revealedForPass { appState.applyPointerDisplayPolicyAfterDismissal() } }
+        // Separators drawn in another section re-host here, not at the
+        // editor drop: a fresh registration on the new helper lands where
+        // the agent puts it, and the drag below moves it into its slot.
+        if case .wholeBar = scope, appState.rehostSeparatorsForApply() {
+            PelmetLog.log("apply: separator host(s) moved to their drawn section")
+            try? await Task.sleep(for: AppTiming.applyRehostWait)
+        }
         // Idle own extras (camera off, nothing playing) join the layout
         // invisibly so the plan can move them too; they leave with the pass.
         if case .wholeBar = scope {

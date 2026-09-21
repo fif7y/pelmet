@@ -1305,7 +1305,12 @@ final class AppState {
 
     /// Apply has something to do: a drawing not yet applied, or the bar
     /// disagreeing with the sections.
-    var applyPending: Bool { !settings.orderEdits.isEmpty || pendingMoveCount > 0 }
+    var applyPending: Bool {
+        !settings.orderEdits.isEmpty || pendingMoveCount > 0 || (separators?.needsRehost ?? false)
+    }
+
+    /// Apply pass: separators drawn in another section move host now.
+    func rehostSeparatorsForApply() -> Bool { separators?.rehostToModel() ?? false }
 
     /// The Apply button: reveal what needs measuring, plan, drag each move
     /// through the one shielded door, verify, report. Failed moves keep the

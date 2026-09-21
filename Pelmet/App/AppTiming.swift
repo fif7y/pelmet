@@ -67,6 +67,10 @@ enum AppTiming {
     static let tidyRevealWait: Duration = .seconds(1.2)
     /// Newly toggled-on extras become hostable before placing.
     static let newExtraPlacementDelay: Duration = .milliseconds(600)
+    /// Apply: a separator re-hosted onto a helper needs the helper up and
+    /// its item registered before the bar is measured (launch → ready →
+    /// hosts ≈ 100ms at boot; a cold launch takes longer).
+    static let applyRehostWait: Duration = .milliseconds(1200)
     /// Below ~100ms every swipe-through of the band reads as a hover
     /// (the fire-time live-pointer check catches the rest).
     static let hoverDelayFloor: TimeInterval = 0.1
