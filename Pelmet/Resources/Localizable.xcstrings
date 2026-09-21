@@ -13631,6 +13631,64 @@
         }
       }
     },
+    "The clock always sits at the right edge, so it can't be moved. Drop it in a hidden section to hide it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Uhr sitzt immer am rechten Rand und lässt sich nicht verschieben. Lege sie in einen ausgeblendeten Bereich, um sie zu verstecken."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El reloj siempre está en el borde derecho, así que no se puede mover. Suéltalo en una sección oculta para ocultarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'horloge reste toujours au bord droit, elle ne peut donc pas être déplacée. Déposez-la dans une section masquée pour la cacher."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'orologio sta sempre al bordo destro, quindi non può essere spostato. Trascinalo in una sezione nascosta per nasconderlo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時計は常に右端にあるため移動できません。隠すには非表示セクションにドロップしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시계는 항상 오른쪽 끝에 있어 옮길 수 없습니다. 숨기려면 숨김 섹션에 놓으세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O relógio fica sempre na borda direita, então não pode ser movido. Solte-o em uma seção oculta para escondê-lo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Часы всегда стоят у правого края, поэтому их нельзя переместить. Перетащите их в скрытый раздел, чтобы скрыть."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时钟始终位于右边缘，无法移动。将它拖到隐藏区域即可隐藏。"
+          }
+        }
+      }
+    },
     "The new language applies the next time Pelmet opens. Your menu bar layout is kept.": {
       "localizations": {
         "de": {

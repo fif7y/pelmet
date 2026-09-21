@@ -703,8 +703,11 @@ private struct ItemTile: View {
                 missingReplacements: item.id.bundleID == PelmetBundle.systemUIServerID
                     ? appState.missingAppleReplacements
                     : [],
+                isClock: MenuBarPolicy.systemItem(for: item.id) == .clock,
                 usePelmetReplacements: { appState.useAppleExtraReplacements() },
-                addLauncher: MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID) ? nil : item.id.bundleID.map { bundle in
+                // A system icon shares the agent's bundle: a launcher for it
+                // would open MenuBarAgent and draw nothing (the clock, 2026-09-21).
+                addLauncher: isSystemIcon || MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID) ? nil : item.id.bundleID.map { bundle in
                     { appState.addAppLauncher(bundleID: bundle, name: displayName, in: section) }
                 }
             )
@@ -754,6 +757,8 @@ private struct InactiveIconCard: View {
     /// on, rather than dead-ending on "can't move it". Empty for the other
     /// pinned host (Kerberos), which has no replacement.
     let missingReplacements: [ExtraKind]
+    /// The clock: pinned at the bar's end, hideable through the allowlist.
+    let isClock: Bool
     let usePelmetReplacements: () -> Void
     let addLauncher: (() -> Void)?
 
@@ -803,7 +808,11 @@ private struct InactiveIconCard: View {
                 case [.siri, .timeMachine]:
                     Text("Siri and Time Machine are locked macOS system icons. Turn on Pelmet's Siri and Time Machine below for separate icons you can move.")
                 default:
-                    Text("Pelmet can hide \(name), but macOS keeps it in its own spot, so the editor can't move it.")
+                    if isClock {
+                        Text("The clock always sits at the right edge, so it can't be moved. Drop it in a hidden section to hide it.")
+                    } else {
+                        Text("Pelmet can hide \(name), but macOS keeps it in its own spot, so the editor can't move it.")
+                    }
                 }
             } else if immovable {
                 Text("Stays where its app put it")

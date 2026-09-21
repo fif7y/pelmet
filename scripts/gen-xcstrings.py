@@ -376,6 +376,17 @@ T = {
         ko="Pelmet은 %@을(를) 숨길 수 있지만 macOS가 제자리에 고정하므로 편집기에서 옮길 수 없습니다.",
         ru="Pelmet может скрыть %@, но macOS держит её на своём месте, поэтому редактор не может её переместить.",
     ),
+    "The clock always sits at the right edge, so it can't be moved. Drop it in a hidden section to hide it.": dict(
+        de="Die Uhr sitzt immer am rechten Rand und lässt sich nicht verschieben. Lege sie in einen ausgeblendeten Bereich, um sie zu verstecken.",
+        fr="L'horloge reste toujours au bord droit, elle ne peut donc pas être déplacée. Déposez-la dans une section masquée pour la cacher.",
+        es="El reloj siempre está en el borde derecho, así que no se puede mover. Suéltalo en una sección oculta para ocultarlo.",
+        it="L'orologio sta sempre al bordo destro, quindi non può essere spostato. Trascinalo in una sezione nascosta per nasconderlo.",
+        pt="O relógio fica sempre na borda direita, então não pode ser movido. Solte-o em uma seção oculta para escondê-lo.",
+        ja="時計は常に右端にあるため移動できません。隠すには非表示セクションにドロップしてください。",
+        zh="时钟始终位于右边缘，无法移动。将它拖到隐藏区域即可隐藏。",
+        ko="시계는 항상 오른쪽 끝에 있어 옮길 수 없습니다. 숨기려면 숨김 섹션에 놓으세요.",
+        ru="Часы всегда стоят у правого края, поэтому их нельзя переместить. Перетащите их в скрытый раздел, чтобы скрыть.",
+    ),
     "Time Machine": dict(de="Time Machine", fr="Time Machine", es="Time Machine", it="Time Machine", pt="Time Machine", ja="Time Machine", zh="时间机器", ko="Time Machine", ru="Time Machine"),
     "Stays where its app put it": dict(de="Bleibt, wo seine App es hingesetzt hat", fr="Reste là où son app l'a mis", es="Se queda donde su app lo puso", it="Resta dove la sua app l'ha messa", pt="Fica onde o app a colocou", ja="アプリが置いた場所に留まります", zh="留在其应用放置的位置", ko="앱이 놓은 자리에 그대로 있습니다", ru="Остаётся там, куда её поставило приложение"),
     "%@ ignores the moves Pelmet makes in the bar, so it keeps its own spot. Hold ⌘ and drag it yourself, or give it a launcher.": dict(
