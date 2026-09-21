@@ -365,6 +365,11 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     /// shows it. (Auto-download is Sparkle's own preference.)
     public var notifyOnUpdates: Bool = true
 
+    /// Opt into the beta channel: Sparkle also offers appcast items tagged
+    /// `beta`. Off (default), only stable items are seen, and nothing ever
+    /// downgrades — a beta stays until the next stable build passes it.
+    public var betaUpdates: Bool = false
+
     /// Pelmet's own media-controls item (play/pause/next/prev via media keys).
     /// Superseded by `extraItems`; kept for migration of early builds.
     public var showMediaControls: Bool = false
@@ -413,7 +418,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case revealTriggers, autoRehide, rehideDelay, rehideOnClickElsewhere, revealAnimation
         case hideSystemExtras, showMediaControls, extraItems, sectionModel, separators
         case displayTemplate, displayOverrides
-        case notifyOnUpdates, barRightClickMenu
+        case notifyOnUpdates, barRightClickMenu, betaUpdates
         case statusIconStyle
         case clockClickOpensNotificationCenter
         case orderEdits
@@ -447,6 +452,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         displayTemplate = field(DisplayBehavior.self, .displayTemplate, defaults.displayTemplate)
         displayOverrides = field([String: DisplayBehavior].self, .displayOverrides, defaults.displayOverrides)
         notifyOnUpdates = field(Bool.self, .notifyOnUpdates, defaults.notifyOnUpdates)
+        betaUpdates = field(Bool.self, .betaUpdates, defaults.betaUpdates)
         barRightClickMenu = field(Bool.self, .barRightClickMenu, defaults.barRightClickMenu)
         statusIconStyle = field(StatusIconStyle.self, .statusIconStyle, defaults.statusIconStyle)
         clockClickOpensNotificationCenter = field(Bool.self, .clockClickOpensNotificationCenter, defaults.clockClickOpensNotificationCenter)

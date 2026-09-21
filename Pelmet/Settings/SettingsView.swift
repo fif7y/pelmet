@@ -1122,6 +1122,18 @@ private struct AboutPane: View {
                     set: { appState.settings.notifyOnUpdates = $0; appState.settingsChanged() }
                 )
             )
+            SettingToggleRow(
+                title: "Get beta releases",
+                caption: "Smaller updates, more often. Stable releases roll them up every week or two.",
+                isOn: Binding(
+                    get: { appState.settings.betaUpdates },
+                    set: {
+                        appState.settings.betaUpdates = $0
+                        appState.settingsChanged()
+                        SparkleController.shared.recheck()
+                    }
+                )
+            )
             if let checked = SparkleController.shared.lastUpdateCheckDate {
                 Text("Last checked \(checked, format: .relative(presentation: .named))")
                     .font(.caption)

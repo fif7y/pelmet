@@ -63,6 +63,8 @@ final class SparkleController: NSObject {
     /// About toggle — read at notification time, so flipping it mid-session
     /// takes effect on the next found update.
     @ObservationIgnored var notifyOnUpdates: () -> Bool = { true }
+    /// Settings › About "Get beta releases"; read by `allowedChannels(for:)`.
+    @ObservationIgnored var betaUpdates: () -> Bool = { false }
 
     /// Every reminder (banner, menu line, sidebar chip) lands in the About
     /// pane with its "Update to…" button lit — never straight in Sparkle's
@@ -118,6 +120,16 @@ final class SparkleController: NSObject {
     /// Also how a gently-reminded update is brought into focus.
     /// (No explicit lower here: the user-driver delegate below yields the
     /// settings window for EVERY Sparkle window, scheduled checks included.)
+    /// The channel toggle flipped: look again now, so a beta shows up (or a
+    /// beta-only offer goes away) without waiting for the scheduled check.
+    func recheck() {
+        start()
+        guard let controller, status != .checking, controller.updater.canCheckForUpdates else { return }
+        installNow = nil
+        status = .checking
+        controller.updater.checkForUpdateInformation()
+    }
+
     func checkForUpdates() {
         start()
         guard let controller else { return }
@@ -266,6 +278,13 @@ extension SparkleController: UNUserNotificationCenterDelegate {
 }
 
 extension SparkleController: SPUUpdaterDelegate {
+    /// One appcast serves both channels: stable items carry no channel,
+    /// betas are tagged `beta` (`generate_appcast --channel beta`). Sparkle
+    /// keeps only the items whose channel is in this set.
+    nonisolated func allowedChannels(for updater: SPUUpdater) -> Set<String> {
+        MainActor.assumeIsolated { betaUpdates() ? ["beta"] : [] }
+    }
+
     nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
         let version = item.displayVersionString
         Task { @MainActor in

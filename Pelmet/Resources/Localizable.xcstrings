@@ -5395,6 +5395,64 @@
         }
       }
     },
+    "Get beta releases": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beta-Versionen erhalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recibir versiones beta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recevoir les versions bêta"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricevi le versioni beta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ベータ版を受け取る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "베타 버전 받기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Receber versões beta"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Получать бета-версии"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接收测试版"
+          }
+        }
+      }
+    },
     "GitHub": {
       "localizations": {
         "de": {
@@ -12467,6 +12525,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "跳过此备份"
+          }
+        }
+      }
+    },
+    "Smaller updates, more often. Stable releases roll them up every week or two.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kleinere Updates, öfter. Stabile Versionen fassen sie alle ein bis zwei Wochen zusammen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizaciones más pequeñas, más a menudo. Las versiones estables las agrupan cada una o dos semanas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des mises à jour plus petites, plus souvent. Les versions stables les regroupent toutes les une à deux semaines."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornamenti più piccoli, più spesso. Le versioni stabili li raccolgono ogni una o due settimane."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小さなアップデートを、より頻繁に。安定版は1〜2週間ごとにまとめて配信されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 작은 업데이트를 더 자주. 안정 버전은 1~2주마다 모아서 배포합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualizações menores, com mais frequência. As versões estáveis as reúnem a cada uma ou duas semanas."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Небольшие обновления, чаще. Стабильные версии собирают их раз в одну-две недели."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更小、更频繁的更新。稳定版每一到两周汇总发布。"
           }
         }
       }
