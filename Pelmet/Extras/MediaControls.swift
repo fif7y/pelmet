@@ -273,7 +273,7 @@ final class ExtrasManager {
                     }
                 } else if !visible, lastCameraIndicatorVisible {
                     cameraPlacementDebounce?.cancel()
-                    appState?.cancelDynamicExtraPlacement(itemID)
+                    appState?.cancelOwnItemPlacement(itemID)
                 }
                 lastCameraIndicatorVisible = visible
             case .mediaControls:
@@ -301,7 +301,7 @@ final class ExtrasManager {
                             appState?.queueDynamicExtraPlacement(itemID)
                         }
                     } else if !visible, lastVisible[id] == true {
-                        appState?.cancelDynamicExtraPlacement(itemID)
+                        appState?.cancelOwnItemPlacement(itemID)
                     }
                 }
             case .appLauncher:
@@ -321,10 +321,10 @@ final class ExtrasManager {
                         if visible {
                             appState?.placeOwnItemSoon(itemID)
                         } else {
-                            appState?.queueDynamicExtraPlacement(itemID)
+                            appState?.placeOwnItemAtNextReveal(itemID)
                         }
                     } else if !running, lastRunning[id] == true {
-                        appState?.cancelDynamicExtraPlacement(itemID)
+                        appState?.cancelOwnItemPlacement(itemID)
                     }
                 }
                 lastRunning[id] = running
@@ -345,10 +345,10 @@ final class ExtrasManager {
                     if sectionVisible {
                         appState?.placeOwnItemSoon(itemID)
                     } else {
-                        appState?.queueDynamicExtraPlacement(itemID)
+                        appState?.placeOwnItemAtNextReveal(itemID)
                     }
                 } else if !active, lastTimerActive {
-                    appState?.cancelDynamicExtraPlacement(itemID)
+                    appState?.cancelOwnItemPlacement(itemID)
                 }
                 lastTimerActive = active
             case .timeMachine:
@@ -364,10 +364,10 @@ final class ExtrasManager {
                         if sectionVisible {
                             appState?.placeOwnItemSoon(itemID)
                         } else {
-                            appState?.queueDynamicExtraPlacement(itemID)
+                            appState?.placeOwnItemAtNextReveal(itemID)
                         }
                     } else if !running, lastBackupRunning {
-                        appState?.cancelDynamicExtraPlacement(itemID)
+                        appState?.cancelOwnItemPlacement(itemID)
                     }
                     lastBackupRunning = running
                 }
@@ -388,10 +388,10 @@ final class ExtrasManager {
                     if sectionVisible {
                         appState?.placeOwnItemSoon(itemID)
                     } else {
-                        appState?.queueDynamicExtraPlacement(itemID)
+                        appState?.placeOwnItemAtNextReveal(itemID)
                     }
                 } else if !active, lastFocusActive {
-                    appState?.cancelDynamicExtraPlacement(itemID)
+                    appState?.cancelOwnItemPlacement(itemID)
                 }
                 lastFocusActive = active
             case .shortcut, .userSwitching, .siri:

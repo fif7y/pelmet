@@ -20,7 +20,7 @@ What we verified before choosing this (2026-09-20, live, instrumented):
 1. **Membership is the product.** Shown, hidden, always hidden. Changing membership never moves an item.
 2. **The bar's physical order is the truth.** Pelmet reads it, never stores it. Stored state is membership plus pending edits.
 3. **Synthetic drags happen in exactly one place**, on explicit user intent (Apply), never in the background, never on hover, reveal, conceal, boot, relaunch or new-item arrival.
-4. **Own items are placed by ownership.** Chevron, replicas, launchers and helper hosts register with a preferred position; Pelmet owns their registration, so they never need a drag (`writeOrderHint` already seeds fresh registrations).
+4. **Own items move through the same door.** Extras, replicas, launchers and separators are dragged by Apply like any icon; only the chevron anchors. Registration does not place: a fresh registration under the same tag lands at the slot MenuBarAgent remembers in RAM, and the plist (`TrailingItemPreferredPositions`) is read only at an agent restart (probed 2026-09-20 — rank and trailing-inset values both ignored). `writeOrderHint` still seeds a Pelmet relaunch.
 5. **No covers for walks.** There are no walks. A cover survives only if we choose to mask the system's reveal animation.
 
 ## Model (PelmetCore, pure, tested)
@@ -49,7 +49,7 @@ Grouping is part of the same pass (the Tidy checkbox was folded in, Gab 2026-09-
 
 **Live items** (camera/mic indicator, Now Playing, Timer, Focus, recording pill, AirDrop, VPN): appear where the agent puts them, `RosterRule` decides visibility, nothing moves. The collateral tracker stays (which system extras hide with which assertion), the placement side of it goes.
 
-**Own items.** Registered with a preferred position derived from the roster: chevron at the roster boundary, replicas next to the system extra they replace, launchers where the user dropped them in the editor. Re-registration is the move primitive for own items. No drags.
+**Own items.** Moved by `ApplyPass`: a whole-bar pass attaches idle extras at alpha 0 so they have a slot, re-hosts separators onto their drawn section's helper first, then drags. An extra entering the bar (camera on, audio starting, a launcher's app starting) runs a one-item pass (`ApplyPass.Scope.ownItem`) among the items on screen, no reveal; entering a concealed section it waits for the next reveal settle. The chevron is the one anchor and moves only by the user's own ⌘-drag.
 
 **New items.** Land where the agent puts them. `RosterRule` assigns a section, assertion applies it. The editor shows them in place with a "new" mark. No placement, no order-front routing.
 
@@ -74,7 +74,7 @@ Grouping is part of the same pass (the Tidy checkbox was folded in, Gab 2026-09-
 | App/EditorItemsBuilder.swift | 175 | rewrite on top of AX order + Roster |
 | App/CollateralTracker.swift | 102 | keep |
 | StatusItem/ConcealGhostOverlay.swift | 753 | keep only if the reveal-animation cover is kept; otherwise delete with the capture pipeline |
-| StatusItem/SeparatorManager.swift, HelperHosts.swift | 527 | keep; gain preferred-position registration |
+| StatusItem/SeparatorManager.swift, HelperHosts.swift | 527 | keep; hosts follow the drawn section at Apply (`hostedSection`), not at the editor drop |
 | Settings/MenuBarTab.swift | 1557 | Tidy button → Apply button with count, Discard, Tidy checkbox; overflow note stays |
 | Settings/EditorDragSession.swift | 163 | between-section drop = membership; within-section drop = OrderEdit |
 | Core/SectionModel.swift | 249 | split: canonicalization → Roster, positional order → OrderEdits |
@@ -99,20 +99,20 @@ Anything that only existed for walks: settle timers for placement, the forced sy
 - **Interleaved reveal look.** This is the visible product change. The README and the editor copy say it up front: hidden icons come back where they live; Apply with Tidy groups them.
 - **Apply can fail mid-pass** if the user moves. It reports and retries when idle. Never silently.
 - **Apple hosts that don't move** (pinned SystemUIServer) are skipped with a reason, as today.
-- **Own-item registration** must be proven on a Developer ID build from /Applications before M2 is called done (DerivedData allowlist blind spot).
+- **Own-item moves** were proven on a Developer ID build from /Applications (2026-09-20: Camera on and off, Media, Sound both ways across the chevron, a Dot separator). Registration-based placement was probed and falsified the same day.
 
 ## Milestones
 
 - **M0 spike (branch `roster`)**: Roster + RosterRule + reveal/conceal with every placement path disabled behind one flag. Live for a day on Gab's bar. Exit: no `place:`/`drift:`/`rescue:` log lines, hover and hotkey reveal work, live items behave.
 - **M1 editor + Apply**: OrderEdits, MovePlan, ApplyPass, Apply/Discard UI, Tidy checkbox. Exit: a five-move edit applies in one pass with the cursor hidden, failures reported.
-- **M2 own items by registration**: chevron, replicas, launchers, helper hosts placed by preferred position. Exit: fresh boot puts every own item where the roster says without a drag.
+- **M2 own items through the door** (LANDED 2026-09-20): extras, replicas, launchers and separators dragged by Apply; idle extras attached for the pass; separators re-host at Apply. Exit met: an own item drawn anywhere in the editor lands there after one Apply, on or off screen.
 - **M3 deletions + cover decision**: remove the survive/delete "delete" rows, decide the reveal-animation cover by measuring the system animation (measure before building over it).
 - **M4 release 0.3.0**: migration seed, release notes, README copy for the reveal change.
 
 ## Blind spots to close before M1 (2026-09-20 review)
 
 1. **Measure the in-place reveal.** Several items re-appearing across the bar means neighbours slide in several places at once. M0 exists to look at this on a full bar before committing. If it reads as busy, the answer is a short cross-fade cover, never a walk.
-2. **Own-item registration is a distance from the right edge, not "next to X".** Pelmet reads the neighbour's frame, converts to a distance, registers, and the bar can change in between; multi-display makes the distance per display. Prove it on a Developer ID build from /Applications with a full bar, and prove re-registration doesn't blink the media bars or drop the chevron's hover state.
+2. **~~Own-item registration is a distance from the right edge~~ — moot.** Registration never places a live-process item (see §Own items); the distance idea is kept here only as history. What still holds: prove own-item moves on a Developer ID build from /Applications with a full bar, and watch that a pass never blinks the media bars or drops the chevron's hover state.
 3. **Apply's feel.** Idle wait plus a hidden cursor can mean a few silent seconds. Visible progress and a per-item result, or people press it twice.
 4. **Upgrade expectations.** Some users chose Pelmet for the block reveal. Release notes say it up front; first launch of 0.3.0 offers "Tidy now" once, and points at "Keep sections grouped".
 5. **Separators stay a feature.** Chevron and always-hidden separator remain Pelmet's own items: drag boundaries for the user's ⌘-drags, right-click menu, hosted on the helpers, placed by registration. What changes is only their *exactness*: "everything left of me is hidden" holds whenever the bar is grouped (user-arranged, Tidy, or "Keep sections grouped"). The one source of disagreement is an editor drag between sections, which hides instantly but leaves the icon physically where it was. New items land at the left end of the bar (to confirm in M0), which is the hidden side, so they are grouped from the start. The editor marks a not-yet-in-place icon and Apply (or the grouped option) relocates it.

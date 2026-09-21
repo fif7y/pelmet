@@ -108,6 +108,7 @@ final class AppState {
             // Newcomers routed into a then-concealed section finally
             // have measurable neighbors — walk them to their slot.
             placement.flushPendingPlacements()
+            placeOwnItemsAwaitingReveal()
             // Order supervisor: with the hidden cluster materialized, any
             // item on the wrong side of the chevron is corrected now, under
             // this reveal, from a fresh measurement.
@@ -906,6 +907,7 @@ final class AppState {
         extras?.sync(with: settings.extraItems)
         let newExtraIDs = Set(extras?.managedItemIDs ?? []).subtracting(previousExtraIDs)
         newOwnIDs.formUnion(newSeparatorIDs.union(newExtraIDs))
+        pruneOrderEditsForRemovedOwnItems()
         if !newOwnIDs.isEmpty {
             Task {
                 try? await Task.sleep(for: AppTiming.newExtraPlacementDelay)
@@ -1219,6 +1221,34 @@ final class AppState {
     /// surfaced at the end of Always Hidden (ChatGPT Classic, 2026-09-09).
     /// Place it now, same beat as a freshly added extra; the reveal-settle
     /// queue would only catch the next reveal.
+    /// Own extras that entered the bar while their section was concealed:
+    /// no neighbour to measure, so they wait for the next reveal that shows
+    /// their section (`onRevealSettled`) and go through the door then.
+    private var ownItemsAwaitingReveal: Set<ItemID> = []
+
+    /// Sets core: an own extra entering a concealed section.
+    func placeOwnItemAtNextReveal(_ id: ItemID) {
+        guard CoreMode.setsOnly else { queueDynamicExtraPlacement(id); return }
+        ownItemsAwaitingReveal.insert(id)
+    }
+
+    func cancelOwnItemPlacement(_ id: ItemID) {
+        ownItemsAwaitingReveal.remove(id)
+        cancelDynamicExtraPlacement(id)
+    }
+
+    private func placeOwnItemsAwaitingReveal() {
+        // A pass reveals too; leave the queue for a user reveal then.
+        guard CoreMode.setsOnly, !applying, !ownItemsAwaitingReveal.isEmpty else { return }
+        let revealed = currentRevealedSections
+        let due = ownItemsAwaitingReveal.filter { revealed.contains(settings.sectionModel.section(of: $0)) }
+        guard !due.isEmpty else { return }
+        ownItemsAwaitingReveal.subtract(due)
+        Task {
+            for id in due { await placeOwnItemNow(id) }
+        }
+    }
+
     func placeOwnItemSoon(_ id: ItemID) {
         placement.dropPlacement(id)
         Task {
@@ -1345,6 +1375,30 @@ final class AppState {
                 applyPointerDisplayPolicyAfterDismissal()
             }
         }
+    }
+
+    /// A removed separator or extra leaves its drawn slot behind in the
+    /// pending edits, and every pass then skips it as not on screen (the Dot
+    /// removed at 20:43, 2026-09-20). Own items only: a third-party icon that
+    /// quit is still a member and comes back.
+    private func pruneOrderEditsForRemovedOwnItems() {
+        guard !settings.orderEdits.isEmpty else { return }
+        let managed = Set(((extras?.managedItemIDs ?? []) + (separators?.managedItemIDs ?? [])).map(\.sectionKey))
+        var edits = settings.orderEdits
+        var dropped = 0
+        for (section, order) in edits.order {
+            let kept = order.filter { id in
+                guard let bundle = id.bundleID, PelmetBundle.ownIDs.contains(bundle),
+                      !id.isPelmetChevron else { return true }
+                return managed.contains(id.sectionKey)
+            }
+            dropped += order.count - kept.count
+            edits.order[section] = kept
+        }
+        guard dropped > 0 else { return }
+        settings.orderEdits = edits
+        settings.save()
+        PelmetLog.log("apply: \(dropped) pending edit(s) for removed own item(s) dropped")
     }
 
     /// Drops the pending edits; the editor goes back to drawing the bar's
