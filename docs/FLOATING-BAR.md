@@ -73,3 +73,43 @@ v1; every knob is a separate ask.
 
 Right-click relay, drag to the bar, per-display trays, periodic picture
 refresh while open, tint.
+
+## Where it lives (code)
+
+- `Pelmet/Tray/TrayController.swift` — open/close, cells from the editor's
+  items in drawn order, the press relay, the picture pass, the drop.
+- `Pelmet/Tray/TrayPanel.swift` — the glass panel, cell layout and wrapping,
+  position rule, entrance/exit, the reorder drag, Esc.
+- `Pelmet/Tray/TrayPictures.swift` — per-item pictures cut from a keyed-out
+  strip picture, keyed by the model key.
+- `Pelmet/Tray/TrayPress.swift` — AXPress on the real item's extras-bar
+  element; the owner's elevated-window count the relay waits on.
+- `TransitionCoordinator.harvestTrayPictures` — strip picture beneath the
+  relay's cover with Pelmet's windows left out, cut out against the last
+  empty-bar picture; `sectionAnchorX` — where the section opens in the bar.
+- `AppState.dispatch` — the reveal effect goes to the tray for a person's
+  triggers when every section is routed; the conceal effect closes it.
+  `onOpened`/`onClosed` feed the rehide machine's settle.
+- `MenuBarBandMonitor.pointerMoved` — the tray counts as bar.
+- `ConcealGhostOverlay.snapshotSet(of:excludingOwnWindows:)`.
+- Settings: `floatingBarSections`, `floatingBarPosition`, `floatingBarSize`;
+  the checkbox on the section headers and the Floating bar card in
+  `MenuBarTab`.
+
+Log prefix: `tray:`.
+
+## Relay, step by step
+
+1. `beginBarCover(label: "tray")` — a live picture of the bar from its
+   leftmost item to the clock, floated before anything moves.
+2. `engine.reveal(sections)` beneath it; wait for swap-quiet plus a short
+   settle; a fresh walk.
+3. Trapped behind the «: `OverflowToggle.expandForPass`, settle, walk again.
+4. Pictures: the section's frames unioned, captured with Pelmet's windows
+   excluded, keyed out against the empty bar, cut per item. Cells refresh.
+5. `TrayPress.press(item)`; the owner's elevated windows are counted before
+   and polled after: shown within 0.6 s → wait until gone (60 s cap).
+6. « collapsed if expanded, `engine.conceal()`, `endBarCover`.
+
+The picture pass is the same without step 5, run when the tray opens with
+cells that have no picture (app icons stand in until it lands).
