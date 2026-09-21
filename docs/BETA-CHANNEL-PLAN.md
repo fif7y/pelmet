@@ -77,7 +77,17 @@ opt in see one update at a time and one set of notes.
 This makes the sets-core switch itself the first use of the channel, which
 is the safest way to ship it.
 
-## Open questions for Gab
+## Decided (Gab, 2026-09-21)
+
+- Beta versions read `X.Y.Z-beta.N`; one build-number counter across channels.
+- Stable day: Tuesday, every one or two weeks (big work happens on weekends).
+- Issues close at the beta, with the opt-in line in the comment.
+- The toggle is a quiet Settings › About row ("Get beta releases").
+- Rollout: 0.2.41 stable from main with the toggle only, then 0.3.0-beta.1
+  from `roster` when Gab has gone over it — not before.
+- The clock-relay trio (#44/#45/#46) is not a 0.3.0 gate; see the audit.
+
+## Open questions (answered above, kept for the record)
 
 - Beta version string: `0.3.0-beta.1` (proposed) or `0.3.0b1`?
 - Stable day: Tuesday (proposed, matches the PH/launch rhythm) or Thursday?
