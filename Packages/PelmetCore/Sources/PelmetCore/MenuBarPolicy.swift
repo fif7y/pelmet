@@ -226,6 +226,20 @@ public enum MenuBarGeometry {
         frame.minY > bandTopInset && frame.minY < bandBottomLimit
     }
 
+    /// True when a frame sits in the menubar band of `display` (its bounds
+    /// in the same CG top-left global space, `CGDisplayBounds`). The agent
+    /// draws an adopted item once per display, and the walk keeps the main
+    /// copy only when there is one: at boot every item is still in the bar,
+    /// a notched built-in overflows, and the only copy left is the one on a
+    /// side display (BenQ at y=-113, 2026-09-21). A registration the agent
+    /// has NOT adopted is drawn on no display at all (x=4800 y=-164,
+    /// 2026-09-02).
+    public static func isInBand(_ frame: CGRect, ofDisplay display: CGRect) -> Bool {
+        let y = frame.minY - display.minY
+        return y > bandTopInset && y < bandBottomLimit
+            && frame.midX >= display.minX && frame.midX < display.maxX
+    }
+
     /// In the band AND on the primary display. A display parked beside the
     /// primary with its top aligned puts its bar in the band too, and an
     /// item that overflows on a notched built-in has only those copies in

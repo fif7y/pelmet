@@ -155,4 +155,22 @@ struct MenuBarPolicyTests {
         #expect(!MenuBarGeometry.isInBand(CGRect(x: 100, y: 800, width: 30, height: 24)))
         #expect(!MenuBarGeometry.isInBand(CGRect(x: 100, y: -30, width: 30, height: 24)))
     }
+
+    @Test func bandOfASideDisplayCountsItsCopiesNotAParkedRegistration() {
+        // Three displays in CG global space: built-in at the origin, a side
+        // display whose top sits 113pt above it, one top-aligned to the right.
+        let builtIn = CGRect(x: 0, y: 0, width: 1800, height: 1169)
+        let left = CGRect(x: -2560, y: -113, width: 2560, height: 1440)
+        let right = CGRect(x: 1800, y: 0, width: 3440, height: 1440)
+        let leftCopy = CGRect(x: -234, y: -113, width: 30, height: 24)
+        #expect(MenuBarGeometry.isInBand(leftCopy, ofDisplay: left))
+        #expect(!MenuBarGeometry.isInBand(leftCopy, ofDisplay: builtIn))
+        #expect(!MenuBarGeometry.isInBand(leftCopy))
+        #expect(MenuBarGeometry.isInBand(CGRect(x: 100, y: 0, width: 30, height: 24), ofDisplay: builtIn))
+        // A registration parked under a stale assertion is on no display's bar.
+        let parked = CGRect(x: 4800, y: -164, width: 30, height: 24)
+        for display in [builtIn, left, right] {
+            #expect(!MenuBarGeometry.isInBand(parked, ofDisplay: display))
+        }
+    }
 }

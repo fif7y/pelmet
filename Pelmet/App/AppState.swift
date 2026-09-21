@@ -2053,21 +2053,42 @@ final class AppState {
         let deadline = Date.now.addingTimeInterval(8)
         var missing = expected
         var lastWalk: [ItemID: CGRect?] = [:]
+        // Every display's bounds in the walk's CG global space. The walk
+        // keeps one copy per item and prefers the main display's; when the
+        // built-in overflows at boot (all items still in the bar, music
+        // playing) the media control's only copy is the one on a side
+        // display — drawn there, so adopted. The wait burned its full 8s on
+        // it 3 boots out of 7 (2026-09-21).
+        let displays = NSScreen.screens.compactMap { screen -> CGRect? in
+            guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+            else { return nil }
+            return CGDisplayBounds(number)
+        }
+        var sideDisplayNoted: Set<ItemID> = []
         while Date.now < deadline {
             // In-band frames only: a registration made while the PREVIOUS
             // instance's assertion still held (relaunch overlap) is present
-            // in AX but parked offscreen (x=4800, 2026-09-02) — counting it
-            // as adopted let the first converge assert over it, parking the
-            // media control in the wrong zone for the whole session.
+            // in AX but parked offscreen (x=4800 y=-164, 2026-09-02) — on no
+            // display's bar. Counting it as adopted let the first converge
+            // assert over it, parking the media control in the wrong zone
+            // for the whole session.
             let snap = await engine.snapshot()
             lastWalk = Dictionary(
                 snap.items.map { ($0.id, $0.frame) }, uniquingKeysWith: { a, _ in a }
             )
-            let observed = Set(
-                snap.items
-                    .filter { $0.frame.map(MenuBarGeometry.isInBand) == true }
-                    .map(\.id)
-            )
+            var observed: Set<ItemID> = []
+            for item in snap.items {
+                guard let frame = item.frame else { continue }
+                if MenuBarGeometry.isInBand(frame) {
+                    observed.insert(item.id)
+                } else if expected.contains(item.id),
+                          displays.contains(where: { MenuBarGeometry.isInBand(frame, ofDisplay: $0) }) {
+                    observed.insert(item.id)
+                    if sideDisplayNoted.insert(item.id).inserted {
+                        PelmetLog.log("start: \(item.id.rawValue) drawn on a side display's bar at x=\(Int(frame.minX)) y=\(Int(frame.minY)) — adopted, the built-in copy overflowed")
+                    }
+                }
+            }
             if expected.subtracting(observed).isEmpty {
                 PelmetLog.log("start: own items adopted (\(expected.count))")
                 return
