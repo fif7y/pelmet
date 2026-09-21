@@ -2094,8 +2094,15 @@ final class AppState {
             // then re-converge so the change (or a known bundle rejoining the
             // allowlist) takes effect.
             Task {
-                registerNewItems(from: await engine.snapshot())
-                await engine.setModel(settings.sectionModel)
+                let registered = registerNewItems(from: await engine.snapshot())
+                // The walk behind a swap fires this for every transition
+                // (concealed items leave and rejoin AX). Converging on it
+                // mid-transition superseded the transition's own converge
+                // for nothing; a known bundle rejoining the allowlist is
+                // picked up by the next converge, a new one is routed now.
+                if !isTransitioning || !registered.isEmpty {
+                    await engine.setModel(settings.sectionModel)
+                }
                 updateSnapshot(await engine.snapshot())
                 // The system camera pill appearing/vanishing is an
                 // itemsChanged — Pelmet's indicator defers to it live. But NOT

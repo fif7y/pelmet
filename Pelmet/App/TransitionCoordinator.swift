@@ -273,7 +273,7 @@ final class TransitionCoordinator {
             // from the moment the swap lands. Nothing to capture → the
             // agent's fade shows as is.
             let stripRect = await concealStripFrames()
-            trace.mark("strip walk")
+            trace.mark("strip", detail: await engine.restSnapshot == nil ? "walked" : "mirror")
             rememberStrip(stripRect)
             // A reveal shorter than the settle precapture (~1s) never got
             // its finished picture, and every reveal after paid the
@@ -664,7 +664,10 @@ final class TransitionCoordinator {
     /// snapshot can be missing half the strip.
     private func concealStripFrames() async -> CGRect? {
         guard let appState else { return nil }
-        let snap = await engine.snapshot()
+        // The rest walk behind the reveal swap listed the whole strip;
+        // walking again here cost 70–130ms before every conceal swap.
+        let snap: EngineSnapshot
+        if let rest = await engine.restSnapshot { snap = rest } else { snap = await engine.snapshot() }
         var union: CGRect?
         var count = 0
         concealableCount = snap.items.filter {

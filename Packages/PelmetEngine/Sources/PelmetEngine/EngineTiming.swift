@@ -8,6 +8,14 @@ import Foundation
 enum EngineTiming {
     /// snapshot() cache TTL — sub-500ms repeat reads reuse the last AX walk.
     static let snapshotTTL: TimeInterval = 0.5
+    /// A mirror taken at rest (this long after the last swap, so the agent's
+    /// reflow is over and AX lists the whole strip) stands in for a fresh
+    /// walk on the transition path — converge plans from it, the conceal
+    /// measures its strip from it — for this long. Measured 2026-09-21:
+    /// the pre-swap walk was 30–100ms of every reveal and 70–130ms of
+    /// every conceal, for a bar that had not changed since the last walk.
+    static let restWalkDelay: TimeInterval = 0.5
+    static let restSnapshotReuse: TimeInterval = 30
     /// AX messaging timeouts — a stuck agent/app must never wedge a walk.
     static let axAgentTimeout: Float = 0.25
     static let axAppTimeout: Float = 0.5

@@ -14,8 +14,9 @@ public struct ConvergeTiming: Sendable {
     public enum Outcome: String, Sendable {
         case swapped, noop, dropped, emptyWalk, unavailable, activationNil, superseded
     }
-    /// The pre-swap AX walk (`refreshSnapshot`), ms.
+    /// The pre-swap AX walk (`refreshSnapshot`), ms — or the mirror reuse.
     public var walkMS = 0
+    public var walkReused = false
     /// `ConvergePlan.compute` plus the running-apps fetch, ms.
     public var planMS = 0
     /// From the activate call to the completion (or the deadline), ms.
@@ -25,14 +26,16 @@ public struct ConvergeTiming: Sendable {
     public var invalidateMS = 0
     public var outcome: Outcome = .superseded
 
+    private var walkLabel: String { walkReused ? "mirror \(walkMS)ms" : "walk \(walkMS)ms" }
+
     public var summary: String {
         switch outcome {
         case .swapped:
-            return "walk \(walkMS)ms plan \(planMS)ms activate \(activateMS)ms\(activated ? "" : " (unconfirmed)") invalidate \(invalidateMS)ms"
+            return "\(walkLabel) plan \(planMS)ms activate \(activateMS)ms\(activated ? "" : " (unconfirmed)") invalidate \(invalidateMS)ms"
         case .noop, .dropped:
-            return "walk \(walkMS)ms plan \(planMS)ms \(outcome.rawValue)"
+            return "\(walkLabel) plan \(planMS)ms \(outcome.rawValue)"
         default:
-            return "walk \(walkMS)ms \(outcome.rawValue)"
+            return "\(walkLabel) \(outcome.rawValue)"
         }
     }
 }
@@ -171,6 +174,20 @@ public actor AgentBarEngine: MenuBarEngine {
         Date().timeIntervalSince(lastSwapAt) > interval
     }
 
+    /// The mirror when it was walked at rest — `restWalkDelay` past the
+    /// last swap, so the agent's reflow was over — and is recent enough
+    /// (`restSnapshotReuse`). Nil means the bar may have changed since:
+    /// walk. Only Pelmet's own swaps move the bar's contents on their own;
+    /// app launches and user drags reach the mirror through the walks the
+    /// app already runs for them.
+    public var restSnapshot: EngineSnapshot? {
+        guard let last = lastSnapshot,
+              last.takenAt.timeIntervalSince(lastSwapAt) >= EngineTiming.restWalkDelay,
+              Date().timeIntervalSince(last.takenAt) < EngineTiming.restSnapshotReuse
+        else { return nil }
+        return last
+    }
+
     /// Fresh registrations under ANY active assertion park offscreen and
     /// never enter the agent's AX tree (verified at boot — it's why start()
     /// waits for own-item adoption; re-verified live 2026-08-31: a relaunched
@@ -272,7 +289,17 @@ public actor AgentBarEngine: MenuBarEngine {
         // under the next perf line.
         defer { lastConvergeTiming = timing }
         var phase = Date()
-        let snapshot = await refreshSnapshot()
+        let snapshot: EngineSnapshot
+        if let rest = restSnapshot {
+            // The bar has not reflowed since this walk: plan from it. A
+            // bundle that appeared since is caught by the walk behind the
+            // swap, one converge later — the same window the app already
+            // has between walks at rest.
+            snapshot = rest
+            timing.walkReused = true
+        } else {
+            snapshot = await refreshSnapshot()
+        }
         timing.walkMS = Self.ms(since: phase)
         guard epoch == convergeEpoch else { return }
         if snapshot.items.isEmpty {
@@ -469,10 +496,14 @@ public actor AgentBarEngine: MenuBarEngine {
         // The walk runs behind the swap instead and refreshes the mirror
         // when it lands (it fires itemsChanged as it always did).
         timing.outcome = .swapped
+        // Stamped with the swap time, not the mirror's: `snapshot()` reads
+        // it inside its TTL right after the swap instead of walking
+        // mid-reflow (a 200ms walk on the settle path, 2026-09-21 11:05),
+        // and `restSnapshot` stays nil until a walk at rest replaces it.
         lastSnapshot = EngineSnapshot(
             items: snapshot.items,
             concealed: plan.concealed,
-            takenAt: snapshot.takenAt
+            takenAt: Date()
         )
         Task { await self.walkAfterSwap(concealable: concealable, epoch: epoch) }
     }
@@ -494,6 +525,23 @@ public actor AgentBarEngine: MenuBarEngine {
         if stillVisible {
             await verifyConcealment(of: concealable)
         }
+        // A walk that ran inside the reflow can list half the strip (AX
+        // adds freshly revealed items progressively). One more at rest
+        // makes the mirror whole, so the next transition can plan and
+        // measure from it instead of walking (`restSnapshot`).
+        // Not epoch-gated: the itemsChanged this walk fires runs a no-op
+        // converge (a new epoch) before the bar is at rest, and its walk is
+        // mid-reflow too. A newer SWAP moves `lastSwapAt`, so the wait
+        // below simply extends to that one's rest.
+        var untilRest = EngineTiming.restWalkDelay - Date().timeIntervalSince(lastSwapAt)
+        while untilRest > 0 {
+            try? await Task.sleep(for: .seconds(untilRest))
+            untilRest = EngineTiming.restWalkDelay - Date().timeIntervalSince(lastSwapAt)
+        }
+        guard restSnapshot == nil else { return }
+        let restStarted = Date()
+        _ = await refreshSnapshot()
+        PelmetLog.log("converge: rest walk \(Self.ms(since: restStarted))ms (background)")
     }
 
     /// Background verify-after-apply: bounded poll until the concealed
