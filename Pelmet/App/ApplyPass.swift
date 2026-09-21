@@ -81,9 +81,13 @@ enum ApplyPass {
             guard let chevronMidX, let x = frames[id]?.midX else { return roster.section(of: id) == .visible }
             return x > chevronMidX
         }
+        // …and only while the roster still wants it there: Sound drawn into
+        // Hidden while sitting right of the chevron was skipped as pinned on
+        // every pass, "Moved 0" with Apply (1) coming back (2026-09-20 21:03).
         let pinned = Set(bar.filter {
             appState.isImmovable($0)
-                || (PlacementController.isProtectedSystemItem($0) && inTrailingCluster($0))
+                || (PlacementController.isProtectedSystemItem($0) && inTrailingCluster($0)
+                    && roster.section(of: $0) == .visible)
         })
         // The one anchor is the chevron (passed separately). Every other own
         // item — extras, replicas, launchers, separators — drags like any
