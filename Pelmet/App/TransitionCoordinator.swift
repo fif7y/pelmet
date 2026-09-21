@@ -158,6 +158,7 @@ final class TransitionCoordinator {
     /// both pictures cover yield a clean cut; items outside them are left
     /// for a later pass. Returns how many pictures landed.
     func harvestTrayPictures(into pictures: TrayPictures, items: [ObservedItem]) async -> Int {
+        guard ScreenRecordingAccess.isGranted else { return 0 }
         let primaryMaxX = primaryMaxX
         let frames = items.compactMap(\.frame).filter { MenuBarGeometry.isInPrimaryBand($0, primaryMaxX: primaryMaxX) }
         guard let minX = frames.map(\.minX).min(), let maxX = frames.map(\.maxX).max(), let band = frames.first else { return 0 }

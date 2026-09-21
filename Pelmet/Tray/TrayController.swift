@@ -48,6 +48,11 @@ final class TrayController {
     func takes(_ sections: Set<PelmetCore.Section>, reason: RevealReason?) -> Bool {
         guard let appState, !sections.isEmpty, !appState.editorHoldsBar else { return false }
         guard sections.isSubset(of: appState.settings.floatingBarSections) else { return false }
+        // Nothing on the bar to show: the in-bar reveal handles the empty
+        // case (and the editor's chip) as before.
+        let present = Set((appState.snapshot?.items ?? []).map(\.id.sectionKey))
+        guard sections.contains(where: { section in appState.editorItems(in: section).contains { present.contains($0.id.sectionKey) } })
+        else { return false }
         switch reason {
         case .hover, .click, .doubleClick, .hotkey, .statusItem, .none: return true
         case .displayPolicy, .settingsPreview, .barDrag: return false
@@ -59,8 +64,15 @@ final class TrayController {
     func open(_ sections: Set<PelmetCore.Section>) {
         guard let appState else { return }
         self.sections = sections
-        let screen = NSScreen.underPointer ?? NSScreen.main ?? NSScreen.screens[0]
         let cells = buildCells()
+        if panel.isShown {
+            // Widened while open (a double-click adds Always Hidden): the
+            // same tray, more cells.
+            panel.update(cells: cells)
+            onOpened?()
+            return
+        }
+        let screen = NSScreen.underPointer ?? NSScreen.main ?? NSScreen.screens[0]
         let placement = TrayPanel.Placement(
             screen: screen,
             position: appState.settings.floatingBarPosition,

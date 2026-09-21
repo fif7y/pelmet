@@ -116,6 +116,7 @@ final class TrayPanel {
         installKeyMonitors()
         let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         if reduced {
+            content.layer?.transform = CATransform3DIdentity
             panel.alphaValue = 1
         } else {
             // Hangs down from under the bar: the content starts lifted and
@@ -184,10 +185,10 @@ final class TrayPanel {
         let screen = placement.screen
         let cellHeight = (Self.barHeight(of: screen) * placement.scale).rounded()
         let maxWidth = max(200, (screen.frame.width * Self.maxWidthShare).rounded()) - 2 * Self.insetX
+        content.contentInset = NSPoint(x: Self.insetX, y: Self.insetY)
         let size = content.lay(cells, cellHeight: cellHeight, maxRowWidth: maxWidth)
         let width = size.width + 2 * Self.insetX
         let height = size.height + 2 * Self.insetY
-        content.contentInset = NSPoint(x: Self.insetX, y: Self.insetY)
 
         var right: CGFloat
         switch placement.position {
@@ -272,7 +273,7 @@ private final class TrayContentView: NSView {
 
     /// Rows of cells, right-aligned, first row on top. Returns the content
     /// size without the inset.
-    func lay(_ cells: [TrayPanel.Cell], cellHeight: CGFloat, maxRowWidth: CGFloat) -> NSSize {
+    func lay(_ cells: [TrayPanel.Cell], cellHeight: CGFloat, maxRowWidth: CGFloat, place: Bool = true) -> NSSize {
         self.cells = cells
         self.cellHeight = cellHeight
         order = cells.map(\.key)
@@ -320,7 +321,7 @@ private final class TrayContentView: NSView {
             y += cellHeight + Self.rowGap
         }
         let height = y - Self.rowGap
-        place(animated: false)
+        if place { self.place(animated: false) }
         return NSSize(width: rowWidth, height: max(height, cellHeight))
     }
 
@@ -442,7 +443,7 @@ private final class TrayContentView: NSView {
         let ordered = newOrder.compactMap { byKey[$0] }
         let keepOrder = order
         let keepInset = contentInset
-        _ = lay(ordered, cellHeight: cellHeight, maxRowWidth: rowWidth + 0.5)
+        _ = lay(ordered, cellHeight: cellHeight, maxRowWidth: rowWidth + 0.5, place: false)
         order = keepOrder
         contentInset = keepInset
     }
