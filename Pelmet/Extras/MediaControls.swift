@@ -84,6 +84,10 @@ final class ExtrasManager {
     /// list sees every activation policy (same lesson as AppState's relaunch
     /// observer, 2026-09-09).
     private var runningAppsObservation: NSKeyValueObservation?
+    /// Extras sitting out of the bar (camera off, no audio, app not running)
+    /// attached invisibly for the length of an Apply pass so they have a
+    /// slot to drag — see `attachForApply`.
+    private var attachedForApply: Set<UUID> = []
 
     init(appState: AppState) {
         self.appState = appState
@@ -233,7 +237,7 @@ final class ExtrasManager {
         systemCameraPillVisible: Bool
     ) {
         for (id, item) in items {
-            guard let spec = specs[id] else { continue }
+            guard let spec = specs[id], !attachedForApply.contains(id) else { continue }
             let section = model.section(of: Self.itemID(for: spec))
             var visible = section == .visible || revealed.contains(section)
             switch spec.kind {
@@ -397,6 +401,32 @@ final class ExtrasManager {
             // A hidden glyph keeps its last frame and stops ticking.
             animators[id]?.paused = !visible
         }
+    }
+
+    /// An own extra that is out of the bar has no slot, so Apply could not
+    /// move it: a Camera moved in the editor while the camera was off only
+    /// found its slot at the next camera-on edge (2026-09-20). For the pass,
+    /// every idle extra joins the layout at alpha 0 (the agent gives it the
+    /// slot it remembers), gets dragged like any icon, and leaves again in
+    /// `detachAfterApply`; its next real entry lands at the new slot.
+    func attachForApply() -> [ItemID] {
+        var attached: [ItemID] = []
+        for (id, item) in items where lastVisible[id] != true && !preattached.contains(id) {
+            guard let spec = specs[id] else { continue }
+            StatusItemFader.attach(item, shownLength: Self.shownLength(for: spec))
+            attachedForApply.insert(id)
+            attached.append(Self.itemID(for: spec))
+        }
+        return attached
+    }
+
+    func detachAfterApply() {
+        for id in attachedForApply {
+            items[id]?.length = 0
+            items[id]?.isVisible = false
+        }
+        attachedForApply.removeAll()
+        applyCurrent()
     }
 
     /// Section-governed items about to be revealed UNCOVERED join the layout

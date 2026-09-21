@@ -1127,6 +1127,14 @@ struct TintChipButton<Icon: View>: View {
         self.action = action
     }
 
+    /// A prebuilt label (the Apply button switches its text and tint).
+    init(text: Text, icon: Icon, tint: Color = PelmetAccent.accent, action: @escaping () -> Void) {
+        self.text = text
+        self.icon = icon
+        self.tint = tint
+        self.action = action
+    }
+
     /// Handles and other runtime strings, shown as-is with a custom glyph.
     init(verbatim text: String, icon: Icon, action: @escaping () -> Void) {
         self.text = Text(verbatim: text)

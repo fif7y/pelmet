@@ -39,25 +39,24 @@ struct ApplyBarButton: View {
                     .font(.callout)
                     .help("Forget the pending order changes; the editor shows the bar as it is")
             }
-            Button {
+            // Same chip family as General's permission row (de-box, tinted
+            // capsule): green while there is something to apply, so a
+            // change in the editor visibly asks for the click; grey and
+            // inert when the bar already matches.
+            let title: Text = appState.applying ? Text("Applying…")
+                : failed ? Text("Retry")
+                : count > 0 ? Text("Apply (\(count))")
+                : Text("Apply")
+            let tint: Color = failed ? .orange : pending ? .green : .secondary
+            TintChipButton(
+                text: title,
+                icon: Image(systemName: failed ? "arrow.clockwise" : "wand.and.stars"),
+                tint: tint
+            ) {
                 appState.applyOrderEdits()
-            } label: {
-                Label {
-                    if appState.applying {
-                        Text("Applying…")
-                    } else if failed {
-                        Text("Retry")
-                    } else if count > 0 {
-                        Text("Apply (\(count))")
-                    } else {
-                        Text("Apply")
-                    }
-                } icon: {
-                    Image(systemName: failed ? "arrow.clockwise" : "wand.and.stars")
-                }
-                .font(.callout)
             }
             .disabled(appState.applying || !pending)
+            .animation(.easeOut(duration: 0.2), value: pending)
             .help("Move the bar to match the editor: your order, and every icon on its section's side of the chevron. Each icon is dragged once with the cursor hidden; nothing moves until you press this.")
         }
     }

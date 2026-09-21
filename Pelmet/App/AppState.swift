@@ -681,6 +681,11 @@ final class AppState {
     /// to place them — so its slide-in animates the third-party icons into
     /// slots around them instead of shifting everything once more when they
     /// settle later (see `StatusItemFader.attach`).
+    /// Apply pass: idle extras join the layout invisibly so they can be
+    /// dragged (ExtrasManager.attachForApply). Returns what joined.
+    func attachIdleExtrasForApply() -> [ItemID] { extras?.attachForApply() ?? [] }
+    func detachIdleExtrasAfterApply() { extras?.detachAfterApply() }
+
     func preattachOwnItems(revealing sections: Set<PelmetCore.Section>) async {
         let model = settings.sectionModel
         var attached = extras?.preattach(model: model, revealing: sections) ?? []

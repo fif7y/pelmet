@@ -144,6 +144,17 @@ enum ApplyPass {
         // What the pass opened, the pass closes (a display set to always
         // show keeps its policy).
         defer { if revealedForPass { appState.applyPointerDisplayPolicyAfterDismissal() } }
+        // Idle own extras (camera off, nothing playing) join the layout
+        // invisibly so the plan can move them too; they leave with the pass.
+        if case .wholeBar = scope {
+            let ghosts = appState.attachIdleExtrasForApply()
+            if !ghosts.isEmpty {
+                PelmetLog.log("apply: \(ghosts.count) idle extra(s) attached for the pass")
+                // The agent lays a new item out on its own beat.
+                try? await Task.sleep(for: AppTiming.postDragSettleFloor)
+            }
+        }
+        defer { if case .wholeBar = scope { appState.detachIdleExtrasAfterApply() } }
 
         var snap = await engine.snapshot()
         appState.updateSnapshot(snap)
