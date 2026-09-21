@@ -312,6 +312,24 @@ public enum SettingsDefaults {
     public static let hideSystemExtras = true
 }
 
+/// Where the floating bar hangs under the menu bar.
+public enum FloatingBarPosition: String, Codable, CaseIterable, Sendable {
+    /// Right-aligned to the section's place in the bar: the icons drop
+    /// down from where they would have opened.
+    case underSection
+    case underPointer
+    case trailing
+    case centered
+}
+
+/// The floating bar's scale relative to the menu bar.
+public enum FloatingBarSize: String, Codable, CaseIterable, Sendable {
+    case bar
+    case large
+
+    public var scale: Double { self == .large ? 1.25 : 1 }
+}
+
 public struct SettingsStore: Codable, Equatable, Sendable {
     public var onboardingCompleted: Bool = false
     public var launchAtLogin: Bool = false
@@ -327,6 +345,11 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     public var rehideOnClickElsewhere: Bool = true
 
     public var revealAnimation: RevealAnimation = .smooth
+    /// Sections that open in the floating bar (a glass tray under the menu
+    /// bar) instead of in it. Empty = every reveal is in-bar.
+    public var floatingBarSections: Set<Section> = []
+    public var floatingBarPosition: FloatingBarPosition = .underSection
+    public var floatingBarSize: FloatingBarSize = .bar
 
     /// Hold the hide-assertion even while revealed (allowlist just widens).
     /// Keeps macOS's collateral extras (Now Playing, camera pill, AirDrop…)
@@ -423,6 +446,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case onboardingCompleted, launchAtLogin, showStatusItem, hotkey, settingsHotkey
         case revealTriggers, autoRehide, rehideDelay, rehideOnClickElsewhere, revealAnimation
+        case floatingBarSections, floatingBarPosition, floatingBarSize
         case hideSystemExtras, showMediaControls, extraItems, sectionModel, separators
         case displayTemplate, displayOverrides
         case notifyOnUpdates, barRightClickMenu, betaUpdates
@@ -451,6 +475,9 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         rehideDelay = field(TimeInterval.self, .rehideDelay, defaults.rehideDelay)
         rehideOnClickElsewhere = field(Bool.self, .rehideOnClickElsewhere, defaults.rehideOnClickElsewhere)
         revealAnimation = field(RevealAnimation.self, .revealAnimation, defaults.revealAnimation)
+        floatingBarSections = field(Set<Section>.self, .floatingBarSections, defaults.floatingBarSections)
+        floatingBarPosition = field(FloatingBarPosition.self, .floatingBarPosition, defaults.floatingBarPosition)
+        floatingBarSize = field(FloatingBarSize.self, .floatingBarSize, defaults.floatingBarSize)
         hideSystemExtras = field(Bool.self, .hideSystemExtras, defaults.hideSystemExtras)
         showMediaControls = field(Bool.self, .showMediaControls, defaults.showMediaControls)
         extraItems = field([ExtraItemSpec].self, .extraItems, defaults.extraItems)

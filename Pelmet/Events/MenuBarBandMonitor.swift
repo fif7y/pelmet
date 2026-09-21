@@ -129,7 +129,9 @@ final class MenuBarBandMonitor {
         guard let appState else { return }
         let location = NSEvent.mouseLocation
         let screen = NSScreen.containing(location)
-        let inBand = screen.map { isBarHover(location, of: $0) } ?? false
+        // The floating bar is the bar's own extension: a pointer on it is
+        // on the bar (hover-out waits until it has left both).
+        let inBand = (screen.map { isBarHover(location, of: $0) } ?? false) || appState.trayContains(location)
         let displayUUID = screen?.displayUUIDString
 
         // Per-display behavior: crossing onto an "always show all" display

@@ -55,7 +55,11 @@ final class AppState {
         settings.behavior(forDisplayUUID: NSScreen.underPointer?.displayUUIDString)
     }
 
-    @ObservationIgnored private lazy var transitions = TransitionCoordinator(appState: self, engine: engine)
+    @ObservationIgnored lazy var transitions = TransitionCoordinator(appState: self, engine: engine)
+    /// The floating bar: a routed section reveals into it (see
+    /// `SettingsStore.floatingBarSections`) — the rehide machine drives it
+    /// exactly like an in-bar reveal.
+    @ObservationIgnored let tray = TrayController()
     private var rehide = RehideStateMachine()
     private var rehideTimer: Timer?
     /// One "rehide: deferred" line per armed countdown, not one per re-arm.
@@ -101,6 +105,22 @@ final class AppState {
     }
 
     private func wireTransitionSettleCallbacks() {
+        tray.appState = self
+        tray.onOpened = { [weak self] in
+            guard let self else { return }
+            dispatch(rehide.handle(.transitionSettled))
+            if case .revealed(_, .hover) = rehide.state,
+               bandMonitor?.pointerCurrentlyInBand == false, !tray.contains(NSEvent.mouseLocation) {
+                pointerLeftBand()
+            }
+        }
+        tray.onClosed = { [weak self] in
+            guard let self else { return }
+            dispatch(rehide.handle(.transitionSettled))
+            if case .concealed = rehide.state {
+                bandMonitor?.rearmHoverAfterConceal()
+            }
+        }
         transitions.onRevealSettled = { [weak self] in
             guard let self else { return }
             dispatch(rehide.handle(.transitionSettled))
@@ -823,6 +843,15 @@ final class AppState {
         }
     }
 
+    /// The floating bar is the bar's own extension: a pointer on it is on
+    /// the bar for the band monitor.
+    func trayContains(_ point: NSPoint) -> Bool { tray.contains(point) }
+
+    /// One of Pelmet's separators, by model key.
+    func isSeparator(_ key: ItemID) -> Bool {
+        settings.separators.contains { SeparatorManager.itemID(for: $0).sectionKey == key }
+    }
+
     func helperItemClicked(title: String, rightButton: Bool, at point: NSPoint) {
         guard rightButton || separators?.spec(titled: title) != nil else { return }
         // Separators: either button opens Pelmet's menu (an always-available
@@ -886,6 +915,7 @@ final class AppState {
 
     func settingsChanged() {
         rehide.policy = settings.rehidePolicy
+        tray.refresh()
         if settings.showStatusItem, statusItem == nil {
             // A chevron switched on mid-session is a fresh registration the
             // agent hosts from the order hint (a Pelmet relaunch seeds it
@@ -1669,9 +1699,22 @@ final class AppState {
                 var reason: RevealReason?
                 if case .transitioning(target: .reveal(_, let r), _) = rehide.state { reason = r }
                 if reason == .hover { hoverRevealStartedAt = .now }
-                transitions.performReveal(sections, trace: PerfTrace(kind: "reveal", reason: reason))
+                if tray.takes(sections, reason: reason) {
+                    tray.open(sections)
+                } else if tray.isOpen {
+                    // Widening past the routed sections (a double-click, an
+                    // Apply pass): the bar takes over, the tray goes.
+                    tray.close()
+                    transitions.performReveal(sections, trace: PerfTrace(kind: "reveal", reason: reason))
+                } else {
+                    transitions.performReveal(sections, trace: PerfTrace(kind: "reveal", reason: reason))
+                }
             case .conceal:
-                transitions.performConceal(trace: PerfTrace(kind: "conceal", reason: nil))
+                if tray.isOpen {
+                    tray.close()
+                } else {
+                    transitions.performConceal(trace: PerfTrace(kind: "conceal", reason: nil))
+                }
             case .armTimer(let deadline):
                 rehideDeferLogged = false
                 scheduleRehideTimer(at: deadline)
@@ -1916,6 +1959,7 @@ final class AppState {
 
     func updateSnapshot(_ snap: EngineSnapshot) {
         let now = Date.now
+        defer { tray.refresh() }
         noteOverflow(in: snap)
         let primary = ApplyPass.primaryFrames(snap)
         let chevronMidX = pelmetChevronItem(in: snap).flatMap { primary[$0.id.sectionKey]?.midX }

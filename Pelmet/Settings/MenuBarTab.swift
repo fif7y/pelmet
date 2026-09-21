@@ -181,6 +181,10 @@ struct MenuBarTab: View {
                 AppLaunchersStrip()
 
                 PelmetItemsStrip()
+
+                if !appState.settings.floatingBarSections.isEmpty {
+                    FloatingBarCard()
+                }
         }
         .animation(.spring(duration: 0.3), value: appState.settings.sectionModel)
         .environment(dragSession)
@@ -263,6 +267,20 @@ private struct EditorSectionView: View {
 
     private var coordinateSpace: String { "pelmet.strip.\(section.rawValue)" }
 
+    private var floatingBarBinding: Binding<Bool> {
+        Binding(
+            get: { appState.settings.floatingBarSections.contains(section) },
+            set: { on in
+                if on {
+                    appState.settings.floatingBarSections.insert(section)
+                } else {
+                    appState.settings.floatingBarSections.remove(section)
+                }
+                appState.settingsChanged()
+            }
+        )
+    }
+
     var body: some View {
         let tiles = self.tiles
         let placedSlots = slots(tiles)
@@ -283,6 +301,16 @@ private struct EditorSectionView: View {
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
+                // Where the section opens: in the bar, or in the floating
+                // bar under it. An empty section has nothing to float.
+                if section != .visible {
+                    Toggle("Floating bar", isOn: floatingBarBinding)
+                        .toggleStyle(.checkbox)
+                        .font(.callout)
+                        .fixedSize()
+                        .disabled(tiles.isEmpty && !appState.settings.floatingBarSections.contains(section))
+                        .help("Open this section in a bar under the menu bar instead of in it")
+                }
             }
 
             // Right-anchored like the real bar — icons cluster at the
@@ -1569,6 +1597,53 @@ private struct SeparatorOptions: View {
         case .chevronRight: "Chevron ›"
         case .dash: "Dash"
         case .space: "Invisible spacer"
+        }
+    }
+}
+
+// MARK: - Floating bar
+
+/// The floating bar's few knobs, shown once a section is routed to it.
+/// Position and size only: the look is the system's glass.
+private struct FloatingBarCard: View {
+    @Environment(AppState.self) private var appState
+
+    private func binding<T>(_ keyPath: WritableKeyPath<SettingsStore, T>) -> Binding<T> {
+        Binding(
+            get: { appState.settings[keyPath: keyPath] },
+            set: { appState.settings[keyPath: keyPath] = $0; appState.settingsChanged() }
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            CardHeader(
+                symbol: "rectangle.bottomhalf.inset.filled", title: "Floating bar",
+                caption: "A bar under the menu bar for the sections you send there"
+            ) { EmptyView() }
+
+            VStack(alignment: .leading, spacing: 14) {
+                SettingRow(title: "Position", caption: "Where it hangs from the menu bar") {
+                    PelmetMenuPicker(
+                        selection: binding(\.floatingBarPosition),
+                        options: [
+                            (.underSection, "Under its icons"),
+                            (.underPointer, "Under the pointer"),
+                            (.trailing, "Right edge"),
+                            (.centered, "Centered"),
+                        ]
+                    )
+                }
+                SettingRow(title: "Size", caption: "Icons at the menu bar's size, or a little larger") {
+                    PelmetMenuPicker(
+                        selection: binding(\.floatingBarSize),
+                        options: [(.bar, "Same as the menu bar"), (.large, "Larger")]
+                    )
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.35)))
         }
     }
 }

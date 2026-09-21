@@ -132,4 +132,19 @@ enum AppTiming {
     /// « expansion → re-measure: the trapped items reflow in left of the
     /// notch and the visible run shifts (~38pt) before frames are true.
     static let overflowExpandSettle: Duration = .milliseconds(700)
+
+    /// The floating bar hangs down from the bar edge and leaves the same
+    /// way, exit shorter and eased in (Design Sense: exits are designed).
+    static let trayEntrance: CFTimeInterval = 0.18
+    static let trayExit: CFTimeInterval = 0.14
+    /// A width change while the bar is open (an item joins or leaves).
+    static let trayReflow: CFTimeInterval = 0.2
+    /// Relay: after the press, how long an item gets to show a menu or
+    /// panel before the section conceals again; and how long an open menu
+    /// keeps the section revealed beneath the cover.
+    static let trayRelayMenuWait: TimeInterval = 0.6
+    static let trayRelayMenuCap: TimeInterval = 60
+    /// Relay: the section's items must be at rest before the press lands
+    /// and before their pictures are taken.
+    static let trayRelaySettle: Duration = .milliseconds(120)
 }

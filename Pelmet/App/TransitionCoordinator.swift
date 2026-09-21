@@ -147,6 +147,32 @@ final class TransitionCoordinator {
     /// a session was slow.
     private static var displayUnderPointer: CGDirectDisplayID? { NSScreen.underPointer?.directDisplayID }
 
+    /// Where the hidden section opens in the bar: the strip's right edge
+    /// (primary-band x). The floating bar hangs from there.
+    var sectionAnchorX: CGFloat? { lastConcealedStripRect?.maxX }
+
+    /// The floating bar's pictures: the section is revealed at rest beneath
+    /// the relay's cover; picture it with Pelmet's windows left out and cut
+    /// the icons out against the empty bar from the last conceal settle, so
+    /// each picture sits on glass with no bar around it. Only the columns
+    /// both pictures cover yield a clean cut; items outside them are left
+    /// for a later pass. Returns how many pictures landed.
+    func harvestTrayPictures(into pictures: TrayPictures, items: [ObservedItem]) async -> Int {
+        let primaryMaxX = primaryMaxX
+        let frames = items.compactMap(\.frame).filter { MenuBarGeometry.isInPrimaryBand($0, primaryMaxX: primaryMaxX) }
+        guard let minX = frames.map(\.minX).min(), let maxX = frames.map(\.maxX).max(), let band = frames.first else { return 0 }
+        let emptyBar = freshEmptyBarSnapshots()
+        guard let bg = emptyBar.first(where: { NSScreen.screens.first?.frame.contains(NSPoint(x: $0.windowFrame.midX, y: $0.windowFrame.midY)) ?? true }) else {
+            PelmetLog.log("tray: no empty-bar picture to cut against")
+            return 0
+        }
+        let rect = CGRect(x: minX - 8, y: band.minY, width: maxX - minX + 16, height: band.height)
+        let strip = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
+        guard let cut = ConcealGhostOverlay.iconsOnly(strip, background: emptyBar) else { return 0 }
+        let within = (bg.windowFrame.minX + ConcealGhostOverlay.capturePadding)...(bg.windowFrame.maxX - ConcealGhostOverlay.capturePadding)
+        return pictures.harvest(cut, items: items, within: within)
+    }
+
     private func rememberStrip(_ strip: CGRect?) {
         lastConcealedStripRect = strip
         guard let strip else { return }
