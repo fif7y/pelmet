@@ -67,6 +67,13 @@ enum AppTiming {
     static let tidyRevealWait: Duration = .seconds(1.2)
     /// An own extra entering the bar is hosted before its one-item pass.
     static let newExtraPlacementDelay: Duration = .milliseconds(600)
+    /// The boot own-item passes wait this long after the own items were
+    /// adopted: 235ms after adoption the bar is still attaching (frames
+    /// overlap, the chevron reads as trapped) and the pass planned on it —
+    /// Media landed left of the chevron at 13:45 and was skipped as
+    /// notOnScreen at 14:04, 2026-09-21. The post-swap and rest walks land
+    /// within ~400ms of adoption.
+    static let bootOwnItemLead: Duration = .seconds(2)
     /// Apply: a separator re-hosted onto a helper needs the helper up and
     /// its item registered before the bar is measured (launch → ready →
     /// hosts ≈ 100ms at boot; a cold launch takes longer).

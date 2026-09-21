@@ -1172,6 +1172,8 @@ final class AppState {
     private var ownItemsAwaitingReveal: Set<ItemID> = []
     /// Own items that already got their one retry after a failed pass.
     private var ownItemsRetried: Set<ItemID> = []
+    /// When the boot adoption saw every own item; nil until then.
+    private var ownItemsAdoptedAt: ContinuousClock.Instant?
 
     /// An own extra entering a concealed section.
     func placeOwnItemAtNextReveal(_ id: ItemID) {
@@ -1217,6 +1219,15 @@ final class AppState {
     /// ownItem`). Never overlaps a running pass; a whole-bar pass covers it.
     private func placeOwnItemNow(_ id: ItemID) async {
         guard !applying else { return }
+        // Boot: measure only once the bar has finished attaching
+        // (AppTiming.bootOwnItemLead after the own items were adopted).
+        let adopted = ownItemsAdoptedAt ?? ContinuousClock.now
+        let due = adopted + AppTiming.bootOwnItemLead
+        if ContinuousClock.now < due {
+            PelmetLog.log("apply: own \(id.rawValue) waits for the boot lead")
+            try? await Task.sleep(until: due, clock: .continuous)
+            guard !applying else { return }
+        }
         // An extra that left layout again (a show/hide flap inside one
         // apply) has no frame to move; the next entry edge queues it anew.
         if let extras, extras.managedItemIDs.contains(where: { $0.sectionKey == id.sectionKey }), !extras.isShowing(id) {
@@ -2134,11 +2145,14 @@ final class AppState {
             }
             if expected.subtracting(observed).isEmpty {
                 PelmetLog.log("start: own items adopted (\(expected.count))")
+                ownItemsAdoptedAt = ContinuousClock.now
                 return
             }
             missing = expected.subtracting(observed)
             try? await Task.sleep(for: .milliseconds(500))
         }
+        // Adoption gave up: the own-item passes must not wait forever.
+        ownItemsAdoptedAt = ContinuousClock.now
         let detail = missing.sorted { $0.rawValue < $1.rawValue }.map { id -> String in
             guard let frame = lastWalk[id] else { return "\(id.rawValue) absent-from-AX" }
             guard let frame else { return "\(id.rawValue) no-frame" }
