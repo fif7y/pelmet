@@ -234,10 +234,18 @@ enum ApplyPass {
 
         var snap = await engine.snapshot()
         appState.updateSnapshot(snap)
-        var plan: MovePlan.Plan
+        // The plan for this scope, re-run on a fresh snapshot after the «
+        // expands — the own-item scope must keep its filter there too, or
+        // the replan is a whole-bar plan (the new separator behind the «
+        // was skipped as notOnScreen for good, 2026-09-21 08:43).
+        let planFor: (EngineSnapshot) -> MovePlan.Plan
+        // Icons behind the « this pass is about: a whole-bar pass expands
+        // for the drawn edits that name one, an own-item pass for its item.
+        let trappedFor: (EngineSnapshot) -> Set<ItemID>
         switch scope {
         case .wholeBar:
-            plan = self.plan(for: appState, snapshot: snap)
+            planFor = { self.plan(for: appState, snapshot: $0) }
+            trappedFor = { trappedEdited($0, edits: appState.settings.orderEdits) }
         case .ownItem(let own):
             // The item's section as the editor draws it counts as the edit,
             // so the plan puts the newcomer between its roster neighbours;
@@ -249,14 +257,19 @@ enum ApplyPass {
             if edits.order[section] == nil {
                 edits.order[section] = model.order[section] ?? appState.currentOrder(in: section)
             }
-            plan = self.plan(for: appState, snapshot: snap, edits: edits)
-            plan.moves = plan.moves.filter { $0.item == key }
-            plan.skipped = plan.skipped.filter { $0.0 == key }
-            if plan.moves.isEmpty, plan.skipped.isEmpty {
-                PelmetLog.log("apply: \(key.rawValue) already in its slot (own)")
-                report.applied.append(key)
-                return report
+            planFor = { snap in
+                var plan = self.plan(for: appState, snapshot: snap, edits: edits)
+                plan.moves = plan.moves.filter { $0.item == key }
+                plan.skipped = plan.skipped.filter { $0.0 == key }
+                return plan
             }
+            trappedFor = { trapped($0).contains(key) ? [key] : [] }
+        }
+        var plan = planFor(snap)
+        if case .ownItem(let own) = scope, plan.moves.isEmpty, plan.skipped.isEmpty {
+            PelmetLog.log("apply: \(own.sectionKey.rawValue) already in its slot (own)")
+            report.applied.append(own.sectionKey)
+            return report
         }
         report.planned = plan.moves.count
         report.skipped = plan.skipped.map { ApplyReport.Skipped(item: $0.0, why: $0.1) }
@@ -269,10 +282,7 @@ enum ApplyPass {
         // notch (probed 2026-09-20, drags across the notch land first try),
         // re-plans on the shifted bar, and collapses it after. Never for a
         // pass whose edits stay clear of the «.
-        var trappedForPass: Set<ItemID> = []
-        if case .wholeBar = scope {
-            trappedForPass = trappedEdited(snap, edits: appState.settings.orderEdits)
-        }
+        let trappedForPass = trappedFor(snap)
         guard !plan.moves.isEmpty || !trappedForPass.isEmpty else { return report }
 
         await waitForIdlePointer()
@@ -295,7 +305,7 @@ enum ApplyPass {
             if expandedToggle != nil {
                 snap = await engine.snapshot()
                 appState.updateSnapshot(snap)
-                plan = self.plan(for: appState, snapshot: snap)
+                plan = planFor(snap)
                 report.planned = plan.moves.count
                 report.skipped = plan.skipped.map { ApplyReport.Skipped(item: $0.0, why: $0.1) }
                 let framed = trappedForPass.filter { primaryFrames(snap)[$0] != nil }.count

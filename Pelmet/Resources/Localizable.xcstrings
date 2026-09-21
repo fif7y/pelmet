@@ -407,60 +407,60 @@
         }
       }
     },
-    "A countdown that stays in the bar. Click for durations, rings when it ends.": {
+    "A countdown that stays in view and rings when it ends.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein Countdown, der in der Leiste bleibt. Klicken für Dauern, klingelt am Ende."
+            "value": "Ein Countdown, der im Blick bleibt und am Ende klingelt."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una cuenta atrás que se queda en la barra. Haz clic para elegir la duración, suena al terminar."
+            "value": "Una cuenta atrás que se queda a la vista y suena al terminar."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un compte à rebours qui reste dans la barre. Cliquez pour choisir la durée, il sonne à la fin."
+            "value": "Un compte à rebours qui reste visible et sonne à la fin."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un conto alla rovescia che resta nella barra. Clic per la durata, suona alla fine."
+            "value": "Un conto alla rovescia sempre in vista che suona alla fine."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バーに残るカウントダウン。クリックで時間を選び、終了時に鳴ります。"
+            "value": "常に見えるカウントダウン。終了時に鳴ります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "메뉴 막대에 남아 있는 카운트다운. 클릭해 시간을 고르면 끝날 때 울립니다."
+            "value": "항상 보이는 카운트다운. 끝나면 울립니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uma contagem regressiva que fica na barra. Clique para escolher a duração, toca ao terminar."
+            "value": "Uma contagem regressiva que fica à vista e toca ao terminar."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Обратный отсчёт, который остаётся в строке меню. Нажмите, чтобы выбрать время, по окончании прозвенит."
+            "value": "Обратный отсчёт, который всегда на виду и звонит по окончании."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "留在菜单栏中的倒计时。点击选择时长，结束时响铃。"
+            "value": "始终可见的倒计时，结束时响铃。"
           }
         }
       }
@@ -519,64 +519,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "只需几秒钟并重新启动。点击以更新。"
-          }
-        }
-      }
-    },
-    "A hover or click away — or ⌘-drag icons left of the chevron": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Überfahren oder Klick entfernt – oder Symbole mit ⌘ links neben den Chevron ziehen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A un paso del cursor o un clic; o arrastra iconos con ⌘ a la izquierda del chevrón"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "À un survol ou un clic : ou glissez des icônes à gauche du chevron avec ⌘"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A un passaggio del cursore o a un clic; oppure trascina le icone con ⌘ a sinistra del chevron"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ホバーかクリックで表示。または⌘を押しながらアイコンをシェブロンの左へドラッグ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "마우스를 올리거나 클릭하면 표시. 또는 ⌘를 누른 채 아이콘을 쉐브론 왼쪽으로 드래그"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A um passar de cursor ou clique; ou arraste ícones com ⌘ para a esquerda do chevron"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показ по наведению или щелчку; либо перетащите значки левее шеврона с ⌘"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "悬停或点击即可显示，也可按住 ⌘ 将图标拖到尖角符号左侧"
           }
         }
       }
@@ -1567,6 +1509,64 @@
         }
       }
     },
+    "AirDrop one click away.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop mit einem Klick."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop a un clic."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop à un clic."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop a un clic."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDropまでワンクリック。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번의 클릭으로 AirDrop."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop a um clique."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop в один щелчок."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一键打开 AirDrop。"
+          }
+        }
+      }
+    },
     "Allow Screen Recording": {
       "localizations": {
         "de": {
@@ -1799,122 +1799,6 @@
         }
       }
     },
-    "Always hidden while a Pelmet item stands in for one of them. Turn those items off under Menu Bar to show the system's while the bar is revealed.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Immer ausgeblendet, solange ein Pelmet-Element eines davon ersetzt. Schalte diese Elemente unter „Menüleiste“ aus, um die von macOS bei aufgedeckter Leiste zu zeigen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Siempre ocultos mientras un elemento de Pelmet sustituya a uno de ellos. Desactiva esos elementos en «Barra de menús» para mostrar los del sistema con la barra revelada."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toujours masqués tant qu’un élément Pelmet remplace l’un d’eux. Désactivez ces éléments dans « Barre des menus » pour afficher ceux du système quand la barre est dévoilée."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sempre nascosti finché un elemento Pelmet ne sostituisce uno. Disattiva quegli elementi in «Barra dei menu» per mostrare quelli di sistema a barra rivelata."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet の項目がいずれかの代わりをしている間は常に非表示です。バーを表示中にシステムのものを出すには、「メニューバー」でその項目をオフにしてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet 항목이 그중 하나를 대신하는 동안에는 항상 숨김 상태입니다. 막대를 펼쳤을 때 시스템 항목을 보려면 ‘메뉴 막대’에서 해당 항목을 끄세요."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sempre ocultos enquanto um item do Pelmet substituir um deles. Desative esses itens em “Barra de menus” para mostrar os do sistema com a barra revelada."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Всегда скрыты, пока элемент Pelmet заменяет один из них. Отключите эти элементы в разделе «Строка меню», чтобы показывать системные при раскрытой строке."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只要有 Pelmet 项目替代其中之一，就始终隐藏。要在菜单栏展开时显示系统自带的，请在“菜单栏”中关闭那些项目。"
-          }
-        }
-      }
-    },
-    "Always in the menu bar": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Immer in der Menüleiste"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Siempre en la barra de menús"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toujours dans la barre des menus"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sempre nella barra dei menu"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "常にメニューバーに表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "항상 메뉴 막대에 표시"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sempre na barra de menus"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Всегда в строке меню"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "始终显示在菜单栏"
-          }
-        }
-      }
-    },
     "Always shows": {
       "localizations": {
         "de": {
@@ -1969,6 +1853,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "始终显示"
+          }
+        }
+      }
+    },
+    "Always there when you need them": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immer da, wenn du sie brauchst"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siempre ahí cuando los necesitas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toujours là quand vous en avez besoin"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sempre lì quando ti servono"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "必要なときにいつもそこに"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필요할 때 언제나 그 자리에"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sempre à mão quando você precisa"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Всегда на месте, когда нужны"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "随时可见，随时可用"
           }
         }
       }
@@ -2317,64 +2259,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "应用启动器"
-          }
-        }
-      }
-    },
-    "Appears while a camera or mic is live.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erscheint, solange Kamera oder Mikrofon aktiv sind."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aparece mientras la cámara o el micrófono están activos."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apparaît quand la caméra ou le micro est actif."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Appare mentre fotocamera o microfono sono attivi."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カメラやマイクの使用中に表示。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카메라나 마이크가 켜져 있을 때 표시됩니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aparece enquanto a câmera ou o microfone está ativo."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Появляется, пока активны камера или микрофон."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "摄像头或麦克风工作时显示。"
           }
         }
       }
@@ -3767,64 +3651,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "点击菜单栏中的计时器以关闭。"
-          }
-        }
-      }
-    },
-    "Click to play or pause, right-click for tracks.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klick spielt oder pausiert, Rechtsklick wechselt den Titel."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clic para reproducir o pausar, clic derecho para cambiar de pista."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clic pour lire ou mettre en pause, clic droit pour changer de piste."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clic per riprodurre o mettere in pausa, clic destro per cambiare brano."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "クリックで再生／一時停止、右クリックで曲送り。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "클릭하면 재생/일시 정지, 오른쪽 클릭으로 트랙 이동."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clique para tocar ou pausar, clique direito para trocar de faixa."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Щелчок — пуск или пауза, правый щелчок — смена трека."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "点按播放或暂停，右键切换曲目。"
           }
         }
       }
@@ -5511,6 +5337,64 @@
         }
       }
     },
+    "Get back here from any app.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von jeder App aus hierher zurück."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuelve aquí desde cualquier app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revenez ici depuis n'importe quelle app."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torna qui da qualsiasi app."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どのアプリからでもここに戻れます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어떤 앱에서든 여기로 돌아오세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volte aqui de qualquer app."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вернуться сюда из любого приложения."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从任何 App 都能回到这里。"
+          }
+        }
+      }
+    },
     "GitHub": {
       "localizations": {
         "de": {
@@ -5565,6 +5449,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "GitHub"
+          }
+        }
+      }
+    },
+    "Gone for good, unless you double-click or ⌥-click the chevron": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dauerhaft weg, außer bei Doppelklick oder ⌥-Klick auf das Chevron"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultos del todo, salvo con doble clic o ⌥-clic en el chevron"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disparues pour de bon, sauf double-clic ou ⌥-clic sur le chevron"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nascoste del tutto, salvo doppio clic o ⌥-clic sul chevron"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完全に非表示。シェブロンをダブルクリックか⌥クリックしたときだけ表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완전히 숨김. 셰브론을 더블 클릭하거나 ⌥-클릭할 때만 표시"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Somem de vez, a menos que você dê dois cliques ou ⌥-clique no chevron"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скрыты насовсем, если не двойной щелчок или ⌥-щелчок по шеврону"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "彻底隐藏，除非双击或 ⌥-点击 V 形符号"
           }
         }
       }
@@ -5739,6 +5681,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "已授权"
+          }
+        }
+      }
+    },
+    "Hands-free: rest the pointer on the right half of the menu bar.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freihändig: Zeiger auf der rechten Hälfte der Menüleiste ruhen lassen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin manos: deja el puntero sobre la mitad derecha de la barra de menús."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans les mains : laissez le pointeur sur la moitié droite de la barre des menus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A mani libere: lascia il puntatore sulla metà destra della barra dei menu."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ハンズフリー: メニューバーの右半分にポインタを置くだけ。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손댈 필요 없이: 메뉴 막대 오른쪽 절반에 포인터를 올려 두세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem as mãos: deixe o ponteiro sobre a metade direita da barra de menus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без рук: наведите указатель на правую половину строки меню."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需操作：把指针停在菜单栏右半部分即可。"
           }
         }
       }
@@ -6787,6 +6787,64 @@
         }
       }
     },
+    "Know when your camera or mic is on.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wisse, wann Kamera oder Mikrofon an sind."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sabe cuándo tu cámara o micrófono están activos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sachez quand votre caméra ou votre micro est actif."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sai quando la fotocamera o il microfono sono attivi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カメラやマイクがオンのときにわかります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카메라나 마이크가 켜져 있을 때 알 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saiba quando sua câmera ou microfone estão ligados."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Знайте, когда включены камера или микрофон."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "随时知道摄像头或麦克风是否开启。"
+          }
+        }
+      }
+    },
     "Language": {
       "localizations": {
         "de": {
@@ -7019,64 +7077,6 @@
         }
       }
     },
-    "Latest backup, Back Up Now. Apple's own icon turns off in System Settings while this is on.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Letztes Backup, Backup jetzt erstellen. Apples eigenes Symbol wird in den Systemeinstellungen ausgeschaltet, solange dies aktiv ist."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Última copia, Realizar copia ahora. El icono de Apple se desactiva en Ajustes del Sistema mientras esto esté activado."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dernière sauvegarde, Sauvegarder maintenant. L’icône d’Apple est désactivée dans Réglages Système tant que ceci est activé."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ultimo backup, Esegui backup adesso. L’icona di Apple viene disattivata nelle Impostazioni di Sistema finché questo è attivo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最新のバックアップと今すぐバックアップ。オンの間、Appleのアイコンはシステム設定でオフになります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최근 백업, 지금 백업. 켜져 있는 동안 Apple의 아이콘은 시스템 설정에서 꺼집니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Último backup, Fazer Backup Agora. O ícone da Apple é desativado nos Ajustes do Sistema enquanto isto estiver ativado."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Последняя копия, Создать копию сейчас. Пока это включено, значок Apple отключается в Системных настройках."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最近备份、立即备份。开启期间，Apple 自带的图标会在系统设置中关闭。"
-          }
-        }
-      }
-    },
     "Launch at login": {
       "localizations": {
         "de": {
@@ -7305,64 +7305,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "尖角符号左侧隐藏，右侧保留。在真实菜单栏中，拖动时按住 ⌘，或在 Pelmet 设置中统一安排。"
-          }
-        }
-      }
-    },
-    "Lets the animation styles play over the system's own show and hide.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lässt die Animationsstile über dem Ein- und Ausblenden des Systems laufen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Permite que los estilos de animación se reproduzcan sobre el mostrar y ocultar del sistema."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Permet aux styles d’animation de se jouer par-dessus l’affichage et le masquage du système."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Consente agli stili di animazione di sovrapporsi al mostra/nascondi del sistema."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アニメーションスタイルをシステム標準の表示・非表示の上で再生できるようにします。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "애니메이션 스타일이 시스템의 표시/숨김 위에서 재생되게 합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Permite que os estilos de animação rodem sobre o mostrar e esconder do sistema."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Позволяет стилям анимации проигрываться поверх системного показа и скрытия."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "让动画样式覆盖在系统自带的显示与隐藏之上。"
           }
         }
       }
@@ -8411,6 +8353,122 @@
         }
       }
     },
+    "Notification Center still opens from the clock, even with icons hidden. Pelmet handles the click.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mitteilungszentrale öffnet sich weiter über die Uhr, auch bei ausgeblendeten Symbolen. Pelmet übernimmt den Klick."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El centro de notificaciones se sigue abriendo desde el reloj, aun con los iconos ocultos. Pelmet se encarga del clic."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le centre de notifications s'ouvre toujours depuis l'horloge, même icônes masquées. Pelmet se charge du clic."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il Centro Notifiche si apre ancora dall'orologio, anche con le icone nascoste. Pelmet gestisce il clic."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンが隠れていても、時計から通知センターを開けます。クリックはPelmetが処理します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘이 숨겨져 있어도 시계에서 알림 센터가 열립니다. 클릭은 Pelmet이 처리합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Central de Notificações continua abrindo pelo relógio, mesmo com os ícones ocultos. O Pelmet cuida do clique."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Центр уведомлений по-прежнему открывается по часам, даже когда значки скрыты. Pelmet берёт щелчок на себя."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即使图标已隐藏，点击时钟仍能打开通知中心。Pelmet 会处理这次点击。"
+          }
+        }
+      }
+    },
+    "Notification Center still opens from the clock, even with icons hidden. Pelmet handles the click; without Screen Recording the hidden icons flash by for an instant. Off, the two-finger swipe from the trackpad's right edge still works.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mitteilungszentrale öffnet sich weiter über die Uhr, auch bei ausgeblendeten Symbolen. Pelmet übernimmt den Klick; ohne Bildschirmaufnahme blitzen die ausgeblendeten Symbole kurz auf. Aus: Das Zwei-Finger-Wischen vom rechten Trackpad-Rand funktioniert weiter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El centro de notificaciones se sigue abriendo desde el reloj, aun con los iconos ocultos. Pelmet se encarga del clic; sin Grabación de pantalla, los iconos ocultos aparecen un instante. Desactivado, el deslizamiento con dos dedos desde el borde derecho del trackpad sigue funcionando."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le centre de notifications s'ouvre toujours depuis l'horloge, même icônes masquées. Pelmet se charge du clic ; sans Enregistrement de l'écran, les icônes masquées apparaissent un instant. Désactivé, le balayage à deux doigts depuis le bord droit du trackpad fonctionne toujours."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il Centro Notifiche si apre ancora dall'orologio, anche con le icone nascoste. Pelmet gestisce il clic; senza Registrazione schermo le icone nascoste compaiono per un istante. Disattivato, lo scorrimento a due dita dal bordo destro del trackpad funziona ancora."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンが隠れていても、時計から通知センターを開けます。クリックはPelmetが処理します。画面収録がないと、隠れたアイコンが一瞬映ります。オフでも、トラックパッド右端からの2本指スワイプは使えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘이 숨겨져 있어도 시계에서 알림 센터가 열립니다. 클릭은 Pelmet이 처리하며, 화면 기록 권한이 없으면 숨긴 아이콘이 잠깐 스쳐 보입니다. 꺼도 트랙패드 오른쪽 가장자리에서 두 손가락 스와이프는 계속 됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Central de Notificações continua abrindo pelo relógio, mesmo com os ícones ocultos. O Pelmet cuida do clique; sem Gravação de Tela, os ícones ocultos aparecem por um instante. Desligado, o deslizar com dois dedos a partir da borda direita do trackpad continua funcionando."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Центр уведомлений по-прежнему открывается по часам, даже когда значки скрыты. Pelmet берёт щелчок на себя; без записи экрана скрытые значки мелькают на мгновение. Выключено: смахивание двумя пальцами от правого края трекпада по-прежнему работает."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即使图标已隐藏，点击时钟仍能打开通知中心。Pelmet 会处理这次点击；没有屏幕录制权限时，隐藏的图标会闪现一下。关闭后，从触控板右边缘双指轻扫仍然有效。"
+          }
+        }
+      }
+    },
     "Notify me when an update is available": {
       "localizations": {
         "de": {
@@ -8875,238 +8933,6 @@
         }
       }
     },
-    "Opens AirDrop in Finder.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffnet AirDrop im Finder."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre AirDrop en el Finder."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvre AirDrop dans le Finder."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apre AirDrop nel Finder."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FinderでAirDropを開きます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finder에서 AirDrop을 엽니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre o AirDrop no Finder."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открывает AirDrop в Finder."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在访达中打开隔空投送。"
-          }
-        }
-      }
-    },
-    "Opens Pelmet Settings from anywhere.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffnet die Pelmet-Einstellungen von überall."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre los ajustes de Pelmet desde cualquier app."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvre les réglages de Pelmet depuis n’importe où."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apre le impostazioni di Pelmet da qualsiasi app."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "どこからでもPelmet設定を開きます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어디서든 Pelmet 설정을 엽니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre os ajustes do Pelmet de qualquer app."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открывает настройки Pelmet из любого приложения."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在任何地方打开 Pelmet 设置。"
-          }
-        }
-      }
-    },
-    "Opens Pelmet's menu from an empty spot on the menu bar.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffnet Pelmets Menü über eine freie Stelle der Menüleiste."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre el menú de Pelmet desde un espacio vacío de la barra de menús."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvre le menu de Pelmet depuis une zone vide de la barre des menus."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apre il menu di Pelmet da uno spazio vuoto della barra dei menu."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メニューバーの空いている場所からPelmetのメニューを開きます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "메뉴 막대의 빈 곳에서 Pelmet 메뉴를 엽니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre o menu do Pelmet a partir de um espaço vazio da barra de menus."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открывает меню Pelmet с пустого места строки меню."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从菜单栏的空白处打开 Pelmet 菜单。"
-          }
-        }
-      }
-    },
-    "Opens Siri. Apple's own icon turns off in System Settings while this is on.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffnet Siri. Apples eigenes Symbol wird in den Systemeinstellungen ausgeschaltet, solange dies aktiv ist."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre Siri. El icono de Apple se desactiva en Ajustes del Sistema mientras esto esté activado."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvre Siri. L’icône d’Apple est désactivée dans Réglages Système tant que ceci est activé."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apre Siri. L’icona di Apple viene disattivata nelle Impostazioni di Sistema finché questo è attivo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Siriを開きます。オンの間、Appleのアイコンはシステム設定でオフになります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Siri를 엽니다. 켜져 있는 동안 Apple의 아이콘은 시스템 설정에서 꺼집니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre a Siri. O ícone da Apple é desativado nos Ajustes do Sistema enquanto isto estiver ativado."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открывает Siri. Пока это включено, значок Apple отключается в Системных настройках."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开 Siri。开启期间，Apple 自带的图标会在系统设置中关闭。"
-          }
-        }
-      }
-    },
     "Optional": {
       "localizations": {
         "de": {
@@ -9223,118 +9049,60 @@
         }
       }
     },
-    "Other users, the login window, lock screen.": {
+    "Out of the way, back with a hover or a click": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Andere Benutzer, Anmeldefenster, Bildschirm sperren."
+            "value": "Aus dem Weg, mit Hover oder Klick wieder da"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Otros usuarios, la ventana de inicio de sesión, bloquear pantalla."
+            "value": "Fuera de la vista, vuelven al pasar el cursor o hacer clic"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Autres utilisateurs, fenêtre de connexion, verrouillage de l’écran."
+            "value": "Hors de vue, de retour d'un survol ou d'un clic"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Altri utenti, finestra di login, blocco schermo."
+            "value": "Fuori dai piedi, tornano con un passaggio del mouse o un clic"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ほかのユーザ、ログインウインドウ、画面ロック。"
+            "value": "普段は非表示、ホバーかクリックで戻ります"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "다른 사용자, 로그인 윈도우, 화면 잠금."
+            "value": "평소엔 숨기고, 올리거나 클릭하면 돌아옵니다"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Outros usuários, a janela de login, bloquear tela."
+            "value": "Fora do caminho, voltam com um hover ou um clique"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Другие пользователи, окно входа, блокировка экрана."
+            "value": "Убраны с глаз, возвращаются наведением или щелчком"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "其他用户、登录窗口、锁定屏幕。"
-          }
-        }
-      }
-    },
-    "Out of sight until you double-click or ⌥-click the chevron": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verborgen, bis du den Chevron doppelt oder mit ⌥ anklickst"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fuera de la vista hasta que hagas doble clic o ⌥-clic en el chevrón"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hors de vue jusqu’à un double-clic ou un ⌥-clic sur le chevron"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fuori vista finché non fai doppio clic o ⌥-clic sul chevron"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "シェブロンをダブルクリックまたは⌥クリックするまで非表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "쉐브론을 더블 클릭하거나 ⌥-클릭할 때까지 숨김"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fora de vista até você dar clique duplo ou ⌥-clique no chevron"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скрыты до двойного щелчка или ⌥-щелчка по шеврону"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "双击或按住 ⌥ 点击尖角符号之前一直隐藏"
+            "value": "平时收起，悬停或点击即回"
           }
         }
       }
@@ -9977,60 +9745,118 @@
         }
       }
     },
-    "Pelmet's own system extras — they hide like any icon": {
+    "Pelmet's items stand in for these, so Apple's stay hidden. Turn a Pelmet item off to get Apple's back when the bar is revealed.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pelmets eigene Systemextras — sie lassen sich wie jedes Symbol ausblenden"
+            "value": "Pelmets Elemente vertreten diese, Apples bleiben daher ausgeblendet. Schalte ein Pelmet-Element aus, um Apples bei eingeblendeter Leiste zurückzubekommen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los extras del sistema al estilo Pelmet — se ocultan como cualquier icono"
+            "value": "Los elementos de Pelmet los sustituyen, así que los de Apple siguen ocultos. Desactiva un elemento de Pelmet para recuperar el de Apple cuando la barra esté visible."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les extras système version Pelmet — ils se masquent comme toute icône"
+            "value": "Les éléments de Pelmet les remplacent, ceux d'Apple restent donc masqués. Désactivez un élément de Pelmet pour retrouver celui d'Apple quand la barre est révélée."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gli extra di sistema in versione Pelmet — si nascondono come ogni icona"
+            "value": "Gli elementi di Pelmet li sostituiscono, quindi quelli di Apple restano nascosti. Disattiva un elemento di Pelmet per riavere quello di Apple quando la barra è visibile."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pelmet版のシステム項目 — ほかのアイコンと同じように隠せます"
+            "value": "Pelmetの項目がこれらの代わりになるため、Appleのものは隠れたままです。バー表示時にAppleのものを戻すには、Pelmetの項目をオフにしてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pelmet이 만든 시스템 항목 — 다른 아이콘처럼 숨겨집니다"
+            "value": "Pelmet 항목이 이를 대신하므로 Apple의 항목은 숨겨진 채로 있습니다. 막대가 펼쳐졌을 때 Apple 항목을 되찾으려면 Pelmet 항목을 끄세요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Os extras do sistema na versão do Pelmet — ocultam-se como qualquer ícone"
+            "value": "Os itens do Pelmet ficam no lugar deles, então os da Apple continuam ocultos. Desligue um item do Pelmet para ter o da Apple de volta quando a barra estiver revelada."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Системные элементы от Pelmet — скрываются, как любой значок"
+            "value": "Элементы Pelmet заменяют их, поэтому значки Apple остаются скрытыми. Выключите элемент Pelmet, чтобы вернуть значок Apple, когда строка раскрыта."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pelmet 版的系统附加项 — 像任何图标一样隐藏"
+            "value": "Pelmet 的项目替代了它们，因此 Apple 的保持隐藏。关闭某个 Pelmet 项目即可在菜单栏展开时恢复 Apple 的图标。"
+          }
+        }
+      }
+    },
+    "Pelmet's menu from any empty spot on the bar. Also your way back here when the icon is hidden.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmets Menü von jeder freien Stelle der Leiste. Auch dein Weg zurück hierher, wenn das Symbol ausgeblendet ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El menú de Pelmet desde cualquier hueco de la barra. También es tu camino de vuelta aquí cuando el icono está oculto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le menu de Pelmet depuis n'importe quel espace vide de la barre. C'est aussi votre retour ici quand l'icône est masquée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il menu di Pelmet da qualsiasi spazio vuoto della barra. È anche la via per tornare qui quando l'icona è nascosta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バーの空いた場所からPelmetのメニューを開けます。アイコン非表示時にここへ戻る手段でもあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "막대의 빈 곳 어디서든 Pelmet 메뉴를 엽니다. 아이콘을 숨겼을 때 여기로 돌아오는 길이기도 합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O menu do Pelmet em qualquer espaço vazio da barra. Também é seu caminho de volta para cá quando o ícone está oculto."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Меню Pelmet из любого пустого места строки. И ваш путь сюда, когда значок скрыт."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在菜单栏任意空白处打开 Pelmet 菜单。图标隐藏时也能借此回到这里。"
           }
         }
       }
@@ -10321,6 +10147,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "竖线"
+          }
+        }
+      }
+    },
+    "Play, pause and switch tracks without leaving the bar.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abspielen, pausieren und Titel wechseln, ohne die Leiste zu verlassen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproduce, pausa y cambia de pista sin salir de la barra."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture, pause et changement de piste sans quitter la barre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci, metti in pausa e cambia brano senza lasciare la barra."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バーから離れずに再生・一時停止・曲送り。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "막대에서 바로 재생, 일시정지, 곡 넘기기."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toque, pause e troque de faixa sem sair da barra."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Воспроизведение, пауза и смена трека, не покидая строку меню."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不离开菜单栏即可播放、暂停和切歌。"
           }
         }
       }
@@ -11079,64 +10963,6 @@
         }
       }
     },
-    "Rest the pointer on the menu bar between the middle of the screen and Pelmet's icon.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeiger auf der Menüleiste zwischen Bildschirmmitte und dem Pelmet-Symbol ruhen lassen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deja el puntero sobre la barra de menús, entre el centro de la pantalla y el icono de Pelmet."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Laisse le pointeur sur la barre des menus, entre le milieu de l’écran et l’icône de Pelmet."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lascia il puntatore sulla barra dei menu, tra il centro dello schermo e l’icona di Pelmet."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画面の中央からPelmetのアイコンまでの間のメニューバーにポインタを置きます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "화면 가운데와 Pelmet 아이콘 사이의 메뉴 막대에 포인터를 올려 두세요."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deixe o ponteiro na barra de menus, entre o meio da tela e o ícone do Pelmet."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Задержите указатель на строке меню между серединой экрана и значком Pelmet."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将指针停在菜单栏上，位于屏幕中央与 Pelmet 图标之间。"
-          }
-        }
-      }
-    },
     "Restore %@": {
       "localizations": {
         "de": {
@@ -11775,6 +11601,64 @@
         }
       }
     },
+    "See which Focus is on and switch it in a click.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sieh, welcher Fokus an ist, und wechsle ihn mit einem Klick."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mira qué modo de concentración está activo y cámbialo con un clic."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voyez quel mode de concentration est actif et changez-en d'un clic."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vedi quale Full Immersion è attiva e cambiala con un clic."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンの集中モードを確認し、ワンクリックで切り替え。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "켜진 집중 모드를 보고 한 번의 클릭으로 바꾸세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veja qual Foco está ativo e troque com um clique."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Видите, какой фокус включён, и переключаете его одним щелчком."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看当前专注模式，一键切换。"
+          }
+        }
+      }
+    },
     "Separator": {
       "localizations": {
         "de": {
@@ -12181,6 +12065,64 @@
         }
       }
     },
+    "Show or hide your icons without reaching for the mouse.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole ein- oder ausblenden, ohne zur Maus zu greifen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra u oculta tus iconos sin tocar el ratón."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affichez ou masquez vos icônes sans toucher la souris."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra o nascondi le icone senza toccare il mouse."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マウスに手を伸ばさずにアイコンを表示・非表示。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마우스에 손대지 않고 아이콘을 보이거나 숨기세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostre ou oculte seus ícones sem pegar o mouse."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывайте или скрывайте значки, не тянувшись к мыши."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需伸手拿鼠标即可显示或隐藏图标。"
+          }
+        }
+      }
+    },
     "Show while revealed": {
       "localizations": {
         "de": {
@@ -12235,64 +12177,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "显示时可见"
-          }
-        }
-      }
-    },
-    "Shows which Focus is on. Click for the Focus panel.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeigt, welcher Fokus aktiv ist. Klick öffnet das Fokus-Panel."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Muestra qué modo de concentración está activo. Un clic abre el panel."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Indique quelle Concentration est active. Un clic ouvre le panneau Concentration."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra quale Full immersion è attiva. Un clic apre il pannello."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "オンになっている集中モードを表示します。クリックで集中モードパネルを開きます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "켜져 있는 집중 모드를 표시합니다. 클릭하면 집중 모드 패널이 열립니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra qual Foco está ativo. Clique para abrir o painel de Foco."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показывает, какой режим фокусирования включён. Щелчок открывает панель."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "显示当前开启的专注模式。点按打开专注模式面板。"
           }
         }
       }
@@ -12529,6 +12413,64 @@
         }
       }
     },
+    "Siri, as an icon you can move. Replaces Apple's while it's on.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri als verschiebbares Symbol. Ersetzt Apples, solange es an ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri, como un icono que puedes mover. Sustituye al de Apple mientras está activo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri, en icône que vous pouvez déplacer. Remplace celle d'Apple tant qu'elle est active."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri, come icona che puoi spostare. Sostituisce quella di Apple finché è attiva."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動かせるアイコンとしてのSiri。オンの間はAppleのものと入れ替わります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "옮길 수 있는 Siri 아이콘. 켜져 있는 동안 Apple의 아이콘을 대신합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri, como um ícone que você pode mover. Substitui o da Apple enquanto estiver ligado."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri в виде значка, который можно переместить. Заменяет значок Apple, пока включён."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可移动的 Siri 图标。开启时替代 Apple 的图标。"
+          }
+        }
+      }
+    },
     "Skip This Backup": {
       "localizations": {
         "de": {
@@ -12641,6 +12583,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "平滑"
+          }
+        }
+      }
+    },
+    "Smoother show and hide animations.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weichere Ein- und Ausblendanimationen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animaciones más suaves al mostrar y ocultar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des animations d'affichage et de masquage plus fluides."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animazioni più fluide quando mostri e nascondi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示・非表示のアニメーションがより滑らかに。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 부드러운 표시·숨김 애니메이션."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animações mais suaves ao mostrar e ocultar."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Более плавные анимации показа и скрытия."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更流畅的显示和隐藏动画。"
           }
         }
       }
@@ -12993,64 +12993,6 @@
         }
       }
     },
-    "Stays on while the Pelmet icon is hidden — it's the way back to Settings.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bleibt aktiv, solange das Pelmet-Symbol ausgeblendet ist — es ist der Weg zurück zu den Einstellungen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Permanece activo mientras el icono de Pelmet está oculto: es la forma de volver a los ajustes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reste actif tant que l’icône de Pelmet est masquée : c’est le chemin de retour vers les réglages."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resta attivo finché l’icona di Pelmet è nascosta: è la via di ritorno alle impostazioni."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmetのアイコンを非表示にしている間は有効のままです。設定に戻る唯一の入口です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pelmet 아이콘을 숨긴 동안에는 켜진 상태로 유지됩니다. 설정으로 돌아가는 통로입니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continua ativo enquanto o ícone do Pelmet está oculto — é o caminho de volta aos ajustes."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Остаётся включённым, пока значок Pelmet скрыт, — это путь обратно к настройкам."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在 Pelmet 图标隐藏期间保持开启——这是回到设置的入口。"
-          }
-        }
-      }
-    },
     "Stays where its app put it": {
       "localizations": {
         "de": {
@@ -13167,6 +13109,64 @@
         }
       }
     },
+    "Switch user or lock the screen in a click.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzer wechseln oder Bildschirm sperren mit einem Klick."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambia de usuario o bloquea la pantalla con un clic."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changez d'utilisateur ou verrouillez l'écran d'un clic."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambia utente o blocca lo schermo con un clic."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワンクリックでユーザ切り替えや画面ロック。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번의 클릭으로 사용자 전환 또는 화면 잠금."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Troque de usuário ou bloqueie a tela com um clique."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Смена пользователя или блокировка экрана одним щелчком."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一键切换用户或锁定屏幕。"
+          }
+        }
+      }
+    },
     "System": {
       "localizations": {
         "de": {
@@ -13279,6 +13279,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "系统附加项"
+          }
+        }
+      }
+    },
+    "System features as icons you can hide and move": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Systemfunktionen als Symbole, die du ausblenden und verschieben kannst"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funciones del sistema como iconos que puedes ocultar y mover"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des fonctions système en icônes que vous pouvez masquer et déplacer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funzioni di sistema come icone che puoi nascondere e spostare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隠したり動かしたりできるシステム機能のアイコン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "숨기고 옮길 수 있는 시스템 기능 아이콘"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recursos do sistema como ícones que você pode ocultar e mover"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Системные функции как значки, которые можно скрыть и переместить"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可隐藏、可移动的系统功能图标"
           }
         }
       }
@@ -14149,64 +14207,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "计时器结束"
-          }
-        }
-      }
-    },
-    "Toggles the hidden icons from anywhere.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Blendet die ausgeblendeten Symbole von überall ein und aus."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Muestra u oculta los iconos ocultos desde cualquier app."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Affiche ou masque les icônes cachées depuis n’importe où."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra o nasconde le icone nascoste da qualsiasi app."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "どこからでも隠したアイコンを切り替えます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어디서든 숨긴 아이콘을 전환합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostra ou oculta os ícones ocultos de qualquer app."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показывает и скрывает спрятанные значки из любого приложения."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在任何地方切换隐藏的图标。"
           }
         }
       }
@@ -15429,6 +15429,64 @@
         }
       }
     },
+    "Your last backup at a glance, back up now. Replaces Apple's while it's on.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein letztes Backup auf einen Blick, jetzt sichern. Ersetzt Apples, solange es an ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu última copia de un vistazo, haz una copia ahora. Sustituye al de Apple mientras está activo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre dernière sauvegarde d'un coup d'œil, sauvegardez maintenant. Remplace celle d'Apple tant qu'elle est active."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'ultimo backup a colpo d'occhio, esegui il backup adesso. Sostituisce quella di Apple finché è attiva."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新のバックアップをひと目で確認、今すぐバックアップ。オンの間はAppleのものと入れ替わります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 백업을 한눈에, 지금 백업. 켜져 있는 동안 Apple의 아이콘을 대신합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu último backup de relance, faça backup agora. Substitui o da Apple enquanto estiver ligado."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Последняя резервная копия на виду, создать сейчас. Заменяет значок Apple, пока включён."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一眼看到上次备份，立即备份。开启时替代 Apple 的图标。"
+          }
+        }
+      }
+    },
     "Your menu bar is full: %lld icons sit behind macOS's « until there's room. Pelmet leaves them where they are.": {
       "localizations": {
         "de": {
@@ -15715,122 +15773,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pelmet 请求隐藏时，macOS 仍将它保留在菜单栏中。"
-          }
-        }
-      }
-    },
-    "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS ignoriert diesen Klick, solange Symbole ausgeblendet sind. Pelmet gibt sie deshalb für einen Augenblick frei und klickt für dich."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS ignora ese clic mientras hay iconos ocultos, así que Pelmet los libera un instante y hace clic por ti."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS ignore ce clic tant que des icônes sont masquées ; Pelmet les libère donc un instant et clique pour vous."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS ignora quel clic finché ci sono icone nascoste, quindi Pelmet le libera per un istante e fa clic al posto tuo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アイコンが隠れている間、macOSはそのクリックを無視します。そのためPelmetが一瞬だけ解除して代わりにクリックします。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아이콘이 숨겨진 동안 macOS는 그 클릭을 무시하므로 Pelmet이 잠시 풀어 주고 대신 클릭합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O macOS ignora esse clique enquanto há ícones ocultos, então o Pelmet os libera por um instante e clica por você."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS игнорирует этот щелчок, пока значки скрыты, поэтому Pelmet на миг отпускает их и щёлкает за вас."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "图标隐藏时 macOS 会忽略这次点击，所以 Pelmet 会短暂放开它们并替你点击。"
-          }
-        }
-      }
-    },
-    "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you. Without Screen Recording that instant shows. Off, the two-finger swipe from the trackpad's right edge still works.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS ignoriert diesen Klick, solange Symbole ausgeblendet sind. Pelmet gibt sie deshalb für einen Augenblick frei und klickt für dich. Ohne Bildschirmaufnahme ist dieser Augenblick sichtbar. Ausgeschaltet funktioniert weiterhin das Wischen mit zwei Fingern vom rechten Trackpad-Rand."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS ignora ese clic mientras hay iconos ocultos, así que Pelmet los libera un instante y hace clic por ti. Sin Grabación de pantalla ese instante se ve. Desactivado, el deslizamiento con dos dedos desde el borde derecho del trackpad sigue funcionando."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS ignore ce clic tant que des icônes sont masquées ; Pelmet les libère donc un instant et clique pour vous. Sans l’enregistrement de l’écran, cet instant est visible. Désactivé, le balayage à deux doigts depuis le bord droit du trackpad fonctionne toujours."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS ignora quel clic finché ci sono icone nascoste, quindi Pelmet le libera per un istante e fa clic al posto tuo. Senza Registrazione schermo quell’istante si vede. Disattivato, lo scorrimento con due dita dal bordo destro del trackpad funziona comunque."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アイコンが隠れている間、macOSはそのクリックを無視します。そのためPelmetが一瞬だけ解除して代わりにクリックします。画面収録の許可がないとその一瞬が見えます。オフにしても、トラックパッドの右端からの2本指スワイプは使えます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아이콘이 숨겨진 동안 macOS는 그 클릭을 무시하므로 Pelmet이 잠시 풀어 주고 대신 클릭합니다. 화면 기록 권한이 없으면 그 순간이 보입니다. 끄더라도 트랙패드 오른쪽 가장자리에서 두 손가락으로 쓸어넘기기는 계속 작동합니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O macOS ignora esse clique enquanto há ícones ocultos, então o Pelmet os libera por um instante e clica por você. Sem a Gravação de Tela, esse instante aparece. Desativado, o deslize com dois dedos a partir da borda direita do trackpad continua funcionando."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS игнорирует этот щелчок, пока значки скрыты, поэтому Pelmet на миг отпускает их и щёлкает за вас. Без записи экрана этот миг заметен. Если выключить, смахивание двумя пальцами от правого края трекпада по-прежнему работает."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "图标隐藏时 macOS 会忽略这次点击，所以 Pelmet 会短暂放开它们并替你点击。未授权屏幕录制时这一瞬间会被看到。关闭后，从触控板右边缘双指轻扫仍然有效。"
           }
         }
       }

@@ -561,7 +561,7 @@ private struct GeneralPane: View {
                 title: "Keyboard shortcut",
                 caption: appState.hotkeyConflict
                     ? "Held by another app — record a different one."
-                    : "Toggles the hidden icons from anywhere."
+                    : "Show or hide your icons without reaching for the mouse."
             ) {
                 ShortcutRecorder(shortcut: binding(\.hotkey), fallback: .default)
             }
@@ -569,7 +569,7 @@ private struct GeneralPane: View {
                 title: "Open Settings",
                 caption: appState.settingsHotkeyConflict
                     ? "Held by another app — record a different one."
-                    : "Opens Pelmet Settings from anywhere."
+                    : "Get back here from any app."
             ) {
                 ShortcutRecorder(shortcut: binding(\.settingsHotkey), fallback: .settingsDefault)
             }
@@ -581,9 +581,7 @@ private struct GeneralPane: View {
                 // card's one-line rhythm. Short title, caption carries it,
                 // same shape as the Permissions and Language rows.
                 title: "Right-click menu",
-                caption: appState.settings.showStatusItem
-                    ? "Opens Pelmet's menu from an empty spot on the menu bar."
-                    : "Stays on while the Pelmet icon is hidden — it's the way back to Settings.",
+                caption: "Pelmet's menu from any empty spot on the bar. Also your way back here when the icon is hidden.",
                 isOn: Binding(
                     get: { appState.settings.barRightClickMenuActive },
                     set: { enabled in
@@ -638,7 +636,7 @@ private struct GeneralPane: View {
             SettingRow(
                 title: "Screen Recording",
                 caption: appState.screenRecordingGranted
-                    ? "Lets the animation styles play over the system's own show and hide."
+                    ? "Smoother show and hide animations."
                     : "Optional. Without it, icons show and hide the way macOS does it."
             ) {
                 if appState.screenRecordingGranted {
@@ -703,7 +701,7 @@ private struct BehaviorPane: View {
         SettingsCard(title: "Reveal") {
             SettingToggleRow(
                 title: "Reveal on hover",
-                caption: "Rest the pointer on the menu bar between the middle of the screen and Pelmet's icon.",
+                caption: "Hands-free: rest the pointer on the right half of the menu bar.",
                 isOn: binding(\.revealTriggers.hoverEnabled)
             )
             if appState.settings.revealTriggers.hoverEnabled {
@@ -738,7 +736,7 @@ private struct BehaviorPane: View {
             SettingRow(
                 title: "Now Playing, camera controls, AirDrop, Focus, Timer",
                 caption: appState.settings.replacesCollateralExtras
-                    ? "Always hidden while a Pelmet item stands in for one of them. Turn those items off under Menu Bar to show the system's while the bar is revealed."
+                    ? "Pelmet's items stand in for these, so Apple's stay hidden. Turn a Pelmet item off to get Apple's back when the bar is revealed."
                     : "macOS hides these whenever any icons are concealed — they can only appear while the whole bar is revealed."
             ) {
                 PelmetMenuPicker(
@@ -754,8 +752,8 @@ private struct BehaviorPane: View {
             SettingToggleRow(
                 title: "Clicking the clock opens Notification Center",
                 caption: appState.screenRecordingGranted
-                    ? "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you."
-                    : "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you. Without Screen Recording that instant shows. Off, the two-finger swipe from the trackpad's right edge still works.",
+                    ? "Notification Center still opens from the clock, even with icons hidden. Pelmet handles the click."
+                    : "Notification Center still opens from the clock, even with icons hidden. Pelmet handles the click; without Screen Recording the hidden icons flash by for an instant. Off, the two-finger swipe from the trackpad's right edge still works.",
                 isOn: binding(\.clockClickOpensNotificationCenter)
             )
         }

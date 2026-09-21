@@ -155,19 +155,19 @@ struct MenuBarTab: View {
                     EditorSectionView(
                         section: .visible,
                         title: "Visible",
-                        caption: "Always in the menu bar",
+                        caption: "Always there when you need them",
                         symbol: "eye"
                     )
                     EditorSectionView(
                         section: .hidden,
                         title: "Hidden",
-                        caption: "A hover or click away — or ⌘-drag icons left of the chevron",
+                        caption: "Out of the way, back with a hover or a click",
                         symbol: "eye.slash"
                     )
                     EditorSectionView(
                         section: .alwaysHidden,
                         title: "Always Hidden",
-                        caption: "Out of sight until you double-click or ⌥-click the chevron",
+                        caption: "Gone for good, unless you double-click or ⌥-click the chevron",
                         symbol: "moon"
                     )
                 }
@@ -927,7 +927,7 @@ private struct PelmetItemsStrip: View {
         VStack(alignment: .leading, spacing: 8) {
             CardHeader(
                 symbol: "sparkles", title: "Pelmet items",
-                caption: "Pelmet's own system extras — they hide like any icon"
+                caption: "System features as icons you can hide and move"
             ) {
                 Menu {
                     if shortcutNames.isEmpty {
@@ -957,46 +957,46 @@ private struct PelmetItemsStrip: View {
             VStack(alignment: .leading, spacing: 12) {
                 PelmetItemRow(
                     symbol: "playpause.fill", title: "Media controls",
-                    caption: "Click to play or pause, right-click for tracks.",
+                    caption: "Play, pause and switch tracks without leaving the bar.",
                     isOn: hasKind(.mediaControls),
                     style: styleBinding(.mediaControls),
                     rule: ruleBinding(.mediaControls)
                 ) { toggleKind(.mediaControls, on: $0) }
                 PelmetItemRow(
                     symbol: "video.fill", title: "Camera & mic indicator",
-                    caption: "Appears while a camera or mic is live.",
+                    caption: "Know when your camera or mic is on.",
                     isOn: hasKind(.cameraMicIndicator)
                 ) { toggleKind(.cameraMicIndicator, on: $0) }
                 PelmetItemRow(
                     symbol: "siri", title: "Siri",
-                    caption: "Opens Siri. Apple's own icon turns off in System Settings while this is on.",
+                    caption: "Siri, as an icon you can move. Replaces Apple's while it's on.",
                     isOn: hasKind(.siri)
                 ) { toggleKind(.siri, on: $0) }
                 PelmetItemRow(
                     symbol: "timer", title: "Timer",
-                    caption: "A countdown that stays in the bar. Click for durations, rings when it ends.",
+                    caption: "A countdown that stays in view and rings when it ends.",
                     isOn: hasKind(.timer)
                 ) { toggleKind(.timer, on: $0) }
                 PelmetItemRow(
                     symbol: "moon.fill", title: "Focus",
-                    caption: "Shows which Focus is on. Click for the Focus panel.",
+                    caption: "See which Focus is on and switch it in a click.",
                     isOn: hasKind(.focus),
                     rule: ruleBinding(.focus)
                 ) { toggleKind(.focus, on: $0) }
                 PelmetItemRow(
                     symbol: ExtraGlyph.timeMachineSymbol, title: "Time Machine",
-                    caption: "Latest backup, Back Up Now. Apple's own icon turns off in System Settings while this is on.",
+                    caption: "Your last backup at a glance, back up now. Replaces Apple's while it's on.",
                     isOn: hasKind(.timeMachine),
                     rule: ruleBinding(.timeMachine)
                 ) { toggleKind(.timeMachine, on: $0) }
                 PelmetItemRow(
                     symbol: "", image: ExtraGlyph.airdrop, title: "AirDrop",
-                    caption: "Opens AirDrop in Finder.",
+                    caption: "AirDrop one click away.",
                     isOn: hasKind(.airdrop)
                 ) { toggleKind(.airdrop, on: $0) }
                 PelmetItemRow(
                     symbol: "person.crop.circle", title: "Fast user switching",
-                    caption: "Other users, the login window, lock screen.",
+                    caption: "Switch user or lock the screen in a click.",
                     isOn: hasKind(.userSwitching)
                 ) { toggleKind(.userSwitching, on: $0) }
                 ForEach(appState.settings.extraItems.filter { $0.kind == .shortcut }) { spec in
