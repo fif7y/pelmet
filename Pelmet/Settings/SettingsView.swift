@@ -139,9 +139,8 @@ private struct SettingsSidebar: View {
                     // The Accessibility row lives in General; the dot says
                     // "something here needs you" from any tab.
                     attention: item == .general && !appState.accessibilityGranted,
-                    // An available update chips the About row in the same
-                    // accent as its "Update to…" button — a trail for someone
-                    // who just opened Settings.
+                    // An available update puts a green chip on the About row
+                    // — a trail for someone who just opened Settings.
                     badge: item == .about && SparkleController.shared.availableVersion != nil
                         ? "Update" : nil
                 ) { tab = item }
@@ -167,36 +166,28 @@ private struct SidebarRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
                 Image(systemName: item.symbol)
                     .font(.system(size: 13))
-                    .frame(width: 18)
-                // Size the row for the semibold weight so selecting never
-                // reflows — the regular label sits over a hidden bold twin.
-                Text(item.title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .hidden()
-                    .overlay(alignment: .leading) {
-                        Text(item.title)
-                            .font(.system(size: 13, weight: selected ? .semibold : .regular))
+                    .frame(width: 18, height: 17)
+                // The badge sits beside the title when both fit at their
+                // natural width (en "About · Update"), otherwise underneath
+                // (ru "О программе" + "Обновить") — never a truncated title.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        title.fixedSize()
+                        Spacer(minLength: 4)
+                        attentionDot
+                        badgeChip
                     }
-                    .lineLimit(1)
-                    // No fixedSize: a long title (ru "О программе" beside
-                    // "Обновить") must ellipsize rather than run under the
-                    // badge and the attention dot it shares the row with.
-                    .truncationMode(.tail)
-                    .layoutPriority(1)
-                Spacer(minLength: 4)
-                if attention {
-                    Circle().fill(.orange).frame(width: 7, height: 7)
-                }
-                if let badge {
-                    Text(badge)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(PelmetAccent.accent, in: Capsule())
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 8) {
+                            title
+                            Spacer(minLength: 4)
+                            attentionDot
+                        }
+                        badgeChip
+                    }
                 }
             }
             .foregroundStyle(selected ? PelmetAccent.accent : .primary)
@@ -213,6 +204,37 @@ private struct SidebarRow: View {
         .buttonStyle(.plain)
         .focusEffectDisabled()
         .onHover { hovered = $0 }
+    }
+
+    /// Size the row for the semibold weight so selecting never reflows —
+    /// the regular label sits over a hidden bold twin.
+    private var title: some View {
+        Text(item.title)
+            .font(.system(size: 13, weight: .semibold))
+            .hidden()
+            .overlay(alignment: .leading) {
+                Text(item.title)
+                    .font(.system(size: 13, weight: selected ? .semibold : .regular))
+            }
+            .lineLimit(1)
+            .truncationMode(.tail)
+    }
+
+    @ViewBuilder private var attentionDot: some View {
+        if attention {
+            Circle().fill(.orange).frame(width: 7, height: 7)
+        }
+    }
+
+    @ViewBuilder private var badgeChip: some View {
+        if let badge {
+            Text(badge)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(.green, in: Capsule())
+        }
     }
 }
 

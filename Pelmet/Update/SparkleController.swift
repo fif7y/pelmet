@@ -64,6 +64,11 @@ final class SparkleController: NSObject {
     /// takes effect on the next found update.
     @ObservationIgnored var notifyOnUpdates: () -> Bool = { true }
 
+    /// Every reminder (banner, menu line, sidebar chip) lands in the About
+    /// pane with its "Update to…" button lit — never straight in Sparkle's
+    /// window. AppState wires this to `openSettings(tab: .about)`.
+    @ObservationIgnored var openUpdateHub: () -> Void = {}
+
     /// True once Info.plist carries a real Sparkle public key. The About
     /// pane hides its update button entirely in unconfigured dev builds.
     var isConfigured: Bool {
@@ -141,12 +146,11 @@ final class SparkleController: NSObject {
                 return
             }
             let content = UNMutableNotificationContent()
+            content.title = String(localized: "Update available")
             if staged {
-                content.title = String(localized: "Pelmet \(version) is ready")
-                content.body = String(localized: "Installs when you quit. Click to update now.")
+                content.body = String(localized: "Pelmet \(version) is ready. Click here to install it now.")
             } else {
-                content.title = String(localized: "Pelmet \(version) is available")
-                content.body = String(localized: "A few seconds and a relaunch. Click to update.")
+                content.body = String(localized: "Click here to update Pelmet to \(version).")
             }
             // Quiet app: a banner, no sound.
             let request = UNNotificationRequest(identifier: Self.notificationID, content: content, trigger: nil)
@@ -200,13 +204,13 @@ extension SparkleController: SPUStandardUserDriverDelegate {
 }
 
 extension SparkleController: UNUserNotificationCenterDelegate {
-    /// Clicking the banner opens the install window.
+    /// Clicking the banner opens the About pane, "Update to…" ready.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
         guard response.notification.request.identifier == Self.notificationID else { return }
-        await MainActor.run { checkForUpdates() }
+        await MainActor.run { openUpdateHub() }
     }
 
     /// Show the banner even while Pelmet is the active app (settings open).
