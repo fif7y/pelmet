@@ -407,64 +407,6 @@
         }
       }
     },
-    "A Pelmet icon that opens an app — hides like any icon": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Pelmet-Symbol, das eine App öffnet — lässt sich wie jedes Symbol ausblenden"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un icono de Pelmet que abre una app — se oculta como cualquier icono"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Une icône Pelmet qui ouvre une app — se masque comme toute icône"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un’icona Pelmet che apre un’app — si nasconde come ogni icona"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アプリを開くPelmetのアイコン — ほかのアイコンと同じように隠せます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱을 여는 Pelmet 아이콘 — 다른 아이콘처럼 숨겨집니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Um ícone do Pelmet que abre um app — oculta-se como qualquer ícone"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Значок Pelmet, открывающий приложение — скрывается, как любой значок"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开应用的 Pelmet 图标 — 像任何图标一样隐藏"
-          }
-        }
-      }
-    },
     "A countdown that stays in the bar. Click for durations, rings when it ends.": {
       "localizations": {
         "de": {
@@ -1447,6 +1389,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加应用启动器"
+          }
+        }
+      }
+    },
+    "Add any app to your menu bar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bring jede App in deine Menüleiste"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade cualquier app a tu barra de menús"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez n'importe quelle app à votre barre des menus"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi qualsiasi app alla barra dei menu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どんなアプリでもメニューバーに追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어떤 앱이든 메뉴 막대에 추가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicione qualquer app à sua barra de menus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавьте любое приложение в строку меню"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把任何 App 放进菜单栏"
           }
         }
       }
@@ -7947,30 +7947,30 @@
         }
       }
     },
-    "New": {
+    "New items": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Neu"
+            "value": "Neue Symbole"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nuevo"
+            "value": "Nuevos"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nouveau"
+            "value": "Nouveautés"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nuovo"
+            "value": "Nuovi"
           }
         },
         "ja": {
@@ -7988,7 +7988,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Novo"
+            "value": "Novos"
           }
         },
         "ru": {
@@ -8000,7 +8000,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "新"
+            "value": "新图标"
           }
         }
       }

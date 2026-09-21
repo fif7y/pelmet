@@ -366,7 +366,7 @@ private struct NewItemsChip: View {
                             style: StrokeStyle(lineWidth: 1, dash: [4, 3])
                         )
                 )
-            Text("New")
+            Text("New items")
                 .font(.system(size: 9))
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
@@ -1133,7 +1133,7 @@ private struct AppLaunchersStrip: View {
             // nav yields to the CTA it duplicates.
             CardHeader(
                 symbol: "app.dashed", title: "App launchers",
-                caption: "A Pelmet icon that opens an app — hides like any icon"
+                caption: "Add any app to your menu bar"
             ) { EmptyView() }
 
             VStack(alignment: .leading, spacing: 0) {
