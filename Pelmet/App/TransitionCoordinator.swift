@@ -175,12 +175,13 @@ final class TransitionCoordinator {
                 // glyph's core lets the live chevron (flipped at the swap)
                 // show through without exposing a neighbor's edge.
                 cover = ConcealGhostOverlay.begin(
-                    from: ConcealGhostOverlay.clearing(emptyBar, columns: chevronPunch.map { ($0.lowerBound + 6)...($0.upperBound - 6) }),
+                    from: punchedCover(emptyBar, columns: chevronPunch.map { ($0.lowerBound + 6)...($0.upperBound - 6) }),
                     safety: AppTiming.transitionCoverSafety
                 )
             } else if style != .smooth {
                 cover = await ConcealGhostOverlay.begin(over: revealCoverRect, safety: AppTiming.transitionCoverSafety)
             }
+            trace.mark("cover", detail: coverSource)
             lastRevealedSections = sections
             if cover != nil, sections == [.hidden], revealedStripUsable {
                 var picture: [ConcealGhostOverlay.BarSnapshot]? = revealedStripSnapshot
@@ -189,7 +190,7 @@ final class TransitionCoordinator {
                     // fresh cover when nothing moved (and for the boot
                     // picture), the kept one when the backdrop changed
                     // since (see backdropMayHaveChanged).
-                    picture = ConcealGhostOverlay.iconsOnly(
+                    picture = cutOutPicture(
                         revealedStripSnapshot, background: revealedStripBackground.isEmpty ? emptyBar : revealedStripBackground,
                         punch: chevronPunch(clearingFrom: lastConcealedStripRect?.maxX),
                         keep: revealedStripKeep ?? entranceKeep
@@ -219,7 +220,7 @@ final class TransitionCoordinator {
                 cover?.dismiss()
                 cover = nil
             }
-            trace.mark("cover", detail: "\(coverSource)\(finished != nil ? ", finished" : "")")
+            if finished != nil { trace.mark("finished") }
             if cover == nil {
                 // Nothing hides the agent's slide-in: own items join the
                 // layout first so it animates around them.
@@ -450,6 +451,36 @@ final class TransitionCoordinator {
         return revealCoverSnapshot
     }
 
+    /// The pixel passes over the pictures are pure functions of the
+    /// pictures and the chevron's columns; between reveals nothing changes,
+    /// and both ran on the main thread on every reveal (2026-09-21).
+    /// Memoized on their inputs — a picture's `takenAt` is its identity.
+    private var punchedCoverCache: (key: String, snaps: [ConcealGhostOverlay.BarSnapshot])?
+    private var cutOutCache: (key: String, picture: [ConcealGhostOverlay.BarSnapshot])?
+
+    private static func pictureKey(_ snaps: [ConcealGhostOverlay.BarSnapshot]) -> String {
+        snaps.map { "\($0.takenAt.timeIntervalSinceReferenceDate)" }.joined(separator: "|")
+    }
+
+    private func punchedCover(_ emptyBar: [ConcealGhostOverlay.BarSnapshot], columns: [ClosedRange<CGFloat>]) -> [ConcealGhostOverlay.BarSnapshot] {
+        let key = Self.pictureKey(emptyBar) + "#" + columns.map { "\($0)" }.joined()
+        if let cached = punchedCoverCache, cached.key == key { return cached.snaps }
+        let snaps = ConcealGhostOverlay.clearing(emptyBar, columns: columns)
+        punchedCoverCache = (key, snaps)
+        return snaps
+    }
+
+    private func cutOutPicture(
+        _ strips: [ConcealGhostOverlay.BarSnapshot], background: [ConcealGhostOverlay.BarSnapshot],
+        punch: [ClosedRange<CGFloat>], keep: ClosedRange<CGFloat>?
+    ) -> [ConcealGhostOverlay.BarSnapshot]? {
+        let key = Self.pictureKey(strips) + "/" + Self.pictureKey(background) + "#" + punch.map { "\($0)" }.joined() + "#" + (keep.map { "\($0)" } ?? "")
+        if let cached = cutOutCache, cached.key == key { return cached.picture }
+        guard let picture = ConcealGhostOverlay.iconsOnly(strips, background: background, punch: punch, keep: keep) else { return nil }
+        cutOutCache = (key, picture)
+        return picture
+    }
+
     /// The chevron's columns, relative to the strip rect — its glyph flips
     /// between the two captures and would otherwise ride the cut-out.
     private var chevronPunch: [ClosedRange<CGFloat>] { chevronPunch(clearingFrom: nil) }
@@ -558,9 +589,18 @@ final class TransitionCoordinator {
         revealedPrecaptureTask?.cancel()
         revealedPrecaptureTask = Task { @MainActor in
             guard let appState else { return }
-            await appState.waitUntilQuiesced(interval: 0.5, deadline: 3, poll: .milliseconds(200))
-            // No cover's fade may bake into the snapshot.
-            try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
+            await appState.waitUntilQuiesced(interval: 0.5, deadline: 3, poll: .milliseconds(50))
+            // The reveal's cover lifts at `entranceCoverHold` past settle:
+            // wait for it rather than skip the picture (a skipped picture
+            // costs the next conceal a live capture, #35). Only a Fade
+            // lift has a tail that could bake in.
+            let lifted = Date().addingTimeInterval(2)
+            while ConcealGhostOverlay.stripActive, Date() < lifted, !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(30))
+            }
+            if appState.settings.revealAnimation == .fade {
+                try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
+            }
             guard !Task.isCancelled, appState.currentRevealedSections == [.hidden] else { return }
             await takeRevealedStripPicture(reason: "settle")
         }

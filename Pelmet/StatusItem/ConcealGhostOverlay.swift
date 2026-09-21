@@ -559,22 +559,59 @@ final class ConcealGhostOverlay {
         })
     }
 
+    /// Lifted covers' windows, kept per display for the next picture:
+    /// creating three borderless windows per reveal was most of the
+    /// cover's 14–39ms on the hover path (2026-09-21). Keyed by the
+    /// display's origin, never moved across displays — a first pool that
+    /// re-framed any spare onto any display cost 0.5–1s per reveal
+    /// (backing-scale change on the move). The image view rides along;
+    /// only its image and layer state are reset.
+    private static var spareWindows: [String: [(NSWindow, NSImageView)]] = [:]
+    private static let spareWindowCap = 4
+
+    private static func displayKey(for frame: NSRect) -> String {
+        let screen = NSScreen.screens.first { $0.frame.contains(CGPoint(x: frame.midX, y: frame.midY)) }
+        return screen.map { "\(Int($0.frame.minX)),\(Int($0.frame.minY))" } ?? "?"
+    }
+
+    private func recycleWindow() {
+        window.orderOut(nil)
+        imageView.layer?.removeAllAnimations()
+        imageView.image = nil
+        let key = Self.displayKey(for: window.frame)
+        var spares = Self.spareWindows[key] ?? []
+        guard spares.count < Self.spareWindowCap else { return }
+        spares.append((window, imageView))
+        Self.spareWindows[key] = spares
+    }
+
     private init(snapshot: BarSnapshot, safety: TimeInterval, startHidden: Bool = false, beneath: CGWindowID? = nil) {
         let frame = snapshot.windowFrame
         let shot = snapshot.image
-        window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.level = .statusBar
-        window.ignoresMouseEvents = true
-        window.hasShadow = false
-        imageView = NSImageView(
-            image: NSImage(cgImage: shot, size: frame.size)
-        )
-        imageView.frame = NSRect(origin: .zero, size: frame.size)
-        imageView.wantsLayer = true
-        if startHidden { imageView.layer?.opacity = 0 }
-        window.contentView = imageView
+        let key = Self.displayKey(for: frame)
+        if var spares = Self.spareWindows[key], let spare = spares.popLast() {
+            Self.spareWindows[key] = spares
+            window = spare.0
+            imageView = spare.1
+            window.setFrame(frame, display: false)
+            imageView.frame = NSRect(origin: .zero, size: frame.size)
+            imageView.image = NSImage(cgImage: shot, size: frame.size)
+        } else {
+            window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+            window.isOpaque = false
+            window.backgroundColor = .clear
+            window.level = .statusBar
+            window.ignoresMouseEvents = true
+            window.hasShadow = false
+            imageView = NSImageView(image: NSImage(cgImage: shot, size: frame.size))
+            imageView.frame = NSRect(origin: .zero, size: frame.size)
+            imageView.wantsLayer = true
+            window.contentView = imageView
+        }
+        if let layer = imageView.layer {
+            layer.position = CGPoint(x: frame.width / 2, y: frame.height / 2)
+            layer.opacity = startHidden ? 0 : 1
+        }
         if let beneath {
             window.order(.below, relativeTo: Int(beneath))
         } else {
@@ -601,7 +638,7 @@ final class ConcealGhostOverlay {
     func dismiss() {
         guard !finished else { return }
         finished = true
-        window.orderOut(nil)
+        recycleWindow()
         standDown()
     }
 
@@ -669,8 +706,8 @@ final class ConcealGhostOverlay {
         // Strong self: the completion is the count's decrement — a weak
         // capture could leak activeStripCount high and suppress per-item
         // ghosts forever.
-        AlphaFade.run(imageView, to: 0, duration: duration, controlPoints: controlPoints) { [window, self] in
-            window.orderOut(nil)
+        AlphaFade.run(imageView, to: 0, duration: duration, controlPoints: controlPoints) { [self] in
+            self.recycleWindow()
             self.standDown()
         }
     }
