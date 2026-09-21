@@ -1177,6 +1177,7 @@ final class AppState {
                 settings.orderEdits.order[edited]?.removeAll { $0 == key }
             }
             settings.orderEdits.order[section] = order
+            pruneSettledOrderEdits()
             applyReport = nil
         }
         settings.save()
@@ -1401,6 +1402,27 @@ final class AppState {
                 applyPointerDisplayPolicyAfterDismissal()
             }
         }
+    }
+
+    /// A drawing that matches the bar again is no edit: an icon dragged
+    /// out of a section and back to its slot lit Apply for a zero-move
+    /// pass (Timer, 2026-09-20 21:45). Compared over the items both sides
+    /// know, on the collapsed-bar view the count uses.
+    private func pruneSettledOrderEdits() {
+        guard let snapshot, !settings.orderEdits.isEmpty else { return }
+        let bar = ApplyPass.barOrder(ApplyPass.rememberedFrames(snapshot, appState: self))
+        let roster = settings.sectionModel.roster
+        var edits = settings.orderEdits
+        for (section, drawn) in edits.order {
+            let onBar = bar.filter { roster.section(of: $0) == section }
+            let drawnSet = Set(drawn), barSet = Set(onBar)
+            if onBar.filter(drawnSet.contains) == drawn.filter(barSet.contains) {
+                edits.order.removeValue(forKey: section)
+            }
+        }
+        guard edits != settings.orderEdits else { return }
+        settings.orderEdits = edits
+        PelmetLog.log("editor: drawing matches the bar again — edit cleared")
     }
 
     /// A removed separator or extra leaves its drawn slot behind in the
