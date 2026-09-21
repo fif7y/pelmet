@@ -17,15 +17,24 @@ public struct OrderEdits: Codable, Equatable, Sendable {
     /// back where it was, when the user moves it by hand in the bar, and
     /// with every other edit at Apply.
     public var previousSection: [ItemID: Section]
+    /// Each edited section's order before its first edit, so Discard puts
+    /// every icon back at the slot it had: reading the bar can't do that
+    /// for a concealed section, and never knew the old index anyway.
+    public var previousOrder: [Section: [ItemID]]
 
-    public init(order: [Section: [ItemID]] = [:], previousSection: [ItemID: Section] = [:]) {
+    public init(
+        order: [Section: [ItemID]] = [:],
+        previousSection: [ItemID: Section] = [:],
+        previousOrder: [Section: [ItemID]] = [:]
+    ) {
         self.order = order
         self.previousSection = previousSection
+        self.previousOrder = previousOrder
     }
 
     public var isEmpty: Bool { order.isEmpty && previousSection.isEmpty }
 
-    private enum CodingKeys: String, CodingKey { case order, previousSection }
+    private enum CodingKeys: String, CodingKey { case order, previousSection, previousOrder }
 
     /// `previousSection` arrived after `order` shipped on the branch: an
     /// edit set saved without it still decodes.
@@ -33,6 +42,14 @@ public struct OrderEdits: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         order = try c.decodeIfPresent([Section: [ItemID]].self, forKey: .order) ?? [:]
         previousSection = try c.decodeIfPresent([ItemID: Section].self, forKey: .previousSection) ?? [:]
+        previousOrder = try c.decodeIfPresent([Section: [ItemID]].self, forKey: .previousOrder) ?? [:]
+    }
+
+    /// The edit for `section` is done with (applied, or the bar matches):
+    /// its drawing and its baseline go together.
+    public mutating func clearOrder(for section: Section) {
+        order.removeValue(forKey: section)
+        previousOrder.removeValue(forKey: section)
     }
 }
 

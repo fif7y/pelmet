@@ -1079,6 +1079,9 @@ final class AppState {
         // Remember where it came from for Discard; drawn back where it
         // started, there is nothing to put back.
         let previous = model.section(of: id)
+        for touched in Set([previous, section]) where settings.orderEdits.previousOrder[touched] == nil {
+            settings.orderEdits.previousOrder[touched] = model.order[touched] ?? currentOrder(in: touched)
+        }
         if previous != section {
             if let origin = settings.orderEdits.previousSection[key] {
                 if origin == section { settings.orderEdits.previousSection.removeValue(forKey: key) }
@@ -1294,7 +1297,7 @@ final class AppState {
             } else if report.failed.isEmpty {
                 var edits = settings.orderEdits
                 for (section, drawn) in edits.order where !drawn.contains(where: unreachable.contains) {
-                    edits.order.removeValue(forKey: section)
+                    edits.clearOrder(for: section)
                 }
                 for id in report.applied { edits.previousSection.removeValue(forKey: id.sectionKey) }
                 settings.orderEdits = edits
@@ -1334,7 +1337,7 @@ final class AppState {
             // DBngin dragged in Always Hidden never lit Apply, 2026-09-21).
             guard drawnSet.isSubset(of: barSet) else { continue }
             if onBar.filter(drawnSet.contains) == drawn {
-                edits.order.removeValue(forKey: section)
+                edits.clearOrder(for: section)
             }
         }
         guard edits != settings.orderEdits else { return }
@@ -1371,31 +1374,20 @@ final class AppState {
     func discardOrderEdits() {
         guard !applying else { return }
         var model = settings.sectionModel
-        // Back to the bar's order where the bar can be read; a concealed
-        // section keeps its drawing until the next reveal reconciles it.
-        // Clearing the order outright left the board reshuffling (2026-09-20).
-        if let snapshot {
-            let frames = ApplyPass.primaryFrames(snapshot)
-            for section in settings.orderEdits.order.keys {
-                let members = editorItems(in: section).map(\.id.sectionKey)
-                guard members.allSatisfy({ frames[$0] != nil }) else { continue }
-                model.order[section] = members.sorted { frames[$0]!.minX < frames[$1]!.minX }
-            }
+        // Discard is a reset of the drawing: every edited section goes back
+        // to the order it had before its first edit (reading the bar could
+        // not serve a concealed section, and put a returning icon at the
+        // end instead of its old slot, 2026-09-21), and every
+        // between-section drop goes back to its section — a separator drawn
+        // elsewhere returns to the one hosting it (Apply moves hosts).
+        for (section, order) in settings.orderEdits.previousOrder {
+            model.order[section] = order
         }
-        // Every between-section drop goes back too: Discard is a reset of
-        // the drawing, and a separator drawn into another section returns
-        // to the one hosting it (its host never moved, Apply does that).
         for (key, origin) in settings.orderEdits.previousSection {
             if origin == .visible {
                 model.assignments.removeValue(forKey: key)
             } else {
                 model.assignments[key] = origin
-            }
-            for section in model.order.keys where section != origin {
-                model.order[section]?.removeAll { $0 == key }
-            }
-            if model.order[origin] != nil, !model.order[origin]!.contains(key) {
-                model.order[origin]!.append(key)
             }
         }
         settings.sectionModel = model
