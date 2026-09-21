@@ -29,7 +29,7 @@ issue is untouched by 0.3.0, **fixed by 0.3.0** = closes with the release.
 | 25 / 5 | Strip flashes a different shade; own animation | SCStream cover, kept by the M3 cover decision | holds on paper; today's cover work (memoized pictures, chevron shift, window pool tried and dropped) is the one area that needs a day of eyes |
 | 21 | Hover on the right half only | Band monitor, plus "hover zone includes the chevron" | holds |
 | 20 | Settings CPU | Settings lifecycle | holds |
-| 19 | Siri / Time Machine | Own extras; they enter the bar through the Apply door now | live check: toggle Siri on, expect `apply: own … applied=1` |
+| 19 | Siri / Time Machine | Own extras; they enter the bar through the Apply door now | live-proven 2026-09-21 14:36 after two fixes: the own-item pass skipped a concealed section as "left layout" (guard order), and the boot repair forgot a singleton extra's section while it was off (Siri came back in Visible) |
 | 18 | Shortcuts | HotkeyManager | holds |
 | 15 | Glitching bar, immovable Electron icons | Old: three background retries then a note. New: no background moves at all; Apply reports a failed drag and the bounce budget stops it | holds by construction (the glitch was the retries) |
 | 13 | Extra without an order slot crash | Enroll repair at boot | holds |
@@ -68,6 +68,10 @@ issue is untouched by 0.3.0, **fixed by 0.3.0** = closes with the release.
 
 1. App test target with the host Pelmet quit (`xcodebuild test`), core
    tests already pass (128 + the new band test).
-2. Live checks above: #31 relaunch under a cover (done 14:26), #19 Siri toggle, a
-   music-on boot, one editor drop + Apply, one Discard.
+2. Live checks above, all done 2026-09-21 14:26–14:42 on Gab's bar: #31
+   relaunch under a cover, #19 Siri toggle, a music-on boot (own items
+   adopted 0.4s after launch), editor drop + Apply (verified drags), Discard.
+   Watch: the Apply count is a concealed-bar estimate; one drop read (2) for
+   a one-move pass and one one-count drop applied two. `apply: pending` log
+   line names the counted moves now.
 3. A day of eyes on the cover after today's picture work (#25 family).

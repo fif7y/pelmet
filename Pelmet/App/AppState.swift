@@ -202,13 +202,19 @@ final class AppState {
         // key behind (twenty dead launcher keys in one blob). Separators
         // have their own manager and stay.
         let liveExtraKeys = Set(settings.extraItems.map { ExtrasManager.itemID(for: $0).sectionKey })
+        // A singleton kind (Siri, Time Machine, timer…) keeps one key for
+        // life: its section survives the toggle going off, so on again it
+        // returns where the user had it (a boot with Siri off sent it to
+        // Visible, 2026-09-21). Launchers and shortcuts are one key each.
+        let singletonKeys = Set(ExtraKind.allCases.filter { $0 != .shortcut && $0 != .appLauncher }
+            .map { ExtrasManager.itemID(for: ExtraItemSpec(kind: $0)).sectionKey })
         for (section, order) in settings.sectionModel.order {
             let kept = order.filter {
                 !MenuBarPolicy.isPelmetExtraID($0) || $0.isPelmetSeparator || liveExtraKeys.contains($0)
             }
             if kept.count != order.count {
                 settings.sectionModel.order[section] = kept
-                for key in order where !kept.contains(key) {
+                for key in order where !kept.contains(key) && !singletonKeys.contains(key) {
                     settings.sectionModel.assignments.removeValue(forKey: key)
                 }
                 repaired = true
@@ -1228,12 +1234,8 @@ final class AppState {
             try? await Task.sleep(until: due, clock: .continuous)
             guard !applying else { return }
         }
-        // An extra that left layout again (a show/hide flap inside one
-        // apply) has no frame to move; the next entry edge queues it anew.
-        if let extras, extras.managedItemIDs.contains(where: { $0.sectionKey == id.sectionKey }), !extras.isShowing(id) {
-            PelmetLog.log("apply: own \(id.rawValue) left layout before its pass — nothing to place")
-            return
-        }
+        // Checked before the layout test: a concealed section ghosts its
+        // extra at once, which is not the flap below (Siri toggle, 2026-09-21).
         // The edge may have fired on a revealed bar that concealed before
         // the pass ran (a timer started 40ms before the hover delay
         // expired, 2026-09-20: "no live neighbour to aim at"). Off screen
@@ -1243,6 +1245,13 @@ final class AppState {
         guard !concealed else {
             PelmetLog.log("apply: own \(id.rawValue) section concealed — waits for a reveal")
             ownItemsAwaitingReveal.insert(id)
+            return
+        }
+        // An extra that left layout again while its section is on screen
+        // (a show/hide flap inside one apply) has no frame to move; the next
+        // entry edge queues it anew.
+        if let extras, extras.managedItemIDs.contains(where: { $0.sectionKey == id.sectionKey }), !extras.isShowing(id) {
+            PelmetLog.log("apply: own \(id.rawValue) left layout before its pass — nothing to place")
             return
         }
         applying = true
@@ -1306,9 +1315,19 @@ final class AppState {
     var pendingMoveCount: Int {
         guard let snapshot else { return 0 }
         // Drawn icons behind the « count too: the pass expands it for them.
-        return ApplyPass.plan(for: self, snapshot: snapshot, remembered: true).moves.count
-            + ApplyPass.trappedEdited(snapshot, edits: settings.orderEdits).count
+        let moves = ApplyPass.plan(for: self, snapshot: snapshot, remembered: true).moves
+        let trapped = ApplyPass.trappedEdited(snapshot, edits: settings.orderEdits)
+        // Logged on change only (the button reads this every render): which
+        // move pads the count when the drop read "Apply (2)" (2026-09-21).
+        let line = moves.map { "\($0.item.rawValue) after=\($0.after?.rawValue ?? "-") before=\($0.before?.rawValue ?? "-")" }.joined(separator: "; ")
+            + " | trapped=" + trapped.map(\.rawValue).sorted().joined(separator: ",")
+        if line != lastPendingLine {
+            lastPendingLine = line
+            PelmetLog.log("apply: pending \(moves.count) move(s) + \(trapped.count) trapped — \(line)")
+        }
+        return moves.count + trapped.count
     }
+    private var lastPendingLine = ""
 
     /// Last primary-band frame per item, kept across conceals so the Apply
     /// count can judge a concealed icon's side without a reveal
