@@ -17,6 +17,13 @@ shortcut and they slide back in. Small on purpose (three sections, an editor,
 for the menu bar Apple rebuilt in macOS 27. Free, open source, no account,
 no analytics.
 
+> [!TIP]
+> **Beta channel now available.** Fixes and new features land there first, a
+> stable release rolls them up every week or two. Turn on "Get beta releases"
+> in Settings › About (0.2.41 or later), or download the latest beta:
+>
+> [![Latest beta](https://img.shields.io/github/v/release/fif7y/pelmet?include_prereleases&filter=*beta*&label=latest%20beta&color=6841ED)](https://github.com/fif7y/pelmet/releases?q=prerelease%3Atrue)
+
 <p align="center">
   <img src="docs/assets/bar-anim.svg" alt="The menu bar: hidden icons tuck away behind the chevron, then return on hover" width="575"><br>
   <sub>Collapsed, and a hover later.</sub>
