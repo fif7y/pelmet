@@ -34,8 +34,8 @@ chevron right in the menu bar. Pelmet records the move and never moves an
 icon on its own.
 
 <p align="center">
-  <img src="docs/assets/editor-anim.svg" alt="The layout editor: dragging an icon from Always Hidden to Hidden, the drawing updates and Apply lights up" width="640"><br>
-  <sub>The layout editor. Drag icons between Visible, Hidden and Always&nbsp;Hidden. Nothing moves in the bar until you press Apply.</sub>
+  <img src="docs/assets/apply-loop.gif" alt="The layout editor under the menu bar: Spotify is dragged from Hidden to Visible, nothing moves in the bar, Apply lights up, one press and Spotify appears in the bar" width="640"><br>
+  <sub>The layout editor is a drawing. Drag icons between Visible, Hidden and Always&nbsp;Hidden; nothing moves in the bar until you press Apply.</sub>
 </p>
 
 Apply reveals what it needs, lays the whole bar out in one pass with the
