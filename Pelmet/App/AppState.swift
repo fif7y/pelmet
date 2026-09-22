@@ -635,6 +635,10 @@ final class AppState {
         dispatch(rehide.handle(.pointerReturned))
     }
 
+    func pointerEnteredHoverZone() {
+        transitions.pointerApproachedBar()
+    }
+
     func pointerLeftBand() {
         dispatch(rehide.handle(.pointerLeft))
     }

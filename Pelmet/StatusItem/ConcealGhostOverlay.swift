@@ -185,6 +185,20 @@ final class ConcealGhostOverlay {
         }
         return runs.sorted { $0.0 < $1.0 }.flatMap(\.1)
     }
+    /// Who moved between two signatures, by owner, for the log (#49: the
+    /// changes were almost all one window in and out of the zone, and the
+    /// count alone never said which).
+    static func backdropMovers(from old: [Int], to new: [Int], in list: [[String: Any]]?) -> String {
+        func runs(_ sig: [Int]) -> Set<[Int]> { Set(stride(from: 0, to: sig.count, by: 5).map { Array(sig[$0..<min($0 + 5, sig.count)]) }) }
+        let changed = runs(old).symmetricDifference(runs(new)).compactMap(\.first)
+        var names: [String] = []
+        for id in Set(changed).sorted() {
+            let owner = list?.first { ($0[kCGWindowNumber as String] as? NSNumber)?.intValue == id }?[kCGWindowOwnerName as String] as? String
+            let name = owner ?? "closed"
+            if !names.contains(name) { names.append(name) }
+        }
+        return names.prefix(4).joined(separator: ", ") + (names.count > 4 ? ", …" : "")
+    }
     /// How far below the band a window still tints it: the glass blur
     /// and a window's shadow both reach a few dozen points.
     static let backdropReach: CGFloat = 48

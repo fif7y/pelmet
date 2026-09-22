@@ -179,6 +179,7 @@ final class MenuBarBandMonitor {
         if inZone, !pointerInHoverZone {
             pointerInHoverZone = true
             PelmetLog.log("band: hover zone entered at x=\(Int(location.x)) (mid \(Int(screen?.frame.midX ?? -1)))")
+            appState.pointerEnteredHoverZone()
             // A synthetic placement warps the pointer through the band — a
             // hover reveal mid-drag injects a reveal/conceal cycle under the
             // running drag (frames shift mid-measurement; seen live during

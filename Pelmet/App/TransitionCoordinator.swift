@@ -53,16 +53,25 @@ final class TransitionCoordinator {
     /// The bar is glass — a window parked under it tints the pictures, and
     /// a window that then moves leaves its edge baked into every reveal
     /// (#33). Checked off the reveal path, on the signals that end a
-    /// window move; a changed backdrop drops the stale pictures and retakes
-    /// the empty-bar one at once when the bar is concealed and at rest.
+    /// window move; a changed backdrop drops the stale pictures. The
+    /// empty-bar one is retaken on approach, not at once (#49): a window
+    /// flickering in and out of the zone on every mouse-up retook it ~40
+    /// times per reveal on a four-display Mac, every capture lighting the
+    /// screen-recording indicator, while the picture is only ever read at
+    /// a reveal. The pointer entering the hover zone is the first sign one
+    /// is coming; the reveal itself starts the capture when nothing did.
     private lazy var backdropWatch = BackdropWatch { [weak self] in self?.backdropMayHaveChanged() }
     /// `ConcealGhostOverlay.backdropSignature` at the time each picture was taken.
     private var revealCoverBackdrop: [Int] = []
     private var revealedStripBackdrop: [Int] = []
+    /// The cover was dropped for a changed backdrop and not retaken yet.
+    private var revealCoverWanted = false
+    private var precaptureInFlight = false
 
     private func backdropMayHaveChanged() {
         guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty else { return }
-        let now = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
+        let list = ConcealGhostOverlay.onScreenWindows()
+        let now = ConcealGhostOverlay.backdropSignature(of: revealCoverRect, in: list)
         let coverStale = !revealCoverSnapshot.isEmpty && now != revealCoverBackdrop
         let stripStale = !revealedStripSnapshot.isEmpty && revealedStripBackground.isEmpty && now != revealedStripBackdrop
         guard coverStale || stripStale else { return }
@@ -75,7 +84,8 @@ final class TransitionCoordinator {
         // the icons cut out against that empty bar are true whatever moved
         // beneath, and the next reveal composites them over the fresh cover.
         let stripCutOut = stripStale && !revealCoverSnapshot.isEmpty && revealCoverBackdrop == revealedStripBackdrop
-        PelmetLog.log("backdrop: changed under the bar (\(now.count / 5) window(s)) — cover \(coverStale ? (concealed ? "dropped, retaking" : "dropped") : "kept"), finished \(stripStale ? (stripCutOut ? "kept as a cut-out" : "dropped") : "kept")")
+        let movers = ConcealGhostOverlay.backdropMovers(from: coverStale ? revealCoverBackdrop : revealedStripBackdrop, to: now, in: list)
+        PelmetLog.log("backdrop: changed under the bar (\(now.count / 5) window(s): \(movers)) — cover \(coverStale ? (concealed ? "dropped, retake on approach" : "dropped") : "kept"), finished \(stripStale ? (stripCutOut ? "kept as a cut-out" : "dropped") : "kept")")
         if stripCutOut {
             revealedStripBackground = revealCoverSnapshot
         } else if stripStale {
@@ -83,8 +93,36 @@ final class TransitionCoordinator {
         }
         if coverStale {
             revealCoverSnapshot = []
-            if concealed { scheduleRevealCoverPrecapture() }
+            revealCoverWanted = concealed
         }
+    }
+
+    /// The pointer entered the hover zone: a reveal is likely within the
+    /// hover delay or a click. Retake the dropped cover now so it is ready
+    /// (~90ms on Gab's Mac, 150–466ms on #49's), and only now.
+    func pointerApproachedBar() {
+        guard revealCoverWanted, !precaptureInFlight, revealCoverSnapshot.isEmpty,
+              appState?.currentRevealedSections.isEmpty == true else { return }
+        PelmetLog.log("cover: retaking on approach")
+        scheduleRevealCoverPrecapture(afterConceal: false)
+    }
+
+    /// A reveal with the cover still wanted: start the capture if nothing
+    /// did (the same live capture the no-picture path pays, minus the
+    /// Smooth exemption it keeps), then wait for whichever is in flight —
+    /// bounded, so a slow capture degrades to the uncovered reveal it
+    /// always was rather than holding the bar.
+    private func awaitCoverRetake(style: RevealAnimation) async {
+        guard revealCoverSnapshot.isEmpty, precaptureInFlight || (revealCoverWanted && style != .smooth) else { return }
+        if !precaptureInFlight {
+            PelmetLog.log("cover: retaking at the reveal")
+            scheduleRevealCoverPrecapture(afterConceal: false)
+        }
+        let started = Date()
+        while precaptureInFlight, Date().timeIntervalSince(started) < AppTiming.coverRetakeWait {
+            try? await Task.sleep(for: .milliseconds(15))
+        }
+        PelmetLog.log("cover: waited \(Int(-started.timeIntervalSinceNow * 1000))ms for the retake — \(revealCoverSnapshot.isEmpty ? "not ready" : "ready")")
     }
 
     /// Settle re-entry into AppState (rehide machine, settle catch-up,
@@ -168,6 +206,7 @@ final class TransitionCoordinator {
             // agent's slide shows.
             var cover: ConcealGhostOverlay.GhostSet?
             var finished: ConcealGhostOverlay.GhostSet?
+            await awaitCoverRetake(style: style)
             let emptyBar = freshEmptyBarSnapshots()
             let coverSource = !emptyBar.isEmpty ? "precaptured" : style != .smooth ? "live capture" : "none"
             if !emptyBar.isEmpty {
@@ -633,17 +672,22 @@ final class TransitionCoordinator {
     /// the next conceal's cover/cut-out reference for every style — capture
     /// it now. One in flight at a time: rapid conceal cycles otherwise stack
     /// overlapping 3s polls, each ending in an SCK capture.
-    private func scheduleRevealCoverPrecapture() {
+    /// `afterConceal` false: a retake of a bar long at rest (#49) — no fade
+    /// to clear, and the pointer is already on its way.
+    private func scheduleRevealCoverPrecapture(afterConceal: Bool = true) {
         precaptureTask?.cancel()
+        precaptureInFlight = true
         precaptureTask = Task { @MainActor in
+            defer { precaptureInFlight = false }
             guard let appState else { return }
-            await appState.waitUntilQuiesced(interval: 0.5, deadline: 3, poll: .milliseconds(200))
+            await appState.waitUntilQuiesced(interval: 0.5, deadline: 3, poll: .milliseconds(afterConceal ? 200 : 30))
             // The agent's own conceal fade must not bake into the snapshot.
-            try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
+            if afterConceal { try? await Task.sleep(for: AppTiming.precaptureGhostClearance) }
             guard !Task.isCancelled, appState.currentRevealedSections.isEmpty else { return }
             revealCoverActiveDisplay = appState.lastMouseDownDisplay ?? Self.displayUnderPointer
             revealCoverBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
             revealCoverSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
+            revealCoverWanted = false
         }
     }
 
