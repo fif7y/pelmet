@@ -210,23 +210,15 @@ final class TrayController {
         let item = snap.items.first { $0.id.sectionKey == key && $0.frame != nil }
         var shown = false
         if let item {
-            // AX first (no pointer involved), a shielded HID click when
-            // nothing shows: Apple's hosts and Control Center's modules
-            // take the press and do nothing with it.
+            // The real click, always: an AX press left a SwiftUI menu bar
+            // extra's button stuck highlighted (a capsule behind the glyph
+            // in the bar, surviving relaunches — Passwords, Weather and a
+            // third-party extra, 2026-09-21), and Apple's hosts and the
+            // modules took it and did nothing.
             let before = TrayPress.elevatedWindowCount()
-            // Apple's hosts and the system modules take the AX press and do
-            // nothing with it (Passwords, Weather, Sound): straight to the
-            // click for them.
-            let apple = item.id.isSystemModule || (item.id.bundleID?.hasPrefix("com.apple.") ?? true)
-            let pressed = !apple && item.pid > 0 && TrayPress.press(item)
-            if pressed { shown = await Self.somethingShown(over: before) }
-            var clicked = false
-            if !shown {
-                clicked = true
-                await TrayPress.click(item)
-                shown = await Self.somethingShown(over: before)
-            }
-            PelmetLog.log("tray: press \(key.rawValue) → \(pressed ? "pressed" : "AX skipped")\(clicked ? ", clicked" : ""), \(shown ? "showed something" : "showed nothing")\(toggle == nil ? "" : " (« expanded)"), \(Int(-started.timeIntervalSinceNow * 1000))ms")
+            await TrayPress.click(item)
+            shown = await Self.somethingShown(over: before)
+            PelmetLog.log("tray: press \(key.rawValue) → clicked, \(shown ? "showed something" : "showed nothing")\(toggle == nil ? "" : " (« expanded)"), \(Int(-started.timeIntervalSinceNow * 1000))ms")
             if shown {
                 // Whatever showed keeps the item revealed; the conceal
                 // follows its dismissal.
