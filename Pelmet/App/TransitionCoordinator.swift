@@ -81,7 +81,14 @@ final class TransitionCoordinator {
     /// display hold. The entrance blink swaps to it once the panel has slid
     /// in: from then on nothing moves under the bar, and a still of that
     /// state is exact (#51).
-    private var underPanelPicture: (snapshot: [ConcealGhostOverlay.BarSnapshot], backdrop: [Int], display: CGDirectDisplayID?)?
+    /// One per bar state: concealed, and each revealed set of sections
+    /// (with the hidden section's content), so a click with the icons out
+    /// wipes in a picture of the bar with the icons out (Gab, 17:36).
+    private var underPanelPictures: [String: (snapshot: [ConcealGhostOverlay.BarSnapshot], backdrop: [Int], display: CGDirectDisplayID?)] = [:]
+    private var barStateKey: String {
+        let sections = (appState?.currentRevealedSections ?? []).map(\.rawValue).sorted().joined(separator: ",")
+        return sections + "|" + hiddenSectionSignature.map(\.rawValue).joined(separator: ",")
+    }
 
     private func backdropMayHaveChanged() {
         guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty || parkedCover != nil else { return }
@@ -125,8 +132,8 @@ final class TransitionCoordinator {
     /// One of Pelmet's own items drew a different glyph: the picture of
     /// the bar under the panel shows the old one over the visible cluster.
     func ownItemsRedrew() {
-        guard underPanelPicture != nil else { return }
-        underPanelPicture = nil
+        guard !underPanelPictures.isEmpty else { return }
+        underPanelPictures.removeAll()
         PelmetLog.log("clock: under-panel picture dropped — an own item redrew")
     }
 
@@ -622,18 +629,16 @@ final class TransitionCoordinator {
     /// to the lift, so the still is exact. No picture yet, or a stale one:
     /// the bare cover stays (today's look) and the lift takes a new one.
     func swapBlinkCoverUnderPanel(_ cover: BlinkCover) {
-        // The picture is of the concealed bar: over a revealed one it
-        // painted the hidden icons away (Gab, 17:28).
-        guard appState?.currentRevealedSections.isEmpty == true else {
-            PelmetLog.log("clock: bar revealed, no under-panel wipe")
-            return
-        }
-        guard let appState, let kept = underPanelPicture, let first = kept.snapshot.first,
+        // The picture must be of the bar in the state it is in now: a
+        // concealed-bar picture over a revealed bar painted the icons away
+        // (Gab, 17:28).
+        let key = barStateKey
+        guard let appState, let kept = underPanelPictures[key], let first = kept.snapshot.first,
               Date().timeIntervalSince(first.takenAt) < AppTiming.underPanelPictureFreshness,
               kept.display == appState.lastMouseDownDisplay,
               kept.backdrop == underPanelSignature else {
-            PelmetLog.log("clock: no under-panel picture for this bar, bare cover stays")
-            underPanelPicture = nil
+            PelmetLog.log("clock: no under-panel picture for this bar (\(appState?.currentRevealedSections.isEmpty == false ? "revealed" : "concealed")), bare cover stays")
+            underPanelPictures[key] = nil
             return
         }
         // A picture up to 4pt short at the clock end still serves: the
@@ -677,9 +682,10 @@ final class TransitionCoordinator {
     /// the click that closes the panel, a picture a few seconds old is
     /// worth one capture.
     func takeUnderPanelPicture(span: ClosedRange<CGFloat>? = nil, maxAge: TimeInterval = AppTiming.underPanelPictureFreshness) async {
-        guard let appState, appState.currentRevealedSections.isEmpty, ClockClickRelay.notificationCenterIsOpen() else { return }
+        guard let appState, ClockClickRelay.notificationCenterIsOpen() else { return }
+        let key = barStateKey
         let signature = underPanelSignature
-        if let kept = underPanelPicture, kept.backdrop == signature, kept.display == appState.lastMouseDownDisplay,
+        if let kept = underPanelPictures[key], kept.backdrop == signature, kept.display == appState.lastMouseDownDisplay,
            let first = kept.snapshot.first, Date().timeIntervalSince(first.takenAt) < maxAge { return }
         // The wide rect the idle picture uses (reveal ∪ blink), so any
         // later blink span crops out of it whatever the concealed count —
@@ -694,7 +700,9 @@ final class TransitionCoordinator {
         let snaps = await ConcealGhostOverlay.snapshotSet(of: rect)
         guard !snaps.isEmpty else { return }
         let span = span ?? (rect.minX...rect.maxX)
-        underPanelPicture = (snaps, signature, appState.lastMouseDownDisplay)
+        // The bar must still be in the state the key names.
+        guard key == barStateKey else { return }
+        underPanelPictures[key] = (snaps, signature, appState.lastMouseDownDisplay)
         let probe: ClosedRange<CGFloat> = (span.upperBound - 200)...(span.upperBound - 20)
         let under = snaps.first.map { ConcealGhostOverlay.meanLuma($0, primaryX: probe) } ?? -1
         let bare = revealCoverSnapshot.first.map { ConcealGhostOverlay.meanLuma($0, primaryX: probe) } ?? -1
