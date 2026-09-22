@@ -772,11 +772,18 @@ final class AppState {
             // through AX so the pointer never moves; the click is the
             // fallback. The element is resolved now, on a static bar.
             let clockElement = point == pointer ? nil : ClockClickRelay.clockElement(at: point)
+            // An open panel closes on the physical click itself (a click
+            // outside it), on the button's release (60fps, 2026-09-22): the
+            // cover's shade front starts there, not at the relay's press.
+            let panelWasOpen = ClockClickRelay.notificationCenterIsOpen()
             let cover = await transitions.beginBarCover()
             // The click opens (or closes) Notification Center under the
             // cover: shade the picture with the panel (#51).
             cover?.followPanelShade { ClockClickRelay.notificationCenterIsOpen() }
-            let panelWasOpen = ClockClickRelay.notificationCenterIsOpen()
+            if panelWasOpen {
+                await ClockClickRelay.waitForButtonRelease()
+                cover?.panelWillClose()
+            }
             let blinked = await engine.beginClockBlink()
             if let clockElement {
                 // Only once the physical button is up: pressed while the
@@ -791,9 +798,7 @@ final class AppState {
                 var opened = false
                 for attempt in 1...2 where !opened {
                     let pressed = ClockClickRelay.press(clockElement)
-                    // A press on an open panel closes it, and its slide
-                    // starts now: the cover's shade follows from here.
-                    if pressed, panelWasOpen { cover?.panelWillClose(); break }
+                    if pressed, panelWasOpen { break }
                     // Poll for the panel rather than sleeping the whole
                     // verify budget: it shows well inside it, and every ms
                     // here is picture time on the bar (#46).
@@ -808,7 +813,6 @@ final class AppState {
             } else {
                 if point != pointer { PelmetLog.log("clock: dot click - no clock element under the target, replaying the click") }
                 ClockClickRelay.postClick(at: point, pointer: pointer)
-                if panelWasOpen { cover?.panelWillClose() }
             }
             guard blinked else { cover?.dismiss(); return }
             try? await Task.sleep(for: AppTiming.clockBlinkReacquire)

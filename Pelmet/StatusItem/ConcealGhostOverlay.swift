@@ -86,8 +86,8 @@ final class ConcealGhostOverlay {
         /// The click that closes the panel just went through: its slide
         /// starts now, while its window stays listed until the slide has
         /// ended (~640ms on Gab's Mac, past the cover's lift).
-        func panelWillClose() {
-            for overlay in overlays { overlay.panelWillClose() }
+        func panelWillClose(elapsed: TimeInterval = 0) {
+            for overlay in overlays { overlay.panelWillClose(elapsed: elapsed) }
         }
     }
 
@@ -258,7 +258,7 @@ final class ConcealGhostOverlay {
     private var shadeLayer: CALayer?
     private var shadeFollower: Task<Void, Never>?
     private var panelOpen = false
-    private var panelShadeTransition: ((Bool) -> Void)?
+    private var panelShadeTransition: ((Bool, TimeInterval) -> Void)?
 
     /// Notification Center's panel is a window BELOW the bar (layer 21):
     /// it slides under the glass and the bar over it darkens, a picture of
@@ -330,8 +330,9 @@ final class ConcealGhostOverlay {
         host.addSublayer(shade)
         CATransaction.commit()
         shadeLayer = shade
-        panelShadeTransition = { now in
+        panelShadeTransition = { now, elapsed in
             let anim = CABasicAnimation(keyPath: "transform.translation.x")
+            anim.timeOffset = elapsed
             anim.fromValue = ramp.presentation()?.value(forKeyPath: "transform.translation.x") ?? translation(panelOpen: !now)
             anim.toValue = translation(panelOpen: now)
             anim.duration = now ? Self.panelSlideIn : Self.panelSlideOut
@@ -355,17 +356,18 @@ final class ConcealGhostOverlay {
         }
     }
 
-    func panelShade(open: Bool) {
+    func panelShade(open: Bool, elapsed: TimeInterval = 0) {
         guard !finished, open != panelOpen, let transition = panelShadeTransition else { return }
         panelOpen = open
-        transition(open)
+        transition(open, elapsed)
     }
 
     /// The window list still says open for the whole exit slide: stop
     /// reading it, the panel will not come back within this cover's life.
-    func panelWillClose() {
+    /// `elapsed`: how far the slide already is (it began at the click).
+    func panelWillClose(elapsed: TimeInterval = 0) {
         shadeFollower?.cancel()
-        panelShade(open: false)
+        panelShade(open: false, elapsed: elapsed)
     }
 
     /// A captured strip image ready to float — pre-captured at conceal settle
