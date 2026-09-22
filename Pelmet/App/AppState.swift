@@ -1669,7 +1669,7 @@ final class AppState {
 
     /// Pelmet-owned items hide by their OWN visibility, not the assertion —
     /// asserting away Pelmet's bundle would take the chevron too.
-    var revealedSectionsForExtras: Set<PelmetCore.Section> { currentRevealedSections }
+    var revealedSectionsForExtras: Set<PelmetCore.Section> { barRevealedSections }
 
     /// macOS force-shows its camera pill through the assertion while the
     /// camera is live; Pelmet's indicator defers to it to avoid duplication.
