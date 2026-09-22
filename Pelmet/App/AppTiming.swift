@@ -148,9 +148,9 @@ enum AppTiming {
     /// the agent's entrance draws a capsule behind an arriving item for
     /// ~450ms past the swap (three cells came out boxed at 120ms).
     static let trayRelaySettle: Duration = .milliseconds(520)
-    /// A press re-pictures its item only when the picture is older than
-    /// this; a fresh one is pressed without a capture.
-    static let trayPictureFreshness: TimeInterval = 120
+    /// The tray re-pictures its section on open once a picture is older
+    /// than this (a badge, a temperature); a press never pictures.
+    static let trayPictureFreshness: TimeInterval = 600
     /// The rehide countdown never runs shorter than this while the tray is
     /// up: the pointer has to leave the band to reach it.
     static let trayReachGrace: TimeInterval = 0.8

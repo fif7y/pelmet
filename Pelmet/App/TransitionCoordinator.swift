@@ -195,7 +195,7 @@ final class TransitionCoordinator {
         }
         let rect = CGRect(x: minX - 8, y: band.minY, width: maxX - minX + 16, height: band.height)
         let strip = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
-        guard let cut = ConcealGhostOverlay.iconsOnly(strip, background: emptyBar, key: .tray) else { return 0 }
+        guard let cut = ConcealGhostOverlay.iconsOnly(strip, background: emptyBar) else { return 0 }
         let within = (bg.windowFrame.minX + ConcealGhostOverlay.capturePadding)...(bg.windowFrame.maxX - ConcealGhostOverlay.capturePadding)
         return pictures.harvest(cut, items: items, within: within)
     }

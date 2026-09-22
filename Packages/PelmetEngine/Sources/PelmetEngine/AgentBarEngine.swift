@@ -169,9 +169,18 @@ public actor AgentBarEngine: MenuBarEngine {
         await converge()
     }
 
+    /// `quiet`: the reflow companion is not fired — the floating bar
+    /// pictures a section beneath a cover and Pelmet's own extras must
+    /// stay where they are.
     public func reveal(_ sections: Set<Section>) async {
+        await reveal(sections, quiet: false)
+    }
+
+    public func reveal(_ sections: Set<Section>, quiet: Bool) async {
         revealedSections.formUnion(sections)
+        companionMuted = quiet
         await converge()
+        companionMuted = false
     }
 
     /// Reveal these items only: their bundles leave the concealable set,
@@ -183,11 +192,15 @@ public actor AgentBarEngine: MenuBarEngine {
         companionMuted = false
     }
 
-    public func conceal() async {
+    /// `quiet`: see `reveal(_:quiet:)`. An item-only reveal's conceal is
+    /// always quiet — no section changed.
+    public func conceal() async { await conceal(quiet: false) }
+
+    public func conceal(quiet: Bool) async {
         let itemOnly = revealedSections.isEmpty && !revealedItems.isEmpty
         revealedSections = []
         revealedItems = []
-        companionMuted = itemOnly
+        companionMuted = quiet || itemOnly
         await converge()
         companionMuted = false
     }

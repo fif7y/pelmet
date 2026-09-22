@@ -90,8 +90,11 @@ final class TrayController {
         PelmetLog.log("tray: cells " + cells.map { "\($0.key.rawValue.split(separator: ":").last ?? "?")=\(Int($0.size.width))×\(Int($0.size.height))\($0.isPicture ? "" : " icon")" }.joined(separator: " "))
         PelmetLog.log("tray: open \(sections.map(\.rawValue).sorted()) — \(cells.count) cell(s), \(cells.count - missing.count) picture(s), \(placement.position.rawValue) on display \(screen.directDisplayID ?? 0)")
         onOpened?()
-        if !missing.isEmpty, ScreenRecordingAccess.isGranted {
-            picturePass(reason: "\(missing.count) missing")
+        let stale = cells.contains { cell in
+            pictures.picture(for: cell.key).map { Date().timeIntervalSince($0.takenAt) > AppTiming.trayPictureFreshness } ?? false
+        }
+        if !missing.isEmpty || stale, ScreenRecordingAccess.isGranted {
+            picturePass(reason: missing.isEmpty ? "stale" : "\(missing.count) missing")
         }
     }
 
@@ -190,8 +193,6 @@ final class TrayController {
         frozen = true
         defer { frozen = false }
         let started = Date()
-        let stale = pictures.picture(for: key).map { Date().timeIntervalSince($0.takenAt) > AppTiming.trayPictureFreshness } ?? true
-        let background = stale ? await appState.transitions.trayBackground() : []
         let cover = await appState.transitions.beginBarCover(label: "tray")
         await appState.engine.reveal(items: [key])
         appState.updateSnapshot(await appState.engine.snapshot())
@@ -205,11 +206,6 @@ final class TrayController {
                 try? await Task.sleep(for: AppTiming.overflowExpandSettle)
                 snap = await appState.engine.freshSnapshot()
             }
-        }
-        var got = 0
-        if stale {
-            let mine = snap.items.filter { $0.id.sectionKey == key }
-            got = await appState.transitions.harvestTrayPictures(into: pictures, items: mine, background: background)
         }
         let item = snap.items.first { $0.id.sectionKey == key && $0.frame != nil }
         var shown = false
@@ -230,7 +226,7 @@ final class TrayController {
                 await TrayPress.click(item)
                 shown = await Self.somethingShown(over: before)
             }
-            PelmetLog.log("tray: press \(key.rawValue) → \(pressed ? "pressed" : "AX skipped")\(clicked ? ", clicked" : ""), \(shown ? "showed something" : "showed nothing")\(toggle == nil ? "" : " (« expanded)"), \(got) picture(s), \(Int(-started.timeIntervalSinceNow * 1000))ms")
+            PelmetLog.log("tray: press \(key.rawValue) → \(pressed ? "pressed" : "AX skipped")\(clicked ? ", clicked" : ""), \(shown ? "showed something" : "showed nothing")\(toggle == nil ? "" : " (« expanded)"), \(Int(-started.timeIntervalSinceNow * 1000))ms")
             if shown {
                 // Whatever showed keeps the item revealed; the conceal
                 // follows its dismissal.
@@ -248,8 +244,6 @@ final class TrayController {
         await appState.engine.conceal()
         appState.updateSnapshot(await appState.engine.snapshot())
         if let cover { appState.transitions.endBarCover(cover, label: "tray") }
-        frozen = false
-        if got > 0 { refresh() }
     }
 
     /// Polls for an elevated window beyond `before` within the menu wait.
@@ -274,16 +268,17 @@ final class TrayController {
             let sections = self.sections
             let background = await appState.transitions.trayBackground()
             let cover = await appState.transitions.beginBarCover(label: "tray")
-            // The section's items, not the section: no section changes, so
-            // Pelmet's own extras stay put and nothing else reflows.
-            await appState.engine.reveal(items: Set(cellSections.keys))
+            // The whole section, companion muted: Pelmet's own extras stay
+            // put. (Item-by-item, SwiftUI's menu bar extras came back with
+            // a capsule behind their glyph that baked into the pictures.)
+            await appState.engine.reveal(sections, quiet: true)
             appState.updateSnapshot(await appState.engine.snapshot())
             await appState.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
             try? await Task.sleep(for: AppTiming.trayRelaySettle)
             let snap = await appState.engine.freshSnapshot()
             let inSection = snap.items.filter { sections.contains(appState.settings.sectionModel.section(of: $0.id)) }
             let got = Task.isCancelled ? 0 : await appState.transitions.harvestTrayPictures(into: pictures, items: inSection, background: background)
-            await appState.engine.conceal()
+            await appState.engine.conceal(quiet: true)
             appState.updateSnapshot(await appState.engine.snapshot())
             if let cover { appState.transitions.endBarCover(cover, label: "tray") }
             PelmetLog.log("tray: picture pass (\(reason)) → \(got) picture(s) in \(Int(-started.timeIntervalSinceNow * 1000))ms")
