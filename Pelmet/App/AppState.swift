@@ -791,7 +791,7 @@ final class AppState {
                 // The panel is open and the bar quiet: the best moment to
                 // refresh the picture of the bar under it, if the kept one
                 // no longer holds (a window moved), before the panel goes.
-                await transitions.takeUnderPanelPicture()
+                await transitions.takeUnderPanelPicture(maxAge: AppTiming.underPanelPictureRefreshAtExit)
                 await ClockClickRelay.waitForButtonRelease()
                 ClockClickRelay.postClick(at: point, pointer: pointer)
                 panelOpenedAt = .distantPast

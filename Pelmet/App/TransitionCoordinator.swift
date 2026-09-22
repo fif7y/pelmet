@@ -639,11 +639,17 @@ final class TransitionCoordinator {
     /// After an entrance blink has lifted with the panel open and the bar
     /// quiet: keep a picture of the bar under the panel for the next one,
     /// unless the kept one still holds (one capture per changed bar).
-    func takeUnderPanelPicture(span: ClosedRange<CGFloat>? = nil) async {
+    /// `maxAge`: a kept picture older than this is retaken even if its
+    /// signature holds. The glass blurs the panel's CONTENT, which no
+    /// signature sees (a notification card against "No recent
+    /// notifications" reads darker or lighter, Gab 2026-09-22 16:58): at
+    /// the click that closes the panel, a picture a few seconds old is
+    /// worth one capture.
+    func takeUnderPanelPicture(span: ClosedRange<CGFloat>? = nil, maxAge: TimeInterval = AppTiming.underPanelPictureFreshness) async {
         guard let appState, appState.currentRevealedSections.isEmpty, ClockClickRelay.notificationCenterIsOpen() else { return }
         let signature = underPanelSignature
         if let kept = underPanelPicture, kept.backdrop == signature, kept.display == appState.lastMouseDownDisplay,
-           let first = kept.snapshot.first, Date().timeIntervalSince(first.takenAt) < AppTiming.underPanelPictureFreshness { return }
+           let first = kept.snapshot.first, Date().timeIntervalSince(first.takenAt) < maxAge { return }
         // The wide rect the idle picture uses (reveal ∪ blink), so any
         // later blink span crops out of it whatever the concealed count —
         // to the clock as it sits NOW: under the open panel it is 3pt
