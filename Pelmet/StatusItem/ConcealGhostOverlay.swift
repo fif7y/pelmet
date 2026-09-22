@@ -453,6 +453,71 @@ final class ConcealGhostOverlay {
         }
     }
 
+    /// The same pictures narrowed to `span` (absolute x in points, primary
+    /// coordinates — every other display holds the right-anchored
+    /// translation, as in `snapshotSet`), padded the way a capture of that
+    /// span would have been so the background stays continuous.
+    ///
+    /// All or nothing: a picture that does not reach both ends of the span
+    /// is dropped and the caller captures live. A cover with a gap at one
+    /// end shows the round trip it exists to hide.
+    static func cropped(_ snaps: [BarSnapshot], toPrimaryX span: ClosedRange<CGFloat>) -> [BarSnapshot] {
+        guard !snaps.isEmpty, span.upperBound - span.lowerBound > 8,
+              let primaryMaxX = NSScreen.screens.first?.frame.maxX
+        else { return [] }
+        var out: [BarSnapshot] = []
+        for snap in snaps {
+            let frame = snap.windowFrame
+            guard let screen = NSScreen.screens.first(where: {
+                $0.frame.intersects(frame)
+            }) else { return [] }
+            let shift = screen.frame.maxX - primaryMaxX
+            guard let columns = cropColumns(
+                span: (span.lowerBound + shift)...(span.upperBound + shift),
+                frame: frame, imageWidth: snap.image.width
+            ) else { return [] }
+            let scale = CGFloat(snap.image.width) / frame.width
+            guard let image = snap.image.cropping(to: CGRect(
+                x: columns.lowerBound, y: 0,
+                width: columns.count, height: snap.image.height
+            )) else { return [] }
+            out.append(BarSnapshot(
+                image: image,
+                windowFrame: NSRect(
+                    x: frame.minX + CGFloat(columns.lowerBound) / scale, y: frame.minY,
+                    width: CGFloat(columns.count) / scale, height: frame.height
+                ),
+                takenAt: snap.takenAt
+            ))
+        }
+        return out
+    }
+
+    /// The pixel columns of `span` inside a picture that floats at `frame`,
+    /// padded the way `snapshotSet` pads a capture of that span. Nil when
+    /// the picture does not reach both ends, or when what is left is too
+    /// narrow to float. Pure geometry, so the crop is testable without a
+    /// display (see `BarSnapshotCropTests`).
+    static func cropColumns(span: ClosedRange<CGFloat>, frame: NSRect, imageWidth: Int) -> Range<Int>? {
+        guard frame.width > 0, imageWidth > 0 else { return nil }
+        // The leading side is clamped, not required: `snapshotSet` stops a
+        // capture at the notch and the display edge, and a cover rect that
+        // budgets for icons sliding in routinely starts off-screen (a blink
+        // cover measured -430 on a bar starting at 0). A live capture of
+        // that span would have been cut at the same place, so a picture
+        // that starts there is not short — it is the same picture.
+        let wantMinX = max(span.lowerBound - capturePadding, frame.minX)
+        // The trailing side is required: it lands just short of the clock,
+        // and a picture cut before it would leave the clock uncovered.
+        let wantMaxX = span.upperBound + capturePadding
+        guard wantMaxX <= frame.maxX + 0.5 else { return nil }
+        let scale = CGFloat(imageWidth) / frame.width
+        let x0 = max(0, Int(((wantMinX - frame.minX) * scale).rounded()))
+        let x1 = min(imageWidth, Int(((wantMaxX - frame.minX) * scale).rounded()))
+        guard x1 - x0 > 8 else { return nil }
+        return x0..<x1
+    }
+
     /// Snapshots on other displays are the primary strip translated
     /// right-anchored (snapshotSet); `keep` is given in primary coordinates.
     /// The primary strip is the one on the primary display — not the one
