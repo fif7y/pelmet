@@ -142,7 +142,7 @@ enum AppTiming {
     /// Relay: after the press, how long an item gets to show a menu or
     /// panel before the section conceals again; and how long an open menu
     /// keeps the section revealed beneath the cover.
-    static let trayRelayMenuWait: TimeInterval = 1.5
+    static let trayRelayMenuWait: TimeInterval = 3
     static let trayRelayMenuCap: TimeInterval = 60
     /// When the only sign the press showed something is the app coming to
     /// the front, the item stays revealed at most this long.

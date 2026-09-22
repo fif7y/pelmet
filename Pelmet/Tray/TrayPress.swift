@@ -63,9 +63,10 @@ enum TrayPress {
                   let y = bounds["Y"], let width = bounds["Width"], let height = bounds["Height"]
             else { return false }
             if layer > 0, layer != 25 { return true }
-            // A popover at the normal level (Weather's): hangs right under
-            // the bar and is nowhere near a document window's width.
-            return layer == 0 && height > 40 && width < screenWidth * 0.6 && abs(y - barBottom) < 16
+            // A popover at the normal level (Weather's): its top sits
+            // between the bar and 60pt below it (its bounds carry a
+            // margin), and it is nowhere near a document window's width.
+            return layer == 0 && height > 40 && width < screenWidth * 0.6 && y >= 0 && y <= barBottom + 60
         }.count
     }
 
