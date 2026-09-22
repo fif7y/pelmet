@@ -535,8 +535,11 @@ final class TransitionCoordinator {
         fileprivate var beneath: [ConcealGhostOverlay.GhostSet] = []
         fileprivate let span: ClosedRange<CGFloat>
         fileprivate let safety: TimeInterval
-        fileprivate init(_ cover: ConcealGhostOverlay.GhostSet, span: ClosedRange<CGFloat>, safety: TimeInterval) {
-            current = cover; self.span = span; self.safety = safety
+        /// What the bare cover shows: the stand-in under-panel still is
+        /// made from it when no real one exists yet.
+        fileprivate var pictures: [ConcealGhostOverlay.BarSnapshot] = []
+        fileprivate init(_ cover: ConcealGhostOverlay.GhostSet, span: ClosedRange<CGFloat>, safety: TimeInterval, pictures: [ConcealGhostOverlay.BarSnapshot] = []) {
+            current = cover; self.span = span; self.safety = safety; self.pictures = pictures
         }
         func dismiss() {
             current.dismiss()
@@ -584,7 +587,7 @@ final class TransitionCoordinator {
             }
             if let cover = ConcealGhostOverlay.begin(from: reusable, safety: safety) {
                 PelmetLog.log("\(label): cover up from the idle picture, no capture — ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
-                return BlinkCover(cover, span: span, safety: safety)
+                return BlinkCover(cover, span: span, safety: safety, pictures: reusable)
             }
         }
         // The capture itself lights the screen-capture indicator at the
@@ -614,7 +617,7 @@ final class TransitionCoordinator {
         }
         let cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
         PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(geometry.minX))..\(Int(geometry.endX)) anchor \(Int(geometry.anchorMinX))→\(Int(anchorNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
-        return cover.map { BlinkCover($0, span: geometry.minX...geometry.endX, safety: safety) }
+        return cover.map { BlinkCover($0, span: geometry.minX...geometry.endX, safety: safety, pictures: snaps) }
     }
 
     /// The signature the under-panel picture is kept under: the backdrop
@@ -637,8 +640,16 @@ final class TransitionCoordinator {
               Date().timeIntervalSince(first.takenAt) < AppTiming.underPanelPictureFreshness,
               kept.display == appState.lastMouseDownDisplay,
               kept.backdrop == underPanelSignature else {
-            PelmetLog.log("clock: no under-panel picture for this bar (\(appState?.currentRevealedSections.isEmpty == false ? "revealed" : "concealed")), bare cover stays")
             underPanelPictures[key] = nil
+            // No real picture of this bar under the panel yet (first click
+            // in this state): the bare picture with the panel's measured
+            // shade over it stands in, wiped in the same way.
+            guard !cover.pictures.isEmpty, let standIn = ConcealGhostOverlay.begin(from: cover.pictures, safety: cover.safety) else {
+                PelmetLog.log("clock: no under-panel picture and no bare picture, bare cover stays")
+                return
+            }
+            standIn.addPanelShade()
+            wipe(standIn, over: cover, what: "stand-in (measured shade)")
             return
         }
         // A picture up to 4pt short at the clock end still serves: the
@@ -658,6 +669,10 @@ final class TransitionCoordinator {
         // slides under the bar (Gab's design, 2026-09-22): the still is the
         // exact look, the mask is the motion. A hard swap read as a step
         // and a crossfade as a fade; neither moved.
+        wipe(under, over: cover, what: "under-panel picture")
+    }
+
+    private func wipe(_ under: ConcealGhostOverlay.GhostSet, over cover: BlinkCover, what: String) {
         cover.beneath.append(cover.current)
         cover.current = under
         // The panel's own trajectory, frame by frame (inset of its leading
@@ -669,7 +684,7 @@ final class TransitionCoordinator {
         let delay = (defaults.object(forKey: "pelmet.wipe.delayMs") as? Double).map { $0 / 1000 } ?? AppTiming.panelEntranceDelay
         let edge = (defaults.object(forKey: "pelmet.wipe.edge") as? Double).map { CGFloat($0) } ?? AppTiming.panelEdgeSoftness
         under.wipeInFromRight(insets: insets, frame: 1.0 / 60, delay: delay, edge: edge)
-        PelmetLog.log("clock: under-panel picture wiping in over the cover (\(insets.count) frames, delay \(Int(delay * 1000))ms)")
+        PelmetLog.log("clock: \(what) wiping in over the cover (\(insets.count) frames, delay \(Int(delay * 1000))ms)")
     }
 
     /// After an entrance blink has lifted with the panel open and the bar
@@ -825,6 +840,10 @@ final class TransitionCoordinator {
     /// reports the bar changed (an icon added, removed or reordered would
     /// paint a stale picture).
     private var revealedStripSnapshot: [ConcealGhostOverlay.BarSnapshot] = []
+    /// Notification Center's panel was under the bar for the finished
+    /// picture: only true while it still is, and the other way round (a
+    /// picture from under the panel darkened reveals after it closed).
+    private var revealedStripUnderPanel = false
     /// The empty-bar picture the finished picture sits on, kept only once
     /// the backdrop changed under both (see backdropMayHaveChanged): the
     /// reveal then cuts the icons out against it. Empty otherwise.
@@ -873,6 +892,9 @@ final class TransitionCoordinator {
             return "hidden section changed since the picture — was \(revealedStripSignature.map(\.rawValue)) now \(hiddenSectionSignature.map(\.rawValue))"
         }
         guard revealedStripActiveDisplay == appState?.lastMouseDownDisplay else { return "picture from another active display" }
+        guard revealedStripUnderPanel == ClockClickRelay.notificationCenterIsOpen() else {
+            return "picture taken with the panel \(revealedStripUnderPanel ? "open" : "closed")"
+        }
         if let then = revealedStripChevronX, let now = liveChevronMinX, abs(then - now) > 1, freshEmptyBarSnapshots().isEmpty {
             return "chevron moved since the picture (\(then) → \(now)) and no cover to cut out against"
         }
@@ -903,6 +925,7 @@ final class TransitionCoordinator {
         revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect) + ConcealGhostOverlay.surfaceSignature()
         revealedStripBackground = []
         revealedStripKeep = nil
+        revealedStripUnderPanel = ClockClickRelay.notificationCenterIsOpen()
         revealedStripSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
         PelmetLog.log("finished: picture taken at \(reason) (\(revealedStripSnapshot.count) display(s), \(revealedStripSignature.count) hidden item(s))")
     }
@@ -1033,6 +1056,7 @@ final class TransitionCoordinator {
         revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: rect) + ConcealGhostOverlay.surfaceSignature()
         revealedStripBackground = []
         revealedStripKeep = (hidden.minX - 6)...(hidden.maxX + 6)
+        revealedStripUnderPanel = ClockClickRelay.notificationCenterIsOpen()
         revealedStripSnapshot = await ConcealGhostOverlay.snapshotSet(of: rect)
         PelmetLog.log("finished: boot picture taken (\(revealedStripSnapshot.count) display(s), \(revealedStripSignature.count) hidden item(s), keep \(Int(hidden.minX))..\(Int(hidden.maxX)))")
     }

@@ -79,6 +79,12 @@ final class ConcealGhostOverlay {
         func wipeInFromRight(insets: [CGFloat], frame: CFTimeInterval, delay: CFTimeInterval, edge: CGFloat) {
             for overlay in overlays { overlay.wipeInFromRight(insets: insets, frame: frame, delay: delay, edge: edge) }
         }
+        /// Darken the pictures the way Notification Center's open panel
+        /// darkens the bar through the glass (measured 2026-09-22: ×0.965
+        /// at the top row to ×0.89 at the bottom).
+        func addPanelShade() {
+            for overlay in overlays { overlay.addPanelShade() }
+        }
     }
 
     /// SCShareableContent lookup is the slow part (can be 100ms+) — cache the
@@ -742,6 +748,18 @@ final class ConcealGhostOverlay {
         guard !stoodDown else { return }
         stoodDown = true
         Self.activeStripCount -= 1
+    }
+
+    func addPanelShade() {
+        guard !finished, let root = window.contentView?.layer else { return }
+        let shade = CAGradientLayer()
+        shade.frame = root.bounds
+        // Layer space is bottom-up: the darker end is the bar's bottom row.
+        shade.colors = [CGColor(gray: 0, alpha: 0.11), CGColor(gray: 0, alpha: 0.035)]
+        shade.startPoint = CGPoint(x: 0.5, y: 0); shade.endPoint = CGPoint(x: 0.5, y: 1)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        root.addSublayer(shade)
+        CATransaction.commit()
     }
 
     /// A wipe from the right that replays Notification Center's own
