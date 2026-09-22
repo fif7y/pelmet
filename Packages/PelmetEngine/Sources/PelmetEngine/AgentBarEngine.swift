@@ -63,8 +63,14 @@ public actor AgentBarEngine: MenuBarEngine {
         reflowCompanion = companion
     }
 
+    /// An item-only reveal (and the conceal that ends it) changes no
+    /// section: the extras have nothing to reflow, and applying them for
+    /// "nothing revealed" ghost-hid an extra that its own rule re-showed a
+    /// beat later (Siri blinking on every floating-bar press, 2026-09-21).
+    private var companionMuted = false
+
     private func notifyReflowCompanion() {
-        guard let reflowCompanion else { return }
+        guard let reflowCompanion, !companionMuted else { return }
         let revealed = revealedSections
         Task { @MainActor in reflowCompanion(revealed) }
     }
@@ -172,13 +178,18 @@ public actor AgentBarEngine: MenuBarEngine {
     /// every section stays as it is, nothing else reflows.
     public func reveal(items: Set<ItemID>) async {
         revealedItems.formUnion(items)
+        companionMuted = true
         await converge()
+        companionMuted = false
     }
 
     public func conceal() async {
+        let itemOnly = revealedSections.isEmpty && !revealedItems.isEmpty
         revealedSections = []
         revealedItems = []
+        companionMuted = itemOnly
         await converge()
+        companionMuted = false
     }
 
     /// Bundle ids of the running applications, pushed by the app from its
