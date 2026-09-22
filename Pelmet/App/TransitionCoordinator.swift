@@ -175,11 +175,16 @@ final class TransitionCoordinator {
         // while none is showing.
         let fresh = appState?.tray.isOpen == true ? [] : freshEmptyBarSnapshots()
         if !fresh.isEmpty { return fresh }
+        // From the cover's left edge to the display's right edge: the
+        // cover rect's fixed margin past a boot-seeded strip stopped 30pt
+        // short of the item beside the chevron (Snib, 2026-09-21), and
+        // the visible icons key out against themselves.
+        let rect = revealCoverRect.map { CGRect(x: $0.minX, y: $0.minY, width: primaryMaxX - $0.minX, height: $0.height) }
         if !ConcealGhostOverlay.captureIndicatorLit {
-            _ = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect, excludingOwnWindows: true)
+            _ = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
             try? await Task.sleep(for: .milliseconds(250))
         }
-        let snaps = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect, excludingOwnWindows: true)
+        let snaps = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
         PelmetLog.log("tray: empty-bar picture taken (\(snaps.count) display(s))")
         return snaps
     }
