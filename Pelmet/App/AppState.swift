@@ -773,6 +773,9 @@ final class AppState {
             // fallback. The element is resolved now, on a static bar.
             let clockElement = point == pointer ? nil : ClockClickRelay.clockElement(at: point)
             let cover = await transitions.beginBarCover()
+            // The click opens (or closes) Notification Center under the
+            // cover: shade the picture with the panel (#51).
+            cover?.followPanelShade { ClockClickRelay.notificationCenterIsOpen() }
             let blinked = await engine.beginClockBlink()
             if let clockElement {
                 // Only once the physical button is up: pressed while the

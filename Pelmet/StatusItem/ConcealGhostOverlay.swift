@@ -64,6 +64,9 @@ final class ConcealGhostOverlay {
     /// keep the single-cover call shape.
     struct GhostSet {
         fileprivate let overlays: [ConcealGhostOverlay]
+        /// The pictures were taken with Notification Center's panel under
+        /// the bar, so they already carry its shade (`followPanelShade`).
+        var pictureUnderPanel = false
         func dismiss() { for overlay in overlays { overlay.dismiss() } }
         func fadeOut(duration: CFTimeInterval = ConcealGhostOverlay.dismissDuration, slide: Bool = false) {
             for overlay in overlays { overlay.fadeOut(duration: duration, slide: slide) }
@@ -73,6 +76,12 @@ final class ConcealGhostOverlay {
         /// (the picture is simply there, or simply lifted by the caller).
         func animate(_ move: AnimationRecipe.Move, entering: Bool) {
             for overlay in overlays { overlay.animate(move, entering: entering) }
+        }
+        /// Shade the covers' right end the way Notification Center's panel
+        /// shades the bar beneath them, for as long as `isOpen` says so.
+        func followPanelShade(isOpen: @escaping @MainActor () -> Bool) {
+            let taken = pictureUnderPanel
+            for overlay in overlays { overlay.followPanelShade(pictureUnderPanel: taken, isOpen: isOpen) }
         }
     }
 
@@ -185,12 +194,28 @@ final class ConcealGhostOverlay {
         }
         return runs.sorted { $0.0 < $1.0 }.flatMap(\.1)
     }
+    /// What the bar's glass shows besides windows: the wallpaper behind each
+    /// screen and the appearance. Two ints appended to the window
+    /// signature, so a new wallpaper or a light/dark flip drops the
+    /// pictures the way a moved window does (Gab, 2026-09-22: the blink
+    /// cover showed the previous wallpaper for a quarter of an hour once
+    /// it stopped capturing live, PR #50).
+    static let surfaceSignatureCount = 2
+    static func surfaceSignature() -> [Int] {
+        var hasher = Hasher()
+        for screen in NSScreen.screens {
+            hasher.combine(NSWorkspace.shared.desktopImageURL(for: screen)?.path ?? "")
+        }
+        return [NSApp.effectiveAppearance.name.rawValue.hashValue, hasher.finalize()]
+    }
+
     /// Who moved between two signatures, by owner, for the log (#49: the
     /// changes were almost all one window in and out of the zone, and the
     /// count alone never said which).
     static func backdropMovers(from old: [Int], to new: [Int], in list: [[String: Any]]?) -> String {
         func runs(_ sig: [Int]) -> Set<[Int]> { Set(stride(from: 0, to: sig.count, by: 5).map { Array(sig[$0..<min($0 + 5, sig.count)]) }) }
-        let changed = runs(old).symmetricDifference(runs(new)).compactMap(\.first)
+        if old.suffix(surfaceSignatureCount) != new.suffix(surfaceSignatureCount) { return "wallpaper or appearance" }
+        let changed = runs(old.dropLast(surfaceSignatureCount)).symmetricDifference(runs(new.dropLast(surfaceSignatureCount))).compactMap(\.first)
         var names: [String] = []
         for id in Set(changed).sorted() {
             let owner = list?.first { ($0[kCGWindowNumber as String] as? NSNumber)?.intValue == id }?[kCGWindowOwnerName as String] as? String
@@ -207,6 +232,75 @@ final class ConcealGhostOverlay {
     private let imageView: NSImageView
     private var finished = false
     private var stoodDown = false
+    private var shadeLayer: CALayer?
+    private var shadeFollower: Task<Void, Never>?
+
+    /// Notification Center's panel is a window BELOW the bar (layer 21):
+    /// it slides under the glass and the bar over it darkens, a picture of
+    /// the bar taken before does not, and the cover reads as a lighter
+    /// rectangle until it lifts (#51). Measured 2026-09-22 on Gab's bar:
+    /// ×0.965 at the top row to ×0.89 at the bottom, ramping in over ~80pt
+    /// from ~420pt off the display's right edge; a lighter wallpaper read
+    /// ×0.94 overall. A black gradient of that shape over the cover's right
+    /// end, faded in and out with the panel, keeps cover and bar in step.
+    static let panelShadeInset: CGFloat = 420
+    static let panelShadeRamp: CGFloat = 80
+    static let panelShadeTop: Float = 0.035
+    static let panelShadeBottom: Float = 0.11
+    static let panelShadeFade: CFTimeInterval = 0.15
+
+    /// `pictureUnderPanel`: the picture already carries the shade, so the
+    /// layer lifts it back off while the panel closes instead (the click
+    /// that closes Notification Center captures live under the open panel).
+    func followPanelShade(pictureUnderPanel: Bool, isOpen: @escaping @MainActor () -> Bool) {
+        guard !finished, shadeFollower == nil, let host = imageView.layer,
+              let screen = NSScreen.screens.first(where: { $0.frame.intersects(window.frame) }) else { return }
+        let frame = window.frame
+        let shadeLeft = screen.frame.maxX - Self.panelShadeInset
+        guard shadeLeft < frame.maxX else { return }
+        let x = max(0, shadeLeft - Self.panelShadeRamp - frame.minX)
+        let shade = CAGradientLayer()
+        shade.frame = CGRect(x: x, y: 0, width: frame.width - x, height: frame.height)
+        // Layer space is bottom-up: the darker end is the bar's bottom row.
+        // Black darkens a picture of the bare bar while the panel is open;
+        // white, of the same strength, lifts most of the shade back off a
+        // picture taken under the panel once it has closed (a lightening
+        // is not the exact inverse of a multiply, close enough at these
+        // strengths: 142 → 147.6 for a 148 target on Gab's bar).
+        let dark = [CGColor(gray: 0, alpha: CGFloat(Self.panelShadeBottom)), CGColor(gray: 0, alpha: CGFloat(Self.panelShadeTop))]
+        let light = [CGColor(gray: 1, alpha: CGFloat(Self.panelShadeBottom)), CGColor(gray: 1, alpha: CGFloat(Self.panelShadeTop))]
+        shade.colors = pictureUnderPanel ? light : dark
+        shade.startPoint = CGPoint(x: 0.5, y: 0); shade.endPoint = CGPoint(x: 0.5, y: 1)
+        let ramp = CAGradientLayer()
+        ramp.frame = shade.bounds
+        ramp.colors = [CGColor(gray: 0, alpha: 0), CGColor(gray: 0, alpha: 1), CGColor(gray: 0, alpha: 1)]
+        let rampEnd = min(1, Double(Self.panelShadeRamp / max(shade.frame.width, 1)))
+        ramp.locations = [0, NSNumber(value: rampEnd), 1]
+        ramp.startPoint = CGPoint(x: 0, y: 0.5); ramp.endPoint = CGPoint(x: 1, y: 0.5)
+        shade.mask = ramp
+        // The first reading sets the start state without a fade: a click
+        // that closes the panel starts under a shaded bar.
+        var open = isOpen()
+        // The layer shows whenever bar and picture disagree about the panel.
+        let shaded = { (panel: Bool) in panel != pictureUnderPanel }
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        shade.opacity = shaded(open) ? 1 : 0
+        host.addSublayer(shade)
+        CATransaction.commit()
+        shadeLayer = shade
+        shadeFollower = Task { @MainActor [weak self] in
+            while let self, !self.finished, !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(30))
+                let now = isOpen()
+                guard now != open else { continue }
+                open = now
+                CATransaction.begin(); CATransaction.setAnimationDuration(Self.panelShadeFade)
+                shade.opacity = shaded(now) ? 1 : 0
+                CATransaction.commit()
+                PelmetLog.log("ghost: cover \(pictureUnderPanel ? "lightens" : "shades") \(shaded(now) ? "on" : "off") — Notification Center \(now ? "open" : "closed")\(pictureUnderPanel ? ", picture taken under it" : "")")
+            }
+        }
+    }
 
     /// A captured strip image ready to float — pre-captured at conceal settle
     /// so the reveal path pays zero capture latency.
@@ -680,6 +774,7 @@ final class ConcealGhostOverlay {
     func dismiss() {
         guard !finished else { return }
         finished = true
+        shadeFollower?.cancel()
         window.orderOut(nil)
         standDown()
     }

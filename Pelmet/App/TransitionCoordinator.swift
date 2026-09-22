@@ -71,19 +71,23 @@ final class TransitionCoordinator {
     /// changes are one window in and out of the zone (#49's log: 9→8→9;
     /// Notification Center opening and closing under the clock): when the
     /// backdrop comes back exactly, the picture is true again, no capture.
-    private var parkedCover: (snapshot: [ConcealGhostOverlay.BarSnapshot], backdrop: [Int], display: CGDirectDisplayID?)?
+    private var parkedCover: (snapshot: [ConcealGhostOverlay.BarSnapshot], backdrop: [Int], display: CGDirectDisplayID?, underPanel: Bool)?
+    /// Notification Center's panel was under the bar when the idle picture
+    /// was taken (its shade is in the pixels; see `GhostSet.pictureUnderPanel`).
+    private var revealCoverUnderPanel = false
 
     private func backdropMayHaveChanged() {
         guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty || parkedCover != nil else { return }
         let list = ConcealGhostOverlay.onScreenWindows()
-        let now = ConcealGhostOverlay.backdropSignature(of: precaptureRect, in: list)
+        let now = ConcealGhostOverlay.backdropSignature(of: precaptureRect, in: list) + ConcealGhostOverlay.surfaceSignature()
         if revealCoverSnapshot.isEmpty, let parked = parkedCover, parked.backdrop == now, appState.currentRevealedSections.isEmpty {
             revealCoverSnapshot = parked.snapshot
             revealCoverBackdrop = parked.backdrop
             revealCoverActiveDisplay = parked.display
+            revealCoverUnderPanel = parked.underPanel
             parkedCover = nil
             revealCoverWanted = false
-            PelmetLog.log("backdrop: back as it was (\(now.count / 5) window(s)) — cover restored, no capture")
+            PelmetLog.log("backdrop: back as it was (\((now.count - ConcealGhostOverlay.surfaceSignatureCount) / 5) window(s)) — cover restored, no capture")
         }
         let coverStale = !revealCoverSnapshot.isEmpty && now != revealCoverBackdrop
         let stripStale = !revealedStripSnapshot.isEmpty && revealedStripBackground.isEmpty && now != revealedStripBackdrop
@@ -98,14 +102,14 @@ final class TransitionCoordinator {
         // beneath, and the next reveal composites them over the fresh cover.
         let stripCutOut = stripStale && !revealCoverSnapshot.isEmpty && revealCoverBackdrop == revealedStripBackdrop
         let movers = ConcealGhostOverlay.backdropMovers(from: coverStale ? revealCoverBackdrop : revealedStripBackdrop, to: now, in: list)
-        PelmetLog.log("backdrop: changed under the bar (\(now.count / 5) window(s): \(movers)) — cover \(coverStale ? (concealed ? "dropped, retake on approach" : "dropped") : "kept"), finished \(stripStale ? (stripCutOut ? "kept as a cut-out" : "dropped") : "kept")")
+        PelmetLog.log("backdrop: changed under the bar (\((now.count - ConcealGhostOverlay.surfaceSignatureCount) / 5) window(s): \(movers)) — cover \(coverStale ? (concealed ? "dropped, retake on approach" : "dropped") : "kept"), finished \(stripStale ? (stripCutOut ? "kept as a cut-out" : "dropped") : "kept")")
         if stripCutOut {
             revealedStripBackground = revealCoverSnapshot
         } else if stripStale {
             revealedStripSnapshot = []
         }
         if coverStale {
-            parkedCover = concealed ? (revealCoverSnapshot, revealCoverBackdrop, revealCoverActiveDisplay) : nil
+            parkedCover = concealed ? (revealCoverSnapshot, revealCoverBackdrop, revealCoverActiveDisplay, revealCoverUnderPanel) : nil
             revealCoverSnapshot = []
             revealCoverWanted = concealed
         }
@@ -230,6 +234,9 @@ final class TransitionCoordinator {
             // agent's slide shows.
             var cover: ConcealGhostOverlay.GhostSet?
             var finished: ConcealGhostOverlay.GhostSet?
+            // A wallpaper or appearance change between two mouse-ups has no
+            // signal of its own: look once more before trusting the picture.
+            backdropMayHaveChanged()
             await awaitCoverRetake(style: style)
             let emptyBar = freshEmptyBarSnapshots()
             let coverSource = !emptyBar.isEmpty ? "precaptured" : style != .smooth ? "live capture" : "none"
@@ -486,6 +493,7 @@ final class TransitionCoordinator {
         // picture that stops short of the clock: with Notification Center
         // open the clock sits 3pt right of its closed place (1687 vs 1684,
         // live 2026-09-22), so the click that closes it captures live.
+        backdropMayHaveChanged()
         if appState.currentRevealedSections.isEmpty {
             let whole = freshEmptyBarSnapshots(cropped: false)
             let span = geometry.minX...(geometry.clockMinX - 2 - ConcealGhostOverlay.capturePadding)
@@ -494,7 +502,8 @@ final class TransitionCoordinator {
                 let have = whole.first.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" } ?? "none"
                 PelmetLog.log("\(label): idle picture \(have) unusable for \(Int(span.lowerBound))..\(Int(span.upperBound)), capturing")
             }
-            if let cover = ConcealGhostOverlay.begin(from: reusable, safety: safety) {
+            if var cover = ConcealGhostOverlay.begin(from: reusable, safety: safety) {
+                cover.pictureUnderPanel = revealCoverUnderPanel
                 PelmetLog.log("\(label): cover up from the idle picture, no capture — ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
                 return cover
             }
@@ -509,6 +518,7 @@ final class TransitionCoordinator {
         // this capture, nothing will move, and the walks were pure delay
         // (four of them, ~460ms between the click and its replay).
         let indicatorLit = ConcealGhostOverlay.captureIndicatorLit
+        let underPanel = ClockClickRelay.notificationCenterIsOpen()
         var snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: geometry.clockMinX))
         // No picture (Screen Recording not granted): nothing to retake, and
         // the walks below only delay the replayed click (~250ms on #27's
@@ -529,7 +539,8 @@ final class TransitionCoordinator {
         if clockNow != geometry.clockMinX {
             snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clockNow))
         }
-        let cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
+        var cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
+        cover?.pictureUnderPanel = underPanel
         PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(geometry.minX))..\(Int(clockNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) clock \(Int(geometry.clockMinX))→\(Int(clockNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
         return cover
     }
@@ -713,7 +724,7 @@ final class TransitionCoordinator {
         revealedStripSignature = hiddenSectionSignature
         revealedStripChevronX = liveChevronMinX
         revealedStripActiveDisplay = appState.lastMouseDownDisplay
-        revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
+        revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect) + ConcealGhostOverlay.surfaceSignature()
         revealedStripBackground = []
         revealedStripKeep = nil
         revealedStripSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
@@ -761,8 +772,10 @@ final class TransitionCoordinator {
             guard !Task.isCancelled, appState.currentRevealedSections.isEmpty else { return }
             revealCoverActiveDisplay = appState.lastMouseDownDisplay ?? Self.displayUnderPointer
             let rect = precaptureRect
-            revealCoverBackdrop = ConcealGhostOverlay.backdropSignature(of: rect)
+            revealCoverBackdrop = ConcealGhostOverlay.backdropSignature(of: rect) + ConcealGhostOverlay.surfaceSignature()
+            let underPanel = ClockClickRelay.notificationCenterIsOpen()
             revealCoverSnapshot = await ConcealGhostOverlay.snapshotSet(of: rect)
+            revealCoverUnderPanel = underPanel
             revealCoverWanted = false
             parkedCover = nil
         }
@@ -833,7 +846,7 @@ final class TransitionCoordinator {
         revealedStripSignature = hiddenSectionSignature
         revealedStripChevronX = liveChevronMinX
         revealedStripActiveDisplay = appState.lastMouseDownDisplay ?? Self.displayUnderPointer
-        revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: rect)
+        revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: rect) + ConcealGhostOverlay.surfaceSignature()
         revealedStripBackground = []
         revealedStripKeep = (hidden.minX - 6)...(hidden.maxX + 6)
         revealedStripSnapshot = await ConcealGhostOverlay.snapshotSet(of: rect)
