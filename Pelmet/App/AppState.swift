@@ -766,25 +766,32 @@ final class AppState {
         clockClicked(at: target, pointer: pointer == target ? CGPoint(x: -1, y: -1) : pointer)
     }
 
+    /// When the relay last opened the panel: the window list lags an
+    /// opening by ~250ms, too slow for a second click right after.
+    private var panelOpenedAt = Date.distantPast
+
     private func clockClicked(at point: CGPoint, pointer: CGPoint) {
         Task { @MainActor in
             // Dot zone (target ≠ where the click landed): press the clock
             // through AX so the pointer never moves; the click is the
             // fallback. The element is resolved now, on a static bar.
             let clockElement = point == pointer ? nil : ClockClickRelay.clockElement(at: point)
-            // An open panel closes on the physical click itself (a click
-            // outside it), on the button's release (60fps, 2026-09-22): the
-            // cover's shade front starts there, not at the relay's press.
-            let panelWasOpen = ClockClickRelay.notificationCenterIsOpen()
-            let cover = await transitions.beginBarCover()
-            // The click opens or closes Notification Center under the
-            // cover, both from the button's release: the picture's shade
-            // slides with the panel from that moment (#51).
-            cover?.followPanelShade { panelWasOpen }
-            if cover != nil {
+            let panelWasOpen = ClockClickRelay.notificationCenterIsOpen() || Date().timeIntervalSince(panelOpenedAt) < 1
+            // Closing needs no blink: the panel dismisses itself on a click
+            // outside it, and the assertion only refuses the clock's OWN
+            // action. A plain replay of the click, no cover, no picture,
+            // nothing for the panel's shade to disagree with (#51; live
+            // 2026-09-22 15:33, 3/3). Opening stays a blink: with the
+            // assertion held the clock's click is refused (probed 0/2).
+            if panelWasOpen {
                 await ClockClickRelay.waitForButtonRelease()
-                if panelWasOpen { cover?.panelWillClose() } else { cover?.panelWillOpen() }
+                ClockClickRelay.postClick(at: point, pointer: pointer)
+                panelOpenedAt = .distantPast
+                PelmetLog.log("clock: panel open — click replayed, no blink")
+                return
             }
+            panelOpenedAt = Date()
+            let cover = await transitions.beginBarCover()
             let blinked = await engine.beginClockBlink()
             if let clockElement {
                 // Only once the physical button is up: pressed while the
@@ -799,7 +806,6 @@ final class AppState {
                 var opened = false
                 for attempt in 1...2 where !opened {
                     let pressed = ClockClickRelay.press(clockElement)
-                    if pressed, panelWasOpen { break }
                     // Poll for the panel rather than sleeping the whole
                     // verify budget: it shows well inside it, and every ms
                     // here is picture time on the bar (#46).
@@ -810,7 +816,7 @@ final class AppState {
                     } while !opened && Date() < verifyUntil
                     PelmetLog.log("clock: dot press \(attempt) \(pressed ? "sent" : "refused") - NC \(opened ? "open" : "not open")")
                 }
-                if !opened, !panelWasOpen { ClockClickRelay.postClick(at: point, pointer: pointer) }
+                if !opened { ClockClickRelay.postClick(at: point, pointer: pointer) }
             } else {
                 if point != pointer { PelmetLog.log("clock: dot click - no clock element under the target, replaying the click") }
                 ClockClickRelay.postClick(at: point, pointer: pointer)

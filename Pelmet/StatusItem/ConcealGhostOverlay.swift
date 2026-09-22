@@ -64,9 +64,6 @@ final class ConcealGhostOverlay {
     /// keep the single-cover call shape.
     struct GhostSet {
         fileprivate let overlays: [ConcealGhostOverlay]
-        /// The pictures were taken with Notification Center's panel under
-        /// the bar, so they already carry its shade (`followPanelShade`).
-        var pictureUnderPanel = false
         func dismiss() { for overlay in overlays { overlay.dismiss() } }
         func fadeOut(duration: CFTimeInterval = ConcealGhostOverlay.dismissDuration, slide: Bool = false) {
             for overlay in overlays { overlay.fadeOut(duration: duration, slide: slide) }
@@ -76,21 +73,6 @@ final class ConcealGhostOverlay {
         /// (the picture is simply there, or simply lifted by the caller).
         func animate(_ move: AnimationRecipe.Move, entering: Bool) {
             for overlay in overlays { overlay.animate(move, entering: entering) }
-        }
-        /// Shade the covers' right end the way Notification Center's panel
-        /// shades the bar beneath them, for as long as `isOpen` says so.
-        func followPanelShade(isOpen: @escaping @MainActor () -> Bool) {
-            let taken = pictureUnderPanel
-            for overlay in overlays { overlay.followPanelShade(pictureUnderPanel: taken, isOpen: isOpen) }
-        }
-        /// The click that closes the panel just went through: its slide
-        /// starts now, while its window stays listed until the slide has
-        /// ended (~640ms on Gab's Mac, past the cover's lift).
-        func panelWillClose(elapsed: TimeInterval = 0) {
-            for overlay in overlays { overlay.panelWillClose(elapsed: elapsed) }
-        }
-        func panelWillOpen(elapsed: TimeInterval = 0) {
-            for overlay in overlays { overlay.panelWillOpen(elapsed: elapsed) }
         }
     }
 
@@ -258,111 +240,6 @@ final class ConcealGhostOverlay {
     private let imageView: NSImageView
     private var finished = false
     private var stoodDown = false
-    private var shadeLayer: CALayer?
-    private var panelOpen = false
-    private var panelShadeTransition: ((Bool, TimeInterval) -> Void)?
-
-    /// Notification Center's panel is a window BELOW the bar (layer 21):
-    /// it slides under the glass and the bar over it darkens, a picture of
-    /// the bar taken before does not, and the cover reads as a lighter
-    /// rectangle until it lifts (#51). Measured 2026-09-22 on Gab's bar:
-    /// ×0.965 at the top row to ×0.89 at the bottom, ramping in over ~70pt
-    /// from ~410pt off the display's right edge (60fps burst 14:23: bins
-    /// left of 1390pt untouched, 1390→1460 ramps, flat after); a lighter wallpaper read
-    /// ×0.94 overall. A black gradient of that shape over the cover's right
-    /// end, faded in and out with the panel, keeps cover and bar in step.
-    static let panelShadeInset: CGFloat = 340
-    static let panelShadeRamp: CGFloat = 70
-    static let panelShadeTop: Float = 0.035
-    static let panelShadeBottom: Float = 0.11
-    /// The panel's slide as the bar shows it, from Gab's own clicks at 60fps
-    /// (2026-09-22 15:16): in over ~80ms, out over ~120ms, both from the
-    /// button's release.
-    static let panelSlideIn: CFTimeInterval = 0.1
-    static let panelSlideOut: CFTimeInterval = 0.13
-
-    /// `pictureUnderPanel`: the picture already carries the shade, so the
-    /// layer lifts it back off the part the panel has left instead.
-    ///
-    /// The panel slides in from the display's right edge over ~200ms and
-    /// the bar darkens as a FRONT that travels with its left edge (60fps,
-    /// 2026-09-22 14:30); a shade that simply fades in shows the finished
-    /// shadow while the real front is still crossing, and Gab read it as
-    /// the panel's shadow being cut. So the gradient's edge slides with
-    /// the panel: the mask translates from the cover's right end to the
-    /// ramp's resting place on open, back on close.
-    func followPanelShade(pictureUnderPanel: Bool, isOpen: @escaping @MainActor () -> Bool) {
-        guard !finished, panelShadeTransition == nil, let host = window.contentView?.layer,
-              let screen = NSScreen.screens.first(where: { $0.frame.intersects(window.frame) }) else { return }
-        let frame = window.frame
-        let shadeLeft = screen.frame.maxX - Self.panelShadeInset
-        guard shadeLeft < frame.maxX else { return }
-        let x = max(0, shadeLeft - Self.panelShadeRamp - frame.minX)
-        let shade = CAGradientLayer()
-        shade.frame = CGRect(x: x, y: 0, width: frame.width - x, height: frame.height)
-        // Layer space is bottom-up: the darker end is the bar's bottom row.
-        // Black darkens a picture of the bare bar under the panel; white of
-        // the same strength lifts most of the shade off a picture taken
-        // under it as the panel leaves (142 → 147.6 for a 148 target).
-        let dark = [CGColor(gray: 0, alpha: CGFloat(Self.panelShadeBottom)), CGColor(gray: 0, alpha: CGFloat(Self.panelShadeTop))]
-        let light = [CGColor(gray: 1, alpha: CGFloat(Self.panelShadeBottom)), CGColor(gray: 1, alpha: CGFloat(Self.panelShadeTop))]
-        shade.colors = pictureUnderPanel ? light : dark
-        shade.startPoint = CGPoint(x: 0.5, y: 0); shade.endPoint = CGPoint(x: 0.5, y: 1)
-        // The front: a ramp over `panelShadeRamp`, then solid. Dark shade
-        // sits RIGHT of the front (under the panel); the lift sits LEFT of
-        // it (where the panel has gone). The mask slides between the ramp's
-        // resting place (translation 0) and the cover's right end (travel).
-        let ramp = CAGradientLayer()
-        ramp.frame = shade.bounds
-        let rampEnd = min(1, Double(Self.panelShadeRamp / max(shade.frame.width, 1)))
-        ramp.colors = pictureUnderPanel
-            ? [CGColor(gray: 0, alpha: 1), CGColor(gray: 0, alpha: 0), CGColor(gray: 0, alpha: 0)]
-            : [CGColor(gray: 0, alpha: 0), CGColor(gray: 0, alpha: 1), CGColor(gray: 0, alpha: 1)]
-        ramp.locations = [0, NSNumber(value: rampEnd), 1]
-        ramp.startPoint = CGPoint(x: 0, y: 0.5); ramp.endPoint = CGPoint(x: 1, y: 0.5)
-        shade.mask = ramp
-        let travel = shade.frame.width
-        // Where the front rests for a given panel state. Dark: panel open →
-        // front at rest (0), closed → off the right end. Lift: the mirror.
-        func translation(panelOpen: Bool) -> CGFloat {
-            let engaged = panelOpen != pictureUnderPanel
-            return pictureUnderPanel ? (engaged ? travel : 0) : (engaged ? 0 : travel)
-        }
-        panelOpen = isOpen()
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        ramp.transform = CATransform3DMakeTranslation(translation(panelOpen: panelOpen), 0, 0)
-        host.addSublayer(shade)
-        CATransaction.commit()
-        shadeLayer = shade
-        panelShadeTransition = { now, elapsed in
-            let anim = CABasicAnimation(keyPath: "transform.translation.x")
-            anim.timeOffset = elapsed
-            anim.fromValue = ramp.presentation()?.value(forKeyPath: "transform.translation.x") ?? translation(panelOpen: !now)
-            anim.toValue = translation(panelOpen: now)
-            anim.duration = now ? Self.panelSlideIn : Self.panelSlideOut
-            // The panel eases out on the way in and in on the way out.
-            let curve: (Float, Float, Float, Float) = now ? (0.16, 1, 0.3, 1) : (0.55, 0, 0.8, 0.4)
-            anim.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
-            CATransaction.begin(); CATransaction.setDisableActions(true)
-            ramp.add(anim, forKey: "pelmetPanelFront")
-            ramp.transform = CATransform3DMakeTranslation(translation(panelOpen: now), 0, 0)
-            CATransaction.commit()
-            PelmetLog.log("ghost: cover \(pictureUnderPanel ? "lift" : "shade") front \(now ? "in" : "out") — Notification Center \(now ? "opening" : "closing")\(pictureUnderPanel ? ", picture taken under it" : "")")
-        }
-        // No polling: the window list lags the panel both ways on a real
-        // click (~250ms on entrance, ~600ms on exit, 2026-09-22 15:16).
-        // Both slides start at the button's release; the relay says when.
-    }
-
-    func panelShade(open: Bool, elapsed: TimeInterval = 0) {
-        guard !finished, open != panelOpen, let transition = panelShadeTransition else { return }
-        panelOpen = open
-        transition(open, elapsed)
-    }
-
-    /// `elapsed`: how far the slide already is when the cover learns of it.
-    func panelWillClose(elapsed: TimeInterval = 0) { panelShade(open: false, elapsed: elapsed) }
-    func panelWillOpen(elapsed: TimeInterval = 0) { panelShade(open: true, elapsed: elapsed) }
 
     /// A captured strip image ready to float — pre-captured at conceal settle
     /// so the reveal path pays zero capture latency.

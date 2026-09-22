@@ -73,7 +73,7 @@ final class TransitionCoordinator {
     /// backdrop comes back exactly, the picture is true again, no capture.
     private var parkedCover: (snapshot: [ConcealGhostOverlay.BarSnapshot], backdrop: [Int], display: CGDirectDisplayID?, underPanel: Bool)?
     /// Notification Center's panel was under the bar when the idle picture
-    /// was taken (its shade is in the pixels; see `GhostSet.pictureUnderPanel`).
+    /// was taken (its shade is in the pixels).
     private var revealCoverUnderPanel = false
     /// The last live blink capture of the bare bar (panel closed), kept
     /// for the click that closes the panel when no idle picture was there
@@ -552,8 +552,7 @@ final class TransitionCoordinator {
                 let have = whole.first.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" } ?? "none"
                 PelmetLog.log("\(label): idle picture \(have) unusable for \(Int(span.lowerBound))..\(Int(span.upperBound)), capturing")
             }
-            if var cover = ConcealGhostOverlay.begin(from: reusable, safety: safety) {
-                cover.pictureUnderPanel = underPanel
+            if let cover = ConcealGhostOverlay.begin(from: reusable, safety: safety) {
                 PelmetLog.log("\(label): cover up from the idle picture, no capture — ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
                 return cover
             }
@@ -589,8 +588,7 @@ final class TransitionCoordinator {
         if clockNow != geometry.clockMinX {
             snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clockNow))
         }
-        var cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
-        cover?.pictureUnderPanel = underPanel
+        let cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
         if !underPanel, appState.currentRevealedSections.isEmpty {
             lastBareBlinkPicture = (snaps, ConcealGhostOverlay.backdropSignature(of: precaptureRect) + ConcealGhostOverlay.surfaceSignature(), appState.lastMouseDownDisplay)
         }
