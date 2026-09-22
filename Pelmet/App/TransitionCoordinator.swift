@@ -67,11 +67,24 @@ final class TransitionCoordinator {
     /// The cover was dropped for a changed backdrop and not retaken yet.
     private var revealCoverWanted = false
     private var precaptureInFlight = false
+    /// The dropped cover, kept with the signature it was taken under. Most
+    /// changes are one window in and out of the zone (#49's log: 9→8→9;
+    /// Notification Center opening and closing under the clock): when the
+    /// backdrop comes back exactly, the picture is true again, no capture.
+    private var parkedCover: (snapshot: [ConcealGhostOverlay.BarSnapshot], backdrop: [Int], display: CGDirectDisplayID?)?
 
     private func backdropMayHaveChanged() {
-        guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty else { return }
+        guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty || parkedCover != nil else { return }
         let list = ConcealGhostOverlay.onScreenWindows()
         let now = ConcealGhostOverlay.backdropSignature(of: precaptureRect, in: list)
+        if revealCoverSnapshot.isEmpty, let parked = parkedCover, parked.backdrop == now, appState.currentRevealedSections.isEmpty {
+            revealCoverSnapshot = parked.snapshot
+            revealCoverBackdrop = parked.backdrop
+            revealCoverActiveDisplay = parked.display
+            parkedCover = nil
+            revealCoverWanted = false
+            PelmetLog.log("backdrop: back as it was (\(now.count / 5) window(s)) — cover restored, no capture")
+        }
         let coverStale = !revealCoverSnapshot.isEmpty && now != revealCoverBackdrop
         let stripStale = !revealedStripSnapshot.isEmpty && revealedStripBackground.isEmpty && now != revealedStripBackdrop
         guard coverStale || stripStale else { return }
@@ -92,6 +105,7 @@ final class TransitionCoordinator {
             revealedStripSnapshot = []
         }
         if coverStale {
+            parkedCover = concealed ? (revealCoverSnapshot, revealCoverBackdrop, revealCoverActiveDisplay) : nil
             revealCoverSnapshot = []
             revealCoverWanted = concealed
         }
@@ -468,12 +482,18 @@ final class TransitionCoordinator {
         // a capture here lights the screen-capture indicator at the moment
         // of the click and costs the walks below (#45, #46). Only while the
         // bar is concealed — the picture is of the empty bar, and a
-        // hover-revealed bar does not look like it.
+        // hover-revealed bar does not look like it. The crop refuses a
+        // picture that stops short of the clock: with Notification Center
+        // open the clock sits 3pt right of its closed place (1687 vs 1684,
+        // live 2026-09-22), so the click that closes it captures live.
         if appState.currentRevealedSections.isEmpty {
-            let reusable = ConcealGhostOverlay.cropped(
-                freshEmptyBarSnapshots(cropped: false),
-                toPrimaryX: geometry.minX...(geometry.clockMinX - 2 - ConcealGhostOverlay.capturePadding)
-            )
+            let whole = freshEmptyBarSnapshots(cropped: false)
+            let span = geometry.minX...(geometry.clockMinX - 2 - ConcealGhostOverlay.capturePadding)
+            let reusable = ConcealGhostOverlay.cropped(whole, toPrimaryX: span)
+            if reusable.isEmpty {
+                let have = whole.first.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" } ?? "none"
+                PelmetLog.log("\(label): idle picture \(have) unusable for \(Int(span.lowerBound))..\(Int(span.upperBound)), capturing")
+            }
             if let cover = ConcealGhostOverlay.begin(from: reusable, safety: safety) {
                 PelmetLog.log("\(label): cover up from the idle picture, no capture — ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
                 return cover
@@ -744,6 +764,7 @@ final class TransitionCoordinator {
             revealCoverBackdrop = ConcealGhostOverlay.backdropSignature(of: rect)
             revealCoverSnapshot = await ConcealGhostOverlay.snapshotSet(of: rect)
             revealCoverWanted = false
+            parkedCover = nil
         }
     }
 
