@@ -10,6 +10,7 @@
 
 import AppKit
 import PelmetCore
+import PelmetEngine
 
 @MainActor
 final class TrayPanel {
@@ -62,6 +63,10 @@ final class TrayPanel {
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.animationBehavior = .none
+        // The band monitor learns where the pointer is from mouse-moved
+        // events; a panel emits none unless asked, and the rehide timer
+        // fired with the pointer resting on the tray (2026-09-21).
+        panel.acceptsMouseMovedEvents = true
         // Its size is its cells': no edge resize, no drag of the surface.
         panel.styleMask.remove(.resizable)
         panel.isMovable = false
@@ -351,14 +356,17 @@ private final class TrayContentView: NSView {
         return NSSize(width: rowWidth, height: max(height, cellHeight))
     }
 
-    /// A cell is never narrower than the bar's own item pitch: a Control
-    /// Center module's AX frame is 20pt with no padding, which made a hit
-    /// zone the size of its glyph.
-    static let minCellWidth: CGFloat = 28
+    /// Every glyph gets the same room on both sides — the bar's own
+    /// pitch, roughly 7pt a side around a 16pt symbol.
+    static let cellPadding: CGFloat = 7
+    static let minCellWidth: CGFloat = 30
 
     static func width(of cell: TrayPanel.Cell, height: CGFloat, glyphScale scale: CGFloat) -> CGFloat {
-        guard cell.isPicture, cell.size.height > 0 else { return (Self.minCellWidth * scale).rounded() }
-        return max((cell.size.width * height / cell.size.height).rounded(), (Self.minCellWidth * scale).rounded())
+        let pad = (Self.cellPadding * scale).rounded()
+        let glyph: CGFloat = cell.isPicture && cell.size.height > 0
+            ? (cell.size.width * height / cell.size.height).rounded()
+            : (18 * scale).rounded()
+        return max(glyph + 2 * pad, (Self.minCellWidth * scale).rounded())
     }
 
     private func place(animated: Bool) {
@@ -398,6 +406,7 @@ private final class TrayContentView: NSView {
         pressed = cell(at: point)
         pressPoint = point
         setPressed(pressed)
+        PelmetLog.log("tray: mouse down at \(Int(point.x)),\(Int(point.y)) → \(pressed?.rawValue ?? "no cell")")
     }
 
     override func rightMouseDown(with event: NSEvent) {
@@ -452,7 +461,11 @@ private final class TrayContentView: NSView {
             return
         }
         let point = convert(event.locationInWindow, from: nil)
-        guard cell(at: point) == pressed else { setPressed(nil); return }
+        guard cell(at: point) == pressed else {
+            PelmetLog.log("tray: mouse up off the pressed cell")
+            setPressed(nil)
+            return
+        }
         onPress?(pressed, event)
     }
 

@@ -1753,7 +1753,10 @@ final class AppState {
             Task { @MainActor in
                 guard let self else { return }
                 // An Apply pass needs the frames it measured to stay put.
-                let bandReason = self.bandMonitor?.rehideDeferReason()
+                var bandReason = self.bandMonitor?.rehideDeferReason()
+                // The tray is the bar's extension: a pointer resting on it
+                // (no moves to report) holds the countdown too.
+                if bandReason == nil, self.tray.contains(NSEvent.mouseLocation) { bandReason = .band }
                 if self.editorHoldsBar
                     || self.pointerDisplayBehavior == .alwaysShowAll
                     || self.applying

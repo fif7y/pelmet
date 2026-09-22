@@ -82,16 +82,18 @@ final class TrayController {
             screen: screen,
             position: appState.settings.floatingBarPosition,
             scale: appState.settings.floatingBarSize.scale,
-            anchorX: appState.transitions.sectionAnchorX,
+            anchorX: visibleClusterMinX ?? appState.transitions.sectionAnchorX,
             pointerX: NSEvent.mouseLocation.x
         )
         panel.show(cells: cells, placement: placement)
-        let missing = pictures.missing(among: cells.map(\.key))
+        // Own items draw their glyph, never a picture: not "missing".
+        let missing = pictures.missing(among: cells.map(\.key).filter { $0.bundleID != PelmetBundle.mainID })
         PelmetLog.log("tray: cells " + cells.map { "\($0.key.rawValue.split(separator: ":").last ?? "?")=\(Int($0.size.width))×\(Int($0.size.height))\($0.isPicture ? "" : " icon")" }.joined(separator: " "))
         PelmetLog.log("tray: open \(sections.map(\.rawValue).sorted()) — \(cells.count) cell(s), \(cells.count - missing.count) picture(s), \(placement.position.rawValue) on display \(screen.directDisplayID ?? 0)")
         onOpened?()
         let stale = cells.contains { cell in
-            pictures.picture(for: cell.key).map { Date().timeIntervalSince($0.takenAt) > AppTiming.trayPictureFreshness } ?? false
+            cell.key.bundleID != PelmetBundle.mainID
+                && (pictures.picture(for: cell.key).map { Date().timeIntervalSince($0.takenAt) > AppTiming.trayPictureFreshness } ?? false)
         }
         if !missing.isEmpty || stale, ScreenRecordingAccess.isGranted {
             picturePass(reason: missing.isEmpty ? "stale" : "\(missing.count) missing")
@@ -113,6 +115,21 @@ final class TrayController {
         let cells = buildCells()
         PelmetLog.log("tray: cells " + cells.map { "\($0.key.rawValue.split(separator: ":").last ?? "?")=\(Int($0.size.width))×\(Int($0.size.height))\($0.isPicture ? "" : " icon")" }.joined(separator: " "))
         panel.update(cells: cells)
+    }
+
+    /// Where the visible cluster starts (its leftmost icon, the chevron
+    /// included): the section opens just left of it, so the tray hangs
+    /// from there. Steadier than the last measured strip, which an Apply
+    /// pass re-measures wider.
+    private var visibleClusterMinX: CGFloat? {
+        guard let appState, let snap = appState.snapshot, let primary = NSScreen.screens.first else { return nil }
+        let model = appState.settings.sectionModel
+        return snap.items.compactMap { item -> CGFloat? in
+            guard let frame = item.frame, frame.maxX <= primary.frame.maxX + 1, frame.minX >= primary.frame.minX,
+                  item.id == AppState.chevronItemID || model.section(of: item.id) == .visible
+            else { return nil }
+            return frame.minX
+        }.min()
     }
 
     // MARK: - Cells
@@ -162,6 +179,7 @@ final class TrayController {
 
     private func pressed(_ key: ItemID, event: NSEvent) {
         guard let appState else { return }
+        PelmetLog.log("tray: pressed \(key.rawValue)")
         if appState.isSeparator(key) {
             // A separator is Pelmet's: either button opens Pelmet's menu.
             let menu = PelmetStatusItem.contextMenu(appState: appState)
