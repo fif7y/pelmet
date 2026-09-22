@@ -962,8 +962,21 @@ final class ExtrasManager {
             let statusItem = items.first(where: { $0.value.button === sender }),
             let spec = specs[statusItem.key]
         else { return }
-        let rightClick = NSApp.currentEvent?.type == .rightMouseUp
+        perform(spec: spec, statusItem: statusItem, rightClick: NSApp.currentEvent?.type == .rightMouseUp)
+    }
 
+    /// The floating bar pressed one of Pelmet's items: the same action its
+    /// button runs. Its menu pops where the pointer is when the item is
+    /// not in the bar (it hides by its own visibility there).
+    func activate(itemKey key: ItemID, rightClick: Bool = false) -> Bool {
+        guard let statusItem = items.first(where: { entry in
+            specs[entry.key].map { Self.itemID(for: $0).sectionKey == key } ?? false
+        }), let spec = specs[statusItem.key] else { return false }
+        perform(spec: spec, statusItem: statusItem, rightClick: rightClick)
+        return true
+    }
+
+    private func perform(spec: ExtraItemSpec, statusItem: (key: UUID, value: NSStatusItem), rightClick: Bool) {
         switch spec.kind {
         case .mediaControls:
             if rightClick {
@@ -1041,6 +1054,10 @@ final class ExtrasManager {
     }
 
     private func popUp(_ menu: NSMenu, on item: NSStatusItem) {
+        guard item.isVisible else {
+            menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+            return
+        }
         item.menu = menu
         item.button?.performClick(nil)
         item.menu = nil

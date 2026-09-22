@@ -855,6 +855,9 @@ final class AppState {
     /// the bar for the band monitor.
     func trayContains(_ point: NSPoint) -> Bool { tray.contains(point) }
 
+    /// The floating bar pressed one of Pelmet's extras.
+    func activateExtra(_ key: ItemID) -> Bool { extras?.activate(itemKey: key) ?? false }
+
     /// One of Pelmet's separators, by model key.
     func isSeparator(_ key: ItemID) -> Bool {
         settings.separators.contains { SeparatorManager.itemID(for: $0).sectionKey == key }

@@ -107,7 +107,9 @@ final class TrayController {
     /// The bar or the settings changed under an open tray.
     func refresh() {
         guard panel.isShown, !frozen else { return }
-        panel.update(cells: buildCells())
+        let cells = buildCells()
+        PelmetLog.log("tray: cells " + cells.map { "\($0.key.rawValue.split(separator: ":").last ?? "?")=\(Int($0.size.width))×\(Int($0.size.height))\($0.isPicture ? "" : " icon")" }.joined(separator: " "))
+        panel.update(cells: cells)
     }
 
     // MARK: - Cells
@@ -116,8 +118,15 @@ final class TrayController {
     /// item drops out of the AX tree, so it is in the snapshot's concealed
     /// set, not its item list.
     private var presentKeys: Set<ItemID> {
-        guard let snap = appState?.snapshot else { return [] }
-        return Set(snap.items.map(\.id.sectionKey)).union(snap.concealed.map(\.sectionKey))
+        guard let appState, let snap = appState.snapshot else { return [] }
+        var keys = Set(snap.items.map(\.id.sectionKey)).union(snap.concealed.map(\.sectionKey))
+        // Pelmet's own extras hide by their own visibility, not the
+        // assertion: out of the AX tree and out of the concealed set while
+        // their section is concealed, yet on the bar the moment it opens.
+        for spec in appState.settings.extraItems {
+            keys.insert(ExtrasManager.itemID(for: spec).sectionKey)
+        }
+        return keys
     }
 
     private func buildCells() -> [TrayPanel.Cell] {
@@ -152,6 +161,12 @@ final class TrayController {
             // A separator is Pelmet's: either button opens Pelmet's menu.
             let menu = PelmetStatusItem.contextMenu(appState: appState)
             menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+            return
+        }
+        if key.bundleID == PelmetBundle.mainID {
+            // One of Pelmet's own: its action runs here, no relay needed.
+            let ran = appState.activateExtra(key)
+            PelmetLog.log("tray: press \(key.rawValue) → own item \(ran ? "activated" : "not found")")
             return
         }
         guard relayTask == nil else {
