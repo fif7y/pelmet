@@ -71,6 +71,9 @@ public actor AgentBarEngine: MenuBarEngine {
 
     private var model = SectionModel()
     private var revealedSections: Set<Section> = []
+    /// Items revealed on their own, sections untouched (the floating bar's
+    /// relay brings one icon back beneath a cover). Cleared by `conceal`.
+    private var revealedItems: Set<ItemID> = []
     /// Steady-assertion mode: hold an assertion even when nothing is
     /// concealable (allowlist = every observed bundle). Keeps macOS's
     /// collateral-hidden extras (Now Playing, camera pill, AirDrop, Focus)
@@ -165,8 +168,16 @@ public actor AgentBarEngine: MenuBarEngine {
         await converge()
     }
 
+    /// Reveal these items only: their bundles leave the concealable set,
+    /// every section stays as it is, nothing else reflows.
+    public func reveal(items: Set<ItemID>) async {
+        revealedItems.formUnion(items)
+        await converge()
+    }
+
     public func conceal() async {
         revealedSections = []
+        revealedItems = []
         await converge()
     }
 
@@ -342,6 +353,7 @@ public actor AgentBarEngine: MenuBarEngine {
             carriedConcealed: lastSnapshot?.concealed ?? [],
             runningBundles: runningBundles,
             revealedSections: revealedSections,
+            revealedItems: revealedItems,
             steadyExtras: steadyExtras,
             exemptBundles: Self.identityExemptBundles
         )

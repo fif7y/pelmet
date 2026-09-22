@@ -23,6 +23,9 @@ final class TrayController {
     private var passTask: Task<Void, Never>?
     /// Section of every cell shown, for a drop.
     private var cellSections: [ItemID: PelmetCore.Section] = [:]
+    /// A relay or a picture pass has the bar in flux beneath the cover:
+    /// the cells hold still until it is over.
+    private var frozen = false
 
     /// Settle re-entry: the tray is up (the reveal's settle) or gone (the
     /// conceal's). Wired by AppState like the coordinator's.
@@ -102,7 +105,7 @@ final class TrayController {
 
     /// The bar or the settings changed under an open tray.
     func refresh() {
-        guard panel.isShown else { return }
+        guard panel.isShown, !frozen else { return }
         panel.update(cells: buildCells())
     }
 
@@ -161,16 +164,18 @@ final class TrayController {
         }
     }
 
-    /// Reveal beneath a cover, picture the section at rest, press the real
-    /// item, wait its menu out, conceal.
+    /// Reveal the one item beneath a cover (its section stays concealed,
+    /// nothing else reflows), press it, wait its menu out, conceal.
     private func relay(_ key: ItemID) async {
         guard let appState else { return }
         passTask?.cancel()
+        frozen = true
+        defer { frozen = false }
         let started = Date()
-        let sections = self.sections
-        let background = await appState.transitions.trayBackground()
+        let stale = pictures.picture(for: key).map { Date().timeIntervalSince($0.takenAt) > AppTiming.trayPictureFreshness } ?? true
+        let background = stale ? await appState.transitions.trayBackground() : []
         let cover = await appState.transitions.beginBarCover(label: "tray")
-        await appState.engine.reveal(sections)
+        await appState.engine.reveal(items: [key])
         appState.updateSnapshot(await appState.engine.snapshot())
         await appState.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
         try? await Task.sleep(for: AppTiming.trayRelaySettle)
@@ -183,35 +188,56 @@ final class TrayController {
                 snap = await appState.engine.freshSnapshot()
             }
         }
-        let inSection = snap.items.filter { sections.contains(appState.settings.sectionModel.section(of: $0.id)) }
-        let got = await appState.transitions.harvestTrayPictures(into: pictures, items: inSection, background: background)
-        if got > 0 { refresh() }
+        var got = 0
+        if stale {
+            let mine = snap.items.filter { $0.id.sectionKey == key }
+            got = await appState.transitions.harvestTrayPictures(into: pictures, items: mine, background: background)
+        }
         let item = snap.items.first { $0.id.sectionKey == key && $0.frame != nil }
-        let pressed = item.map { TrayPress.press($0) } ?? false
-        PelmetLog.log("tray: press \(key.rawValue) → \(item == nil ? "not on screen" : pressed ? "pressed" : "press refused")\(toggle == nil ? "" : " (« expanded)"), \(got) picture(s), \(Int(-started.timeIntervalSinceNow * 1000))ms")
-        if pressed, let pid = item?.pid, pid > 0 {
-            // Whatever the press showed keeps the section revealed; the
-            // conceal follows its dismissal.
-            let before = TrayPress.elevatedWindowCount(pid: pid)
-            let showBy = Date().addingTimeInterval(AppTiming.trayRelayMenuWait)
-            var shown = false
-            while Date() < showBy {
-                try? await Task.sleep(for: .milliseconds(30))
-                if TrayPress.elevatedWindowCount(pid: pid) > before { shown = true; break }
+        var shown = false
+        if let item {
+            // AX first (no pointer involved), a shielded HID click when
+            // nothing shows: Apple's hosts and Control Center's modules
+            // take the press and do nothing with it.
+            let before = TrayPress.elevatedWindowCount()
+            let pressed = item.pid > 0 && !item.id.isSystemModule && TrayPress.press(item)
+            if pressed { shown = await Self.somethingShown(over: before) }
+            var clicked = false
+            if !shown {
+                clicked = true
+                await TrayPress.click(item)
+                shown = await Self.somethingShown(over: before)
             }
+            PelmetLog.log("tray: press \(key.rawValue) → \(pressed ? "pressed" : "AX skipped")\(clicked ? ", clicked" : ""), \(shown ? "showed something" : "showed nothing")\(toggle == nil ? "" : " (« expanded)"), \(got) picture(s), \(Int(-started.timeIntervalSinceNow * 1000))ms")
             if shown {
+                // Whatever showed keeps the item revealed; the conceal
+                // follows its dismissal.
                 let cap = Date().addingTimeInterval(AppTiming.trayRelayMenuCap)
-                while Date() < cap, TrayPress.elevatedWindowCount(pid: pid) > before {
+                while Date() < cap, TrayPress.elevatedWindowCount() > before {
                     try? await Task.sleep(for: .milliseconds(100))
                 }
+                PelmetLog.log("tray: \(key.rawValue) gone at \(Int(-started.timeIntervalSinceNow * 1000))ms")
             }
-            PelmetLog.log("tray: \(key.rawValue) \(shown ? "showed something, gone" : "showed nothing") at \(Int(-started.timeIntervalSinceNow * 1000))ms")
+        } else {
+            PelmetLog.log("tray: press \(key.rawValue) → not on screen, \(Int(-started.timeIntervalSinceNow * 1000))ms")
         }
         panel.setPressed(nil)
         if let toggle { await OverflowToggle.collapseAfterPass(toggle) }
         await appState.engine.conceal()
         appState.updateSnapshot(await appState.engine.snapshot())
         if let cover { appState.transitions.endBarCover(cover, label: "tray") }
+        frozen = false
+        if got > 0 { refresh() }
+    }
+
+    /// Polls for an elevated window beyond `before` within the menu wait.
+    private static func somethingShown(over before: Int) async -> Bool {
+        let showBy = Date().addingTimeInterval(AppTiming.trayRelayMenuWait)
+        while Date() < showBy {
+            try? await Task.sleep(for: .milliseconds(30))
+            if TrayPress.elevatedWindowCount() > before { return true }
+        }
+        return false
     }
 
     /// The relay without the press: the section's pictures, taken beneath
@@ -220,6 +246,8 @@ final class TrayController {
         passTask?.cancel()
         passTask = Task { @MainActor in
             guard let appState, relayTask == nil else { return }
+            frozen = true
+            defer { frozen = false }
             let started = Date()
             let sections = self.sections
             let background = await appState.transitions.trayBackground()
@@ -235,6 +263,7 @@ final class TrayController {
             appState.updateSnapshot(await appState.engine.snapshot())
             if let cover { appState.transitions.endBarCover(cover, label: "tray") }
             PelmetLog.log("tray: picture pass (\(reason)) → \(got) picture(s) in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+            frozen = false
             if got > 0 { refresh() }
         }
     }

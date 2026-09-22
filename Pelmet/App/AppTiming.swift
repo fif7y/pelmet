@@ -147,4 +147,10 @@ enum AppTiming {
     /// Relay: the section's items must be at rest before the press lands
     /// and before their pictures are taken.
     static let trayRelaySettle: Duration = .milliseconds(120)
+    /// A press re-pictures its item only when the picture is older than
+    /// this; a fresh one is pressed without a capture.
+    static let trayPictureFreshness: TimeInterval = 120
+    /// The rehide countdown never runs shorter than this while the tray is
+    /// up: the pointer has to leave the band to reach it.
+    static let trayReachGrace: TimeInterval = 0.8
 }

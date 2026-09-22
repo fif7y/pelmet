@@ -1717,7 +1717,12 @@ final class AppState {
                 }
             case .armTimer(let deadline):
                 rehideDeferLogged = false
-                scheduleRehideTimer(at: deadline)
+                // The floating bar sits below the band: reaching it means
+                // leaving the band, so the countdown gets a floor while it
+                // is up (a rehide delay of 0 closed it before any pointer
+                // could arrive).
+                let floor = tray.isOpen ? Date().addingTimeInterval(AppTiming.trayReachGrace) : deadline
+                scheduleRehideTimer(at: max(deadline, floor))
             case .cancelTimer:
                 rehideTimer?.invalidate()
                 rehideTimer = nil

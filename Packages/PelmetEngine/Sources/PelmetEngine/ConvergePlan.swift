@@ -32,6 +32,7 @@ struct ConvergePlan: Equatable {
         carriedConcealed: Set<ItemID>,
         runningBundles: Set<String>,
         revealedSections: Set<PelmetCore.Section>,
+        revealedItems: Set<ItemID> = [],
         steadyExtras: Bool,
         exemptBundles: Set<String>
     ) -> ConvergePlan {
@@ -67,6 +68,12 @@ struct ConvergePlan: Equatable {
             else { continue }
             concealable.insert(bundle)
         }
+        // Single items revealed on their own (the floating bar's relay):
+        // their bundle comes back, their section stays concealed.
+        for id in revealedItems {
+            if let bundle = id.bundleID { concealable.remove(bundle) }
+        }
+        let revealedSystem = Set(revealedItems.compactMap { MenuBarPolicy.systemItem(for: $0) })
 
         // System items assigned to a non-revealed section leave the system
         // allowlist — this is how Sound/battery/etc. become hideable. An
@@ -74,7 +81,8 @@ struct ConvergePlan: Equatable {
         // definition never "revealed" — it's always on screen).
         let hiddenSystem = Set(model.assignments.compactMap { id, section -> SystemItem? in
             guard section != .visible, !revealedSections.contains(section) else { return nil }
-            return MenuBarPolicy.systemItem(for: id)
+            guard let system = MenuBarPolicy.systemItem(for: id), !revealedSystem.contains(system) else { return nil }
+            return system
         })
         let allowedSystem = SystemItem.allCases.filter { !hiddenSystem.contains($0) }
 

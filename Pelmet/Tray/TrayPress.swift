@@ -44,19 +44,29 @@ enum TrayPress {
         }
     }
 
-    /// Windows the item's owner has up beyond its status item — a menu, a
-    /// popover, a panel — counted so the relay knows when the press has
-    /// shown something and when that something is gone. Ordinary document
-    /// windows (layer 0) and the bar's own layer are not it.
-    static func elevatedWindowCount(pid: pid_t) -> Int {
-        guard pid > 0,
-              let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]
+    /// Elevated windows on screen that are not Pelmet's — a menu, a
+    /// popover, a panel the press opened — counted so the relay knows when
+    /// the press has shown something and when that something is gone. Not
+    /// keyed on the owner: a system extra's panel belongs to another
+    /// process. Ordinary document windows (layer 0) and the bar's own
+    /// layer are not it.
+    static func elevatedWindowCount() -> Int {
+        let me = ProcessInfo.processInfo.processIdentifier
+        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]
         else { return 0 }
         return list.filter { info in
-            guard let owner = info[kCGWindowOwnerPID as String] as? Int32, owner == pid,
+            guard let owner = info[kCGWindowOwnerPID as String] as? Int32, owner != me,
                   let layer = info[kCGWindowLayer as String] as? Int
             else { return false }
             return layer > 0 && layer != 25
         }.count
+    }
+
+    /// The click every host answers: a shielded HID click at the item's
+    /// centre (cursor hidden, warped back). The cover above ignores mouse
+    /// events, so it reaches the bar.
+    static func click(_ item: ObservedItem) async {
+        guard let frame = item.frame else { return }
+        await ItemMover.shieldedClick(at: CGPoint(x: frame.midX, y: frame.midY))
     }
 }

@@ -96,8 +96,21 @@ final class TrayPanel {
     var isShown: Bool { panel.isVisible }
     var screen: NSScreen? { placement?.screen }
 
+    /// The tray and its approach: the band above it, the gap, a margin
+    /// around it and the run to the display's trailing edge (a pointer
+    /// leaving the bar by the clock is on its way here). Without this a
+    /// rehide delay of zero closed the tray the moment the pointer left
+    /// the band anywhere but onto the tray itself.
     func contains(_ point: NSPoint) -> Bool {
-        panel.isVisible && panel.frame.insetBy(dx: -2, dy: -2).contains(point)
+        guard panel.isVisible, let screen = placement?.screen else { return false }
+        let f = panel.frame
+        let margin: CGFloat = 24
+        let top = screen.frame.maxY - Self.barHeight(of: screen)
+        let corridor = NSRect(
+            x: f.minX - margin, y: f.minY - margin,
+            width: (screen.frame.maxX - f.minX) + margin, height: top - (f.minY - margin)
+        )
+        return corridor.contains(point)
     }
 
     /// The order the cells sit in right now (a drag in flight included).
