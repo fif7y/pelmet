@@ -31,15 +31,16 @@ enum AppTiming {
     /// blink uncovered, three runs averaged (Gab's built-in, 2026-09-22
     /// 17:17). The edge is where the bar's shade reaches half its depth.
     static let panelEntranceInsets: [CGFloat] = [0, 16, 40, 130, 215, 255, 288, 316, 336, 352, 364, 374, 380, 382]
-    /// From the relay's click being up to the panel's first frame (~100ms
-    /// after the replayed mouse-down, which is held 60ms).
-    static let panelEntranceDelay: CFTimeInterval = 0.035
+    /// From the relay's click being up to the wipe's first frame. Filmed
+    /// at ~35ms; tuned by eye to 105ms against the panel's card below the
+    /// bar, which trails the bar's own shade (Gab, 2026-09-22 17:38).
+    static let panelEntranceDelay: CFTimeInterval = 0.105
     /// Where the panel's leading edge comes to rest, in from the display's
     /// right edge, as the bar's shade shows it (1390pt on an 1800pt bar).
     static let panelShadeInset: CGFloat = 410
     /// The panel's leading edge as the glass shows it: a ~70pt ramp
     /// (60fps profile, 2026-09-22 14:28).
-    static let panelEdgeSoftness: CGFloat = 75
+    static let panelEdgeSoftness: CGFloat = 110
     /// The under-panel picture shows the visible cluster too, and that
     /// cluster drifts (battery, Wi-Fi, third-party glyphs): short-lived,
     /// and dropped outright when an own item redraws.
