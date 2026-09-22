@@ -115,6 +115,28 @@ final class TransitionCoordinator {
         }
     }
 
+    /// The picture parked when Notification Center's panel opened, when it
+    /// is the bare bar of right now: same display, fresh, and the backdrop
+    /// without the panel's own windows reads as it did then.
+    private func bareParkedCover() -> [ConcealGhostOverlay.BarSnapshot]? {
+        guard let parked = parkedCover else { PelmetLog.log("clock: no parked picture"); return nil }
+        guard !parked.underPanel else { PelmetLog.log("clock: parked picture was taken under the panel"); return nil }
+        guard let first = parked.snapshot.first, Date().timeIntervalSince(first.takenAt) < AppTiming.revealCoverFreshness else { PelmetLog.log("clock: parked picture stale"); return nil }
+        guard parked.display == appState?.lastMouseDownDisplay else { PelmetLog.log("clock: parked picture from another active display (\(parked.display ?? 0) → \(appState?.lastMouseDownDisplay ?? 0))"); return nil }
+        guard let list = ConcealGhostOverlay.onScreenWindows() else { return nil }
+        // The panel itself; its widgets and the Dock's backstop never enter
+        // a signature (see `backdropSignature`).
+        let bare = list.filter { w in
+            (w[kCGWindowOwnerName as String] as? String) != "Notification Center" || (w[kCGWindowLayer as String] as? Int ?? 0) < 0
+        }
+        let now = ConcealGhostOverlay.backdropSignature(of: precaptureRect, in: bare) + ConcealGhostOverlay.surfaceSignature()
+        if now != parked.backdrop {
+            PelmetLog.log("clock: parked picture's backdrop differs (\(ConcealGhostOverlay.backdropMovers(from: parked.backdrop, to: now, in: bare)))")
+            return nil
+        }
+        return parked.snapshot
+    }
+
     /// The pointer entered the hover zone: a reveal is likely within the
     /// hover delay or a click. Retake the dropped cover now so it is ready
     /// (~90ms on Gab's Mac, 150–466ms on #49's), and only now.
@@ -495,15 +517,34 @@ final class TransitionCoordinator {
         // live 2026-09-22), so the click that closes it captures live.
         backdropMayHaveChanged()
         if appState.currentRevealedSections.isEmpty {
-            let whole = freshEmptyBarSnapshots(cropped: false)
-            let span = geometry.minX...(geometry.clockMinX - 2 - ConcealGhostOverlay.capturePadding)
+            var whole = freshEmptyBarSnapshots(cropped: false)
+            var underPanel = revealCoverUnderPanel
+            // The click that closes Notification Center: the idle picture
+            // (if any) was taken under the panel, and lifting the panel's
+            // shade back off a picture only approximates the bare bar. The
+            // picture parked when the panel opened IS the bare bar; with
+            // the same backdrop otherwise, it takes the dark front sliding
+            // out, exactly as the opening click took it sliding in (#51).
+            var spanEnd = geometry.clockMinX - 2 - ConcealGhostOverlay.capturePadding
+            if ClockClickRelay.notificationCenterIsOpen(), let bare = bareParkedCover() {
+                whole = bare; underPanel = false
+                // The clock sits 3pt further right while the panel is open;
+                // the picture was taken at rest and ends just short of the
+                // resting clock, which is where the cover ends anyway once
+                // the panel has gone.
+                if let last = bare.first?.windowFrame.maxX {
+                    spanEnd = min(spanEnd, last - ConcealGhostOverlay.capturePadding)
+                }
+                PelmetLog.log("\(label): bare picture from before the panel opened")
+            }
+            let span = geometry.minX...spanEnd
             let reusable = ConcealGhostOverlay.cropped(whole, toPrimaryX: span)
             if reusable.isEmpty {
                 let have = whole.first.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" } ?? "none"
                 PelmetLog.log("\(label): idle picture \(have) unusable for \(Int(span.lowerBound))..\(Int(span.upperBound)), capturing")
             }
             if var cover = ConcealGhostOverlay.begin(from: reusable, safety: safety) {
-                cover.pictureUnderPanel = revealCoverUnderPanel
+                cover.pictureUnderPanel = underPanel
                 PelmetLog.log("\(label): cover up from the idle picture, no capture — ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
                 return cover
             }

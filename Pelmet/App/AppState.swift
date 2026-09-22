@@ -776,6 +776,7 @@ final class AppState {
             // The click opens (or closes) Notification Center under the
             // cover: shade the picture with the panel (#51).
             cover?.followPanelShade { ClockClickRelay.notificationCenterIsOpen() }
+            let panelWasOpen = ClockClickRelay.notificationCenterIsOpen()
             let blinked = await engine.beginClockBlink()
             if let clockElement {
                 // Only once the physical button is up: pressed while the
@@ -790,6 +791,9 @@ final class AppState {
                 var opened = false
                 for attempt in 1...2 where !opened {
                     let pressed = ClockClickRelay.press(clockElement)
+                    // A press on an open panel closes it, and its slide
+                    // starts now: the cover's shade follows from here.
+                    if pressed, panelWasOpen { cover?.panelWillClose(); break }
                     // Poll for the panel rather than sleeping the whole
                     // verify budget: it shows well inside it, and every ms
                     // here is picture time on the bar (#46).
@@ -800,10 +804,11 @@ final class AppState {
                     } while !opened && Date() < verifyUntil
                     PelmetLog.log("clock: dot press \(attempt) \(pressed ? "sent" : "refused") - NC \(opened ? "open" : "not open")")
                 }
-                if !opened { ClockClickRelay.postClick(at: point, pointer: pointer) }
+                if !opened, !panelWasOpen { ClockClickRelay.postClick(at: point, pointer: pointer) }
             } else {
                 if point != pointer { PelmetLog.log("clock: dot click - no clock element under the target, replaying the click") }
                 ClockClickRelay.postClick(at: point, pointer: pointer)
+                if panelWasOpen { cover?.panelWillClose() }
             }
             guard blinked else { cover?.dismiss(); return }
             try? await Task.sleep(for: AppTiming.clockBlinkReacquire)

@@ -83,6 +83,12 @@ final class ConcealGhostOverlay {
             let taken = pictureUnderPanel
             for overlay in overlays { overlay.followPanelShade(pictureUnderPanel: taken, isOpen: isOpen) }
         }
+        /// The click that closes the panel just went through: its slide
+        /// starts now, while its window stays listed until the slide has
+        /// ended (~640ms on Gab's Mac, past the cover's lift).
+        func panelWillClose() {
+            for overlay in overlays { overlay.panelWillClose() }
+        }
     }
 
     /// SCShareableContent lookup is the slow part (can be 100ms+) — cache the
@@ -188,6 +194,14 @@ final class ConcealGhostOverlay {
                   let b = w[kCGWindowBounds as String] as? [String: CGFloat],
                   let x = b["X"], let y = b["Y"], let width = b["Width"], let height = b["Height"]
             else { continue }
+            // Notification Center's desktop widgets hide while its panel is
+            // open and the Dock raises a display-sized backstop under it;
+            // both come and go with the panel, which is in the signature
+            // itself. Leaving them out lets a picture parked when the
+            // panel opened read as the bare bar while it is open (#51).
+            let owner = w[kCGWindowOwnerName as String] as? String ?? ""
+            if owner == "Notification Center", layer < 0 { continue }
+            if owner == "Dock", width >= 1000, height >= 700 { continue }
             let frame = CGRect(x: x, y: y, width: width, height: height)
             guard zones.contains(where: { $0.intersects(frame) }) else { continue }
             runs.append((id, [Int(id), Int(x), Int(y), Int(width), Int(height)]))
@@ -243,6 +257,8 @@ final class ConcealGhostOverlay {
     private var stoodDown = false
     private var shadeLayer: CALayer?
     private var shadeFollower: Task<Void, Never>?
+    private var panelOpen = false
+    private var panelShadeTransition: ((Bool) -> Void)?
 
     /// Notification Center's panel is a window BELOW the bar (layer 21):
     /// it slides under the glass and the bar over it darkens, a picture of
@@ -308,32 +324,48 @@ final class ConcealGhostOverlay {
             let engaged = panelOpen != pictureUnderPanel
             return pictureUnderPanel ? (engaged ? travel : 0) : (engaged ? 0 : travel)
         }
-        var open = isOpen()
+        panelOpen = isOpen()
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        ramp.transform = CATransform3DMakeTranslation(translation(panelOpen: open), 0, 0)
+        ramp.transform = CATransform3DMakeTranslation(translation(panelOpen: panelOpen), 0, 0)
         host.addSublayer(shade)
         CATransaction.commit()
         shadeLayer = shade
+        panelShadeTransition = { now in
+            let anim = CABasicAnimation(keyPath: "transform.translation.x")
+            anim.fromValue = ramp.presentation()?.value(forKeyPath: "transform.translation.x") ?? translation(panelOpen: !now)
+            anim.toValue = translation(panelOpen: now)
+            anim.duration = now ? Self.panelSlideIn : Self.panelSlideOut
+            // The panel eases out on the way in and in on the way out.
+            let curve: (Float, Float, Float, Float) = now ? (0.16, 1, 0.3, 1) : (0.55, 0, 0.8, 0.4)
+            anim.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            ramp.add(anim, forKey: "pelmetPanelFront")
+            ramp.transform = CATransform3DMakeTranslation(translation(panelOpen: now), 0, 0)
+            CATransaction.commit()
+            PelmetLog.log("ghost: cover \(pictureUnderPanel ? "lift" : "shade") front \(now ? "in" : "out") — Notification Center \(now ? "opening" : "closing")\(pictureUnderPanel ? ", picture taken under it" : "")")
+        }
+        // The window list lags the panel's exit by ~0.6s (see
+        // `panelWillClose`); it leads the entrance, so opening is polled.
         shadeFollower = Task { @MainActor [weak self] in
             while let self, !self.finished, !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(30))
-                let now = isOpen()
-                guard now != open else { continue }
-                open = now
-                let anim = CABasicAnimation(keyPath: "transform.translation.x")
-                anim.fromValue = ramp.presentation()?.value(forKeyPath: "transform.translation.x") ?? translation(panelOpen: !now)
-                anim.toValue = translation(panelOpen: now)
-                anim.duration = now ? Self.panelSlideIn : Self.panelSlideOut
-                // The panel eases out on the way in and in on the way out.
-                let curve: (Float, Float, Float, Float) = now ? (0.16, 1, 0.3, 1) : (0.55, 0, 0.8, 0.4)
-                anim.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
-                CATransaction.begin(); CATransaction.setDisableActions(true)
-                ramp.add(anim, forKey: "pelmetPanelFront")
-                ramp.transform = CATransform3DMakeTranslation(translation(panelOpen: now), 0, 0)
-                CATransaction.commit()
-                PelmetLog.log("ghost: cover \(pictureUnderPanel ? "lift" : "shade") front \(now ? "in" : "out") — Notification Center \(now ? "opening" : "closing")\(pictureUnderPanel ? ", picture taken under it" : "")")
+                guard !Task.isCancelled else { return }
+                if isOpen(), !self.panelOpen { self.panelShade(open: true) }
             }
         }
+    }
+
+    func panelShade(open: Bool) {
+        guard !finished, open != panelOpen, let transition = panelShadeTransition else { return }
+        panelOpen = open
+        transition(open)
+    }
+
+    /// The window list still says open for the whole exit slide: stop
+    /// reading it, the panel will not come back within this cover's life.
+    func panelWillClose() {
+        shadeFollower?.cancel()
+        panelShade(open: false)
     }
 
     /// A captured strip image ready to float — pre-captured at conceal settle
