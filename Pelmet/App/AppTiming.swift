@@ -32,9 +32,11 @@ enum AppTiming {
     /// 17:17). The edge is where the bar's shade reaches half its depth.
     static let panelEntranceInsets: [CGFloat] = [0, 16, 40, 130, 215, 255, 288, 316, 336, 352, 364, 374, 380, 382]
     /// From the relay's click being up to the wipe's first frame. Filmed
-    /// at ~35ms; tuned by eye to 105ms against the panel's card below the
-    /// bar, which trails the bar's own shade (Gab, 2026-09-22 17:38).
-    static let panelEntranceDelay: CFTimeInterval = 0.105
+    /// at ~35ms; tuned by eye against the panel's card below the bar,
+    /// which trails the bar's own shade: 105ms with a kept under-panel
+    /// still, 130ms with the click's own picture shaded (Gab, 2026-09-22
+    /// 18:05).
+    static let panelEntranceDelay: CFTimeInterval = 0.13
     /// Where the panel's leading edge comes to rest, in from the display's
     /// right edge, as the bar's shade shows it (1390pt on an 1800pt bar).
     static let panelShadeInset: CGFloat = 410
