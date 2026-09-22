@@ -81,14 +81,6 @@ final class TransitionCoordinator {
     /// display hold. The entrance blink swaps to it once the panel has slid
     /// in: from then on nothing moves under the bar, and a still of that
     /// state is exact (#51).
-    /// One per bar state: concealed, and each revealed set of sections
-    /// (with the hidden section's content), so a click with the icons out
-    /// wipes in a picture of the bar with the icons out (Gab, 17:36).
-    private var underPanelPictures: [String: (snapshot: [ConcealGhostOverlay.BarSnapshot], backdrop: [Int], display: CGDirectDisplayID?)] = [:]
-    private var barStateKey: String {
-        let sections = (appState?.currentRevealedSections ?? []).map(\.rawValue).sorted().joined(separator: ",")
-        return sections + "|" + hiddenSectionSignature.map(\.rawValue).joined(separator: ",")
-    }
 
     private func backdropMayHaveChanged() {
         guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty || parkedCover != nil else { return }
@@ -129,13 +121,6 @@ final class TransitionCoordinator {
         }
     }
 
-    /// One of Pelmet's own items drew a different glyph: the picture of
-    /// the bar under the panel shows the old one over the visible cluster.
-    func ownItemsRedrew() {
-        guard !underPanelPictures.isEmpty else { return }
-        underPanelPictures.removeAll()
-        PelmetLog.log("clock: under-panel picture dropped — an own item redrew")
-    }
 
     /// Notification Center was just dismissed from the clock: once its
     /// slide is over and its window has left the list (~0.6s), take the
@@ -620,56 +605,20 @@ final class TransitionCoordinator {
         return cover.map { BlinkCover($0, span: geometry.minX...geometry.endX, safety: safety, pictures: snaps) }
     }
 
-    /// The signature the under-panel picture is kept under: the backdrop
-    /// (the panel is not part of it) plus wallpaper and appearance.
-    private var underPanelSignature: [Int] {
-        ConcealGhostOverlay.backdropSignature(of: precaptureRect, primaryOnly: true) + ConcealGhostOverlay.surfaceSignature()
-    }
-
-    /// Entrance blink, once Notification Center's panel has slid in: put
-    /// the picture of the bar as it looks under the panel over the bare
-    /// one, then drop the bare one. Nothing moves under the bar from here
-    /// to the lift, so the still is exact. No picture yet, or a stale one:
-    /// the bare cover stays (today's look) and the lift takes a new one.
+    /// Entrance blink, as Notification Center's panel slides in: the
+    /// picture this cover shows (the bar as it is at this click) with the
+    /// panel's measured shade over it, wiped in from the right on the
+    /// panel's own trajectory. Always the click's own picture: a kept
+    /// still of the bar under the panel painted over any icon that had
+    /// changed since (Gab, 2026-09-22 18:00), and refreshing it cost a
+    /// capture at every exit click.
     func swapBlinkCoverUnderPanel(_ cover: BlinkCover) {
-        // The picture must be of the bar in the state it is in now: a
-        // concealed-bar picture over a revealed bar painted the icons away
-        // (Gab, 17:28).
-        let key = barStateKey
-        guard let appState, let kept = underPanelPictures[key], let first = kept.snapshot.first,
-              Date().timeIntervalSince(first.takenAt) < AppTiming.underPanelPictureFreshness,
-              kept.display == appState.lastMouseDownDisplay,
-              kept.backdrop == underPanelSignature else {
-            underPanelPictures[key] = nil
-            // No real picture of this bar under the panel yet (first click
-            // in this state): the bare picture with the panel's measured
-            // shade over it stands in, wiped in the same way.
-            guard !cover.pictures.isEmpty, let standIn = ConcealGhostOverlay.begin(from: cover.pictures, safety: cover.safety) else {
-                PelmetLog.log("clock: no under-panel picture and no bare picture, bare cover stays")
-                return
-            }
-            standIn.addPanelShade()
-            wipe(standIn, over: cover, what: "stand-in (measured shade)")
+        guard !cover.pictures.isEmpty, let shaded = ConcealGhostOverlay.begin(from: cover.pictures, safety: cover.safety) else {
+            PelmetLog.log("clock: no picture to shade, bare cover stays")
             return
         }
-        // A picture up to 4pt short at the clock end still serves: the
-        // cover then ends that much earlier, in bare bar before the clock.
-        var span = cover.span
-        if let last = kept.snapshot.first?.windowFrame.maxX {
-            let end = last - ConcealGhostOverlay.capturePadding
-            if end < span.upperBound, span.upperBound - end <= 4 { span = span.lowerBound...end }
-        }
-        let cropped = ConcealGhostOverlay.cropped(kept.snapshot, toPrimaryX: span)
-        guard let under = ConcealGhostOverlay.begin(from: cropped, safety: cover.safety) else {
-            let have = kept.snapshot.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" }.joined(separator: " ")
-            PelmetLog.log("clock: under-panel picture (\(have)) does not span the cover \(Int(cover.span.lowerBound))..\(Int(cover.span.upperBound)), bare cover stays")
-            return
-        }
-        // Over the bare still, wiped in from the right the way the panel
-        // slides under the bar (Gab's design, 2026-09-22): the still is the
-        // exact look, the mask is the motion. A hard swap read as a step
-        // and a crossfade as a fade; neither moved.
-        wipe(under, over: cover, what: "under-panel picture")
+        shaded.addPanelShade()
+        wipe(shaded, over: cover, what: "shaded picture")
     }
 
     private func wipe(_ under: ConcealGhostOverlay.GhostSet, over cover: BlinkCover, what: String) {
@@ -687,42 +636,6 @@ final class TransitionCoordinator {
         PelmetLog.log("clock: \(what) wiping in over the cover (\(insets.count) frames, delay \(Int(delay * 1000))ms)")
     }
 
-    /// After an entrance blink has lifted with the panel open and the bar
-    /// quiet: keep a picture of the bar under the panel for the next one,
-    /// unless the kept one still holds (one capture per changed bar).
-    /// `maxAge`: a kept picture older than this is retaken even if its
-    /// signature holds. The glass blurs the panel's CONTENT, which no
-    /// signature sees (a notification card against "No recent
-    /// notifications" reads darker or lighter, Gab 2026-09-22 16:58): at
-    /// the click that closes the panel, a picture a few seconds old is
-    /// worth one capture.
-    func takeUnderPanelPicture(span: ClosedRange<CGFloat>? = nil, maxAge: TimeInterval = AppTiming.underPanelPictureFreshness) async {
-        guard let appState, ClockClickRelay.notificationCenterIsOpen() else { return }
-        let key = barStateKey
-        let signature = underPanelSignature
-        if let kept = underPanelPictures[key], kept.backdrop == signature, kept.display == appState.lastMouseDownDisplay,
-           let first = kept.snapshot.first, Date().timeIntervalSince(first.takenAt) < maxAge { return }
-        // The wide rect the idle picture uses (reveal ∪ blink), so any
-        // later blink span crops out of it whatever the concealed count —
-        // to the clock as it sits NOW: under the open panel it is 3pt
-        // further right than at rest, and a picture taken to the resting
-        // clock came up 3pt short of the next cover (2026-09-22 16:38).
-        guard var rect = precaptureRect, let geometry = barCoverGeometry() else {
-            PelmetLog.log("clock: under-panel picture not taken — no rect")
-            return
-        }
-        rect = rect.union(barCoverRect(geometry))
-        let snaps = await ConcealGhostOverlay.snapshotSet(of: rect)
-        guard !snaps.isEmpty else { return }
-        let span = span ?? (rect.minX...rect.maxX)
-        // The bar must still be in the state the key names.
-        guard key == barStateKey else { return }
-        underPanelPictures[key] = (snaps, signature, appState.lastMouseDownDisplay)
-        let probe: ClosedRange<CGFloat> = (span.upperBound - 200)...(span.upperBound - 20)
-        let under = snaps.first.map { ConcealGhostOverlay.meanLuma($0, primaryX: probe) } ?? -1
-        let bare = revealCoverSnapshot.first.map { ConcealGhostOverlay.meanLuma($0, primaryX: probe) } ?? -1
-        PelmetLog.log("clock: under-panel picture taken (\(Int(span.lowerBound))..\(Int(span.upperBound))) — luma under \(Int(under)) vs bare idle \(Int(bare)) over \(Int(probe.lowerBound))..\(Int(probe.upperBound))")
-    }
 
     /// Lift the blink cover once the re-acquire has taken beneath it. Swap-
     /// quiet is not enough: the agent finishes the drop's reveal slide
@@ -743,12 +656,6 @@ final class TransitionCoordinator {
             try? await Task.sleep(for: .seconds(AppTiming.clockBlinkLiftHold))
             cover.dismiss()
             PelmetLog.log("\(label): cover down — concealed gone at \(gone)ms, lifted at \(Int(-started.timeIntervalSinceNow * 1000))ms")
-            if label == "clock" {
-                // The panel's window reaches the list ~250ms after it opens;
-                // by the lift it is there.
-                try? await Task.sleep(for: .milliseconds(150))
-                await takeUnderPanelPicture(span: cover.span)
-            }
         }
     }
 

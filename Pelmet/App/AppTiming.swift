@@ -41,13 +41,6 @@ enum AppTiming {
     /// The panel's leading edge as the glass shows it: a ~70pt ramp
     /// (60fps profile, 2026-09-22 14:28).
     static let panelEdgeSoftness: CGFloat = 110
-    /// The under-panel picture shows the visible cluster too, and that
-    /// cluster drifts (battery, Wi-Fi, third-party glyphs): short-lived,
-    /// and dropped outright when an own item redraws.
-    static let underPanelPictureFreshness: TimeInterval = 120
-    /// At the click that closes the panel, a kept picture older than this
-    /// is retaken: the panel's content under the glass may have changed.
-    static let underPanelPictureRefreshAtExit: TimeInterval = 10
     /// How long the blink cover stays after the concealed items have left
     /// the AX tree. Was `exitCoverHold` (0.42s) — the picture sat 1.0–1.5s
     /// on every clock click (#46). Measured 2026-09-21 at 60fps: lifting
