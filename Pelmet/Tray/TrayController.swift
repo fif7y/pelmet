@@ -168,6 +168,7 @@ final class TrayController {
         passTask?.cancel()
         let started = Date()
         let sections = self.sections
+        let background = await appState.transitions.trayBackground()
         let cover = await appState.transitions.beginBarCover(label: "tray")
         await appState.engine.reveal(sections)
         appState.updateSnapshot(await appState.engine.snapshot())
@@ -183,7 +184,7 @@ final class TrayController {
             }
         }
         let inSection = snap.items.filter { sections.contains(appState.settings.sectionModel.section(of: $0.id)) }
-        let got = await appState.transitions.harvestTrayPictures(into: pictures, items: inSection)
+        let got = await appState.transitions.harvestTrayPictures(into: pictures, items: inSection, background: background)
         if got > 0 { refresh() }
         let item = snap.items.first { $0.id.sectionKey == key && $0.frame != nil }
         let pressed = item.map { TrayPress.press($0) } ?? false
@@ -221,6 +222,7 @@ final class TrayController {
             guard let appState, relayTask == nil else { return }
             let started = Date()
             let sections = self.sections
+            let background = await appState.transitions.trayBackground()
             let cover = await appState.transitions.beginBarCover(label: "tray")
             await appState.engine.reveal(sections)
             appState.updateSnapshot(await appState.engine.snapshot())
@@ -228,7 +230,7 @@ final class TrayController {
             try? await Task.sleep(for: AppTiming.trayRelaySettle)
             let snap = await appState.engine.freshSnapshot()
             let inSection = snap.items.filter { sections.contains(appState.settings.sectionModel.section(of: $0.id)) }
-            let got = Task.isCancelled ? 0 : await appState.transitions.harvestTrayPictures(into: pictures, items: inSection)
+            let got = Task.isCancelled ? 0 : await appState.transitions.harvestTrayPictures(into: pictures, items: inSection, background: background)
             await appState.engine.conceal()
             appState.updateSnapshot(await appState.engine.snapshot())
             if let cover { appState.transitions.endBarCover(cover, label: "tray") }

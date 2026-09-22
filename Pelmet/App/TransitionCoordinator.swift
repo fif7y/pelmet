@@ -157,12 +157,30 @@ final class TransitionCoordinator {
     /// each picture sits on glass with no bar around it. Only the columns
     /// both pictures cover yield a clean cut; items outside them are left
     /// for a later pass. Returns how many pictures landed.
-    func harvestTrayPictures(into pictures: TrayPictures, items: [ObservedItem]) async -> Int {
+    /// The empty bar under the concealed section, for the tray's cut-outs:
+    /// the precaptured picture when it is usable, a fresh one otherwise —
+    /// the bar is concealed and at rest when a relay starts. A capture
+    /// lights the indicator and shifts the bar ~3pt, so with it off the
+    /// first picture only lights it and the second is the one kept: every
+    /// picture after shares the shift.
+    func trayBackground() async -> [ConcealGhostOverlay.BarSnapshot] {
+        guard ScreenRecordingAccess.isGranted, appState?.currentRevealedSections.isEmpty ?? false else { return [] }
+        let fresh = freshEmptyBarSnapshots()
+        if !fresh.isEmpty { return fresh }
+        if !ConcealGhostOverlay.captureIndicatorLit {
+            _ = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+        let snaps = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
+        PelmetLog.log("tray: empty-bar picture taken (\(snaps.count) display(s))")
+        return snaps
+    }
+
+    func harvestTrayPictures(into pictures: TrayPictures, items: [ObservedItem], background emptyBar: [ConcealGhostOverlay.BarSnapshot]) async -> Int {
         guard ScreenRecordingAccess.isGranted else { return 0 }
         let primaryMaxX = primaryMaxX
         let frames = items.compactMap(\.frame).filter { MenuBarGeometry.isInPrimaryBand($0, primaryMaxX: primaryMaxX) }
         guard let minX = frames.map(\.minX).min(), let maxX = frames.map(\.maxX).max(), let band = frames.first else { return 0 }
-        let emptyBar = freshEmptyBarSnapshots()
         guard let bg = emptyBar.first(where: { NSScreen.screens.first?.frame.contains(NSPoint(x: $0.windowFrame.midX, y: $0.windowFrame.midY)) ?? true }) else {
             PelmetLog.log("tray: no empty-bar picture to cut against")
             return 0
