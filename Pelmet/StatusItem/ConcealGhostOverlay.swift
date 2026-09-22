@@ -201,11 +201,20 @@ final class ConcealGhostOverlay {
     /// cover showed the previous wallpaper for a quarter of an hour once
     /// it stopped capturing live, PR #50).
     static let surfaceSignatureCount = 2
+    /// The wallpaper store's index is rewritten on every change, including
+    /// the ones `desktopImageURL` misses: picking another variant of the
+    /// same dynamic wallpaper keeps the path (Gab, 2026-09-22 14:21: the
+    /// store changed, the URL did not, and the parked picture of the old
+    /// wallpaper was restored a second later).
+    private static let wallpaperStoreIndex = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/com.apple.wallpaper/Store/Index.plist").path
     static func surfaceSignature() -> [Int] {
         var hasher = Hasher()
         for screen in NSScreen.screens {
             hasher.combine(NSWorkspace.shared.desktopImageURL(for: screen)?.path ?? "")
         }
+        let modified = (try? FileManager.default.attributesOfItem(atPath: wallpaperStoreIndex))?[.modificationDate] as? Date
+        hasher.combine(modified?.timeIntervalSinceReferenceDate ?? 0)
         return [NSApp.effectiveAppearance.name.rawValue.hashValue, hasher.finalize()]
     }
 
@@ -239,12 +248,13 @@ final class ConcealGhostOverlay {
     /// it slides under the glass and the bar over it darkens, a picture of
     /// the bar taken before does not, and the cover reads as a lighter
     /// rectangle until it lifts (#51). Measured 2026-09-22 on Gab's bar:
-    /// ×0.965 at the top row to ×0.89 at the bottom, ramping in over ~80pt
-    /// from ~420pt off the display's right edge; a lighter wallpaper read
+    /// ×0.965 at the top row to ×0.89 at the bottom, ramping in over ~70pt
+    /// from ~410pt off the display's right edge (60fps burst 14:23: bins
+    /// left of 1390pt untouched, 1390→1460 ramps, flat after); a lighter wallpaper read
     /// ×0.94 overall. A black gradient of that shape over the cover's right
     /// end, faded in and out with the panel, keeps cover and bar in step.
-    static let panelShadeInset: CGFloat = 420
-    static let panelShadeRamp: CGFloat = 80
+    static let panelShadeInset: CGFloat = 340
+    static let panelShadeRamp: CGFloat = 70
     static let panelShadeTop: Float = 0.035
     static let panelShadeBottom: Float = 0.11
     static let panelShadeFade: CFTimeInterval = 0.15
