@@ -62,7 +62,10 @@ enum TrayPress {
                   let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
                   let y = bounds["Y"], let width = bounds["Width"], let height = bounds["Height"]
             else { return false }
-            if layer > 0, layer != 25 { return true }
+            // Weather's popover is a status-level window (layer 25, the
+            // bar's own level) 1131pt tall: the bar's level is excluded
+            // only at the bar's height.
+            if layer > 0, layer != 25 || height > 60 { return true }
             // A popover at the normal level (Weather's): its top sits
             // between the bar and 60pt below it (its bounds carry a
             // margin), and it is nowhere near a document window's width.
@@ -78,8 +81,12 @@ enum TrayPress {
         else { return 0 }
         return list.filter { info in
             guard let owner = info[kCGWindowOwnerPID as String] as? Int32, owner == pid,
-                  let layer = info[kCGWindowLayer as String] as? Int else { return false }
-            return layer != 25
+                  let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
+                  let height = bounds["Height"] else { return false }
+            // A status item has no window of its own on macOS 27: anything
+            // taller than a bar row is a popover or panel, whatever level
+            // it sits at (Weather's is at the bar's own level).
+            return height > 40
         }.count
     }
 
