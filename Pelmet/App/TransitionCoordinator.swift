@@ -196,6 +196,17 @@ final class TransitionCoordinator {
         let rect = CGRect(x: minX - 8, y: band.minY, width: maxX - minX + 16, height: band.height)
         let strip = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
         guard let cut = ConcealGhostOverlay.iconsOnly(strip, background: emptyBar) else { return 0 }
+        if UserDefaults.standard.bool(forKey: "pelmet.trayDump") {
+            for (name, snaps) in [("strip", strip), ("empty", emptyBar), ("cut", cut)] {
+                guard let image = snaps.first?.image else { continue }
+                let url = URL(fileURLWithPath: NSString(string: "~/Library/Logs/Pelmet/tray-\(name).png").expandingTildeInPath)
+                if let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) {
+                    CGImageDestinationAddImage(dest, image, nil)
+                    CGImageDestinationFinalize(dest)
+                }
+            }
+            PelmetLog.log("tray: pictures dumped (strip \(Int(strip.first?.windowFrame.minX ?? 0))..\(Int(strip.first?.windowFrame.maxX ?? 0)), empty \(Int(bg.windowFrame.minX))..\(Int(bg.windowFrame.maxX)))")
+        }
         let within = (bg.windowFrame.minX + ConcealGhostOverlay.capturePadding)...(bg.windowFrame.maxX - ConcealGhostOverlay.capturePadding)
         return pictures.harvest(cut, items: items, within: within)
     }
