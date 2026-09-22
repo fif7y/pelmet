@@ -69,6 +69,19 @@ enum TrayPress {
         }.count
     }
 
+    /// Every on-screen window of `pid` but the bar's own layer, whatever
+    /// its level or shape: a popover the press opened raises it by one.
+    static func windowCount(pid: pid_t) -> Int {
+        guard pid > 0,
+              let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]
+        else { return 0 }
+        return list.filter { info in
+            guard let owner = info[kCGWindowOwnerPID as String] as? Int32, owner == pid,
+                  let layer = info[kCGWindowLayer as String] as? Int else { return false }
+            return layer != 25
+        }.count
+    }
+
     /// The click every host answers: a shielded HID click at the item's
     /// centre (cursor hidden, warped back). The cover above ignores mouse
     /// events, so it reaches the bar.

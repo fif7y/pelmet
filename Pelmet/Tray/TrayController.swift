@@ -174,12 +174,16 @@ final class TrayController {
             PelmetLog.log("tray: press \(key.rawValue) → own item \(ran ? "activated" : "not found")")
             return
         }
-        guard relayTask == nil else {
-            PelmetLog.log("tray: press \(key.rawValue) ignored, a relay is running")
-            return
+        // A relay still waiting its popover out yields to the new press:
+        // it conceals and this one runs after it.
+        let previous = relayTask
+        if previous != nil {
+            PelmetLog.log("tray: press \(key.rawValue) — the running relay yields")
+            previous?.cancel()
         }
         panel.setPressed(key)
         relayTask = Task { @MainActor in
+            _ = await previous?.value
             await relay(key)
             relayTask = nil
         }
@@ -217,9 +221,10 @@ final class TrayController {
             // third-party extra, 2026-09-21), and Apple's hosts and the
             // modules took it and did nothing.
             let before = TrayPress.elevatedWindowCount()
+            let beforeOwn = TrayPress.windowCount(pid: item.pid)
             let wasFront = Self.isFrontmost(item.pid)
             await TrayPress.click(item)
-            let how = await Self.somethingShown(over: before, pid: wasFront ? 0 : item.pid)
+            let how = await Self.somethingShown(over: before, own: beforeOwn, pid: item.pid, frontCounts: !wasFront)
             shown = how != nil
             PelmetLog.log("tray: press \(key.rawValue) → clicked, \(how.map { "showed \($0)" } ?? "showed nothing")\(toggle == nil ? "" : " (« expanded)"), \(Int(-started.timeIntervalSinceNow * 1000))ms")
             if let how {
@@ -228,20 +233,31 @@ final class TrayController {
                 // clicked again (a capsule behind three icons, 2026-09-21).
                 // Gone = the way it showed is undone: the windows are back
                 // to the count before, or the app is no longer in front.
-                let cap = Date().addingTimeInterval(AppTiming.trayRelayMenuCap)
-                while Date() < cap {
-                    let still = how == "a window" ? TrayPress.elevatedWindowCount() > before : Self.isFrontmost(item.pid)
+                // "In front" alone is a weak signal (an app can stay in
+                // front after its popover closed): capped short.
+                let cap = Date().addingTimeInterval(how == "its app in front" ? AppTiming.trayRelayFrontCap : AppTiming.trayRelayMenuCap)
+                while Date() < cap, !Task.isCancelled {
+                    let still: Bool
+                    switch how {
+                    case "a window": still = TrayPress.elevatedWindowCount() > before
+                    case "its own window": still = TrayPress.windowCount(pid: item.pid) > beforeOwn
+                    default: still = Self.isFrontmost(item.pid)
+                    }
                     if !still { break }
                     try? await Task.sleep(for: .milliseconds(100))
                 }
-                PelmetLog.log("tray: \(key.rawValue) gone at \(Int(-started.timeIntervalSinceNow * 1000))ms")
+                PelmetLog.log("tray: \(key.rawValue) gone at \(Int(-started.timeIntervalSinceNow * 1000))ms\(Task.isCancelled ? " (yielded)" : "")")
+                // The item at rest again, still revealed beneath the cover:
+                // its picture refreshed (a badge, a state the click changed).
+                // Not after a click that opened nothing — the button is
+                // still drawing its pressed look.
+                if !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(150))
+                    let fresh = await appState.engine.freshSnapshot().items.filter { $0.id.sectionKey == key }
+                    let got = await appState.transitions.harvestTrayPictures(into: pictures, items: fresh, background: background)
+                    if got > 0 { frozen = false; refresh(); frozen = true }
+                }
             }
-            // The item at rest again, still revealed beneath the cover: its
-            // picture refreshed (a badge, a state the click changed).
-            try? await Task.sleep(for: .milliseconds(150))
-            let fresh = await appState.engine.freshSnapshot().items.filter { $0.id.sectionKey == key }
-            let got = await appState.transitions.harvestTrayPictures(into: pictures, items: fresh, background: background)
-            if got > 0 { frozen = false; refresh(); frozen = true }
         } else {
             PelmetLog.log("tray: press \(key.rawValue) → not on screen, \(Int(-started.timeIntervalSinceNow * 1000))ms")
         }
@@ -254,12 +270,13 @@ final class TrayController {
 
     /// Polls for an elevated window beyond `before`, or the item's app
     /// coming to the front (a popover activates it), within the menu wait.
-    private static func somethingShown(over before: Int, pid: pid_t) async -> String? {
+    private static func somethingShown(over before: Int, own beforeOwn: Int, pid: pid_t, frontCounts: Bool) async -> String? {
         let showBy = Date().addingTimeInterval(AppTiming.trayRelayMenuWait)
-        while Date() < showBy {
+        while Date() < showBy, !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(30))
             if TrayPress.elevatedWindowCount() > before { return "a window" }
-            if isFrontmost(pid) { return "its app in front" }
+            if TrayPress.windowCount(pid: pid) > beforeOwn { return "its own window" }
+            if frontCounts, isFrontmost(pid) { return "its app in front" }
         }
         return nil
     }

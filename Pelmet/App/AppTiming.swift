@@ -144,6 +144,9 @@ enum AppTiming {
     /// keeps the section revealed beneath the cover.
     static let trayRelayMenuWait: TimeInterval = 1.5
     static let trayRelayMenuCap: TimeInterval = 60
+    /// When the only sign the press showed something is the app coming to
+    /// the front, the item stays revealed at most this long.
+    static let trayRelayFrontCap: TimeInterval = 3
     /// Relay: the items must be at rest before their pictures are taken —
     /// the agent's entrance draws a capsule behind an arriving item for
     /// ~450ms past the swap (three cells came out boxed at 120ms).
