@@ -167,13 +167,19 @@ final class TransitionCoordinator {
         // The rehide machine reads "revealed" while the tray is up; the
         // bar beneath is concealed, which is all that matters here.
         guard ScreenRecordingAccess.isGranted else { return [] }
-        let fresh = freshEmptyBarSnapshots()
+        // Pelmet's windows left out of both pictures: the tray's glass and
+        // shadow sit under the translucent bar and shift its backdrop, and
+        // a backdrop that differs between the two pictures keys out as a
+        // box behind the icon (three boxed cells, 2026-09-21 20:42). The
+        // precaptured picture was taken with no tray up, so it only serves
+        // while none is showing.
+        let fresh = appState?.tray.isOpen == true ? [] : freshEmptyBarSnapshots()
         if !fresh.isEmpty { return fresh }
         if !ConcealGhostOverlay.captureIndicatorLit {
-            _ = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
+            _ = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect, excludingOwnWindows: true)
             try? await Task.sleep(for: .milliseconds(250))
         }
-        let snaps = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
+        let snaps = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect, excludingOwnWindows: true)
         PelmetLog.log("tray: empty-bar picture taken (\(snaps.count) display(s))")
         return snaps
     }
