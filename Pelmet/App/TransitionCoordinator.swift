@@ -475,6 +475,12 @@ final class TransitionCoordinator {
         /// trade places with the system's and the cluster shifts (Gab:
         /// "the icons change since the Pelmet icon goes away").
         let anchorMinX: CGFloat
+        /// Where the cover ends: the display's right edge (less the
+        /// capture's padding, which the crop adds back). Notification
+        /// Center's panel shades the bar from ~410pt in to the edge; a
+        /// cover that stopped at the clock left the real panel moving
+        /// beside the picture's wipe (Gab, 2026-09-22 17:14).
+        let endX: CGFloat
         let band: CGRect
     }
 
@@ -497,14 +503,14 @@ final class TransitionCoordinator {
         // and the display edge, and a wider picture of static bar is free.
         let concealedGrowth = CGFloat(appState.snapshot?.concealed.count ?? 0) * 40
         let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24 - concealedGrowth
-        return BarCoverGeometry(minX: minX, anchorMinX: clock.minX, band: band)
+        return BarCoverGeometry(minX: minX, anchorMinX: clock.minX, endX: primaryMaxX - ConcealGhostOverlay.capturePadding, band: band)
     }
 
     /// The capture pads 6pt past the rect on both sides (continuous
     /// background); the right edge must land short of the clock AFTER
     /// that padding or the picture eats the date's first letter.
     private func barCoverRect(_ geometry: BarCoverGeometry, anchorMinX: CGFloat? = nil) -> CGRect {
-        let maxX = (anchorMinX ?? geometry.anchorMinX) - 2 - ConcealGhostOverlay.capturePadding
+        let maxX = geometry.endX
         return CGRect(
             x: geometry.minX, y: geometry.band.minY,
             width: maxX - geometry.minX, height: geometry.band.height
@@ -515,12 +521,20 @@ final class TransitionCoordinator {
     /// for the under-panel picture once the panel has slid in.
     final class BlinkCover {
         fileprivate(set) var current: ConcealGhostOverlay.GhostSet
+        /// Covers kept underneath the current one for the blink's life:
+        /// the under-panel picture can start further right than the bare
+        /// one (taken when the strip was shorter), and dropping the bare
+        /// cover uncovered the hidden icons on its left (Gab, 17:24).
+        fileprivate var beneath: [ConcealGhostOverlay.GhostSet] = []
         fileprivate let span: ClosedRange<CGFloat>
         fileprivate let safety: TimeInterval
         fileprivate init(_ cover: ConcealGhostOverlay.GhostSet, span: ClosedRange<CGFloat>, safety: TimeInterval) {
             current = cover; self.span = span; self.safety = safety
         }
-        func dismiss() { current.dismiss() }
+        func dismiss() {
+            current.dismiss()
+            for cover in beneath { cover.dismiss() }
+        }
     }
 
     func beginBarCover(
@@ -532,7 +546,12 @@ final class TransitionCoordinator {
         func liveAnchor(_ snap: EngineSnapshot) -> CGFloat? { snap.items.first(where: isClock)?.frame?.minX }
         func rect(anchorMinX: CGFloat) -> CGRect { barCoverRect(geometry, anchorMinX: anchorMinX) }
         let started = Date()
-        var spanEnd = geometry.anchorMinX - 2 - ConcealGhostOverlay.capturePadding
+        // Debug: the blink with no cover at all, to film the real panel.
+        if label == "clock", UserDefaults.standard.bool(forKey: "pelmet.debug.blinkNoCover") {
+            PelmetLog.log("clock: debug — no cover")
+            return nil
+        }
+        var spanEnd = geometry.endX
         var span = geometry.minX...spanEnd
         // The picture the idle pre-capture already holds spans this cover
         // (scheduleRevealCoverPrecapture widens it to), so cut the cover
@@ -587,8 +606,8 @@ final class TransitionCoordinator {
             snaps = await ConcealGhostOverlay.snapshotSet(of: rect(anchorMinX: anchorNow))
         }
         let cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
-        PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(geometry.minX))..\(Int(anchorNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) anchor \(Int(geometry.anchorMinX))→\(Int(anchorNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
-        return cover.map { BlinkCover($0, span: geometry.minX...(anchorNow - 2 - ConcealGhostOverlay.capturePadding), safety: safety) }
+        PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(geometry.minX))..\(Int(geometry.endX)) anchor \(Int(geometry.anchorMinX))→\(Int(anchorNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+        return cover.map { BlinkCover($0, span: geometry.minX...geometry.endX, safety: safety) }
     }
 
     /// The signature the under-panel picture is kept under: the backdrop
@@ -628,14 +647,18 @@ final class TransitionCoordinator {
         // slides under the bar (Gab's design, 2026-09-22): the still is the
         // exact look, the mask is the motion. A hard swap read as a step
         // and a crossfade as a fade; neither moved.
-        let bare = cover.current
+        cover.beneath.append(cover.current)
         cover.current = under
-        under.wipeInFromRight(duration: AppTiming.panelSlideInFade, edge: AppTiming.panelEdgeSoftness, restInset: AppTiming.panelShadeInset)
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(Int(AppTiming.panelSlideInFade * 1000) + 60))
-            bare.dismiss()
-        }
-        PelmetLog.log("clock: under-panel picture wiping in over the cover")
+        // The panel's own trajectory, frame by frame (inset of its leading
+        // edge from the display's right edge at each 1/60s), from the
+        // moment the relay's click is up. Overridable for tuning:
+        // `pelmet.wipe.insets` (points), `pelmet.wipe.delayMs`, `pelmet.wipe.edge`.
+        let defaults = UserDefaults.standard
+        let insets = (defaults.array(forKey: "pelmet.wipe.insets") as? [Double]).map { $0.map { CGFloat($0) } } ?? AppTiming.panelEntranceInsets
+        let delay = (defaults.object(forKey: "pelmet.wipe.delayMs") as? Double).map { $0 / 1000 } ?? AppTiming.panelEntranceDelay
+        let edge = (defaults.object(forKey: "pelmet.wipe.edge") as? Double).map { CGFloat($0) } ?? AppTiming.panelEdgeSoftness
+        under.wipeInFromRight(insets: insets, frame: 1.0 / 60, delay: delay, edge: edge)
+        PelmetLog.log("clock: under-panel picture wiping in over the cover (\(insets.count) frames, delay \(Int(delay * 1000))ms)")
     }
 
     /// After an entrance blink has lifted with the panel open and the bar
