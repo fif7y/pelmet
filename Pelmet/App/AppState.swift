@@ -788,10 +788,25 @@ final class AppState {
                 ClockClickRelay.postClick(at: point, pointer: pointer)
                 panelOpenedAt = .distantPast
                 PelmetLog.log("clock: panel open — click replayed, no blink")
+                // The bare bar is back once the panel has left (and its
+                // window has left the list): the next click or reveal
+                // should find a picture of it, not capture (#51).
+                transitions.precaptureAfterPanel()
                 return
             }
             panelOpenedAt = Date()
             let cover = await transitions.beginBarCover()
+            // The physical click is swallowed, so the panel starts sliding
+            // at Pelmet's own press and is in ~100ms later; from then on
+            // the bar under it is static, and the cover swaps to a still
+            // of that state (#51).
+            let panelStarting = { [transitions] in
+                guard let cover else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: AppTiming.panelSlideIn)
+                    transitions.swapBlinkCoverUnderPanel(cover)
+                }
+            }
             let blinked = await engine.beginClockBlink()
             if let clockElement {
                 // Only once the physical button is up: pressed while the
@@ -806,6 +821,7 @@ final class AppState {
                 var opened = false
                 for attempt in 1...2 where !opened {
                     let pressed = ClockClickRelay.press(clockElement)
+                    if pressed, attempt == 1 { panelStarting() }
                     // Poll for the panel rather than sleeping the whole
                     // verify budget: it shows well inside it, and every ms
                     // here is picture time on the bar (#46).
@@ -816,10 +832,11 @@ final class AppState {
                     } while !opened && Date() < verifyUntil
                     PelmetLog.log("clock: dot press \(attempt) \(pressed ? "sent" : "refused") - NC \(opened ? "open" : "not open")")
                 }
-                if !opened { ClockClickRelay.postClick(at: point, pointer: pointer) }
+                if !opened { ClockClickRelay.postClick(at: point, pointer: pointer); panelStarting() }
             } else {
                 if point != pointer { PelmetLog.log("clock: dot click - no clock element under the target, replaying the click") }
                 ClockClickRelay.postClick(at: point, pointer: pointer)
+                panelStarting()
             }
             guard blinked else { cover?.dismiss(); return }
             try? await Task.sleep(for: AppTiming.clockBlinkReacquire)

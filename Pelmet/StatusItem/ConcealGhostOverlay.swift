@@ -179,13 +179,15 @@ final class ConcealGhostOverlay {
                   let b = w[kCGWindowBounds as String] as? [String: CGFloat],
                   let x = b["X"], let y = b["Y"], let width = b["Width"], let height = b["Height"]
             else { continue }
-            // Notification Center's desktop widgets hide while its panel is
-            // open and the Dock raises a display-sized backstop under it;
-            // both come and go with the panel, which is in the signature
-            // itself. Leaving them out lets a picture parked when the
-            // panel opened read as the bare bar while it is open (#51).
+            // Notification Center is not a backdrop: its panel's state is
+            // tracked on its own (`revealCoverUnderPanel`, the clock relay),
+            // its windows linger in this list ~0.6s past the panel's exit,
+            // its desktop widgets hide while the panel is open, and the
+            // Dock raises a display-sized backstop under it. In the
+            // signature they dropped the idle picture on every open and
+            // again a second after every close (#51, 2026-09-22).
             let owner = w[kCGWindowOwnerName as String] as? String ?? ""
-            if owner == "Notification Center", layer < 0 { continue }
+            if owner == "Notification Center" { continue }
             if owner == "Dock", width >= 1000, height >= 700 { continue }
             let frame = CGRect(x: x, y: y, width: width, height: height)
             guard zones.contains(where: { $0.intersects(frame) }) else { continue }
