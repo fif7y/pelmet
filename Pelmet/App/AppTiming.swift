@@ -144,9 +144,10 @@ enum AppTiming {
     /// keeps the section revealed beneath the cover.
     static let trayRelayMenuWait: TimeInterval = 0.6
     static let trayRelayMenuCap: TimeInterval = 60
-    /// Relay: the section's items must be at rest before the press lands
-    /// and before their pictures are taken.
-    static let trayRelaySettle: Duration = .milliseconds(120)
+    /// Relay: the items must be at rest before their pictures are taken —
+    /// the agent's entrance draws a capsule behind an arriving item for
+    /// ~450ms past the swap (three cells came out boxed at 120ms).
+    static let trayRelaySettle: Duration = .milliseconds(520)
     /// A press re-pictures its item only when the picture is older than
     /// this; a fresh one is pressed without a capture.
     static let trayPictureFreshness: TimeInterval = 120

@@ -338,9 +338,15 @@ private final class TrayContentView: NSView {
         return NSSize(width: rowWidth, height: max(height, cellHeight))
     }
 
+    /// A cell is never narrower than the bar's own item pitch: a Control
+    /// Center module's AX frame is 20pt with no padding, which made a hit
+    /// zone the size of its glyph.
+    static let minCellWidth: CGFloat = 28
+
     static func width(of cell: TrayPanel.Cell, height: CGFloat) -> CGFloat {
-        guard cell.isPicture, cell.size.height > 0 else { return (height * 0.8).rounded() }
-        return (cell.size.width * height / cell.size.height).rounded()
+        let scale = height / 24
+        guard cell.isPicture, cell.size.height > 0 else { return (Self.minCellWidth * scale).rounded() }
+        return max((cell.size.width * height / cell.size.height).rounded(), (Self.minCellWidth * scale).rounded())
     }
 
     private func place(animated: Bool) {
@@ -504,14 +510,20 @@ private final class TrayCellView: NSView {
         image.image = cell.image
         NSLayoutConstraint.deactivate(sizeConstraints)
         if cell.isPicture {
+            // The picture at its own width, centred: a cell wider than its
+            // picture (the minimum) pads it like the bar pads its items.
+            let width = cell.size.height > 0 ? (cell.size.width * height / cell.size.height).rounded() : height
+            image.symbolConfiguration = nil
             sizeConstraints = [
-                image.leadingAnchor.constraint(equalTo: leadingAnchor),
-                image.trailingAnchor.constraint(equalTo: trailingAnchor),
+                image.widthAnchor.constraint(equalToConstant: width),
                 image.topAnchor.constraint(equalTo: topAnchor),
                 image.bottomAnchor.constraint(equalTo: bottomAnchor),
             ]
         } else {
-            let side = (height * 0.55).rounded()
+            // A stand-in drawn like a bar glyph: 16pt symbol, 18pt box.
+            let scale = height / 24
+            let side = (18 * scale).rounded()
+            image.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 16 * scale, weight: .regular)
             sizeConstraints = [
                 image.widthAnchor.constraint(equalToConstant: side),
                 image.heightAnchor.constraint(equalToConstant: side),
