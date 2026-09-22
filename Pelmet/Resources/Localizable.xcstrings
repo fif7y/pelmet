@@ -3887,6 +3887,122 @@
         }
       }
     },
+    "Control Center": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontrollzentrum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Centro de control"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Centre de contrôle"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Centro di Controllo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コントロールセンター"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제어 센터"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Central de Controle"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пункт управления"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "控制中心"
+          }
+        }
+      }
+    },
+    "Control Center always sits next to the clock, so it can't be moved. Drop it in a hidden section to hide it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Kontrollzentrum sitzt immer neben der Uhr und lässt sich nicht verschieben. Lege es in einen ausgeblendeten Bereich, um es zu verstecken."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El Centro de control siempre está junto al reloj, así que no se puede mover. Suéltalo en una sección oculta para ocultarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Centre de contrôle reste toujours à côté de l'horloge, il ne peut donc pas être déplacé. Déposez-le dans une section masquée pour le cacher."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il Centro di Controllo sta sempre accanto all'orologio, quindi non può essere spostato. Trascinalo in una sezione nascosta per nasconderlo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コントロールセンターは常に時計の隣にあるため移動できません。隠すには非表示セクションにドロップしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제어 센터는 항상 시계 옆에 있어 옮길 수 없습니다. 숨기려면 숨김 섹션에 놓으세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Central de Controle fica sempre ao lado do relógio, então não pode ser movida. Solte-a em uma seção oculta para escondê-la."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пункт управления всегда стоит рядом с часами, поэтому его нельзя переместить. Перетащите его в скрытый раздел, чтобы скрыть."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "控制中心始终位于时钟旁边，无法移动。将它拖到隐藏区域即可隐藏。"
+          }
+        }
+      }
+    },
     "Custom…": {
       "localizations": {
         "de": {

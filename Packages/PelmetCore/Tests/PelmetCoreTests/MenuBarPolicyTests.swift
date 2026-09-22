@@ -39,6 +39,16 @@ struct MenuBarPolicyTests {
         #expect(MenuBarPolicy.systemItem(for: menuExtra("textinput")) == .keyboard)
         #expect(MenuBarPolicy.systemItem(for: menuExtra("keyboard")) == .keyboard)
         #expect(MenuBarPolicy.systemItem(for: menuExtra("screen-mirroring")) == .screenMirroring)
+        #expect(MenuBarPolicy.systemItem(for: menuExtra("controlcenter")) == .primaryBentoBox)
+    }
+
+    // The clock and Control Center hide like Sound but never move.
+    @Test func pinnedSystemItemsAreTheClockAndControlCenter() {
+        #expect(MenuBarPolicy.isPinnedSystemItem(menuExtra("clock")))
+        #expect(MenuBarPolicy.isPinnedSystemItem(menuExtra("controlcenter")))
+        #expect(MenuBarPolicy.isSectionManageable(menuExtra("controlcenter")))
+        #expect(!MenuBarPolicy.isPinnedSystemItem(menuExtra("sound")))
+        #expect(!MenuBarPolicy.isPinnedSystemItem(.status(bundle: "com.example.App", title: "clock")))
     }
 
     @Test func systemItemTableRejectsNonControllableIDs() {

@@ -1624,6 +1624,9 @@ final class AppState {
     func isOutOfPlace(_ id: ItemID) -> Bool {
         guard let snapshot,
               let chevron = pelmetChevronItem(in: snapshot)?.frame else { return false }
+        // The clock and Control Center in Hidden sit right of the chevron
+        // for good: that is their spot, not a pending move.
+        guard !isImmovable(id) else { return false }
         let frames = ApplyPass.primaryFrames(snapshot)
         guard let frame = frames[id.sectionKey] else { return false }
         let wantsLeft = settings.sectionModel.section(of: id) != .visible
@@ -1885,12 +1888,12 @@ final class AppState {
     private static let immovableKey = "pelmet.immovableBundles"
 
     /// Learned (bounced drags) or known: the agent pins SystemUIServer, and
-    /// the clock always ends the bar — it hides through the system allowlist
-    /// like Sound, but no drag (real or synthetic) ever lands right of it.
+    /// the clock and Control Center end the bar — they hide through the
+    /// system allowlist like Sound, but no drag (real or synthetic) moves them.
     func isImmovable(_ id: ItemID) -> Bool {
         guard let bundle = id.bundleID else { return false }
         return immovableBundles.contains(bundle) || MenuBarPolicy.isPinnedAppleHost(bundle)
-            || MenuBarPolicy.systemItem(for: id) == .clock
+            || MenuBarPolicy.isPinnedSystemItem(id)
     }
 
     /// A third-party item's drags both landed back where they started.

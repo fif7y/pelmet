@@ -91,6 +91,22 @@ import Testing
         #expect(plan.moves.allSatisfy { ![c, siri, sep].contains($0.item) })
     }
 
+    // The clock drawn into Hidden still ends the bar: the visible icons left
+    // of it are in place, not "after the clock".
+    @Test func endPinnedItemInHiddenIsNoBound() {
+        let clock = ItemID.status(bundle: "com.apple.MenuBarAgent", title: "com.apple.menuextra.clock")
+        var members = roster.members
+        members[clock] = .hidden
+        let plan = MovePlan.compute(
+            bar: [c, chevron, v1, v2, clock],
+            edits: OrderEdits(order: [.hidden: [c, clock]]),
+            roster: Roster(members: members), chevron: chevron,
+            pinned: [clock]
+        )
+        #expect(plan.moves.isEmpty)
+        #expect(plan.skipped.contains { $0.0 == clock && $0.1 == .pinned })
+    }
+
     @Test func tidyGroupsAroundTheChevronWithoutMovingIt() {
         // v1 parked in the hidden run, a and d parked right of the chevron.
         // Tidy is two runs around the chevron anchor: concealable [d, b, c, a]

@@ -458,6 +458,9 @@ private struct ItemTile: View {
             }
             return names.joined(separator: ", ")
         }
+        if MenuBarPolicy.systemItem(for: item.id) == .primaryBentoBox {
+            return String(localized: "Control Center")
+        }
         if item.id.rawValue.contains("::com.apple.menuextra.") {
             let suffix = item.id.rawValue.components(separatedBy: ".").last ?? String(localized: "System")
             return suffix.replacingOccurrences(of: "-", with: " ").capitalized
@@ -526,12 +529,12 @@ private struct ItemTile: View {
     }
 
     /// macOS pins this item's spot (SystemUIServer's Siri and Time
-    /// Machine, the clock at the bar's end). It hides, it just can't be
-    /// dragged — so the tile says so rather than looking as movable as its
-    /// neighbours.
+    /// Machine, Control Center and the clock at the bar's end). It hides,
+    /// it just can't be dragged — so the tile says so rather than looking
+    /// as movable as its neighbours.
     private var isPinnedBySystem: Bool {
         MenuBarPolicy.isPinnedAppleHost(item.id.bundleID)
-            || MenuBarPolicy.systemItem(for: item.id) == .clock
+            || MenuBarPolicy.isPinnedSystemItem(item.id)
     }
 
     /// Only SystemUIServer's pair has no capturable icon; the other pinned
@@ -699,7 +702,7 @@ private struct ItemTile: View {
                 missingReplacements: item.id.bundleID == PelmetBundle.systemUIServerID
                     ? appState.missingAppleReplacements
                     : [],
-                isClock: MenuBarPolicy.systemItem(for: item.id) == .clock,
+                pinnedSystemItem: MenuBarPolicy.isPinnedSystemItem(item.id) ? MenuBarPolicy.systemItem(for: item.id) : nil,
                 usePelmetReplacements: { appState.useAppleExtraReplacements() },
                 // A system icon shares the agent's bundle: a launcher for it
                 // would open MenuBarAgent and draw nothing (the clock, 2026-09-21).
@@ -784,8 +787,9 @@ private struct InactiveIconCard: View {
     /// on, rather than dead-ending on "can't move it". Empty for the other
     /// pinned host (Kerberos), which has no replacement.
     let missingReplacements: [ExtraKind]
-    /// The clock: pinned at the bar's end, hideable through the allowlist.
-    let isClock: Bool
+    /// The clock or Control Center: pinned at the bar's end, hideable
+    /// through the allowlist.
+    let pinnedSystemItem: SystemItem?
     let usePelmetReplacements: () -> Void
     let addLauncher: (() -> Void)?
 
@@ -835,8 +839,10 @@ private struct InactiveIconCard: View {
                 case [.siri, .timeMachine]:
                     Text("Siri and Time Machine are locked macOS system icons. Turn on Pelmet's Siri and Time Machine below for separate icons you can move.")
                 default:
-                    if isClock {
+                    if pinnedSystemItem == .clock {
                         Text("The clock always sits at the right edge, so it can't be moved. Drop it in a hidden section to hide it.")
+                    } else if pinnedSystemItem == .primaryBentoBox {
+                        Text("Control Center always sits next to the clock, so it can't be moved. Drop it in a hidden section to hide it.")
                     } else {
                         Text("Pelmet can hide \(name), but macOS keeps it in its own spot, so the editor can't move it.")
                     }

@@ -52,10 +52,10 @@ Accessibility, and Settings > General > Permissions shows whether it's on.
 macOS re-confirms Screen Recording roughly monthly for all apps. If the nag
 bothers you, turn the permission off and keep going.
 
-**Some system icons can't be hidden.**
-Control Center never hides, so it has no tile. The clock hides like any
-system icon but never moves and gets no launcher (icons macOS hosts itself
-share one bundle, so a launcher for one would draw nothing); its tile says so.
+**Some system icons can't be moved.**
+Control Center and the clock hide like any system icon but never move and get
+no launcher (icons macOS hosts itself share one bundle, so a launcher for one
+would draw nothing); their tiles say so.
 Siri and Time Machine are a special case: macOS draws them from one process, so they hide together
 as one tile, and macOS pins their spot, so the editor can't move them. To
 manage them one by one, turn on Pelmet's own Time Machine and Siri items in

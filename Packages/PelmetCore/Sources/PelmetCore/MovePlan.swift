@@ -117,10 +117,20 @@ public enum MovePlan {
         }
         for (_, order) in edits.order {
             for id in order {
-                if !live.contains(id) { skipped.append((id, .notOnScreen)) }
-                else if let why = anchor(id) { skipped.append((id, why)) }
+                if let why = anchor(id) { skipped.append((id, why)) }
+                else if !live.contains(id) { skipped.append((id, .notOnScreen)) }
             }
         }
+        // A pinned item right of the chevron that the editor put in a
+        // concealable section (the clock, Control Center: macOS's end of the
+        // bar, hidden through the allowlist) is neither a mover nor a
+        // bound. Kept as an anchor it sat right of every visible icon and
+        // the run asked Media to land right of the clock — "1 not moved"
+        // on every pass (2026-09-22).
+        let chevronIndex = chevron.flatMap { bar.firstIndex(of: $0) }
+        let bar = bar.enumerated().filter { i, id in
+            !(pinned.contains(id) && roster.section(of: id) != .visible && chevronIndex.map { i > $0 } == true)
+        }.map(\.element)
 
         // Desired sequence: concealable sections left of the chevron in
         // editor order (drawn or current), visible right of it.
