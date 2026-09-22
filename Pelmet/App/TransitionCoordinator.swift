@@ -164,7 +164,9 @@ final class TransitionCoordinator {
     /// first picture only lights it and the second is the one kept: every
     /// picture after shares the shift.
     func trayBackground() async -> [ConcealGhostOverlay.BarSnapshot] {
-        guard ScreenRecordingAccess.isGranted, appState?.currentRevealedSections.isEmpty ?? false else { return [] }
+        // The rehide machine reads "revealed" while the tray is up; the
+        // bar beneath is concealed, which is all that matters here.
+        guard ScreenRecordingAccess.isGranted else { return [] }
         let fresh = freshEmptyBarSnapshots()
         if !fresh.isEmpty { return fresh }
         if !ConcealGhostOverlay.captureIndicatorLit {
