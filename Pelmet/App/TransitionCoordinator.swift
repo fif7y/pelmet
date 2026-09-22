@@ -622,6 +622,12 @@ final class TransitionCoordinator {
     /// to the lift, so the still is exact. No picture yet, or a stale one:
     /// the bare cover stays (today's look) and the lift takes a new one.
     func swapBlinkCoverUnderPanel(_ cover: BlinkCover) {
+        // The picture is of the concealed bar: over a revealed one it
+        // painted the hidden icons away (Gab, 17:28).
+        guard appState?.currentRevealedSections.isEmpty == true else {
+            PelmetLog.log("clock: bar revealed, no under-panel wipe")
+            return
+        }
         guard let appState, let kept = underPanelPicture, let first = kept.snapshot.first,
               Date().timeIntervalSince(first.takenAt) < AppTiming.underPanelPictureFreshness,
               kept.display == appState.lastMouseDownDisplay,
