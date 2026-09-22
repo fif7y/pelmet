@@ -630,7 +630,7 @@ final class TransitionCoordinator {
         // and a crossfade as a fade; neither moved.
         let bare = cover.current
         cover.current = under
-        under.wipeInFromRight(duration: AppTiming.panelSlideInFade, edge: AppTiming.panelEdgeSoftness)
+        under.wipeInFromRight(duration: AppTiming.panelSlideInFade, edge: AppTiming.panelEdgeSoftness, restInset: AppTiming.panelShadeInset)
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(Int(AppTiming.panelSlideInFade * 1000) + 60))
             bare.dismiss()

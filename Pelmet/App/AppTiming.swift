@@ -25,7 +25,10 @@ enum AppTiming {
     /// press; the blink cover crossfades from the bare still to the
     /// under-panel one over that slide, starting at the press.
     static let panelSlideIn: Duration = .milliseconds(0)
-    static let panelSlideInFade: CFTimeInterval = 0.12
+    static let panelSlideInFade: CFTimeInterval = 0.22
+    /// Where the panel's leading edge comes to rest, in from the display's
+    /// right edge, as the bar's shade shows it (1390pt on an 1800pt bar).
+    static let panelShadeInset: CGFloat = 410
     /// The panel's leading edge as the glass shows it: a ~70pt ramp
     /// (60fps profile, 2026-09-22 14:28).
     static let panelEdgeSoftness: CGFloat = 70

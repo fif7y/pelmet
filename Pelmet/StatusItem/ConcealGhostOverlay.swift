@@ -76,8 +76,8 @@ final class ConcealGhostOverlay {
         }
         /// Reveal the pictures from their right end leftwards, the way
         /// Notification Center's panel slides in under the bar (#51).
-        func wipeInFromRight(duration: CFTimeInterval, edge: CGFloat) {
-            for overlay in overlays { overlay.wipeInFromRight(duration: duration, edge: edge) }
+        func wipeInFromRight(duration: CFTimeInterval, edge: CGFloat, restInset: CGFloat) {
+            for overlay in overlays { overlay.wipeInFromRight(duration: duration, edge: edge, restInset: restInset) }
         }
     }
 
@@ -749,23 +749,34 @@ final class ConcealGhostOverlay {
     /// glass) travels from past the right end to rest over `duration`,
     /// with the panel's own ease-out. Whatever the picture shows arrives
     /// the way the panel does; the picture itself carries the exact look.
-    func wipeInFromRight(duration: CFTimeInterval, edge: CGFloat) {
-        guard !finished, let root = window.contentView?.layer else { return }
+    /// The panel's own path: its leading edge starts at the display's
+    /// right edge and comes to rest `restInset` points in from it (where
+    /// the bar's shade begins, ~410pt on Gab's built-in); the mask's soft
+    /// edge travels exactly that, so speed and place match the panel.
+    func wipeInFromRight(duration: CFTimeInterval, edge: CGFloat, restInset: CGFloat) {
+        guard !finished, let root = window.contentView?.layer,
+              let screen = NSScreen.screens.first(where: { $0.frame.intersects(window.frame) }) else { return }
         let width = window.frame.width
         let mask = CAGradientLayer()
-        mask.frame = CGRect(x: 0, y: 0, width: width, height: window.frame.height)
+        // Wide enough to cover the picture from any translation the path
+        // visits; the soft edge is its first `edge` points.
+        mask.frame = CGRect(x: 0, y: 0, width: width * 2, height: window.frame.height)
         mask.colors = [CGColor(gray: 0, alpha: 0), CGColor(gray: 0, alpha: 1), CGColor(gray: 0, alpha: 1)]
-        mask.locations = [0, NSNumber(value: Double(min(1, edge / max(width, 1)))), 1]
+        mask.locations = [0, NSNumber(value: Double(min(1, edge / max(width * 2, 1)))), 1]
         mask.startPoint = CGPoint(x: 0, y: 0.5); mask.endPoint = CGPoint(x: 1, y: 0.5)
         root.mask = mask
+        // Layer x of the panel's edge at start and at rest, in this
+        // window's space; the soft edge's centre sits on it.
+        let start = screen.frame.maxX - window.frame.minX - edge / 2
+        let rest = screen.frame.maxX - restInset - window.frame.minX - edge / 2
         let anim = CABasicAnimation(keyPath: "transform.translation.x")
-        anim.fromValue = width
-        anim.toValue = 0
+        anim.fromValue = start
+        anim.toValue = rest
         anim.duration = duration
         anim.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
         CATransaction.begin(); CATransaction.setDisableActions(true)
         mask.add(anim, forKey: "pelmetWipe")
-        mask.transform = CATransform3DIdentity
+        mask.transform = CATransform3DMakeTranslation(rest, 0, 0)
         CATransaction.commit()
     }
 
