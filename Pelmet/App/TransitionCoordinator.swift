@@ -199,10 +199,12 @@ final class TransitionCoordinator {
         if UserDefaults.standard.bool(forKey: "pelmet.trayDump") {
             for (name, snaps) in [("strip", strip), ("empty", emptyBar), ("cut", cut)] {
                 guard let image = snaps.first?.image else { continue }
-                let url = URL(fileURLWithPath: NSString(string: "~/Library/Logs/Pelmet/tray-\(name).png").expandingTildeInPath)
-                if let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) {
-                    CGImageDestinationAddImage(dest, image, nil)
-                    CGImageDestinationFinalize(dest)
+                // Re-rendered: a stream-backed image does not serialize.
+                let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: image.width, pixelsHigh: image.height, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+                if let rep, let ctx = NSGraphicsContext(bitmapImageRep: rep) {
+                    ctx.cgContext.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+                    let url = URL(fileURLWithPath: NSString(string: "~/Library/Logs/Pelmet/tray-\(name).png").expandingTildeInPath)
+                    try? rep.representation(using: .png, properties: [:])?.write(to: url)
                 }
             }
             PelmetLog.log("tray: pictures dumped (strip \(Int(strip.first?.windowFrame.minX ?? 0))..\(Int(strip.first?.windowFrame.maxX ?? 0)), empty \(Int(bg.windowFrame.minX))..\(Int(bg.windowFrame.maxX)))")

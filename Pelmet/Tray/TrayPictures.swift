@@ -44,15 +44,44 @@ final class TrayPictures {
             let x = ((frame.minX + inset - snap.windowFrame.minX) * scale).rounded()
             let w = ((frame.width - 2 * inset) * scale).rounded()
             let rect = CGRect(x: x, y: 0, width: w, height: CGFloat(snap.image.height))
-            guard w > 0, let cut = snap.image.cropping(to: rect) else { continue }
+            guard w > 0, var cut = snap.image.cropping(to: rect) else { continue }
+            // Trim to the glyph's own columns: an AX frame is not centred
+            // on what its item draws (Control Center's Sound sat left in
+            // its cell), and the cell pads every glyph evenly itself.
+            if let bounds = Self.opaqueColumns(of: cut), bounds.width > 0,
+               let trimmed = cut.cropping(to: CGRect(x: bounds.lowerBound, y: 0, width: bounds.width, height: CGFloat(cut.height))) {
+                cut = trimmed
+            }
             pictures[item.id.sectionKey] = Picture(
                 image: cut,
-                size: CGSize(width: w / scale, height: snap.windowFrame.height),
+                size: CGSize(width: CGFloat(cut.width) / scale, height: snap.windowFrame.height),
                 takenAt: snap.takenAt
             )
             count += 1
         }
         return count
+    }
+
+    /// The leftmost and rightmost columns with any alpha, padded by one
+    /// pixel; nil when the picture is blank.
+    private static func opaqueColumns(of image: CGImage) -> (lowerBound: CGFloat, width: CGFloat)? {
+        let w = image.width, h = image.height
+        guard w > 0, h > 0,
+              let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                                  space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let data = ctx.data
+        else { return nil }
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        let px = data.bindMemory(to: UInt8.self, capacity: w * h * 4)
+        var first = w, last = -1
+        for x in 0..<w {
+            var any = false
+            for y in 0..<h where px[(y * w + x) * 4 + 3] > 24 { any = true; break }
+            if any { first = min(first, x); last = max(last, x) }
+        }
+        guard last >= first else { return nil }
+        let lo = max(0, first - 1), hi = min(w - 1, last + 1)
+        return (CGFloat(lo), CGFloat(hi - lo + 1))
     }
 
     func picture(for key: ItemID) -> Picture? { pictures[key] }
