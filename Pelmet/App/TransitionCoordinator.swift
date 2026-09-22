@@ -209,7 +209,10 @@ final class TransitionCoordinator {
             }
             PelmetLog.log("tray: pictures dumped (strip \(Int(strip.first?.windowFrame.minX ?? 0))..\(Int(strip.first?.windowFrame.maxX ?? 0)), empty \(Int(bg.windowFrame.minX))..\(Int(bg.windowFrame.maxX)))")
         }
-        let within = (bg.windowFrame.minX + ConcealGhostOverlay.capturePadding)...(bg.windowFrame.maxX - ConcealGhostOverlay.capturePadding)
+        // The padding columns are empty bar too: an item at the strip's
+        // edge (Snib beside the chevron) fell just outside the inset range
+        // and stayed an app icon, with a pass on every open.
+        let within = bg.windowFrame.minX...bg.windowFrame.maxX
         return pictures.harvest(cut, items: items, within: within)
     }
 

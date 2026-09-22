@@ -26,6 +26,8 @@ final class TrayController {
     /// A relay or a picture pass has the bar in flux beneath the cover:
     /// the cells hold still until it is over.
     private var frozen = false
+    /// Keys a pass could not picture, and when: not retried on every open.
+    private var unpictured: [ItemID: Date] = [:]
 
     /// Settle re-entry: the tray is up (the reveal's settle) or gone (the
     /// conceal's). Wired by AppState like the coordinator's.
@@ -95,8 +97,9 @@ final class TrayController {
             cell.key.bundleID != PelmetBundle.mainID
                 && (pictures.picture(for: cell.key).map { Date().timeIntervalSince($0.takenAt) > AppTiming.trayPictureFreshness } ?? false)
         }
-        if !missing.isEmpty || stale, ScreenRecordingAccess.isGranted {
-            picturePass(reason: missing.isEmpty ? "stale" : "\(missing.count) missing")
+        let worthAPass = missing.contains { unpictured[$0].map { Date().timeIntervalSince($0) > AppTiming.trayPictureFreshness } ?? true }
+        if worthAPass || stale, ScreenRecordingAccess.isGranted {
+            picturePass(reason: worthAPass ? "\(missing.count) missing" : "stale")
         }
     }
 
@@ -328,7 +331,9 @@ final class TrayController {
             await appState.engine.conceal(quiet: true)
             appState.updateSnapshot(await appState.engine.snapshot())
             if let cover { appState.transitions.endBarCover(cover, label: "tray") }
-            PelmetLog.log("tray: picture pass (\(reason)) → \(got) picture(s) in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+            let still = pictures.missing(among: cellSections.keys.filter { $0.bundleID != PelmetBundle.mainID })
+            for key in still { unpictured[key] = Date() }
+            PelmetLog.log("tray: picture pass (\(reason)) → \(got) picture(s) in \(Int(-started.timeIntervalSinceNow * 1000))ms\(still.isEmpty ? "" : ", still none for \(still.map(\.rawValue))")")
             frozen = false
             if got > 0 { refresh() }
         }
