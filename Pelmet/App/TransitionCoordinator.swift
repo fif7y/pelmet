@@ -75,6 +75,10 @@ final class TransitionCoordinator {
     /// Notification Center's panel was under the bar when the idle picture
     /// was taken (its shade is in the pixels; see `GhostSet.pictureUnderPanel`).
     private var revealCoverUnderPanel = false
+    /// The last live blink capture of the bare bar (panel closed), kept
+    /// for the click that closes the panel when no idle picture was there
+    /// to park (#51: a straight approach to the clock captured live).
+    private var lastBareBlinkPicture: (snapshot: [ConcealGhostOverlay.BarSnapshot], backdrop: [Int], display: CGDirectDisplayID?)?
 
     private func backdropMayHaveChanged() {
         guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty || parkedCover != nil else { return }
@@ -119,10 +123,15 @@ final class TransitionCoordinator {
     /// is the bare bar of right now: same display, fresh, and the backdrop
     /// without the panel's own windows reads as it did then.
     private func bareParkedCover() -> [ConcealGhostOverlay.BarSnapshot]? {
-        guard let parked = parkedCover else { PelmetLog.log("clock: no parked picture"); return nil }
-        guard !parked.underPanel else { PelmetLog.log("clock: parked picture was taken under the panel"); return nil }
-        guard let first = parked.snapshot.first, Date().timeIntervalSince(first.takenAt) < AppTiming.revealCoverFreshness else { PelmetLog.log("clock: parked picture stale"); return nil }
-        guard parked.display == appState?.lastMouseDownDisplay else { PelmetLog.log("clock: parked picture from another active display (\(parked.display ?? 0) → \(appState?.lastMouseDownDisplay ?? 0))"); return nil }
+        if let parked = parkedCover, !parked.underPanel, let bare = bareCandidate(parked.snapshot, parked.backdrop, parked.display, "parked") { return bare }
+        if let last = lastBareBlinkPicture, let bare = bareCandidate(last.snapshot, last.backdrop, last.display, "last blink") { return bare }
+        return nil
+    }
+
+    private func bareCandidate(_ snapshot: [ConcealGhostOverlay.BarSnapshot], _ backdrop: [Int], _ display: CGDirectDisplayID?, _ what: String) -> [ConcealGhostOverlay.BarSnapshot]? {
+        let parked = (snapshot: snapshot, backdrop: backdrop, display: display)
+        guard let first = parked.snapshot.first, Date().timeIntervalSince(first.takenAt) < AppTiming.revealCoverFreshness else { PelmetLog.log("clock: \(what) picture stale"); return nil }
+        guard parked.display == appState?.lastMouseDownDisplay else { PelmetLog.log("clock: \(what) picture from another active display (\(parked.display ?? 0) → \(appState?.lastMouseDownDisplay ?? 0))"); return nil }
         guard let list = ConcealGhostOverlay.onScreenWindows() else { return nil }
         // The panel itself; its widgets and the Dock's backstop never enter
         // a signature (see `backdropSignature`).
@@ -131,7 +140,7 @@ final class TransitionCoordinator {
         }
         let now = ConcealGhostOverlay.backdropSignature(of: precaptureRect, in: bare) + ConcealGhostOverlay.surfaceSignature()
         if now != parked.backdrop {
-            PelmetLog.log("clock: parked picture's backdrop differs (\(ConcealGhostOverlay.backdropMovers(from: parked.backdrop, to: now, in: bare)))")
+            PelmetLog.log("clock: \(what) picture's backdrop differs (\(ConcealGhostOverlay.backdropMovers(from: parked.backdrop, to: now, in: bare)))")
             return nil
         }
         return parked.snapshot
@@ -582,6 +591,9 @@ final class TransitionCoordinator {
         }
         var cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
         cover?.pictureUnderPanel = underPanel
+        if !underPanel, appState.currentRevealedSections.isEmpty {
+            lastBareBlinkPicture = (snaps, ConcealGhostOverlay.backdropSignature(of: precaptureRect) + ConcealGhostOverlay.surfaceSignature(), appState.lastMouseDownDisplay)
+        }
         PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(geometry.minX))..\(Int(clockNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) clock \(Int(geometry.clockMinX))→\(Int(clockNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
         return cover
     }

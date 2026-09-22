@@ -162,6 +162,11 @@ final class MenuBarBandMonitor {
         if inBand, !pointerInBand {
             pointerInBand = true
             appState.pointerReturnedToBand()
+            // The right half of the band is where reveals and clock clicks
+            // come from: a dropped picture is retaken on the way in (#49,
+            // #51: a straight approach to the clock never crosses the
+            // hover zone, and every clock click captured live).
+            if let screen, location.x >= screen.frame.midX { appState.pointerEnteredHoverZone() }
         } else if !inBand, pointerInBand {
             pointerInBand = false
             hoverSuppressedUntilExit = false
