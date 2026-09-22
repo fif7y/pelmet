@@ -217,13 +217,16 @@ final class TrayController {
             // modules took it and did nothing.
             let before = TrayPress.elevatedWindowCount()
             await TrayPress.click(item)
-            shown = await Self.somethingShown(over: before)
+            shown = await Self.somethingShown(over: before, pid: item.pid)
             PelmetLog.log("tray: press \(key.rawValue) → clicked, \(shown ? "showed something" : "showed nothing")\(toggle == nil ? "" : " (« expanded)"), \(Int(-started.timeIntervalSinceNow * 1000))ms")
             if shown {
                 // Whatever showed keeps the item revealed; the conceal
                 // follows its dismissal.
+                // Concealing under an open popover orphans it: the item's
+                // button stays highlighted in the bar until the app is
+                // clicked again (a capsule behind three icons, 2026-09-21).
                 let cap = Date().addingTimeInterval(AppTiming.trayRelayMenuCap)
-                while Date() < cap, TrayPress.elevatedWindowCount() > before {
+                while Date() < cap, TrayPress.elevatedWindowCount() > before || Self.isFrontmost(item.pid) {
                     try? await Task.sleep(for: .milliseconds(100))
                 }
                 PelmetLog.log("tray: \(key.rawValue) gone at \(Int(-started.timeIntervalSinceNow * 1000))ms")
@@ -238,14 +241,19 @@ final class TrayController {
         if let cover { appState.transitions.endBarCover(cover, label: "tray") }
     }
 
-    /// Polls for an elevated window beyond `before` within the menu wait.
-    private static func somethingShown(over before: Int) async -> Bool {
+    /// Polls for an elevated window beyond `before`, or the item's app
+    /// coming to the front (a popover activates it), within the menu wait.
+    private static func somethingShown(over before: Int, pid: pid_t) async -> Bool {
         let showBy = Date().addingTimeInterval(AppTiming.trayRelayMenuWait)
         while Date() < showBy {
             try? await Task.sleep(for: .milliseconds(30))
-            if TrayPress.elevatedWindowCount() > before { return true }
+            if TrayPress.elevatedWindowCount() > before || isFrontmost(pid) { return true }
         }
         return false
+    }
+
+    private static func isFrontmost(_ pid: pid_t) -> Bool {
+        pid > 0 && NSWorkspace.shared.frontmostApplication?.processIdentifier == pid
     }
 
     /// The relay without the press: the section's pictures, taken beneath
