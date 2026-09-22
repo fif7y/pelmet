@@ -62,7 +62,7 @@ final class TransitionCoordinator {
 
     private func backdropMayHaveChanged() {
         guard let appState, !revealCoverSnapshot.isEmpty || !revealedStripSnapshot.isEmpty else { return }
-        let now = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
+        let now = ConcealGhostOverlay.backdropSignature(of: precaptureRect)
         let coverStale = !revealCoverSnapshot.isEmpty && now != revealCoverBackdrop
         let stripStale = !revealedStripSnapshot.isEmpty && revealedStripBackground.isEmpty && now != revealedStripBackdrop
         guard coverStale || stripStale else { return }
@@ -133,6 +133,16 @@ final class TransitionCoordinator {
             let minX = min($0.minX, widestStripMinX ?? $0.minX, estimatedMinX)
             return CGRect(x: minX - 120, y: $0.minY, width: ($0.maxX - minX) + 180, height: $0.height)
         }
+    }
+    /// What the idle capture actually takes: the reveal cover widened to the
+    /// blink's footprint, so one picture serves both and the blink needs no
+    /// capture at the click (#45, #46). A wider picture of a static bar is
+    /// free — it is taken while the bar idles concealed, and each consumer
+    /// crops back to its own rect.
+    private var precaptureRect: CGRect? {
+        guard let reveal = revealCoverRect else { return nil }
+        guard let geometry = barCoverGeometry() else { return reveal }
+        return reveal.union(barCoverRect(geometry))
     }
     /// Strip and cover rects are primary-band geometry: an external's copy
     /// of an item stretched the strip across displays (`1278..4887`) and
@@ -335,10 +345,18 @@ final class TransitionCoordinator {
     /// looks right now. The clock stays uncovered (it never moves: the
     /// right zone is fixed) and the pre-captured empty-bar still is no use
     /// here: it stops at the strip, right where the extras reappear.
-    func beginBarCover(
-        label: String = "clock",
-        safety: TimeInterval = AppTiming.transitionCoverSafety
-    ) async -> ConcealGhostOverlay.GhostSet? {
+    /// Where a bar cover has to sit: from the leftmost place a dropped
+    /// assertion can slide an icon into, to the clock's left edge.
+    /// `beginBarCover` captures it; `scheduleRevealCoverPrecapture` widens
+    /// the idle picture to hold it, so the blink can cut its cover out of
+    /// that picture instead of paying a capture at the click.
+    private struct BarCoverGeometry {
+        let minX: CGFloat
+        let clockMinX: CGFloat
+        let band: CGRect
+    }
+
+    private func barCoverGeometry() -> BarCoverGeometry? {
         let isClock: (ObservedItem) -> Bool = { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }
         let primaryMaxX = primaryMaxX
         guard let appState, let items = appState.snapshot?.items, !items.isEmpty,
@@ -357,14 +375,45 @@ final class TransitionCoordinator {
         // and the display edge, and a wider picture of static bar is free.
         let concealedGrowth = CGFloat(appState.snapshot?.concealed.count ?? 0) * 40
         let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24 - concealedGrowth
-        // The capture pads 6pt past the rect on both sides (continuous
-        // background); the right edge must land short of the clock AFTER
-        // that padding or the picture eats the date's first letter.
-        func rect(clockMinX: CGFloat) -> CGRect {
-            let maxX = clockMinX - 2 - ConcealGhostOverlay.capturePadding
-            return CGRect(x: minX, y: band.minY, width: maxX - minX, height: band.height)
-        }
+        return BarCoverGeometry(minX: minX, clockMinX: clock.minX, band: band)
+    }
+
+    /// The capture pads 6pt past the rect on both sides (continuous
+    /// background); the right edge must land short of the clock AFTER
+    /// that padding or the picture eats the date's first letter.
+    private func barCoverRect(_ geometry: BarCoverGeometry, clockMinX: CGFloat? = nil) -> CGRect {
+        let maxX = (clockMinX ?? geometry.clockMinX) - 2 - ConcealGhostOverlay.capturePadding
+        return CGRect(
+            x: geometry.minX, y: geometry.band.minY,
+            width: maxX - geometry.minX, height: geometry.band.height
+        )
+    }
+
+    func beginBarCover(
+        label: String = "clock",
+        safety: TimeInterval = AppTiming.transitionCoverSafety
+    ) async -> ConcealGhostOverlay.GhostSet? {
+        guard let appState, let geometry = barCoverGeometry() else { return nil }
+        let isClock: (ObservedItem) -> Bool = { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }
+        func rect(clockMinX: CGFloat) -> CGRect { barCoverRect(geometry, clockMinX: clockMinX) }
         let started = Date()
+        // The picture the idle pre-capture already holds spans this cover
+        // (scheduleRevealCoverPrecapture widens it to), so cut the cover
+        // out of it and take no picture at all. That is the whole point:
+        // a capture here lights the screen-capture indicator at the moment
+        // of the click and costs the walks below (#45, #46). Only while the
+        // bar is concealed — the picture is of the empty bar, and a
+        // hover-revealed bar does not look like it.
+        if appState.currentRevealedSections.isEmpty {
+            let reusable = ConcealGhostOverlay.cropped(
+                freshEmptyBarSnapshots(cropped: false),
+                toPrimaryX: geometry.minX...(geometry.clockMinX - 2 - ConcealGhostOverlay.capturePadding)
+            )
+            if let cover = ConcealGhostOverlay.begin(from: reusable, safety: safety) {
+                PelmetLog.log("\(label): cover up from the idle picture, no capture — ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+                return cover
+            }
+        }
         // The capture itself lights the screen-capture indicator at the
         // bar's right end and the whole cluster shifts left to make room
         // (8pt, 2026-09-14; 3pt on 2026-09-16) — the first picture is stale
@@ -375,7 +424,7 @@ final class TransitionCoordinator {
         // this capture, nothing will move, and the walks were pure delay
         // (four of them, ~460ms between the click and its replay).
         let indicatorLit = ConcealGhostOverlay.captureIndicatorLit
-        var snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clock.minX))
+        var snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: geometry.clockMinX))
         // No picture (Screen Recording not granted): nothing to retake, and
         // the walks below only delay the replayed click (~250ms on #27's
         // machine, four walks per click).
@@ -383,20 +432,20 @@ final class TransitionCoordinator {
             PelmetLog.log("\(label): cover none — no picture, ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
             return nil
         }
-        var clockNow = clock.minX
+        var clockNow = geometry.clockMinX
         var walks = 0
         while !indicatorLit, walks < 2 {
             walks += 1
             let fresh = await appState.engine.freshSnapshot()
             guard let now = fresh.items.first(where: isClock)?.frame?.minX else { break }
-            if now != clock.minX { clockNow = now; break }
+            if now != geometry.clockMinX { clockNow = now; break }
             try? await Task.sleep(for: .milliseconds(40))
         }
-        if clockNow != clock.minX {
+        if clockNow != geometry.clockMinX {
             snaps = await ConcealGhostOverlay.snapshotSet(of: rect(clockMinX: clockNow))
         }
         let cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
-        PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(minX))..\(Int(clockNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) clock \(Int(clock.minX))→\(Int(clockNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+        PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(geometry.minX))..\(Int(clockNow) - 2 - Int(ConcealGhostOverlay.capturePadding)) clock \(Int(geometry.clockMinX))→\(Int(clockNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
         return cover
     }
 
@@ -424,7 +473,11 @@ final class TransitionCoordinator {
 
     /// The empty-bar capture from the last conceal settle, if it is recent
     /// enough to stand in for the bar as it looks now (static wallpaper).
-    private func freshEmptyBarSnapshots() -> [ConcealGhostOverlay.BarSnapshot] {
+    ///
+    /// The stored picture spans `precaptureRect` — the reveal cover widened
+    /// to the blink's footprint — so the reveal path takes it `cropped`
+    /// back to its own rect and the blink cuts its own cover out of it.
+    private func freshEmptyBarSnapshots(cropped: Bool = true) -> [ConcealGhostOverlay.BarSnapshot] {
         guard let first = revealCoverSnapshot.first,
               Date().timeIntervalSince(first.takenAt) < AppTiming.revealCoverFreshness
         else { return [] }
@@ -432,7 +485,9 @@ final class TransitionCoordinator {
             PelmetLog.log("cover: picture from another active display (\(revealCoverActiveDisplay ?? 0) → \(appState?.lastMouseDownDisplay ?? 0)), not used")
             return []
         }
-        return revealCoverSnapshot
+        guard cropped, let want = revealCoverRect, want != precaptureRect else { return revealCoverSnapshot }
+        let narrowed = ConcealGhostOverlay.cropped(revealCoverSnapshot, toPrimaryX: want.minX...want.maxX)
+        return narrowed.isEmpty ? revealCoverSnapshot : narrowed
     }
 
     /// The chevron's columns, relative to the strip rect — its glyph flips
@@ -565,8 +620,9 @@ final class TransitionCoordinator {
             try? await Task.sleep(for: AppTiming.precaptureGhostClearance)
             guard !Task.isCancelled, appState.currentRevealedSections.isEmpty else { return }
             revealCoverActiveDisplay = appState.lastMouseDownDisplay ?? Self.displayUnderPointer
-            revealCoverBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect)
-            revealCoverSnapshot = await ConcealGhostOverlay.snapshotSet(of: revealCoverRect)
+            let rect = precaptureRect
+            revealCoverBackdrop = ConcealGhostOverlay.backdropSignature(of: rect)
+            revealCoverSnapshot = await ConcealGhostOverlay.snapshotSet(of: rect)
         }
     }
 
