@@ -199,6 +199,7 @@ final class TrayPanel {
         let cellHeight = (Self.barHeight(of: screen) * placement.scale).rounded()
         let maxWidth = max(200, (screen.frame.width * Self.maxWidthShare).rounded()) - 2 * Self.insetX
         content.contentInset = NSPoint(x: Self.insetX, y: Self.insetY)
+        content.glyphScale = placement.scale
         let size = content.lay(cells, cellHeight: cellHeight, maxRowWidth: maxWidth)
         let width = size.width + 2 * Self.insetX
         let height = size.height + 2 * Self.insetY
@@ -255,6 +256,10 @@ private final class TrayContentView: NSView {
     var onPress: ((ItemID, NSEvent) -> Void)?
     var onReorder: (([ItemID]) -> Void)?
     var contentInset = NSPoint(x: 0, y: 0)
+    /// The size setting's scale: glyphs in the bar are ~16pt whatever the
+    /// bar's height (39pt on a notch display), so stand-ins and the
+    /// minimum cell follow this, never the cell height.
+    var glyphScale: CGFloat = 1
 
     private var cells: [TrayPanel.Cell] = []
     private var views: [ItemID: TrayCellView] = [:]
@@ -303,11 +308,11 @@ private final class TrayContentView: NSView {
                 views[cell.key] = v
                 return v
             }()
-            view.set(cell, height: cellHeight)
+            view.set(cell, height: cellHeight, glyphScale: glyphScale)
         }
         // Widths at this height.
         var widths: [ItemID: CGFloat] = [:]
-        for cell in cells { widths[cell.key] = Self.width(of: cell, height: cellHeight) }
+        for cell in cells { widths[cell.key] = Self.width(of: cell, height: cellHeight, glyphScale: glyphScale) }
         // Break into rows.
         var rows: [[ItemID]] = [[]]
         var rowW: CGFloat = 0
@@ -343,8 +348,7 @@ private final class TrayContentView: NSView {
     /// zone the size of its glyph.
     static let minCellWidth: CGFloat = 28
 
-    static func width(of cell: TrayPanel.Cell, height: CGFloat) -> CGFloat {
-        let scale = height / 24
+    static func width(of cell: TrayPanel.Cell, height: CGFloat, glyphScale scale: CGFloat) -> CGFloat {
         guard cell.isPicture, cell.size.height > 0 else { return (Self.minCellWidth * scale).rounded() }
         return max((cell.size.width * height / cell.size.height).rounded(), (Self.minCellWidth * scale).rounded())
     }
@@ -505,7 +509,7 @@ private final class TrayCellView: NSView {
 
     private var sizeConstraints: [NSLayoutConstraint] = []
 
-    func set(_ cell: TrayPanel.Cell, height: CGFloat) {
+    func set(_ cell: TrayPanel.Cell, height: CGFloat, glyphScale scale: CGFloat) {
         isPicture = cell.isPicture
         image.image = cell.image
         NSLayoutConstraint.deactivate(sizeConstraints)
@@ -521,7 +525,6 @@ private final class TrayCellView: NSView {
             ]
         } else {
             // A stand-in drawn like a bar glyph: 16pt symbol, 18pt box.
-            let scale = height / 24
             let side = (18 * scale).rounded()
             image.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 16 * scale, weight: .regular)
             sizeConstraints = [

@@ -380,9 +380,20 @@ final class ConcealGhostOverlay {
     /// the strip stays opaque; a strip that differs almost everywhere
     /// (animated wallpaper) returns nil and the caller falls back to the
     /// agent's animation.
+    /// The soft key's thresholds: identical below `low`, kept whole above
+    /// `high`. The floating bar keys firmer — SwiftUI menu bar extras draw
+    /// a faint capsule behind their glyph that the bar hides and a cell on
+    /// glass shows as a box.
+    struct Key {
+        let low: Int
+        let high: Int
+        static let cover = Key(low: 6, high: 26)
+        static let tray = Key(low: 18, high: 40)
+    }
+
     static func iconsOnly(
         _ strips: [BarSnapshot], background: [BarSnapshot],
-        punch: [ClosedRange<CGFloat>] = [], keep: ClosedRange<CGFloat>? = nil
+        punch: [ClosedRange<CGFloat>] = [], keep: ClosedRange<CGFloat>? = nil, key: Key = .cover
     ) -> [BarSnapshot]? {
         var out: [BarSnapshot] = []
         for strip in strips {
@@ -393,7 +404,7 @@ final class ConcealGhostOverlay {
                 PelmetLog.log("ghost: cut-out skipped — no background under the strip @x=\(Int(strip.windowFrame.minX))")
                 return nil
             }
-            guard var cut = cutOut(strip: strip, background: bg, punch: punch) else { return nil }
+            guard var cut = cutOut(strip: strip, background: bg, punch: punch, key: key) else { return nil }
             var frame = strip.windowFrame
             // Only the strip's own columns: a system icon at the picture's
             // edge that changed between the captures (AirPods state,
@@ -460,7 +471,7 @@ final class ConcealGhostOverlay {
     }
 
     private static func cutOut(
-        strip: BarSnapshot, background bg: BarSnapshot, punch: [ClosedRange<CGFloat>]
+        strip: BarSnapshot, background bg: BarSnapshot, punch: [ClosedRange<CGFloat>], key: Key = .cover
     ) -> CGImage? {
         let overlap = strip.windowFrame.intersection(bg.windowFrame)
         guard overlap.width > 4 else {
@@ -491,8 +502,8 @@ final class ConcealGhostOverlay {
                     abs(Int(ap[1]) - Int(bp[1])),
                     abs(Int(ap[2]) - Int(bp[2]))
                 )
-                // Soft key: identical → gone, 26+ levels off → kept whole.
-                let alpha = d <= 6 ? 0 : d >= 26 ? 255 : (d - 6) * 255 / 20
+                // Soft key: identical → gone, past `high` → kept whole.
+                let alpha = d <= key.low ? 0 : d >= key.high ? 255 : (d - key.low) * 255 / (key.high - key.low)
                 if alpha == 255 { changed += 1 }
                 if alpha < 255 {
                     ap[0] = UInt8(Int(ap[0]) * alpha / 255)
