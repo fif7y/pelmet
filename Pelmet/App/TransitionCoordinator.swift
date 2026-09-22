@@ -770,6 +770,8 @@ final class TransitionCoordinator {
         // it is only true while it is open, and the other way round.
         guard revealCoverUnderPanel == ClockClickRelay.notificationCenterIsOpen() else {
             PelmetLog.log("cover: picture taken with the panel \(revealCoverUnderPanel ? "open" : "closed"), not used")
+            // Retake on the next approach, in the panel's current state.
+            if appState?.currentRevealedSections.isEmpty == true { revealCoverWanted = true }
             return []
         }
         guard cropped, let want = revealCoverRect, want != precaptureRect else { return revealCoverSnapshot }
@@ -969,14 +971,10 @@ final class TransitionCoordinator {
             // The agent's own conceal fade must not bake into the snapshot.
             if afterConceal { try? await Task.sleep(for: AppTiming.precaptureGhostClearance) }
             guard !Task.isCancelled, appState.currentRevealedSections.isEmpty else { return }
-            // Under Notification Center's panel the bar is not the bar a
-            // reveal or a clock click will find: leave the bare picture
-            // (or its absence) alone, the blink keeps its own picture of
-            // the bar under the panel (#51).
-            guard !ClockClickRelay.notificationCenterIsOpen() else {
-                PelmetLog.log("cover: panel open, precapture skipped")
-                return
-            }
+            // Under Notification Center's panel the picture is stamped as
+            // such and only ever used while the panel is open (reveals and
+            // conceals with the panel out ran uncovered without one, #51);
+            // the bare one returns after the panel has gone.
             revealCoverActiveDisplay = appState.lastMouseDownDisplay ?? Self.displayUnderPointer
             let rect = precaptureRect
             revealCoverBackdrop = ConcealGhostOverlay.backdropSignature(of: rect) + ConcealGhostOverlay.surfaceSignature()
