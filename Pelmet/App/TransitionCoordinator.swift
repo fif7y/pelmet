@@ -574,7 +574,7 @@ final class TransitionCoordinator {
     /// The signature the under-panel picture is kept under: the backdrop
     /// (the panel is not part of it) plus wallpaper and appearance.
     private var underPanelSignature: [Int] {
-        ConcealGhostOverlay.backdropSignature(of: precaptureRect) + ConcealGhostOverlay.surfaceSignature()
+        ConcealGhostOverlay.backdropSignature(of: precaptureRect, primaryOnly: true) + ConcealGhostOverlay.surfaceSignature()
     }
 
     /// Entrance blink, once Notification Center's panel has slid in: put
@@ -593,7 +593,8 @@ final class TransitionCoordinator {
         }
         let cropped = ConcealGhostOverlay.cropped(kept.snapshot, toPrimaryX: cover.span)
         guard let under = ConcealGhostOverlay.begin(from: cropped, safety: cover.safety) else {
-            PelmetLog.log("clock: under-panel picture does not span the cover, bare cover stays")
+            let have = kept.snapshot.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" }.joined(separator: " ")
+            PelmetLog.log("clock: under-panel picture (\(have)) does not span the cover \(Int(cover.span.lowerBound))..\(Int(cover.span.upperBound)), bare cover stays")
             return
         }
         let bare = cover.current
@@ -605,16 +606,22 @@ final class TransitionCoordinator {
     /// After an entrance blink has lifted with the panel open and the bar
     /// quiet: keep a picture of the bar under the panel for the next one,
     /// unless the kept one still holds (one capture per changed bar).
-    private func takeUnderPanelPicture(span: ClosedRange<CGFloat>) async {
+    func takeUnderPanelPicture(span: ClosedRange<CGFloat>? = nil) async {
         guard let appState, appState.currentRevealedSections.isEmpty, ClockClickRelay.notificationCenterIsOpen() else { return }
         let signature = underPanelSignature
         if let kept = underPanelPicture, kept.backdrop == signature, kept.display == appState.lastMouseDownDisplay,
            let first = kept.snapshot.first, Date().timeIntervalSince(first.takenAt) < AppTiming.revealCoverFreshness { return }
-        guard let geometry = barCoverGeometry() else { return }
-        let snaps = await ConcealGhostOverlay.snapshotSet(of: barCoverRect(geometry))
+        // The wide rect the idle picture uses (reveal ∪ blink), so any
+        // later blink span crops out of it whatever the concealed count.
+        guard let rect = precaptureRect else { return }
+        let snaps = await ConcealGhostOverlay.snapshotSet(of: rect)
         guard !snaps.isEmpty else { return }
+        let span = span ?? (rect.minX...rect.maxX)
         underPanelPicture = (snaps, signature, appState.lastMouseDownDisplay)
-        PelmetLog.log("clock: under-panel picture taken (\(Int(span.lowerBound))..\(Int(span.upperBound)))")
+        let probe: ClosedRange<CGFloat> = (span.upperBound - 200)...(span.upperBound - 20)
+        let under = snaps.first.map { ConcealGhostOverlay.meanLuma($0, primaryX: probe) } ?? -1
+        let bare = revealCoverSnapshot.first.map { ConcealGhostOverlay.meanLuma($0, primaryX: probe) } ?? -1
+        PelmetLog.log("clock: under-panel picture taken (\(Int(span.lowerBound))..\(Int(span.upperBound))) — luma under \(Int(under)) vs bare idle \(Int(bare)) over \(Int(probe.lowerBound))..\(Int(probe.upperBound))")
     }
 
     /// Lift the blink cover once the re-acquire has taken beneath it. Swap-

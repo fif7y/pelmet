@@ -784,6 +784,10 @@ final class AppState {
             // 2026-09-22 15:33, 3/3). Opening stays a blink: with the
             // assertion held the clock's click is refused (probed 0/2).
             if panelWasOpen {
+                // The panel is open and the bar quiet: the best moment to
+                // refresh the picture of the bar under it, if the kept one
+                // no longer holds (a window moved), before the panel goes.
+                await transitions.takeUnderPanelPicture()
                 await ClockClickRelay.waitForButtonRelease()
                 ClockClickRelay.postClick(at: point, pointer: pointer)
                 panelOpenedAt = .distantPast

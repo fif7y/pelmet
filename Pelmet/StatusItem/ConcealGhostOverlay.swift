@@ -157,12 +157,15 @@ final class ConcealGhostOverlay {
     /// same backdrop; a moved, resized, raised or closed window changes
     /// it, and a picture of the bar taken under the old one is stale (#33:
     /// a Finder window's top edge slid in with the bar).
-    static func backdropSignature(of rect: CGRect?, in list: [[String: Any]]? = nil) -> [Int] {
+    /// `primaryOnly`: the primary display's band alone (the clock blink's
+    /// under-panel picture is only ever shown there, and window traffic
+    /// near the other bars invalidated it on every other click).
+    static func backdropSignature(of rect: CGRect?, in list: [[String: Any]]? = nil, primaryOnly: Bool = false) -> [Int] {
         guard let rect, rect.width > 8, let list = list ?? onScreenWindows(),
               let primary = NSScreen.screens.first else { return [] }
         let me = ProcessInfo.processInfo.processIdentifier
         let barLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
-        let zones: [CGRect] = NSScreen.screens.compactMap { screen in
+        let zones: [CGRect] = (primaryOnly ? [primary] : NSScreen.screens).compactMap { screen in
             guard let displayID = screen.directDisplayID else { return nil }
             let bounds = CGDisplayBounds(displayID)
             let shift = screen.frame.maxX - primary.frame.maxX
@@ -217,6 +220,24 @@ final class ConcealGhostOverlay {
         let modified = (try? FileManager.default.attributesOfItem(atPath: wallpaperStoreIndex))?[.modificationDate] as? Date
         hasher.combine(modified?.timeIntervalSinceReferenceDate ?? 0)
         return [NSApp.effectiveAppearance.name.rawValue.hashValue, hasher.finalize()]
+    }
+
+    /// Mean luminance of the picture's columns over `primaryX` (debug: is a
+    /// picture of the bar under Notification Center's panel darker?).
+    static func meanLuma(_ snap: BarSnapshot, primaryX: ClosedRange<CGFloat>) -> Double {
+        let scale = CGFloat(snap.image.width) / snap.windowFrame.width
+        let x0 = max(0, Int((primaryX.lowerBound - snap.windowFrame.minX) * scale))
+        let x1 = min(snap.image.width, Int((primaryX.upperBound - snap.windowFrame.minX) * scale))
+        guard x1 > x0, let data = snap.image.dataProvider?.data, let ptr = CFDataGetBytePtr(data) else { return -1 }
+        let bpr = snap.image.bytesPerRow, bpp = snap.image.bitsPerPixel / 8
+        var sum = 0.0, n = 0.0
+        for y in stride(from: 0, to: snap.image.height, by: 4) {
+            for x in stride(from: x0, to: x1, by: 4) {
+                let o = y * bpr + x * bpp
+                sum += (Double(ptr[o]) + Double(ptr[o + 1]) + Double(ptr[o + 2])) / 3; n += 1
+            }
+        }
+        return n > 0 ? sum / n : -1
     }
 
     /// Who moved between two signatures, by owner, for the log (#49: the
