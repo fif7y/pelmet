@@ -21,9 +21,11 @@ enum AppTiming {
     /// Longest the blink cover waits for the concealed items to leave the
     /// AX tree after the re-acquire before lifting anyway.
     static let clockBlinkCoverDeadline: TimeInterval = 1.5
-    /// Notification Center's panel, from the button's release to fully in,
-    /// as the bar shows it (Gab's clicks at 60fps, 2026-09-22): ~80ms.
-    static let panelSlideIn: Duration = .milliseconds(120)
+    /// Notification Center's panel slides in over ~100ms from Pelmet's
+    /// press; the blink cover crossfades from the bare still to the
+    /// under-panel one over that slide, starting at the press.
+    static let panelSlideIn: Duration = .milliseconds(0)
+    static let panelSlideInFade: CFTimeInterval = 0.12
     /// The under-panel picture shows the visible cluster too, and that
     /// cluster drifts (battery, Wi-Fi, third-party glyphs): short-lived,
     /// and dropped outright when an own item redraws.

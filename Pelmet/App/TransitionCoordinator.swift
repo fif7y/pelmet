@@ -222,9 +222,14 @@ final class TransitionCoordinator {
     /// free — it is taken while the bar idles concealed, and each consumer
     /// crops back to its own rect.
     private var precaptureRect: CGRect? {
-        guard let reveal = revealCoverRect else { return nil }
-        guard let geometry = barCoverGeometry() else { return reveal }
-        return reveal.union(barCoverRect(geometry))
+        // No strip known yet (no conceal since launch, or a boot that
+        // could not seed one): the blink's own rect still serves every
+        // clock click (#51: nothing was ever precaptured after a relaunch,
+        // every entrance captured live, no under-panel picture existed).
+        let blink = barCoverGeometry().map { barCoverRect($0) }
+        guard let reveal = revealCoverRect else { return blink }
+        guard let blink else { return reveal }
+        return reveal.union(blink)
     }
     /// Strip and cover rects are primary-band geometry: an external's copy
     /// of an item stretched the strip across displays (`1278..4887`) and
@@ -527,8 +532,8 @@ final class TransitionCoordinator {
         func liveAnchor(_ snap: EngineSnapshot) -> CGFloat? { snap.items.first(where: isClock)?.frame?.minX }
         func rect(anchorMinX: CGFloat) -> CGRect { barCoverRect(geometry, anchorMinX: anchorMinX) }
         let started = Date()
-        let spanEnd = geometry.anchorMinX - 2 - ConcealGhostOverlay.capturePadding
-        let span = geometry.minX...spanEnd
+        var spanEnd = geometry.anchorMinX - 2 - ConcealGhostOverlay.capturePadding
+        var span = geometry.minX...spanEnd
         // The picture the idle pre-capture already holds spans this cover
         // (scheduleRevealCoverPrecapture widens it to), so cut the cover
         // out of it and take no picture at all. That is the whole point:
@@ -539,6 +544,13 @@ final class TransitionCoordinator {
         backdropMayHaveChanged()
         if appState.currentRevealedSections.isEmpty {
             let whole = freshEmptyBarSnapshots(cropped: false)
+            // Right after the panel has left, the clock sits 3pt right of
+            // rest for a moment; a picture that short at the clock end
+            // still serves (the cover ends in bare bar before the clock).
+            if let last = whole.first?.windowFrame.maxX {
+                let end = last - ConcealGhostOverlay.capturePadding
+                if end < spanEnd, spanEnd - end <= 4 { spanEnd = end; span = geometry.minX...spanEnd }
+            }
             let reusable = ConcealGhostOverlay.cropped(whole, toPrimaryX: span)
             if reusable.isEmpty, !whole.isEmpty {
                 let have = whole.first.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" } ?? "none"
@@ -607,15 +619,21 @@ final class TransitionCoordinator {
             if end < span.upperBound, span.upperBound - end <= 4 { span = span.lowerBound...end }
         }
         let cropped = ConcealGhostOverlay.cropped(kept.snapshot, toPrimaryX: span)
-        guard let under = ConcealGhostOverlay.begin(from: cropped, safety: cover.safety) else {
+        guard let under = ConcealGhostOverlay.begin(from: cropped, safety: cover.safety, startHidden: true) else {
             let have = kept.snapshot.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" }.joined(separator: " ")
             PelmetLog.log("clock: under-panel picture (\(have)) does not span the cover \(Int(cover.span.lowerBound))..\(Int(cover.span.upperBound)), bare cover stays")
             return
         }
+        // Over the bare still, fading in for the panel's own slide: a hard
+        // swap read as a step, and the front cannot be followed exactly.
         let bare = cover.current
         cover.current = under
-        bare.dismiss()
-        PelmetLog.log("clock: cover swapped to the under-panel picture")
+        under.animate(.fade(AppTiming.panelSlideInFade), entering: true)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(Int(AppTiming.panelSlideInFade * 1000) + 40))
+            bare.dismiss()
+        }
+        PelmetLog.log("clock: cover crossfading to the under-panel picture")
     }
 
     /// After an entrance blink has lifted with the panel open and the bar
@@ -631,7 +649,10 @@ final class TransitionCoordinator {
         // to the clock as it sits NOW: under the open panel it is 3pt
         // further right than at rest, and a picture taken to the resting
         // clock came up 3pt short of the next cover (2026-09-22 16:38).
-        guard var rect = precaptureRect, let geometry = barCoverGeometry() else { return }
+        guard var rect = precaptureRect, let geometry = barCoverGeometry() else {
+            PelmetLog.log("clock: under-panel picture not taken — no rect")
+            return
+        }
         rect = rect.union(barCoverRect(geometry))
         let snaps = await ConcealGhostOverlay.snapshotSet(of: rect)
         guard !snaps.isEmpty else { return }
