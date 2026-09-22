@@ -122,6 +122,14 @@ final class TransitionCoordinator {
         }
     }
 
+    /// One of Pelmet's own items drew a different glyph: the picture of
+    /// the bar under the panel shows the old one over the visible cluster.
+    func ownItemsRedrew() {
+        guard underPanelPicture != nil else { return }
+        underPanelPicture = nil
+        PelmetLog.log("clock: under-panel picture dropped — an own item redrew")
+    }
+
     /// Notification Center was just dismissed from the clock: once its
     /// slide is over and its window has left the list (~0.6s), take the
     /// bare picture the next click or reveal will want.
@@ -584,14 +592,21 @@ final class TransitionCoordinator {
     /// the bare cover stays (today's look) and the lift takes a new one.
     func swapBlinkCoverUnderPanel(_ cover: BlinkCover) {
         guard let appState, let kept = underPanelPicture, let first = kept.snapshot.first,
-              Date().timeIntervalSince(first.takenAt) < AppTiming.revealCoverFreshness,
+              Date().timeIntervalSince(first.takenAt) < AppTiming.underPanelPictureFreshness,
               kept.display == appState.lastMouseDownDisplay,
               kept.backdrop == underPanelSignature else {
             PelmetLog.log("clock: no under-panel picture for this bar, bare cover stays")
             underPanelPicture = nil
             return
         }
-        let cropped = ConcealGhostOverlay.cropped(kept.snapshot, toPrimaryX: cover.span)
+        // A picture up to 4pt short at the clock end still serves: the
+        // cover then ends that much earlier, in bare bar before the clock.
+        var span = cover.span
+        if let last = kept.snapshot.first?.windowFrame.maxX {
+            let end = last - ConcealGhostOverlay.capturePadding
+            if end < span.upperBound, span.upperBound - end <= 4 { span = span.lowerBound...end }
+        }
+        let cropped = ConcealGhostOverlay.cropped(kept.snapshot, toPrimaryX: span)
         guard let under = ConcealGhostOverlay.begin(from: cropped, safety: cover.safety) else {
             let have = kept.snapshot.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" }.joined(separator: " ")
             PelmetLog.log("clock: under-panel picture (\(have)) does not span the cover \(Int(cover.span.lowerBound))..\(Int(cover.span.upperBound)), bare cover stays")
@@ -610,10 +625,14 @@ final class TransitionCoordinator {
         guard let appState, appState.currentRevealedSections.isEmpty, ClockClickRelay.notificationCenterIsOpen() else { return }
         let signature = underPanelSignature
         if let kept = underPanelPicture, kept.backdrop == signature, kept.display == appState.lastMouseDownDisplay,
-           let first = kept.snapshot.first, Date().timeIntervalSince(first.takenAt) < AppTiming.revealCoverFreshness { return }
+           let first = kept.snapshot.first, Date().timeIntervalSince(first.takenAt) < AppTiming.underPanelPictureFreshness { return }
         // The wide rect the idle picture uses (reveal ∪ blink), so any
-        // later blink span crops out of it whatever the concealed count.
-        guard let rect = precaptureRect else { return }
+        // later blink span crops out of it whatever the concealed count —
+        // to the clock as it sits NOW: under the open panel it is 3pt
+        // further right than at rest, and a picture taken to the resting
+        // clock came up 3pt short of the next cover (2026-09-22 16:38).
+        guard var rect = precaptureRect, let geometry = barCoverGeometry() else { return }
+        rect = rect.union(barCoverRect(geometry))
         let snaps = await ConcealGhostOverlay.snapshotSet(of: rect)
         guard !snaps.isEmpty else { return }
         let span = span ?? (rect.minX...rect.maxX)

@@ -24,6 +24,10 @@ enum AppTiming {
     /// Notification Center's panel, from the button's release to fully in,
     /// as the bar shows it (Gab's clicks at 60fps, 2026-09-22): ~80ms.
     static let panelSlideIn: Duration = .milliseconds(120)
+    /// The under-panel picture shows the visible cluster too, and that
+    /// cluster drifts (battery, Wi-Fi, third-party glyphs): short-lived,
+    /// and dropped outright when an own item redraws.
+    static let underPanelPictureFreshness: TimeInterval = 120
     /// How long the blink cover stays after the concealed items have left
     /// the AX tree. Was `exitCoverHold` (0.42s) — the picture sat 1.0–1.5s
     /// on every clock click (#46). Measured 2026-09-21 at 60fps: lifting

@@ -639,6 +639,10 @@ final class AppState {
         transitions.pointerApproachedBar()
     }
 
+    func ownItemsRedrew() {
+        transitions.ownItemsRedrew()
+    }
+
     func pointerLeftBand() {
         dispatch(rehide.handle(.pointerLeft))
     }

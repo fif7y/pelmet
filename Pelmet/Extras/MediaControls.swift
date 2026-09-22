@@ -59,6 +59,10 @@ final class ExtrasManager {
         guard let button = item.button else { return }
         if glyphKeys[id] == key, button.image != nil { return }
         button.image = make()
+        // A changed glyph (play → pause, a level) dates every picture of the
+        // visible cluster (#51: the clock blink showed a pause glyph over a
+        // play one for its whole life).
+        if glyphKeys[id] != nil, glyphKeys[id] != key { appState?.ownItemsRedrew() }
         glyphKeys[id] = key
     }
     private var specs: [UUID: ExtraItemSpec] = [:]
