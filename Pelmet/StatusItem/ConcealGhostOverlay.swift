@@ -89,6 +89,9 @@ final class ConcealGhostOverlay {
         func panelWillClose(elapsed: TimeInterval = 0) {
             for overlay in overlays { overlay.panelWillClose(elapsed: elapsed) }
         }
+        func panelWillOpen(elapsed: TimeInterval = 0) {
+            for overlay in overlays { overlay.panelWillOpen(elapsed: elapsed) }
+        }
     }
 
     /// SCShareableContent lookup is the slow part (can be 100ms+) — cache the
@@ -256,7 +259,6 @@ final class ConcealGhostOverlay {
     private var finished = false
     private var stoodDown = false
     private var shadeLayer: CALayer?
-    private var shadeFollower: Task<Void, Never>?
     private var panelOpen = false
     private var panelShadeTransition: ((Bool, TimeInterval) -> Void)?
 
@@ -273,9 +275,11 @@ final class ConcealGhostOverlay {
     static let panelShadeRamp: CGFloat = 70
     static let panelShadeTop: Float = 0.035
     static let panelShadeBottom: Float = 0.11
-    /// The panel's slide, measured at 60fps on Gab's built-in (2026-09-22).
-    static let panelSlideIn: CFTimeInterval = 0.22
-    static let panelSlideOut: CFTimeInterval = 0.2
+    /// The panel's slide as the bar shows it, from Gab's own clicks at 60fps
+    /// (2026-09-22 15:16): in over ~80ms, out over ~120ms, both from the
+    /// button's release.
+    static let panelSlideIn: CFTimeInterval = 0.1
+    static let panelSlideOut: CFTimeInterval = 0.13
 
     /// `pictureUnderPanel`: the picture already carries the shade, so the
     /// layer lifts it back off the part the panel has left instead.
@@ -288,7 +292,7 @@ final class ConcealGhostOverlay {
     /// the panel: the mask translates from the cover's right end to the
     /// ramp's resting place on open, back on close.
     func followPanelShade(pictureUnderPanel: Bool, isOpen: @escaping @MainActor () -> Bool) {
-        guard !finished, shadeFollower == nil, let host = imageView.layer,
+        guard !finished, panelShadeTransition == nil, let host = window.contentView?.layer,
               let screen = NSScreen.screens.first(where: { $0.frame.intersects(window.frame) }) else { return }
         let frame = window.frame
         let shadeLeft = screen.frame.maxX - Self.panelShadeInset
@@ -345,15 +349,9 @@ final class ConcealGhostOverlay {
             CATransaction.commit()
             PelmetLog.log("ghost: cover \(pictureUnderPanel ? "lift" : "shade") front \(now ? "in" : "out") — Notification Center \(now ? "opening" : "closing")\(pictureUnderPanel ? ", picture taken under it" : "")")
         }
-        // The window list lags the panel's exit by ~0.6s (see
-        // `panelWillClose`); it leads the entrance, so opening is polled.
-        shadeFollower = Task { @MainActor [weak self] in
-            while let self, !self.finished, !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(30))
-                guard !Task.isCancelled else { return }
-                if isOpen(), !self.panelOpen { self.panelShade(open: true) }
-            }
-        }
+        // No polling: the window list lags the panel both ways on a real
+        // click (~250ms on entrance, ~600ms on exit, 2026-09-22 15:16).
+        // Both slides start at the button's release; the relay says when.
     }
 
     func panelShade(open: Bool, elapsed: TimeInterval = 0) {
@@ -362,13 +360,9 @@ final class ConcealGhostOverlay {
         transition(open, elapsed)
     }
 
-    /// The window list still says open for the whole exit slide: stop
-    /// reading it, the panel will not come back within this cover's life.
-    /// `elapsed`: how far the slide already is (it began at the click).
-    func panelWillClose(elapsed: TimeInterval = 0) {
-        shadeFollower?.cancel()
-        panelShade(open: false, elapsed: elapsed)
-    }
+    /// `elapsed`: how far the slide already is when the cover learns of it.
+    func panelWillClose(elapsed: TimeInterval = 0) { panelShade(open: false, elapsed: elapsed) }
+    func panelWillOpen(elapsed: TimeInterval = 0) { panelShade(open: true, elapsed: elapsed) }
 
     /// A captured strip image ready to float — pre-captured at conceal settle
     /// so the reveal path pays zero capture latency.
@@ -815,7 +809,15 @@ final class ConcealGhostOverlay {
         imageView.frame = NSRect(origin: .zero, size: frame.size)
         imageView.wantsLayer = true
         if startHidden { imageView.layer?.opacity = 0 }
-        window.contentView = imageView
+        // A layer-hosting root: a layer added into the image view's own
+        // (AppKit-managed) layer dropped out for single frames every
+        // ~180ms (Gab's clicks at 60fps, 2026-09-22 15:16), a shade that
+        // flickered. Sublayers of a root we own are left alone.
+        let root = NSView(frame: NSRect(origin: .zero, size: frame.size))
+        root.layer = CALayer()
+        root.wantsLayer = true
+        root.addSubview(imageView)
+        window.contentView = root
         if let beneath {
             window.order(.below, relativeTo: Int(beneath))
         } else {
@@ -842,7 +844,6 @@ final class ConcealGhostOverlay {
     func dismiss() {
         guard !finished else { return }
         finished = true
-        shadeFollower?.cancel()
         window.orderOut(nil)
         standDown()
     }

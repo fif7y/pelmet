@@ -777,12 +777,13 @@ final class AppState {
             // cover's shade front starts there, not at the relay's press.
             let panelWasOpen = ClockClickRelay.notificationCenterIsOpen()
             let cover = await transitions.beginBarCover()
-            // The click opens (or closes) Notification Center under the
-            // cover: shade the picture with the panel (#51).
-            cover?.followPanelShade { ClockClickRelay.notificationCenterIsOpen() }
-            if panelWasOpen {
+            // The click opens or closes Notification Center under the
+            // cover, both from the button's release: the picture's shade
+            // slides with the panel from that moment (#51).
+            cover?.followPanelShade { panelWasOpen }
+            if cover != nil {
                 await ClockClickRelay.waitForButtonRelease()
-                cover?.panelWillClose()
+                if panelWasOpen { cover?.panelWillClose() } else { cover?.panelWillOpen() }
             }
             let blinked = await engine.beginClockBlink()
             if let clockElement {
