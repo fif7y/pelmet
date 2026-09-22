@@ -62,6 +62,10 @@ final class TrayPanel {
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.animationBehavior = .none
+        // Its size is its cells': no edge resize, no drag of the surface.
+        panel.styleMask.remove(.resizable)
+        panel.isMovable = false
+        panel.isMovableByWindowBackground = false
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         content.translatesAutoresizingMaskIntoConstraints = false
         if #available(macOS 26.0, *) {
@@ -122,6 +126,8 @@ final class TrayPanel {
         self.placement = placement
         let frame = layout(cells, placement: placement)
         restFrame = frame
+        panel.minSize = frame.size
+        panel.maxSize = frame.size
         panel.setFrame(frame, display: true)
         content.setPressed(nil)
         panel.alphaValue = 0
@@ -151,6 +157,8 @@ final class TrayPanel {
         let frame = layout(cells, placement: placement)
         guard frame != restFrame else { return }
         restFrame = frame
+        panel.minSize = NSSize(width: min(panel.frame.width, frame.width), height: min(panel.frame.height, frame.height))
+        panel.maxSize = NSSize(width: max(panel.frame.width, frame.width), height: max(panel.frame.height, frame.height))
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = AppTiming.trayReflow
             ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
@@ -524,9 +532,11 @@ private final class TrayCellView: NSView {
                 image.bottomAnchor.constraint(equalTo: bottomAnchor),
             ]
         } else {
-            // A stand-in drawn like a bar glyph: 16pt symbol, 18pt box.
+            // A stand-in drawn like a bar glyph: the bar draws template
+            // symbols a touch heavier than a 16pt regular symbol reads on
+            // glass (Siri came out thin, Gab 2026-09-21).
             let side = (18 * scale).rounded()
-            image.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 16 * scale, weight: .regular)
+            image.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 16 * scale, weight: .medium)
             sizeConstraints = [
                 image.widthAnchor.constraint(equalToConstant: side),
                 image.heightAnchor.constraint(equalToConstant: side),
