@@ -87,6 +87,7 @@ final class TrayController {
         )
         panel.show(cells: cells, placement: placement)
         let missing = pictures.missing(among: cells.map(\.key))
+        PelmetLog.log("tray: cells " + cells.map { "\($0.key.rawValue.split(separator: ":").last ?? "?")=\(Int($0.size.width))×\(Int($0.size.height))\($0.isPicture ? "" : " icon")" }.joined(separator: " "))
         PelmetLog.log("tray: open \(sections.map(\.rawValue).sorted()) — \(cells.count) cell(s), \(cells.count - missing.count) picture(s), \(placement.position.rawValue) on display \(screen.directDisplayID ?? 0)")
         onOpened?()
         if !missing.isEmpty, ScreenRecordingAccess.isGranted {
@@ -200,7 +201,11 @@ final class TrayController {
             // nothing shows: Apple's hosts and Control Center's modules
             // take the press and do nothing with it.
             let before = TrayPress.elevatedWindowCount()
-            let pressed = item.pid > 0 && !item.id.isSystemModule && TrayPress.press(item)
+            // Apple's hosts and the system modules take the AX press and do
+            // nothing with it (Passwords, Weather, Sound): straight to the
+            // click for them.
+            let apple = item.id.isSystemModule || (item.id.bundleID?.hasPrefix("com.apple.") ?? true)
+            let pressed = !apple && item.pid > 0 && TrayPress.press(item)
             if pressed { shown = await Self.somethingShown(over: before) }
             var clicked = false
             if !shown {
@@ -252,7 +257,9 @@ final class TrayController {
             let sections = self.sections
             let background = await appState.transitions.trayBackground()
             let cover = await appState.transitions.beginBarCover(label: "tray")
-            await appState.engine.reveal(sections)
+            // The section's items, not the section: no section changes, so
+            // Pelmet's own extras stay put and nothing else reflows.
+            await appState.engine.reveal(items: Set(cellSections.keys))
             appState.updateSnapshot(await appState.engine.snapshot())
             await appState.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
             try? await Task.sleep(for: AppTiming.trayRelaySettle)

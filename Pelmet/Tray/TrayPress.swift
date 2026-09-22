@@ -54,11 +54,18 @@ enum TrayPress {
         let me = ProcessInfo.processInfo.processIdentifier
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]
         else { return 0 }
+        let barBottom = NSScreen.screens.first.map { $0.frame.maxY - $0.visibleFrame.maxY } ?? 24
+        let screenWidth = NSScreen.screens.first?.frame.width ?? 1440
         return list.filter { info in
             guard let owner = info[kCGWindowOwnerPID as String] as? Int32, owner != me,
-                  let layer = info[kCGWindowLayer as String] as? Int
+                  let layer = info[kCGWindowLayer as String] as? Int,
+                  let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
+                  let y = bounds["Y"], let width = bounds["Width"], let height = bounds["Height"]
             else { return false }
-            return layer > 0 && layer != 25
+            if layer > 0, layer != 25 { return true }
+            // A popover at the normal level (Weather's): hangs right under
+            // the bar and is nowhere near a document window's width.
+            return layer == 0 && height > 40 && width < screenWidth * 0.6 && abs(y - barBottom) < 16
         }.count
     }
 

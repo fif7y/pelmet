@@ -711,10 +711,18 @@ final class AppState {
     private func settleCatchUp() {
         extras?.apply(
             model: settings.sectionModel,
-            revealed: currentRevealedSections,
+            revealed: barRevealedSections,
             systemCameraPillVisible: systemCameraPillVisible
         )
-        separators?.apply(model: settings.sectionModel, revealed: currentRevealedSections)
+        separators?.apply(model: settings.sectionModel, revealed: barRevealedSections)
+    }
+
+    /// What the BAR shows revealed: the rehide machine reads "revealed"
+    /// while the floating bar holds a section, but nothing in the bar is —
+    /// handing the machine's word to the extras showed Siri in the bar on
+    /// every tray open (2026-09-21).
+    var barRevealedSections: Set<PelmetCore.Section> {
+        tray.isOpen ? [] : currentRevealedSections
     }
 
     func openSettings(tab: SettingsTab = .general) {
@@ -2317,8 +2325,8 @@ final class AppState {
                 // animate extras on a second clock. The settle catch-up in
                 // dispatch covers the transition case.
                 guard !isTransitioning else { return }
-                extras?.apply(model: settings.sectionModel, revealed: currentRevealedSections, systemCameraPillVisible: systemCameraPillVisible)
-                separators?.apply(model: settings.sectionModel, revealed: currentRevealedSections)
+                extras?.apply(model: settings.sectionModel, revealed: barRevealedSections, systemCameraPillVisible: systemCameraPillVisible)
+                separators?.apply(model: settings.sectionModel, revealed: barRevealedSections)
             }
         case .assertionTornDown:
             unhideableTracker.assertionLost()
