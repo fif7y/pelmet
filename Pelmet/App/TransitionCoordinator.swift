@@ -456,11 +456,11 @@ final class TransitionCoordinator {
     /// that picture instead of paying a capture at the click.
     private struct BarCoverGeometry {
         let minX: CGFloat
-        /// The leftmost live icon: whatever the assertion still hides
-        /// slides in to its LEFT, so the cover ends just short of it. The
-        /// visible cluster and the clock stay real (#51: a still to the
-        /// clock sat under Notification Center's panel as a lighter
-        /// rectangle for the blink's life).
+        /// The clock's left edge: the cover runs to it. Ending at the
+        /// leftmost live icon instead (tried 2026-09-22) let the visible
+        /// cluster show its own change during the drop: Pelmet's own items
+        /// trade places with the system's and the cluster shifts (Gab:
+        /// "the icons change since the Pelmet icon goes away").
         let anchorMinX: CGFloat
         let band: CGRect
     }
@@ -484,8 +484,7 @@ final class TransitionCoordinator {
         // and the display edge, and a wider picture of static bar is free.
         let concealedGrowth = CGFloat(appState.snapshot?.concealed.count ?? 0) * 40
         let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24 - concealedGrowth
-        _ = clock
-        return BarCoverGeometry(minX: minX, anchorMinX: leftmost, band: band)
+        return BarCoverGeometry(minX: minX, anchorMinX: clock.minX, band: band)
     }
 
     /// The capture pads 6pt past the rect on both sides (continuous
@@ -516,10 +515,8 @@ final class TransitionCoordinator {
         safety: TimeInterval = AppTiming.transitionCoverSafety
     ) async -> BlinkCover? {
         guard let appState, let geometry = barCoverGeometry() else { return nil }
-        let primaryMaxX = primaryMaxX
-        func liveAnchor(_ snap: EngineSnapshot) -> CGFloat? {
-            snap.items.compactMap(\.frame).filter { MenuBarGeometry.isInPrimaryBand($0, primaryMaxX: primaryMaxX) }.map(\.minX).min()
-        }
+        let isClock: (ObservedItem) -> Bool = { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }
+        func liveAnchor(_ snap: EngineSnapshot) -> CGFloat? { snap.items.first(where: isClock)?.frame?.minX }
         func rect(anchorMinX: CGFloat) -> CGRect { barCoverRect(geometry, anchorMinX: anchorMinX) }
         let started = Date()
         let spanEnd = geometry.anchorMinX - 2 - ConcealGhostOverlay.capturePadding
