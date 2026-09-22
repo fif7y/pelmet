@@ -26,6 +26,9 @@ enum AppTiming {
     /// under-panel one over that slide, starting at the press.
     static let panelSlideIn: Duration = .milliseconds(0)
     static let panelSlideInFade: CFTimeInterval = 0.12
+    /// The panel's leading edge as the glass shows it: a ~70pt ramp
+    /// (60fps profile, 2026-09-22 14:28).
+    static let panelEdgeSoftness: CGFloat = 70
     /// The under-panel picture shows the visible cluster too, and that
     /// cluster drifts (battery, Wi-Fi, third-party glyphs): short-lived,
     /// and dropped outright when an own item redraws.

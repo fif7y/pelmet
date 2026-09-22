@@ -619,21 +619,23 @@ final class TransitionCoordinator {
             if end < span.upperBound, span.upperBound - end <= 4 { span = span.lowerBound...end }
         }
         let cropped = ConcealGhostOverlay.cropped(kept.snapshot, toPrimaryX: span)
-        guard let under = ConcealGhostOverlay.begin(from: cropped, safety: cover.safety, startHidden: true) else {
+        guard let under = ConcealGhostOverlay.begin(from: cropped, safety: cover.safety) else {
             let have = kept.snapshot.map { "\(Int($0.windowFrame.minX))..\(Int($0.windowFrame.maxX))" }.joined(separator: " ")
             PelmetLog.log("clock: under-panel picture (\(have)) does not span the cover \(Int(cover.span.lowerBound))..\(Int(cover.span.upperBound)), bare cover stays")
             return
         }
-        // Over the bare still, fading in for the panel's own slide: a hard
-        // swap read as a step, and the front cannot be followed exactly.
+        // Over the bare still, wiped in from the right the way the panel
+        // slides under the bar (Gab's design, 2026-09-22): the still is the
+        // exact look, the mask is the motion. A hard swap read as a step
+        // and a crossfade as a fade; neither moved.
         let bare = cover.current
         cover.current = under
-        under.animate(.fade(AppTiming.panelSlideInFade), entering: true)
+        under.wipeInFromRight(duration: AppTiming.panelSlideInFade, edge: AppTiming.panelEdgeSoftness)
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(Int(AppTiming.panelSlideInFade * 1000) + 40))
+            try? await Task.sleep(for: .milliseconds(Int(AppTiming.panelSlideInFade * 1000) + 60))
             bare.dismiss()
         }
-        PelmetLog.log("clock: cover crossfading to the under-panel picture")
+        PelmetLog.log("clock: under-panel picture wiping in over the cover")
     }
 
     /// After an entrance blink has lifted with the panel open and the bar

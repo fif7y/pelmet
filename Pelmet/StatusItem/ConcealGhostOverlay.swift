@@ -74,6 +74,11 @@ final class ConcealGhostOverlay {
         func animate(_ move: AnimationRecipe.Move, entering: Bool) {
             for overlay in overlays { overlay.animate(move, entering: entering) }
         }
+        /// Reveal the pictures from their right end leftwards, the way
+        /// Notification Center's panel slides in under the bar (#51).
+        func wipeInFromRight(duration: CFTimeInterval, edge: CGFloat) {
+            for overlay in overlays { overlay.wipeInFromRight(duration: duration, edge: edge) }
+        }
     }
 
     /// SCShareableContent lookup is the slow part (can be 100ms+) — cache the
@@ -737,6 +742,31 @@ final class ConcealGhostOverlay {
         guard !stoodDown else { return }
         stoodDown = true
         Self.activeStripCount -= 1
+    }
+
+    /// A wipe from the right: the root layer takes a mask whose soft left
+    /// edge (`edge` points, the panel's blurred leading edge under the
+    /// glass) travels from past the right end to rest over `duration`,
+    /// with the panel's own ease-out. Whatever the picture shows arrives
+    /// the way the panel does; the picture itself carries the exact look.
+    func wipeInFromRight(duration: CFTimeInterval, edge: CGFloat) {
+        guard !finished, let root = window.contentView?.layer else { return }
+        let width = window.frame.width
+        let mask = CAGradientLayer()
+        mask.frame = CGRect(x: 0, y: 0, width: width, height: window.frame.height)
+        mask.colors = [CGColor(gray: 0, alpha: 0), CGColor(gray: 0, alpha: 1), CGColor(gray: 0, alpha: 1)]
+        mask.locations = [0, NSNumber(value: Double(min(1, edge / max(width, 1)))), 1]
+        mask.startPoint = CGPoint(x: 0, y: 0.5); mask.endPoint = CGPoint(x: 1, y: 0.5)
+        root.mask = mask
+        let anim = CABasicAnimation(keyPath: "transform.translation.x")
+        anim.fromValue = width
+        anim.toValue = 0
+        anim.duration = duration
+        anim.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        mask.add(anim, forKey: "pelmetWipe")
+        mask.transform = CATransform3DIdentity
+        CATransaction.commit()
     }
 
     /// Drop the cover with no animation — the Instant reveal style: whatever
