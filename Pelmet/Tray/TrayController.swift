@@ -134,7 +134,9 @@ final class TrayController {
         let present = presentKeys
         var cells: [TrayPanel.Cell] = []
         cellSections = [:]
-        for section in [PelmetCore.Section.hidden, .alwaysHidden] where sections.contains(section) {
+        // The bar's own order: Always Hidden sits left of Hidden, which
+        // sits left of the visible cluster.
+        for section in [PelmetCore.Section.alwaysHidden, .hidden] where sections.contains(section) {
             for item in appState.editorItems(in: section) {
                 let key = item.id.sectionKey
                 guard present.contains(key) else { continue }
@@ -296,7 +298,7 @@ final class TrayController {
     /// once. The pass needs the items in the bar, so the tray closes first.
     private func reordered(_ order: [ItemID]) {
         guard let appState else { return }
-        for section in [PelmetCore.Section.hidden, .alwaysHidden] where sections.contains(section) {
+        for section in [PelmetCore.Section.alwaysHidden, .hidden] where sections.contains(section) {
             let keys = order.filter { cellSections[$0] == section }
             let current = appState.currentOrder(in: section)
             guard keys != current.filter({ keys.contains($0) }) else { continue }
