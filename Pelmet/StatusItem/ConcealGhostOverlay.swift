@@ -257,11 +257,20 @@ final class ConcealGhostOverlay {
     static let panelShadeRamp: CGFloat = 70
     static let panelShadeTop: Float = 0.035
     static let panelShadeBottom: Float = 0.11
-    static let panelShadeFade: CFTimeInterval = 0.15
+    /// The panel's slide, measured at 60fps on Gab's built-in (2026-09-22).
+    static let panelSlideIn: CFTimeInterval = 0.22
+    static let panelSlideOut: CFTimeInterval = 0.2
 
     /// `pictureUnderPanel`: the picture already carries the shade, so the
-    /// layer lifts it back off while the panel closes instead (the click
-    /// that closes Notification Center captures live under the open panel).
+    /// layer lifts it back off the part the panel has left instead.
+    ///
+    /// The panel slides in from the display's right edge over ~200ms and
+    /// the bar darkens as a FRONT that travels with its left edge (60fps,
+    /// 2026-09-22 14:30); a shade that simply fades in shows the finished
+    /// shadow while the real front is still crossing, and Gab read it as
+    /// the panel's shadow being cut. So the gradient's edge slides with
+    /// the panel: the mask translates from the cover's right end to the
+    /// ramp's resting place on open, back on close.
     func followPanelShade(pictureUnderPanel: Bool, isOpen: @escaping @MainActor () -> Bool) {
         guard !finished, shadeFollower == nil, let host = imageView.layer,
               let screen = NSScreen.screens.first(where: { $0.frame.intersects(window.frame) }) else { return }
@@ -272,29 +281,36 @@ final class ConcealGhostOverlay {
         let shade = CAGradientLayer()
         shade.frame = CGRect(x: x, y: 0, width: frame.width - x, height: frame.height)
         // Layer space is bottom-up: the darker end is the bar's bottom row.
-        // Black darkens a picture of the bare bar while the panel is open;
-        // white, of the same strength, lifts most of the shade back off a
-        // picture taken under the panel once it has closed (a lightening
-        // is not the exact inverse of a multiply, close enough at these
-        // strengths: 142 → 147.6 for a 148 target on Gab's bar).
+        // Black darkens a picture of the bare bar under the panel; white of
+        // the same strength lifts most of the shade off a picture taken
+        // under it as the panel leaves (142 → 147.6 for a 148 target).
         let dark = [CGColor(gray: 0, alpha: CGFloat(Self.panelShadeBottom)), CGColor(gray: 0, alpha: CGFloat(Self.panelShadeTop))]
         let light = [CGColor(gray: 1, alpha: CGFloat(Self.panelShadeBottom)), CGColor(gray: 1, alpha: CGFloat(Self.panelShadeTop))]
         shade.colors = pictureUnderPanel ? light : dark
         shade.startPoint = CGPoint(x: 0.5, y: 0); shade.endPoint = CGPoint(x: 0.5, y: 1)
+        // The front: a ramp over `panelShadeRamp`, then solid. Dark shade
+        // sits RIGHT of the front (under the panel); the lift sits LEFT of
+        // it (where the panel has gone). The mask slides between the ramp's
+        // resting place (translation 0) and the cover's right end (travel).
         let ramp = CAGradientLayer()
         ramp.frame = shade.bounds
-        ramp.colors = [CGColor(gray: 0, alpha: 0), CGColor(gray: 0, alpha: 1), CGColor(gray: 0, alpha: 1)]
         let rampEnd = min(1, Double(Self.panelShadeRamp / max(shade.frame.width, 1)))
+        ramp.colors = pictureUnderPanel
+            ? [CGColor(gray: 0, alpha: 1), CGColor(gray: 0, alpha: 0), CGColor(gray: 0, alpha: 0)]
+            : [CGColor(gray: 0, alpha: 0), CGColor(gray: 0, alpha: 1), CGColor(gray: 0, alpha: 1)]
         ramp.locations = [0, NSNumber(value: rampEnd), 1]
         ramp.startPoint = CGPoint(x: 0, y: 0.5); ramp.endPoint = CGPoint(x: 1, y: 0.5)
         shade.mask = ramp
-        // The first reading sets the start state without a fade: a click
-        // that closes the panel starts under a shaded bar.
+        let travel = shade.frame.width
+        // Where the front rests for a given panel state. Dark: panel open →
+        // front at rest (0), closed → off the right end. Lift: the mirror.
+        func translation(panelOpen: Bool) -> CGFloat {
+            let engaged = panelOpen != pictureUnderPanel
+            return pictureUnderPanel ? (engaged ? travel : 0) : (engaged ? 0 : travel)
+        }
         var open = isOpen()
-        // The layer shows whenever bar and picture disagree about the panel.
-        let shaded = { (panel: Bool) in panel != pictureUnderPanel }
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        shade.opacity = shaded(open) ? 1 : 0
+        ramp.transform = CATransform3DMakeTranslation(translation(panelOpen: open), 0, 0)
         host.addSublayer(shade)
         CATransaction.commit()
         shadeLayer = shade
@@ -304,10 +320,18 @@ final class ConcealGhostOverlay {
                 let now = isOpen()
                 guard now != open else { continue }
                 open = now
-                CATransaction.begin(); CATransaction.setAnimationDuration(Self.panelShadeFade)
-                shade.opacity = shaded(now) ? 1 : 0
+                let anim = CABasicAnimation(keyPath: "transform.translation.x")
+                anim.fromValue = ramp.presentation()?.value(forKeyPath: "transform.translation.x") ?? translation(panelOpen: !now)
+                anim.toValue = translation(panelOpen: now)
+                anim.duration = now ? Self.panelSlideIn : Self.panelSlideOut
+                // The panel eases out on the way in and in on the way out.
+                let curve: (Float, Float, Float, Float) = now ? (0.16, 1, 0.3, 1) : (0.55, 0, 0.8, 0.4)
+                anim.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
+                CATransaction.begin(); CATransaction.setDisableActions(true)
+                ramp.add(anim, forKey: "pelmetPanelFront")
+                ramp.transform = CATransform3DMakeTranslation(translation(panelOpen: now), 0, 0)
                 CATransaction.commit()
-                PelmetLog.log("ghost: cover \(pictureUnderPanel ? "lightens" : "shades") \(shaded(now) ? "on" : "off") — Notification Center \(now ? "open" : "closed")\(pictureUnderPanel ? ", picture taken under it" : "")")
+                PelmetLog.log("ghost: cover \(pictureUnderPanel ? "lift" : "shade") front \(now ? "in" : "out") — Notification Center \(now ? "opening" : "closing")\(pictureUnderPanel ? ", picture taken under it" : "")")
             }
         }
     }
