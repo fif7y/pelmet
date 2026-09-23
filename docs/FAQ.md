@@ -52,6 +52,15 @@ Accessibility, and Settings > General > Permissions shows whether it's on.
 macOS re-confirms Screen Recording roughly monthly for all apps. If the nag
 bothers you, turn the permission off and keep going.
 
+**Icon spacing.**
+Settings → Behavior → Icon spacing is macOS's own gap between menu bar icons
+(the same two preferences people set by hand), one slider, Apply to write it.
+Pelmet relaunches itself and the system icons so the clock, Control Center and
+its own items follow at once; every other app keeps the old spacing until it
+next opens, or log out and back in to get them all. The setting is macOS's, so
+it stays after Pelmet is removed: press Reset then Apply before uninstalling if
+you want the default back.
+
 **Some system icons can't be moved.**
 Control Center and the clock hide like any system icon but never move and get
 no launcher (icons macOS hosts itself share one bundle, so a launcher for one

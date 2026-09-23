@@ -787,6 +787,10 @@ private struct BehaviorPane: View {
             AnimationShowcase(selection: binding(\.revealAnimation))
         }
 
+        SettingsCard(title: "Icon spacing") {
+            IconSpacingRow()
+        }
+
         SettingsCard(title: "Reveal") {
             SettingToggleRow(
                 title: "Reveal on hover",
@@ -870,6 +874,83 @@ private struct BehaviorPane: View {
                 appState.settingsChanged()
             }
         )
+    }
+}
+
+// MARK: - Icon spacing
+
+/// One slider for macOS's own gap between menu bar icons. The draft lives
+/// here; the store holds what was applied, so the Apply chip lights only
+/// when they differ (the same grammar as the editor's Apply). Applying
+/// relaunches Pelmet and restarts the system icons, so it never fires on
+/// a slider notch.
+private struct IconSpacingRow: View {
+    @Environment(AppState.self) private var appState
+    @State private var draft: Double = Double(IconSpacing.macOSDefault)
+    @State private var staleApps: [String] = []
+
+    private var spacing: Int { IconSpacing.clamped(Int(draft.rounded())) }
+    private var applied: Int { IconSpacingApplier.current() }
+    private var pending: Bool { spacing != applied }
+    private var atDefault: Bool { spacing == IconSpacing.macOSDefault }
+
+    private var label: LocalizedStringKey {
+        switch spacing {
+        case ...4: "Tightest"
+        case 8: "Tight"
+        case 12: "Snug"
+        case 16: "Default"
+        case 20: "Roomy"
+        case 24: "Wide"
+        default: "Widest"
+        }
+    }
+
+    var body: some View {
+        // The reading sits under the title, not beside the slider: a word
+        // plus a number in nine languages never fits a fixed lane next to
+        // the knob (it slid under it twice, 2026-09-22).
+        SettingRow(title: "Space between icons", caption: "\(Text(label)) · \(spacing) pt") {
+            Slider(
+                value: $draft,
+                in: Double(IconSpacing.steps.first!)...Double(IconSpacing.steps.last!),
+                step: 4
+            )
+            .frame(width: 200)
+        }
+        if !staleApps.isEmpty {
+            SettingNote("Still on the old spacing until relaunched: \(ListFormatter.localizedString(byJoining: staleApps))")
+        }
+        HStack(spacing: 10) {
+            SettingNote("macOS's own spacing, so it stays after Pelmet. The clock and system icons follow right away; other apps when they next open, or log out and back in for all of them at once.")
+            Spacer(minLength: 0)
+            if !atDefault || applied != IconSpacing.macOSDefault {
+                Button("Reset") { draft = Double(IconSpacing.macOSDefault) }
+                    .font(.callout)
+                    .disabled(atDefault)
+                    .help("Back to the macOS default")
+            }
+            TintChipButton(
+                text: Text("Apply"),
+                icon: Image(systemName: "wand.and.stars"),
+                tint: pending ? .green : .secondary
+            ) {
+                IconSpacingApplier.apply(spacing, appState: appState)
+            }
+            .disabled(!pending)
+            .animation(.easeOut(duration: 0.2), value: pending)
+            .help("Relaunches Pelmet and the system icons with the new spacing")
+        }
+        .onAppear {
+            draft = Double(applied)
+            staleApps = IconSpacingApplier.staleAppNames()
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in
+            staleApps = IconSpacingApplier.staleAppNames()
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification)) { _ in
+            staleApps = IconSpacingApplier.staleAppNames()
+        }
     }
 }
 
