@@ -523,10 +523,16 @@ final class TransitionCoordinator {
         /// What the bare cover shows: the stand-in under-panel still is
         /// made from it when no real one exists yet.
         fileprivate var pictures: [ConcealGhostOverlay.BarSnapshot] = []
+        /// Set once lifted: a swap scheduled before the blink was refused
+        /// must not raise a fresh picture on a cover nobody holds (#52).
+        private(set) var dismissed = false
         fileprivate init(_ cover: ConcealGhostOverlay.GhostSet, span: ClosedRange<CGFloat>, safety: TimeInterval, pictures: [ConcealGhostOverlay.BarSnapshot] = []) {
             current = cover; self.span = span; self.safety = safety; self.pictures = pictures
         }
+        /// Every cover this blink raised, for the log.
+        var ids: String { (beneath + [current]).map(\.ids).joined(separator: " ") }
         func dismiss() {
+            dismissed = true
             current.dismiss()
             for cover in beneath { cover.dismiss() }
         }
@@ -613,6 +619,10 @@ final class TransitionCoordinator {
     /// changed since (Gab, 2026-09-22 18:00), and refreshing it cost a
     /// capture at every exit click.
     func swapBlinkCoverUnderPanel(_ cover: BlinkCover) {
+        guard !cover.dismissed else {
+            PelmetLog.log("clock: cover \(cover.ids) already down, no shaded picture")
+            return
+        }
         guard !cover.pictures.isEmpty, let shaded = ConcealGhostOverlay.begin(from: cover.pictures, safety: cover.safety) else {
             PelmetLog.log("clock: no picture to shade, bare cover stays")
             return
@@ -655,7 +665,7 @@ final class TransitionCoordinator {
             let gone = Int(-started.timeIntervalSinceNow * 1000)
             try? await Task.sleep(for: .seconds(AppTiming.clockBlinkLiftHold))
             cover.dismiss()
-            PelmetLog.log("\(label): cover down — concealed gone at \(gone)ms, lifted at \(Int(-started.timeIntervalSinceNow * 1000))ms")
+            PelmetLog.log("\(label): cover \(cover.ids) down — concealed gone at \(gone)ms, lifted at \(Int(-started.timeIntervalSinceNow * 1000))ms")
         }
     }
 

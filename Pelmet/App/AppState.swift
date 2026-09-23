@@ -758,19 +758,42 @@ final class AppState {
             PelmetLog.log("clock: shortcut — no clock in the walk, nothing to press")
             return
         }
-        let target = CGPoint(x: frame.midX, y: frame.midY)
+        var target = CGPoint(x: frame.midX, y: frame.midY)
         // The pointer's own place, in the clock's (top-left) space; a target
         // it happens to sit on replays a click there instead of pressing.
         let pointer = CGEvent(source: nil)?.location ?? CGPoint(x: -1, y: -1)
+        // The walk keeps one clock, the main bar's. The panel belongs on
+        // the display the pointer is on (#53: four bars, the panel kept
+        // landing on the built-in): the system items sit in the same order
+        // on every bar, so that display's clock is the same distance in
+        // from its right edge. Hit-test before trusting it.
+        if let display = ClockClickRelay.display(under: pointer),
+           let main = ClockClickRelay.display(under: target), display != main {
+            let mainBounds = CGDisplayBounds(main), bounds = CGDisplayBounds(display)
+            let candidate = CGPoint(x: bounds.maxX - (mainBounds.maxX - target.x), y: bounds.minY + (target.y - mainBounds.minY))
+            if ClockClickRelay.clockElement(at: candidate) != nil {
+                target = candidate
+            } else {
+                PelmetLog.log("clock: shortcut — no clock at \(Int(candidate.x)),\(Int(candidate.y)) on display \(display), pressing the main bar's")
+            }
+        }
+        guard ClockClickRelay.clockElement(at: target) != nil else {
+            PelmetLog.log("clock: shortcut — nothing to press at \(Int(target.x)),\(Int(target.y)), no click replayed")
+            return
+        }
         PelmetLog.log("clock: shortcut → press at \(Int(target.x)),\(Int(target.y))")
-        clockClicked(at: target, pointer: pointer == target ? CGPoint(x: -1, y: -1) : pointer)
+        clockClicked(at: target, pointer: pointer == target ? CGPoint(x: -1, y: -1) : pointer, viaShortcut: true)
     }
 
     /// When the relay last opened the panel: the window list lags an
     /// opening by ~250ms, too slow for a second click right after.
     private var panelOpenedAt = Date.distantPast
+    /// A blink is running: a second press meanwhile would raise a second
+    /// cover over the first and press a clock that is already opening the
+    /// panel (#52, #53: covers stacked six deep under a held shortcut).
+    private var clockBlinkInFlight = false
 
-    private func clockClicked(at point: CGPoint, pointer: CGPoint) {
+    private func clockClicked(at point: CGPoint, pointer: CGPoint, viaShortcut: Bool = false) {
         Task { @MainActor in
             // Dot zone (target ≠ where the click landed): press the clock
             // through AX so the pointer never moves; the click is the
@@ -794,6 +817,12 @@ final class AppState {
                 transitions.precaptureAfterPanel()
                 return
             }
+            guard !clockBlinkInFlight else {
+                PelmetLog.log("clock: blink in flight — press ignored")
+                return
+            }
+            clockBlinkInFlight = true
+            defer { clockBlinkInFlight = false }
             panelOpenedAt = Date()
             let cover = await transitions.beginBarCover()
             // The physical click is swallowed, so the panel starts sliding
@@ -832,7 +861,15 @@ final class AppState {
                     } while !opened && Date() < verifyUntil
                     PelmetLog.log("clock: dot press \(attempt) \(pressed ? "sent" : "refused") - NC \(opened ? "open" : "not open")")
                 }
-                if !opened { ClockClickRelay.postClick(at: point, pointer: pointer); panelStarting() }
+                if !opened {
+                    // A key never moves the pointer: the shortcut stops at
+                    // the presses rather than warp it to the clock (#53).
+                    if viaShortcut {
+                        PelmetLog.log("clock: shortcut — panel not seen after 2 presses, no click replayed")
+                    } else {
+                        ClockClickRelay.postClick(at: point, pointer: pointer); panelStarting()
+                    }
+                }
             } else {
                 if point != pointer { PelmetLog.log("clock: dot click - no clock element under the target, replaying the click") }
                 ClockClickRelay.postClick(at: point, pointer: pointer)

@@ -205,7 +205,7 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
         return CGPoint(x: clockMaxX - width / 2, y: bounds.minY + bandHeight / 2)
     }
 
-    private static func display(under point: CGPoint) -> CGDirectDisplayID? {
+    static func display(under point: CGPoint) -> CGDirectDisplayID? {
         var display: CGDirectDisplayID = 0
         var count: UInt32 = 0
         guard CGGetDisplaysWithPoint(point, 1, &display, &count) == .success, count == 1 else { return nil }

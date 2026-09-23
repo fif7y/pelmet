@@ -17,7 +17,11 @@ enum AppTiming {
     /// agent this long to apply the drop first, then this long for
     /// Notification Center's panel to show before pressing again.
     static let clockPressSettle: Duration = .milliseconds(120)
-    static let clockPressVerify: TimeInterval = 0.3
+    /// A poll, not a sleep: it ends the moment the panel's window shows.
+    /// 0.3 ran out on a four-display Mac where the list lags an opening by
+    /// ~250ms, and the retry then closed the panel the first press had
+    /// opened (#53); the extra budget only costs when the panel is late.
+    static let clockPressVerify: TimeInterval = 0.6
     /// Longest the blink cover waits for the concealed items to leave the
     /// AX tree after the re-acquire before lifting anyway.
     static let clockBlinkCoverDeadline: TimeInterval = 1.5

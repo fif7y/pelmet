@@ -648,17 +648,15 @@ private struct GeneralPane: View {
             }
             SettingRow(
                 title: "Keyboard shortcut",
-                caption: appState.hotkeyConflict
-                    ? "Held by another app — record a different one."
-                    : "Show or hide your icons without reaching for the mouse."
+                caption: hotkeyCaption(appState.settings.hotkey, conflict: appState.hotkeyConflict,
+                                       otherwise: "Show or hide your icons without reaching for the mouse.")
             ) {
                 ShortcutRecorder(shortcut: binding(\.hotkey), fallback: .default)
             }
             SettingRow(
                 title: "Open Settings",
-                caption: appState.settingsHotkeyConflict
-                    ? "Held by another app — record a different one."
-                    : "Get back here from any app."
+                caption: hotkeyCaption(appState.settings.settingsHotkey, conflict: appState.settingsHotkeyConflict,
+                                       otherwise: "Get back here from any app.")
             ) {
                 ShortcutRecorder(shortcut: binding(\.settingsHotkey), fallback: .settingsDefault)
             }
@@ -852,9 +850,8 @@ private struct BehaviorPane: View {
             if appState.settings.clockClickOpensNotificationCenter {
                 SettingRow(
                     title: "Keyboard shortcut",
-                    caption: appState.notificationCenterHotkeyConflict
-                        ? "Held by another app — record a different one."
-                        : "Opens Notification Center while the icons are hidden, which the macOS shortcut can't."
+                    caption: hotkeyCaption(appState.settings.notificationCenterHotkey, conflict: appState.notificationCenterHotkeyConflict,
+                                           otherwise: "Opens Notification Center while the icons are hidden, which the macOS shortcut can't.")
                 ) {
                     ShortcutRecorder(shortcut: binding(\.notificationCenterHotkey), fallback: .notificationCenterDefault)
                 }
@@ -1531,4 +1528,14 @@ private struct MockBar: View {
             .timingCurve(0.42, 0, 0.58, 1, duration: revealed ? AppTiming.fadeRevealDuration : AppTiming.fadeExitDuration)
         }
     }
+}
+
+/// A shortcut row’s caption: the plain one, or why the shortcut will
+/// not fire. macOS's own shortcuts register fine and never run (#55).
+func hotkeyCaption(_ spec: HotkeySpec?, conflict: Bool, otherwise: LocalizedStringKey) -> LocalizedStringKey {
+    if conflict { return "Held by another app — record a different one." }
+    if let spec, SystemShortcuts.owns(spec) {
+        return "macOS uses this shortcut. Turn it off in System Settings › Keyboard › Keyboard Shortcuts, or record another."
+    }
+    return otherwise
 }

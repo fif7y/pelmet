@@ -16879,6 +16879,64 @@
         }
       }
     },
+    "macOS uses this shortcut. Turn it off in System Settings › Keyboard › Keyboard Shortcuts, or record another.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS nutzt dieses Kürzel. Schalte es in den Systemeinstellungen › Tastatur › Tastaturkurzbefehle aus oder nimm ein anderes auf."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS usa este atajo. Desactívalo en Ajustes del Sistema › Teclado › Funciones rápidas de teclado, o graba otro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS utilise ce raccourci. Désactivez-le dans Réglages Système › Clavier › Raccourcis clavier, ou enregistrez-en un autre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS usa questa scorciatoia. Disattivala in Impostazioni di Sistema › Tastiera › Abbreviazioni da tastiera, o registrane un’altra."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS がこのショートカットを使用しています。システム設定 › キーボード › キーボードショートカットでオフにするか、別のショートカットを記録してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS가 이 단축키를 사용합니다. 시스템 설정 › 키보드 › 키보드 단축키에서 끄거나 다른 단축키를 기록하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O macOS usa este atalho. Desative-o em Ajustes do Sistema › Teclado › Atalhos de Teclado, ou grave outro."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS использует это сочетание. Отключите его в Системных настройках › Клавиатура › Сочетания клавиш или запишите другое."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 正在使用此快捷键。请在“系统设置”›“键盘”›“键盘快捷键”中将其关闭，或录制另一个。"
+          }
+        }
+      }
+    },
     "macOS's own spacing, so it stays after Pelmet. The clock and system icons follow right away; other apps when they next open, or log out and back in for all of them at once.": {
       "localizations": {
         "de": {

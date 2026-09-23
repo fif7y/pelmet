@@ -64,6 +64,8 @@ final class ConcealGhostOverlay {
     /// keep the single-cover call shape.
     struct GhostSet {
         fileprivate let overlays: [ConcealGhostOverlay]
+        /// The covers' ids as they read in the `ghost:` lines, "#3 #4".
+        var ids: String { overlays.map { "#\($0.id)" }.joined(separator: " ") }
         func dismiss() { for overlay in overlays { overlay.dismiss() } }
         func fadeOut(duration: CFTimeInterval = ConcealGhostOverlay.dismissDuration, slide: Bool = false) {
             for overlay in overlays { overlay.fadeOut(duration: duration, slide: slide) }
@@ -274,6 +276,10 @@ final class ConcealGhostOverlay {
     private let imageView: NSImageView
     private var finished = false
     private var stoodDown = false
+    /// One per cover, in the `ghost:` log lines, so a cover that outlived
+    /// its blink can be matched to the line that raised it (#52).
+    private static var nextID = 0
+    let id: Int
 
     /// A captured strip image ready to float — pre-captured at conceal settle
     /// so the reveal path pays zero capture latency.
@@ -708,6 +714,8 @@ final class ConcealGhostOverlay {
     private init(snapshot: BarSnapshot, safety: TimeInterval, startHidden: Bool = false, beneath: CGWindowID? = nil) {
         let frame = snapshot.windowFrame
         let shot = snapshot.image
+        Self.nextID += 1
+        id = Self.nextID
         window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -736,10 +744,17 @@ final class ConcealGhostOverlay {
         }
         window.displayIfNeeded()
         Self.activeStripCount += 1
-        PelmetLog.log("ghost: strip up \(Int(frame.width))×\(Int(frame.height)) @x=\(Int(frame.minX))")
+        PelmetLog.log("ghost: strip #\(id) up \(Int(frame.width))×\(Int(frame.height)) @x=\(Int(frame.minX)) safety \(Int(safety * 1000))ms")
         // Safety: never leave a stale cover if the caller's task dies.
-        DispatchQueue.main.asyncAfter(deadline: .now() + safety) { [weak self] in
-            self?.fadeOut()
+        // Strong self on purpose: a cover nobody held any more (#52, a
+        // shaded picture raised after its blink had been dismissed) was
+        // freed with its window still ordered in, and a weak timer had
+        // nothing left to fade. The window is what stays on screen, so
+        // the timer must be what keeps the cover alive until it lifts.
+        DispatchQueue.main.asyncAfter(deadline: .now() + safety) { [self] in
+            guard !finished else { return }
+            PelmetLog.log("ghost: strip #\(id) safety fade")
+            fadeOut()
         }
     }
 
