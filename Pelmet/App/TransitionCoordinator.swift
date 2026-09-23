@@ -287,7 +287,7 @@ final class TransitionCoordinator {
                     let keep: ClosedRange<CGFloat>? = revealedStripSnapshot.first.map { ($0.windowFrame.minX)...(then - 1) }
                     picture = cutOutPicture(revealedStripSnapshot, background: emptyBar, punch: punch, keep: keep)?
                         .map { ConcealGhostOverlay.BarSnapshot(image: $0.image, windowFrame: $0.windowFrame.offsetBy(dx: shift, dy: 0), takenAt: $0.takenAt) }
-                    PelmetLog.log("finished: chevron moved since the picture (\(then) → \(then + shift)) — \(picture == nil ? "cut-out failed, cover only" : "icons cut out and shifted \(Int(shift))pt")")
+                    PelmetLog.log("finished: bar moved since the picture (chevron \(then) → \(then + shift)) — \(picture == nil ? "cut-out failed, cover only" : "icons cut out and shifted \(Int(shift))pt")")
                 } else if recipe.entrance.needsCutOut || revealedStripCutOut {
                     // Against the empty bar the picture was taken over: the
                     // fresh cover when nothing moved (and for the boot
@@ -777,6 +777,37 @@ final class TransitionCoordinator {
     private var liveChevronMinX: CGFloat? {
         appState?.snapshot?.items.first(where: { $0.id == AppState.chevronItemID })?.frame?.minX
     }
+    /// How far the bar has moved since the picture is read off the nearest
+    /// live item right of the chevron, not the chevron: with no glyph its
+    /// AX frame sits on its hidden neighbour's spot in the concealed bar,
+    /// 16pt from where it reads revealed, and comparing the two floated
+    /// the picture 16pt off a bar that had not moved (frames, 2026-09-22:
+    /// Snib cut in half, the strip jumping at lift). The neighbour stays
+    /// put across a reveal and still moves with the capture indicator or
+    /// an expanded «.
+    private var revealedStripAnchor: (id: ItemID, minX: CGFloat)?
+    private var liveAnchor: (id: ItemID, minX: CGFloat)? {
+        guard let items = appState?.snapshot?.items,
+              let chevron = items.first(where: { $0.id == AppState.chevronItemID })?.frame else { return nil }
+        let primaryMaxX = primaryMaxX
+        return items.compactMap { item -> (id: ItemID, minX: CGFloat)? in
+            guard item.id != AppState.chevronItemID, let frame = item.frame,
+                  frame.minX >= chevron.maxX - 1, MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX)
+            else { return nil }
+            return (item.id, frame.minX)
+        }.min { $0.minX < $1.minX }
+    }
+    /// The anchor's x now, and how far it moved since the picture. An
+    /// anchor gone from the bar (a media control that stopped) falls back
+    /// to the chevron, which does read a real move then.
+    private var revealedStripMove: (then: CGFloat, now: CGFloat)? {
+        if let anchor = revealedStripAnchor,
+           let now = appState?.snapshot?.items.first(where: { $0.id == anchor.id })?.frame?.minX {
+            return (anchor.minX, now)
+        }
+        guard let then = revealedStripChevronX, let now = liveChevronMinX else { return nil }
+        return (then, now)
+    }
 
     private var hiddenSectionSignature: [ItemID] {
         guard let model = appState?.settings.sectionModel else { return [] }
@@ -802,8 +833,8 @@ final class TransitionCoordinator {
         guard revealedStripUnderPanel == ClockClickRelay.notificationCenterIsOpen() else {
             return "picture taken with the panel \(revealedStripUnderPanel ? "open" : "closed")"
         }
-        if let then = revealedStripChevronX, let now = liveChevronMinX, abs(then - now) > 1, freshEmptyBarSnapshots().isEmpty {
-            return "chevron moved since the picture (\(then) → \(now)) and no cover to cut out against"
+        if let (then, now) = revealedStripMove, abs(then - now) > 1, freshEmptyBarSnapshots().isEmpty {
+            return "bar moved since the picture (\(then) → \(now)) and no cover to cut out against"
         }
         return nil
     }
@@ -816,7 +847,7 @@ final class TransitionCoordinator {
     /// much and land where the bar puts them (2026-09-21 — before, every
     /// such reveal dropped the picture and ran cover-only).
     private var revealedStripShift: CGFloat {
-        guard let then = revealedStripChevronX, let now = liveChevronMinX, abs(then - now) > 1 else { return 0 }
+        guard let (then, now) = revealedStripMove, abs(then - now) > 1 else { return 0 }
         return now - then
     }
 
@@ -828,6 +859,7 @@ final class TransitionCoordinator {
         // exactly (same rect, same padding).
         revealedStripSignature = hiddenSectionSignature
         revealedStripChevronX = liveChevronMinX
+        revealedStripAnchor = liveAnchor
         revealedStripActiveDisplay = appState.lastMouseDownDisplay
         revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: revealCoverRect) + ConcealGhostOverlay.surfaceSignature()
         revealedStripBackground = []
@@ -959,6 +991,7 @@ final class TransitionCoordinator {
         }
         revealedStripSignature = hiddenSectionSignature
         revealedStripChevronX = liveChevronMinX
+        revealedStripAnchor = liveAnchor
         revealedStripActiveDisplay = appState.lastMouseDownDisplay ?? Self.displayUnderPointer
         revealedStripBackdrop = ConcealGhostOverlay.backdropSignature(of: rect) + ConcealGhostOverlay.surfaceSignature()
         revealedStripBackground = []
