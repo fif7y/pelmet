@@ -142,7 +142,18 @@ struct ShortcutRecorder: View {
         return out
     }
 
-    private static func keyName(keyCode: Int, chars: String?) -> String {
+    /// The key's name for display. `chars` is `charactersIgnoringModifiers`,
+    /// which follows the ACTIVE input source: recording ⌥A with Korean input
+    /// on named the shortcut `⌥ㅁ`, and it stayed that way after switching
+    /// back to Roman. The registration is by key code and fired on the A key
+    /// the whole time — only the label was wrong. macOS names shortcuts from
+    /// the Roman layout, so ask that layout first and keep `chars` as the
+    /// fallback for a key it cannot translate.
+    static func keyName(
+        keyCode: Int,
+        chars: String?,
+        romanKey: @MainActor (Int) -> String? = romanKeyName
+    ) -> String {
         let special: [Int: String] = [
             kVK_Space: "Space", kVK_Return: "↩", kVK_Tab: "⇥",
             kVK_ForwardDelete: "⌦", kVK_LeftArrow: "←", kVK_RightArrow: "→",
@@ -153,6 +164,37 @@ struct ShortcutRecorder: View {
             kVK_F9: "F9", kVK_F10: "F10", kVK_F11: "F11", kVK_F12: "F12",
         ]
         if let name = special[keyCode] { return name }
+        if let roman = romanKey(keyCode), !roman.isEmpty { return roman.uppercased() }
         return chars?.uppercased() ?? "?"
+    }
+
+    /// What `keyCode` types on the current ASCII-capable layout, unmodified.
+    /// Nil when there is no such layout or the key does not produce a
+    /// character on it (a dead key, a keypad code some layouts omit).
+    static func romanKeyName(keyCode: Int) -> String? {
+        guard let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let raw = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
+        else { return nil }
+        let data = Unmanaged<CFData>.fromOpaque(raw).takeUnretainedValue() as Data
+        return data.withUnsafeBytes { buffer -> String? in
+            guard let layout = buffer.baseAddress?.assumingMemoryBound(to: UCKeyboardLayout.self) else { return nil }
+            var deadKeyState: UInt32 = 0
+            var length = 0
+            var characters = [UniChar](repeating: 0, count: 4)
+            let status = UCKeyTranslate(
+                layout,
+                UInt16(keyCode),
+                UInt16(kUCKeyActionDisplay),
+                0,
+                UInt32(LMGetKbdType()),
+                OptionBits(kUCKeyTranslateNoDeadKeysMask),
+                &deadKeyState,
+                characters.count,
+                &length,
+                &characters
+            )
+            guard status == noErr, length > 0 else { return nil }
+            return String(utf16CodeUnits: characters, count: length)
+        }
     }
 }
