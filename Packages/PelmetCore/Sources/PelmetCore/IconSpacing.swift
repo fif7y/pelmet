@@ -11,8 +11,17 @@ public enum IconSpacing {
     /// between two of Pelmet's own items, 16 between Control Center and
     /// the clock).
     public static let macOSDefault = 16
-    /// The slider's stops, the default in the middle.
-    public static let steps: [Int] = [4, 8, 12, 16, 20, 24, 28]
+    /// The slider's stops, the default in the middle. The bottom stop is
+    /// 1, not 4: macOS takes it (measured 2026-09-23, Pelmet relaunched,
+    /// agent restarted: chevron→media 33pt at default, 21 at 4, 18 at 1;
+    /// 0 buys one more point and reads as "off", so 1 it is). The stops
+    /// are not evenly spaced, so the slider runs on their index.
+    public static let steps: [Int] = [1, 4, 8, 12, 16, 20, 24, 28]
+
+    /// The stop nearest a spacing, as a slider position.
+    public static func index(of spacing: Int) -> Int {
+        steps.indices.min { abs(steps[$0] - spacing) < abs(steps[$1] - spacing) } ?? steps.firstIndex(of: macOSDefault)!
+    }
 
     public static let spacingKey = "NSStatusItemSpacing"
     public static let paddingKey = "NSStatusItemSelectionPadding"

@@ -198,6 +198,7 @@ T = {
     "Icon spacing": dict(de="Symbolabstand", fr="Espacement des icônes", es="Espaciado de iconos", it="Spaziatura icone", pt="Espaçamento dos ícones", ja="アイコンの間隔", zh="图标间距", ko="아이콘 간격", ru="Интервал значков"),
     "Space between icons": dict(de="Abstand zwischen Symbolen", fr="Espace entre les icônes", es="Espacio entre iconos", it="Spazio tra le icone", pt="Espaço entre os ícones", ja="アイコン同士の間隔", zh="图标之间的间距", ko="아이콘 사이 간격", ru="Расстояние между значками"),
     "Tightest": dict(de="Am engsten", fr="Le plus serré", es="Mínimo", it="Minimo", pt="Mínimo", ja="最小", zh="最紧", ko="가장 좁게", ru="Минимальный"),
+    "Tighter": dict(de="Enger", fr="Plus serré", es="Más estrecho", it="Più stretto", pt="Mais apertado", ja="より狭い", zh="更紧", ko="더 좁게", ru="Уже"),
     "Tight": dict(de="Eng", fr="Serré", es="Estrecho", it="Stretto", pt="Apertado", ja="狭い", zh="紧凑", ko="좁게", ru="Узкий"),
     "Snug": dict(de="Kompakt", fr="Compact", es="Compacto", it="Compatto", pt="Compacto", ja="やや狭い", zh="较紧", ko="약간 좁게", ru="Плотный"),
     "Default": dict(de="Standard", fr="Par défaut", es="Predeterminado", it="Predefinito", pt="Padrão", ja="デフォルト", zh="默认", ko="기본", ru="По умолчанию"),
