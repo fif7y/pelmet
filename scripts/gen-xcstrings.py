@@ -148,6 +148,29 @@ T = {
     "Check for updates": dict(de="Nach Updates suchen", fr="Rechercher des mises à jour", es="Buscar actualizaciones", it="Cerca aggiornamenti", pt="Buscar atualizações", ja="アップデートを確認", zh="检查更新", ko="업데이트 확인", ru="Проверить обновления"),
 
     # ── Menu Bar tab (editor) ───────────────────────────────────────
+    "Automatically hide notch": dict(de="Notch automatisch ausblenden", fr="Masquer automatiquement l’encoche", es="Ocultar automáticamente la muesca", it="Nascondi automaticamente il notch", pt="Ocultar o entalhe automaticamente", ja="ノッチを自動的に隠す", zh="自动隐藏刘海", ko="노치 자동 숨기기", ru="Автоматически скрывать вырез"),
+    "Make the menu bar black to blend with the camera cutout. Your wallpaper and menu items stay unchanged.": dict(
+        de="Färbt die Menüleiste schwarz, damit die Notch verschwindet. Hintergrundbild und Menüeinträge bleiben unverändert.",
+        fr="Noircit la barre des menus pour fondre l’encoche dans le décor. Le fond d’écran et les éléments du menu restent inchangés.",
+        es="Pone la barra de menús negra para disimular la muesca. El fondo de pantalla y los elementos del menú no cambian.",
+        it="Rende nera la barra dei menu per nascondere il notch. Sfondo ed elementi del menu restano invariati.",
+        pt="Deixa a barra de menus preta para disfarçar o entalhe. O papel de parede e os itens de menu não mudam.",
+        ja="メニューバーを黒くしてノッチを目立たなくします。壁紙とメニュー項目は変わりません。",
+        zh="将菜单栏设为纯黑，使刘海融入背景；壁纸和菜单项保持不变。",
+        ko="메뉴 막대를 검게 만들어 노치가 눈에 띄지 않게 합니다. 배경화면과 메뉴 항목은 그대로 유지됩니다.",
+        ru="Делает строку меню чёрной, чтобы скрыть вырез. Обои и пункты меню не меняются.",
+    ),
+    "Turn off Reduce Transparency in System Settings to hide the notch.": dict(
+        de="Deaktiviere „Transparenz reduzieren“ in den Systemeinstellungen, um die Notch auszublenden.",
+        fr="Désactivez « Réduire la transparence » dans Réglages Système pour masquer l’encoche.",
+        es="Desactiva «Reducir transparencia» en Ajustes del Sistema para ocultar la muesca.",
+        it="Disattiva «Riduci trasparenza» in Impostazioni di Sistema per nascondere il notch.",
+        pt="Desative “Reduzir transparência” nos Ajustes do Sistema para ocultar o entalhe.",
+        ja="ノッチを隠すには、システム設定で「透明度を下げる」をオフにしてください。",
+        zh="若要隐藏刘海，请在系统设置中关闭「降低透明度」。",
+        ko="노치를 숨기려면 시스템 설정에서 '투명도 줄이기'를 끄세요.",
+        ru="Отключите «Уменьшение прозрачности» в Системных настройках, чтобы скрыть вырез.",
+    ),
     "Hiding is unavailable on this macOS build — reordering still works.": dict(de="Ausblenden ist auf diesem macOS-Build nicht verfügbar – Umsortieren funktioniert weiterhin.", fr="Le masquage n’est pas disponible sur cette version de macOS : le réordonnancement fonctionne toujours.", es="Ocultar no está disponible en esta versión de macOS: reordenar sigue funcionando.", it="Nascondere non è disponibile in questa build di macOS: riordinare funziona ancora.", pt="Ocultar não está disponível nesta versão do macOS: reordenar continua funcionando.", ja="このmacOSビルドでは非表示は使えません。並べ替えは引き続き可能です。", zh="此 macOS 版本不支持隐藏，但仍可重新排序。", ko="이 macOS 빌드에서는 숨기기를 사용할 수 없습니다. 순서 변경은 계속 가능합니다.", ru="Скрытие недоступно в этой сборке macOS: переупорядочивание по-прежнему работает."),
     "Your menu bar is full: %lld icons sit behind macOS's « until there's room. Pelmet leaves them where they are.": dict(
         de="Deine Menüleiste ist voll: %lld Symbole bleiben hinter dem « von macOS, bis wieder Platz ist. Pelmet lässt sie dort.",

@@ -2379,6 +2379,64 @@
         }
       }
     },
+    "Automatically hide notch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch automatisch ausblenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar automáticamente la muesca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer automatiquement l’encoche"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nascondi automaticamente il notch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ノッチを自動的に隠す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노치 자동 숨기기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar o entalhe automaticamente"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматически скрывать вырез"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动隐藏刘海"
+          }
+        }
+      }
+    },
     "Automatically rehide": {
       "localizations": {
         "de": {
@@ -7247,6 +7305,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "登录窗口…"
+          }
+        }
+      }
+    },
+    "Make the menu bar black to blend with the camera cutout. Your wallpaper and menu items stay unchanged.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Färbt die Menüleiste schwarz, damit die Notch verschwindet. Hintergrundbild und Menüeinträge bleiben unverändert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pone la barra de menús negra para disimular la muesca. El fondo de pantalla y los elementos del menú no cambian."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noircit la barre des menus pour fondre l’encoche dans le décor. Le fond d’écran et les éléments du menu restent inchangés."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rende nera la barra dei menu per nascondere il notch. Sfondo ed elementi del menu restano invariati."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーを黒くしてノッチを目立たなくします。壁紙とメニュー項目は変わりません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대를 검게 만들어 노치가 눈에 띄지 않게 합니다. 배경화면과 메뉴 항목은 그대로 유지됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deixa a barra de menus preta para disfarçar o entalhe. O papel de parede e os itens de menu não mudam."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Делает строку меню чёрной, чтобы скрыть вырез. Обои и пункты меню не меняются."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将菜单栏设为纯黑，使刘海融入背景；壁纸和菜单项保持不变。"
           }
         }
       }
@@ -13685,6 +13801,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "在任何地方切换隐藏的图标。"
+          }
+        }
+      }
+    },
+    "Turn off Reduce Transparency in System Settings to hide the notch.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deaktiviere „Transparenz reduzieren“ in den Systemeinstellungen, um die Notch auszublenden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desactiva «Reducir transparencia» en Ajustes del Sistema para ocultar la muesca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivez « Réduire la transparence » dans Réglages Système pour masquer l’encoche."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disattiva «Riduci trasparenza» in Impostazioni di Sistema per nascondere il notch."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ノッチを隠すには、システム設定で「透明度を下げる」をオフにしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노치를 숨기려면 시스템 설정에서 '투명도 줄이기'를 끄세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desative “Reduzir transparência” nos Ajustes do Sistema para ocultar o entalhe."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отключите «Уменьшение прозрачности» в Системных настройках, чтобы скрыть вырез."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "若要隐藏刘海，请在系统设置中关闭「降低透明度」。"
           }
         }
       }

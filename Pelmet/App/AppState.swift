@@ -11,6 +11,13 @@ import SwiftUI
 final class AppState {
     let engine = EngineGoldenGate()
     var settings = SettingsStore.load()
+    var blackMenuBarEnabled = UserDefaults.standard.bool(forKey: "pelmet.blackMenuBarEnabled") {
+        didSet {
+            UserDefaults.standard.set(blackMenuBarEnabled, forKey: "pelmet.blackMenuBarEnabled")
+            blackMenuBarOverlay?.setEnabled(blackMenuBarEnabled)
+        }
+    }
+    @ObservationIgnored private var blackMenuBarOverlay: BlackMenuBarOverlay?
     private(set) var snapshot: EngineSnapshot?
     private(set) var accessibilityGranted = AccessibilityAccess.isGranted
     /// Optional grant behind the hide/reveal covers; re-read while the
@@ -86,6 +93,8 @@ final class AppState {
     /// `flushPendingPlacements` after `setModel`, and the launch conceal
     /// precedes the display-policy reveal so the policy lands on a settled bar.
     func start() {
+        blackMenuBarOverlay = BlackMenuBarOverlay()
+        blackMenuBarOverlay?.setEnabled(blackMenuBarEnabled)
         wireTransitionSettleCallbacks()
         runOneShotMigrations()
         applyPolicyAndStartUpdater()
@@ -572,6 +581,7 @@ final class AppState {
     /// (formerly a main-actor-blocking semaphore).
     private var terminationReplied = false
     func beginTermination() {
+        blackMenuBarOverlay?.setEnabled(false)
         rehideTimer?.invalidate()
         eventTask?.cancel()
         SparkleController.shared.clearUpdateNotification()

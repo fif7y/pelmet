@@ -102,6 +102,20 @@ struct MenuBarTab: View {
         // No own ScrollView — the settings shell provides scrolling + padding.
         // Generous section rhythm — whitespace is structure, not waste.
         VStack(alignment: .leading, spacing: 30) {
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle("Automatically hide notch", isOn: Binding(
+                    get: { appState.blackMenuBarEnabled },
+                    set: { appState.blackMenuBarEnabled = $0 }
+                ))
+                Text("Make the menu bar black to blend with the camera cutout. Your wallpaper and menu items stay unchanged.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
+                    Text("Turn off Reduce Transparency in System Settings to hide the notch.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
             if !appState.engineCanHide {
                     Label(
                         "Hiding is unavailable on this macOS build — reordering still works.",
