@@ -170,11 +170,11 @@ window to conceal the curtain fittings. Now also the same thing, for your menu b
 
 ## Licenses & acknowledgements
 
-Pelmet was inspired by [Ice](https://github.com/jordanbaird/Ice), the open-source
-menu bar manager for earlier versions of macOS, and by [Thaw](https://github.com/stonerl/Thaw),
-its actively maintained fork. Apple's macOS 27 rebuild of the
-menu bar doesn't carry the old architecture forward, so Pelmet was rebuilt from
-scratch for the new one (no code is shared between the projects).
+Pelmet's macOS 27 approach is based on the work of [Thaw](https://github.com/thaw-app/Thaw),
+whose maintainers worked out how the rebuilt menu bar can be managed, in public, during
+the macOS 27 betas ([thaw-app/Thaw#687](https://github.com/thaw-app/Thaw/issues/687)).
+Thaw is a fork of [Ice](https://github.com/jordanbaird/Ice), the open-source menu bar
+manager for earlier versions of macOS, which is what got Pelmet started in the first place.
 
 Pelmet's only third-party dependency is
 [Sparkle](https://github.com/sparkle-project/Sparkle) (in-app updates), used
