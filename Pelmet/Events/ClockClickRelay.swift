@@ -230,6 +230,29 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
         }
     }
 
+    /// Notification Center's process. A window's `kCGWindowOwnerName` is the
+    /// app's name in the user's language — "알림 센터" on a Korean Mac — so
+    /// matching "Notification Center" only ever worked on English systems.
+    /// Elsewhere every check read the panel as closed: the shortcut pressed
+    /// again 0.6s after a panel that had fully opened, closing it, and the
+    /// panel's windows were counted as backdrop. The bundle id is the same
+    /// in every language.
+    static let notificationCenterBundleID = "com.apple.notificationcenterui"
+
+    static func notificationCenterPID() -> pid_t? {
+        NSRunningApplication.runningApplications(withBundleIdentifier: notificationCenterBundleID).first?.processIdentifier
+    }
+
+    /// Whether a window-list entry is Notification Center's, by its owner's
+    /// pid. Without a pid (the process not found) the English name stands in,
+    /// which is what was matched before.
+    static func isNotificationCenterWindow(_ window: [String: Any], pid: pid_t?) -> Bool {
+        if let pid {
+            return (window[kCGWindowOwnerPID as String] as? Int32) == pid
+        }
+        return window[kCGWindowOwnerName as String] as? String == "Notification Center"
+    }
+
     /// Notification Center's panel is on screen: its process shows one
     /// display-sized window at layer 21 while open, none while closed.
     /// Desktop widgets belong to the same process at the desktop layer
@@ -238,8 +261,9 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     /// never ran and the #51 shade stayed on from the first frame).
     @MainActor static func notificationCenterIsOpen() -> Bool {
         guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return false }
+        let pid = notificationCenterPID()
         return windows.contains { window in
-            guard window[kCGWindowOwnerName as String] as? String == "Notification Center",
+            guard isNotificationCenterWindow(window, pid: pid),
                   let layer = window[kCGWindowLayer as String] as? Int, layer >= 0,
                   let bounds = window[kCGWindowBounds as String] as? [String: CGFloat],
                   let height = bounds["Height"] else { return false }
