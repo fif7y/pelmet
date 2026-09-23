@@ -12,7 +12,5 @@ DerivedData/
 !project.yml
 xcuserdata/
 *.dmg
-/Thaw reference/
-/_Thaw reference/
 # xcodegen-generated from project.yml info block
 Pelmet/Info.plist
