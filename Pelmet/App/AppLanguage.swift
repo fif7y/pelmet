@@ -61,14 +61,23 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         alert.addButton(withTitle: String(localized: "Relaunch Now"))
         alert.addButton(withTitle: String(localized: "Later"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
-        UserDefaults.standard.set(true, forKey: reopenKey)
+        UserDefaults.standard.set(SettingsTab.general.rawValue, forKey: reopenKey)
         relaunch()
     }
 
-    /// Consumed once by the app delegate after a language relaunch.
-    static func takeReopenSettingsFlag() -> Bool {
+    /// Consumed once by the app delegate after a relaunch: the Settings tab
+    /// to reopen on, nil when the relaunch was not ours.
+    static func takeReopenSettingsTab() -> SettingsTab? {
         defer { UserDefaults.standard.removeObject(forKey: reopenKey) }
-        return UserDefaults.standard.bool(forKey: reopenKey)
+        guard let raw = UserDefaults.standard.string(forKey: reopenKey) else { return nil }
+        return SettingsTab(rawValue: raw) ?? .general
+    }
+
+    /// Relaunch Pelmet and land back on `tab` (the icon spacing Apply,
+    /// which needs a fresh process to read macOS's spacing).
+    static func relaunchReopeningSettings(tab: SettingsTab) {
+        UserDefaults.standard.set(tab.rawValue, forKey: reopenKey)
+        relaunch()
     }
 
     /// Spawn a watcher that opens a fresh instance only after this one has

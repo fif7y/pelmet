@@ -46,10 +46,20 @@ enum EditorItemsBuilder {
         // in it, and without the running check its stand-in tile outlived the
         // app in the editor (Bitwarden quit, 2026-08-31). Same guard as the
         // stored path below; nil-bundle IDs stay (system modules filter later).
+        let ownSpecIDs = Set(
+            separators.map { SeparatorManager.itemID(for: $0).sectionKey }
+                + extraItems.map { ExtrasManager.itemID(for: $0).sectionKey }
+        )
         for raw in concealed {
             let id = canonical(raw)
             guard byID[id] == nil else { continue }
             if let bundle = id.bundleID, bundle != pelmetBundleID, !isRunning(bundle) { continue }
+            // Pelmet's bundle is exempt from the running check, so a
+            // separator or extra removed while concealed would keep its
+            // stand-in until the engine's carried set caught up: the spec
+            // is the item's existence, not the engine's memory of it.
+            if id.bundleID == pelmetBundleID, MenuBarPolicy.isPelmetExtraID(id),
+               !ownSpecIDs.contains(id.sectionKey) { continue }
             byID[id] = ObservedItem(id: id, frame: nil, appName: id.bundleID.flatMap(appName))
         }
         // Pelmet's extras are section-manageable (visibility-based hiding); when
@@ -115,9 +125,12 @@ enum EditorItemsBuilder {
         // never half-concealed, so a frame-nil entry whose bundle has a live
         // item is an old alias, not a second icon. (Pelmet's own extras are
         // exempt — they legitimately mix live and hidden items.)
+        // Apple's item hosts are exempt too: their items hide one by one, so
+        // a concealed Sound next to a live Wi-Fi is not an alias (the tile
+        // vanished from Hidden whenever the bar was collapsed, 2026-09-20).
         let liveBundles = Set(
             snapshotItems.compactMap(\.id.bundleID)
-        ).subtracting([pelmetBundleID])
+        ).subtracting(MenuBarPolicy.identityExemptBundles(pelmetBundleID: pelmetBundleID))
         // Two frame-nil twins of one bundle (both "concealed") are one item
         // under a drifted tag plus its stale alias — the engine can't prune
         // the alias until the item is next observed live, so collapse here.
@@ -161,6 +174,12 @@ enum EditorItemsBuilder {
             }
         }
         let explicit = model.order[section] ?? []
+        // Icons behind the native « report overlapping phantom frames at
+        // its left edge; sorted by x they jump to the front of the section
+        // (Pure Paste / Unclutter after a Discard, 13:47 2026-09-21). They
+        // sort as unframed instead: explicit order, then the stable tiebreak.
+        let framed = byKey.values.filter { $0.frame != nil }
+        let trapped = Set(PlacementGeometry.overflowTrapped(framed.map { $0.frame! }).map { framed[$0].id.sectionKey })
         return byKey.values.sorted { lhs, rhs in
             // The user's explicit order is authoritative — nothing outranks it.
             // (A left-pin experiment for extras once did, and it broke drag
@@ -168,8 +187,12 @@ enum EditorItemsBuilder {
             let li = explicit.firstIndex(of: lhs.id.sectionKey) ?? Int.max
             let ri = explicit.firstIndex(of: rhs.id.sectionKey) ?? Int.max
             if li != ri { return li < ri }
-            return (lhs.frame?.minX ?? .greatestFiniteMagnitude)
-                < (rhs.frame?.minX ?? .greatestFiniteMagnitude)
+            let lx = trapped.contains(lhs.id.sectionKey) ? .greatestFiniteMagnitude : lhs.frame?.minX ?? .greatestFiniteMagnitude
+            let rx = trapped.contains(rhs.id.sectionKey) ? .greatestFiniteMagnitude : rhs.frame?.minX ?? .greatestFiniteMagnitude
+            if lx != rx { return lx < rx }
+            // Neither ordered nor on screen: a stable tiebreak, or the board
+            // reshuffles on every rebuild (dictionary order).
+            return lhs.id.rawValue < rhs.id.rawValue
         }
     }
 }

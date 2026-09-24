@@ -1,6 +1,6 @@
 // MenuBarEngine.swift
 // The macOS-28 seam: everything above this protocol is version-agnostic.
-// One implementation exists today (EngineGoldenGate, macOS 27).
+// One implementation exists today (AgentBarEngine, macOS 27).
 
 import Foundation
 import PelmetCore
@@ -52,8 +52,6 @@ public struct EngineSnapshot: Equatable, Sendable {
 public enum EngineEvent: Equatable, Sendable {
     /// The set of menubar items changed (app launched/quit, item added/removed).
     case itemsChanged
-    /// The user (or the OS) reordered items outside Pelmet — adopt, don't correct.
-    case externalOrderChange
     /// Our hide assertion was torn down externally (DND/assessment churn).
     case assertionTornDown
     /// MenuBarClientCore availability flipped (e.g. after an OS update).

@@ -27,8 +27,8 @@ enum PelmetAccent {
 
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "General"
-    case behavior = "Behavior"
     case menuBar = "Menu Bar"
+    case behavior = "Behavior"
     case displays = "Displays"
     case thanks = "Thanks"
     case about = "About"
@@ -82,36 +82,103 @@ struct SettingsView: View {
         .tint(PelmetAccent.accent)
     }
 
-    @ViewBuilder
+    /// The title row pins; its glass only shows once the pane has scrolled
+    /// under it (the row starts as plain content).
+    @State private var headerPinned = false
+    @State private var gapHeight: CGFloat = 0
+
     private var content: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(appState.settingsTab.title)
-                        .font(.system(size: 22, weight: .semibold))
-                    Spacer()
-                    // The pane's one bar-wide action rides the title row —
-                    // vertical space below belongs to the sections.
-                    if appState.settingsTab == .menuBar {
-                        TidyBarButton()
+        GeometryReader { geo in
+            // The content area runs under the transparent titlebar; the
+            // scroll view takes that band too so the pinned row covers it.
+            let safeTop = geo.safeAreaInsets.top
+            ScrollView {
+                // The title row is a pinned header: it carries the pane's one
+                // bar-wide action (Apply on Menu Bar) and must stay in reach
+                // however far the strips scroll.
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: .sectionHeaders) {
+                    // A pending update greets every pane, About excepted (it
+                    // holds the button itself). One line, one action. Scrolls
+                    // away with the top gap — the header stays lean.
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let version = SparkleController.shared.availableVersion,
+                           appState.settingsTab != .about {
+                            UpdateStrip(version: version) { appState.settingsTab = .about }
+                                .padding(.bottom, 14)
+                        }
+                    }
+                    .padding(.horizontal, 28)
+                    .padding(.top, 28)
+                    .frame(maxWidth: 640, alignment: .leading)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { gapHeight = $0 }
+                    Section {
+                        VStack(alignment: .leading, spacing: 24) {
+                            switch appState.settingsTab {
+                            case .general: GeneralPane()
+                            case .behavior: BehaviorPane()
+                            case .menuBar: MenuBarTab()
+                            case .displays: DisplaysPane()
+                            case .thanks: ThanksPane()
+                            case .about: AboutPane()
+                            }
+                        }
+                        .padding(.horizontal, 28)
+                        .padding(.top, 12)
+                        .padding(.bottom, 28)
+                        .frame(maxWidth: 640, alignment: .leading)
+                    } header: {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(appState.settingsTab.title)
+                                .font(.system(size: 22, weight: .semibold))
+                            Spacer()
+                            if appState.settingsTab == .menuBar {
+                                ApplyBarButton()
+                            }
+                        }
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 10)
+                        // The titlebar band is part of the row, so pinned
+                        // glass reaches the window's top edge and nothing
+                        // peeks above it.
+                        .padding(.top, safeTop)
+                        .frame(maxWidth: 640, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.ultraThinMaterial.opacity(headerPinned ? 1 : 0))
+                        .animation(.easeOut(duration: 0.15), value: headerPinned)
                     }
                 }
-                .padding(.bottom, 2)
-                switch appState.settingsTab {
-                case .general: GeneralPane()
-                case .behavior: BehaviorPane()
-                case .menuBar: MenuBarTab()
-                case .displays: DisplaysPane()
-                case .thanks: ThanksPane()
-                case .about: AboutPane()
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(28)
-            .padding(.top, 16)
-            .frame(maxWidth: 640, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .ignoresSafeArea(edges: .top)
+            .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y >= gapHeight - 0.5 } action: { _, pinned in
+                headerPinned = pinned
+            }
         }
         .background(Color(nsColor: .textBackgroundColor).opacity(0.35))
+    }
+}
+
+/// Pending-update strip atop the non-About panes: green low-alpha fill
+/// (de-box), text left, the one action right — a trail to About.
+private struct UpdateStrip: View {
+    let version: String
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 15))
+                .foregroundStyle(.green)
+            Text("Pelmet \(version) is available.")
+                .font(.callout)
+            Spacer(minLength: 8)
+            // Same tinted chip as Apply and "Granted": tint on a low-alpha
+            // fill, no white-on-green.
+            TintChipButton(text: "Update", symbol: "arrow.down.circle.fill", tint: .green, action: action)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -139,9 +206,8 @@ private struct SettingsSidebar: View {
                     // The Accessibility row lives in General; the dot says
                     // "something here needs you" from any tab.
                     attention: item == .general && !appState.accessibilityGranted,
-                    // An available update chips the About row in the same
-                    // accent as its "Update to…" button — a trail for someone
-                    // who just opened Settings.
+                    // An available update puts a green chip on the About row
+                    // — a trail for someone who just opened Settings.
                     badge: item == .about && SparkleController.shared.availableVersion != nil
                         ? "Update" : nil
                 ) { tab = item }
@@ -167,36 +233,28 @@ private struct SidebarRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
                 Image(systemName: item.symbol)
                     .font(.system(size: 13))
-                    .frame(width: 18)
-                // Size the row for the semibold weight so selecting never
-                // reflows — the regular label sits over a hidden bold twin.
-                Text(item.title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .hidden()
-                    .overlay(alignment: .leading) {
-                        Text(item.title)
-                            .font(.system(size: 13, weight: selected ? .semibold : .regular))
+                    .frame(width: 18, height: 17)
+                // The badge sits beside the title when both fit at their
+                // natural width (en "About · Update"), otherwise underneath
+                // (ru "О программе" + "Обновить") — never a truncated title.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        title.fixedSize()
+                        Spacer(minLength: 4)
+                        attentionDot
+                        badgeChip
                     }
-                    .lineLimit(1)
-                    // No fixedSize: a long title (ru "О программе" beside
-                    // "Обновить") must ellipsize rather than run under the
-                    // badge and the attention dot it shares the row with.
-                    .truncationMode(.tail)
-                    .layoutPriority(1)
-                Spacer(minLength: 4)
-                if attention {
-                    Circle().fill(.orange).frame(width: 7, height: 7)
-                }
-                if let badge {
-                    Text(badge)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(PelmetAccent.accent, in: Capsule())
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 8) {
+                            title
+                            Spacer(minLength: 4)
+                            attentionDot
+                        }
+                        badgeChip
+                    }
                 }
             }
             .foregroundStyle(selected ? PelmetAccent.accent : .primary)
@@ -213,6 +271,37 @@ private struct SidebarRow: View {
         .buttonStyle(.plain)
         .focusEffectDisabled()
         .onHover { hovered = $0 }
+    }
+
+    /// Size the row for the semibold weight so selecting never reflows —
+    /// the regular label sits over a hidden bold twin.
+    private var title: some View {
+        Text(item.title)
+            .font(.system(size: 13, weight: .semibold))
+            .hidden()
+            .overlay(alignment: .leading) {
+                Text(item.title)
+                    .font(.system(size: 13, weight: selected ? .semibold : .regular))
+            }
+            .lineLimit(1)
+            .truncationMode(.tail)
+    }
+
+    @ViewBuilder private var attentionDot: some View {
+        if attention {
+            Circle().fill(.orange).frame(width: 7, height: 7)
+        }
+    }
+
+    @ViewBuilder private var badgeChip: some View {
+        if let badge {
+            Text(badge)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.green)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(.green.opacity(0.13), in: Capsule())
+        }
     }
 }
 
@@ -559,17 +648,15 @@ private struct GeneralPane: View {
             }
             SettingRow(
                 title: "Keyboard shortcut",
-                caption: appState.hotkeyConflict
-                    ? "Held by another app — record a different one."
-                    : "Toggles the hidden icons from anywhere."
+                caption: hotkeyCaption(appState.settings.hotkey, conflict: appState.hotkeyConflict,
+                                       otherwise: "Show or hide your icons without reaching for the mouse.")
             ) {
                 ShortcutRecorder(shortcut: binding(\.hotkey), fallback: .default)
             }
             SettingRow(
                 title: "Open Settings",
-                caption: appState.settingsHotkeyConflict
-                    ? "Held by another app — record a different one."
-                    : "Opens Pelmet Settings from anywhere."
+                caption: hotkeyCaption(appState.settings.settingsHotkey, conflict: appState.settingsHotkeyConflict,
+                                       otherwise: "Get back here from any app.")
             ) {
                 ShortcutRecorder(shortcut: binding(\.settingsHotkey), fallback: .settingsDefault)
             }
@@ -581,9 +668,7 @@ private struct GeneralPane: View {
                 // card's one-line rhythm. Short title, caption carries it,
                 // same shape as the Permissions and Language rows.
                 title: "Right-click menu",
-                caption: appState.settings.showStatusItem
-                    ? "Opens Pelmet's menu from an empty spot on the menu bar."
-                    : "Stays on while the Pelmet icon is hidden — it's the way back to Settings.",
+                caption: "Pelmet's menu from any empty spot on the bar. Also your way back here when the icon is hidden.",
                 isOn: Binding(
                     get: { appState.settings.barRightClickMenuActive },
                     set: { enabled in
@@ -638,7 +723,7 @@ private struct GeneralPane: View {
             SettingRow(
                 title: "Screen Recording",
                 caption: appState.screenRecordingGranted
-                    ? "Lets the animation styles play over the system's own show and hide."
+                    ? "Smoother show and hide animations."
                     : "Optional. Without it, icons show and hide the way macOS does it."
             ) {
                 if appState.screenRecordingGranted {
@@ -700,10 +785,14 @@ private struct BehaviorPane: View {
             AnimationShowcase(selection: binding(\.revealAnimation))
         }
 
+        SettingsCard(title: "Icon spacing") {
+            IconSpacingRow()
+        }
+
         SettingsCard(title: "Reveal") {
             SettingToggleRow(
                 title: "Reveal on hover",
-                caption: "Rest the pointer on the menu bar between the middle of the screen and Pelmet's icon.",
+                caption: "Hands-free: rest the pointer on the right half of the menu bar.",
                 isOn: binding(\.revealTriggers.hoverEnabled)
             )
             if appState.settings.revealTriggers.hoverEnabled {
@@ -738,7 +827,7 @@ private struct BehaviorPane: View {
             SettingRow(
                 title: "Now Playing, camera controls, AirDrop, Focus, Timer",
                 caption: appState.settings.replacesCollateralExtras
-                    ? "Always hidden while a Pelmet item stands in for one of them. Turn those items off under Menu Bar to show the system's while the bar is revealed."
+                    ? "Pelmet's items stand in for these, so Apple's stay hidden. Turn a Pelmet item off to get Apple's back when the bar is revealed."
                     : "macOS hides these whenever any icons are concealed — they can only appear while the whole bar is revealed."
             ) {
                 PelmetMenuPicker(
@@ -754,10 +843,19 @@ private struct BehaviorPane: View {
             SettingToggleRow(
                 title: "Clicking the clock opens Notification Center",
                 caption: appState.screenRecordingGranted
-                    ? "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you."
-                    : "macOS refuses that click while icons are hidden, so Pelmet releases them for an instant and clicks for you. Without Screen Recording that instant shows. Off, the two-finger swipe from the trackpad's right edge still works.",
+                    ? "Notification Center still opens from the clock, even with icons hidden. Pelmet handles the click."
+                    : "Notification Center still opens from the clock, even with icons hidden. Pelmet handles the click; without Screen Recording the hidden icons flash by for an instant. Off, the two-finger swipe from the trackpad's right edge still works.",
                 isOn: binding(\.clockClickOpensNotificationCenter)
             )
+            if appState.settings.clockClickOpensNotificationCenter {
+                SettingRow(
+                    title: "Keyboard shortcut",
+                    caption: hotkeyCaption(appState.settings.notificationCenterHotkey, conflict: appState.notificationCenterHotkeyConflict,
+                                           otherwise: "Opens Notification Center while the icons are hidden, which the macOS shortcut can't.")
+                ) {
+                    ShortcutRecorder(shortcut: binding(\.notificationCenterHotkey), fallback: .notificationCenterDefault)
+                }
+            }
         }
     }
 
@@ -773,6 +871,82 @@ private struct BehaviorPane: View {
                 appState.settingsChanged()
             }
         )
+    }
+}
+
+// MARK: - Icon spacing
+
+/// One slider for macOS's own gap between menu bar icons. The draft lives
+/// here; the store holds what was applied, so the Apply chip lights only
+/// when they differ (the same grammar as the editor's Apply). Applying
+/// relaunches Pelmet and restarts the system icons, so it never fires on
+/// a slider notch.
+private struct IconSpacingRow: View {
+    @Environment(AppState.self) private var appState
+    /// The slider runs on the stop index: the stops are not evenly spaced
+    /// (1, then fours), and SwiftUI's Slider only steps evenly.
+    @State private var draft: Double = Double(IconSpacing.index(of: IconSpacing.macOSDefault))
+    @State private var staleApps: [String] = []
+
+    private var spacing: Int { IconSpacing.steps[min(max(Int(draft.rounded()), 0), IconSpacing.steps.count - 1)] }
+    private var applied: Int { IconSpacingApplier.current() }
+    private var pending: Bool { spacing != applied }
+    private var atDefault: Bool { spacing == IconSpacing.macOSDefault }
+
+    private var label: LocalizedStringKey {
+        switch spacing {
+        case ...1: "Tightest"
+        case 4: "Tighter"
+        case 8: "Tight"
+        case 12: "Snug"
+        case 16: "Default"
+        case 20: "Roomy"
+        case 24: "Wide"
+        default: "Widest"
+        }
+    }
+
+    var body: some View {
+        // The reading sits under the title, not beside the slider: a word
+        // plus a number in nine languages never fits a fixed lane next to
+        // the knob (it slid under it twice, 2026-09-22).
+        SettingRow(title: "Space between icons", caption: "\(Text(label)) · \(spacing) pt") {
+            Slider(value: $draft, in: 0...Double(IconSpacing.steps.count - 1), step: 1)
+            .frame(width: 200)
+        }
+        if !staleApps.isEmpty {
+            SettingNote("Still on the old spacing until relaunched: \(ListFormatter.localizedString(byJoining: staleApps))")
+        }
+        HStack(spacing: 10) {
+            SettingNote("macOS's own spacing, so it stays after Pelmet. The clock and system icons follow right away; other apps when they next open, or log out and back in for all of them at once.")
+            Spacer(minLength: 0)
+            if !atDefault || applied != IconSpacing.macOSDefault {
+                Button("Reset") { draft = Double(IconSpacing.index(of: IconSpacing.macOSDefault)) }
+                    .font(.callout)
+                    .disabled(atDefault)
+                    .help("Back to the macOS default")
+            }
+            TintChipButton(
+                text: Text("Apply"),
+                icon: Image(systemName: "wand.and.stars"),
+                tint: pending ? .green : .secondary
+            ) {
+                IconSpacingApplier.apply(spacing, appState: appState)
+            }
+            .disabled(!pending)
+            .animation(.easeOut(duration: 0.2), value: pending)
+            .help("Relaunches Pelmet and the system icons with the new spacing")
+        }
+        .onAppear {
+            draft = Double(IconSpacing.index(of: applied))
+            staleApps = IconSpacingApplier.staleAppNames()
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in
+            staleApps = IconSpacingApplier.staleAppNames()
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification)) { _ in
+            staleApps = IconSpacingApplier.staleAppNames()
+        }
     }
 }
 
@@ -1010,7 +1184,9 @@ private struct AboutPane: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 60)
+        // 60 scrolled the pane by a row once the beta toggle joined the
+        // Updates card (Gab, 2026-09-21): the default window shows it whole.
+        .padding(.top, 20)
         .onAppear { SparkleController.shared.probe() }
     }
 
@@ -1135,6 +1311,14 @@ struct TintChipButton<Icon: View>: View {
     init(text: LocalizedStringKey, symbol: String, tint: Color = PelmetAccent.accent, action: @escaping () -> Void) where Icon == Image {
         self.text = Text(text)
         self.icon = Image(systemName: symbol)
+        self.tint = tint
+        self.action = action
+    }
+
+    /// A prebuilt label (the Apply button switches its text and tint).
+    init(text: Text, icon: Icon, tint: Color = PelmetAccent.accent, action: @escaping () -> Void) {
+        self.text = text
+        self.icon = icon
         self.tint = tint
         self.action = action
     }
@@ -1343,4 +1527,14 @@ private struct MockBar: View {
             .timingCurve(0.42, 0, 0.58, 1, duration: revealed ? AppTiming.fadeRevealDuration : AppTiming.fadeExitDuration)
         }
     }
+}
+
+/// A shortcut row’s caption: the plain one, or why the shortcut will
+/// not fire. macOS's own shortcuts register fine and never run (#55).
+func hotkeyCaption(_ spec: HotkeySpec?, conflict: Bool, otherwise: LocalizedStringKey) -> LocalizedStringKey {
+    if conflict { return "Held by another app — record a different one." }
+    if let spec, SystemShortcuts.owns(spec) {
+        return "macOS uses this shortcut. Turn it off in System Settings › Keyboard › Keyboard Shortcuts, or record another."
+    }
+    return otherwise
 }

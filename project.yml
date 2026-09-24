@@ -37,8 +37,8 @@ targetTemplates:
         NSPrincipalClass: NSApplication
     settings:
       base:
-        MARKETING_VERSION: "0.2.41"
-        CURRENT_PROJECT_VERSION: "48"
+        MARKETING_VERSION: "0.3.0"
+        CURRENT_PROJECT_VERSION: "56"
         SWIFT_VERSION: "6.0"
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         SWIFT_APPROACHABLE_CONCURRENCY: "YES"
@@ -89,8 +89,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.fif7y.Pelmet
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "0.2.41"
-        CURRENT_PROJECT_VERSION: "48"
+        MARKETING_VERSION: "0.3.0"
+        CURRENT_PROJECT_VERSION: "56"
         SWIFT_VERSION: "6.0"
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         SWIFT_APPROACHABLE_CONCURRENCY: "YES"

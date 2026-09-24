@@ -95,6 +95,10 @@ Plan and rationale: `docs/BETA-CHANNEL-PLAN.md`. Mechanics:
   roll-up.
 - Stable roll-up every one or two weeks, Tuesdays: a fresh build from the
   last beta's commit with the plain version and the next build number.
+- A build whose version carries `-beta.` turns "Get beta releases" on at
+  first launch (`AppState.isPrereleaseBuild`, one-shot per store), so a beta
+  taken straight from GitHub stays on the channel. The user's later choice
+  stands.
 
 ## CI
 

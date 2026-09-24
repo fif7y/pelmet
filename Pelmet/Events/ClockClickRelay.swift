@@ -205,7 +205,7 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
         return CGPoint(x: clockMaxX - width / 2, y: bounds.minY + bandHeight / 2)
     }
 
-    private static func display(under point: CGPoint) -> CGDirectDisplayID? {
+    static func display(under point: CGPoint) -> CGDirectDisplayID? {
         var display: CGDirectDisplayID = 0
         var count: UInt32 = 0
         guard CGGetDisplaysWithPoint(point, 1, &display, &count) == .success, count == 1 else { return nil }
@@ -230,12 +230,17 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
         }
     }
 
-    /// Notification Center's panel is on screen (its process shows one
-    /// tall window while open, none while closed).
+    /// Notification Center's panel is on screen: its process shows one
+    /// display-sized window at layer 21 while open, none while closed.
+    /// Desktop widgets belong to the same process at the desktop layer
+    /// (Gab's "Up Next", 360pt tall), so the layer is part of the test
+    /// (2026-09-22: without it this read true all day, the press retry
+    /// never ran and the #51 shade stayed on from the first frame).
     @MainActor static func notificationCenterIsOpen() -> Bool {
         guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return false }
         return windows.contains { window in
             guard window[kCGWindowOwnerName as String] as? String == "Notification Center",
+                  let layer = window[kCGWindowLayer as String] as? Int, layer >= 0,
                   let bounds = window[kCGWindowBounds as String] as? [String: CGFloat],
                   let height = bounds["Height"] else { return false }
             return height > 300

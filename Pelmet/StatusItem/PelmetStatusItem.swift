@@ -178,16 +178,17 @@ final class PelmetStatusItem {
         let target = AppMenuTarget.shared
         target.appState = appState
         var items: [NSMenuItem] = [toggle, showAll, .separator(), settings, .separator(), quit]
-        // Same line in every right-click (chevron, separators, empty bar):
-        // the About chip is the only other trace once the banner is gone.
+        // Same line in every right-click (chevron, separators, empty bar),
+        // right under Settings: the About chip is the only other trace once
+        // the banner is gone.
         if let version = SparkleController.shared.availableVersion {
             let update = NSMenuItem(
-                title: String(localized: "Update to \(version)…"),
+                title: String(localized: "Update available: \(version)"),
                 action: #selector(AppMenuTarget.installUpdate), keyEquivalent: ""
             )
             update.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: nil)?
-                .withSymbolConfiguration(.init(paletteColors: [PelmetAccent.nsColor]))
-            items.insert(contentsOf: [update, .separator()], at: 0)
+                .withSymbolConfiguration(.init(paletteColors: [.systemGreen]))
+            items.insert(update, at: items.firstIndex(of: settings)! + 1)
         }
         if !appState.accessibilityGranted {
             // Lead with the fix: nothing else in this menu works without it.
@@ -219,6 +220,6 @@ final class AppMenuTarget: NSObject {
     @objc func grantAccessibility() { AccessibilityAccess.request() }
     /// The About pane is the update hub (chip, notes, toggles) — land there
     /// rather than straight in Sparkle's window.
-    @objc func installUpdate() { appState?.openSettings(tab: .about) }
+    @objc func installUpdate() { SparkleController.shared.openUpdateHub() }
     @objc func quit() { NSApp.terminate(nil) }
 }

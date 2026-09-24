@@ -8,23 +8,69 @@ import PelmetCore
 import PelmetEngine
 import SwiftUI
 
-/// Sits on the pane's title row (the settings shell places it) — the one
-/// bar-wide action, out of the sections' way.
-struct TidyBarButton: View {
+/// Sits on the pane's title row (the settings shell places it). Sets core
+/// (docs/CORE-SETS.md M1): the editor is a drawing; this is the one door
+/// through which the bar moves. Shows the pending move count (drawn edits
+/// plus icons on the wrong side of the chevron) and Discard beside it.
+struct ApplyBarButton: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        Button {
-            appState.tidyBar()
-        } label: {
-            Label(
-                appState.tidying ? "Tidying…" : "Tidy bar order",
-                systemImage: "wand.and.stars"
-            )
-            .font(.callout)
+        @Bindable var appState = appState
+        let pending = appState.applyPending
+        let failed = appState.applyReport.map { !$0.failed.isEmpty } ?? false
+        let count = appState.pendingMoveCount
+        HStack(spacing: 10) {
+            // Separators are edited on their tiles; adding one is the only
+            // action that needs a home, and the title row is it.
+            Button {
+                appState.addSeparator()
+            } label: {
+                AddTrigger(title: "Separator", menuChevron: false)
+            }
+            .buttonStyle(.plain)
+            .disabled(appState.applying)
+            .help("Add a divider to the bar — click its tile to pick a style")
+            // The pass runs silently with the cursor hidden (blind spot 3):
+            // say what it did, or people press it twice.
+            if !appState.applying, let report = appState.applyReport {
+                Group {
+                    let notMoved = report.failed.count + report.skipped.filter { $0.why == .notOnScreen }.count
+                    if notMoved == 0 {
+                        Text("Moved \(report.applied.count)")
+                    } else {
+                        Text("Moved \(report.applied.count), \(notMoved) not moved")
+                            .help("Icons behind macOS's « have no place to be dragged from yet")
+                    }
+                }
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            }
+            if !appState.settings.orderEdits.isEmpty, !appState.applying {
+                Button("Discard") { appState.discardOrderEdits() }
+                    .font(.callout)
+                    .help("Forget the pending order changes; the editor shows the bar as it is")
+            }
+            // Same chip family as General's permission row (de-box, tinted
+            // capsule): green while there is something to apply, so a
+            // change in the editor visibly asks for the click; grey and
+            // inert when the bar already matches.
+            let title: Text = appState.applying ? Text("Applying…")
+                : failed ? Text("Retry")
+                : count > 0 ? Text("Apply (\(count))")
+                : Text("Apply")
+            let tint: Color = failed ? .orange : pending ? .green : .secondary
+            TintChipButton(
+                text: title,
+                icon: Image(systemName: failed ? "arrow.clockwise" : "wand.and.stars"),
+                tint: tint
+            ) {
+                appState.applyOrderEdits()
+            }
+            .disabled(appState.applying || !pending)
+            .animation(.easeOut(duration: 0.2), value: pending)
+            .help("Move the bar to match the editor: your order, and every icon on its section's side of the chevron. Each icon is dragged once with the cursor hidden; nothing moves until you press this.")
         }
-        .disabled(appState.tidying)
-        .help("Physically arranges the bar to match the sections — icons that sit out of place slide their neighbors on every reveal.")
     }
 }
 
@@ -80,24 +126,6 @@ struct MenuBarTab: View {
     @Environment(AppState.self) private var appState
     @State private var dragSession = EditorDragSession()
 
-    private var newItemsLabel: some View {
-        Text("New menu bar icons go to").font(.callout)
-    }
-
-    private var newItemsSegments: some View {
-        PelmetSegments(selection: Binding(
-            get: { appState.settings.sectionModel.newItemsDestination },
-            set: { destination in
-                appState.settings.sectionModel.newItemsDestination = destination
-                appState.settingsChanged()
-            }
-        ), options: [
-            (.visible, "Visible"),
-            (.hidden, "Hidden"),
-            (.alwaysHidden, "Always hidden"),
-        ])
-    }
-
     var body: some View {
         // No own ScrollView — the settings shell provides scrolling + padding.
         // Generous section rhythm — whitespace is structure, not waste.
@@ -119,58 +147,47 @@ struct MenuBarTab: View {
                     .foregroundStyle(.secondary)
                 }
 
-                EditorSectionView(
-                    section: .visible,
-                    title: "Visible",
-                    caption: "Always in the menu bar",
-                    symbol: "eye"
-                )
-                EditorSectionView(
-                    section: .hidden,
-                    title: "Hidden",
-                    caption: "A hover or click away — or ⌘-drag icons left of the chevron",
-                    symbol: "eye.slash"
-                )
-                EditorSectionView(
-                    section: .alwaysHidden,
-                    title: "Always Hidden",
-                    caption: "Out of sight until you double-click or ⌥-click the chevron",
-                    symbol: "moon"
-                )
-
-                // The "New" chip above is the same setting made draggable —
-                // this row is its discoverable, labeled twin.
-                // Label + three segments is ~550pt in German against a
-                // 468pt floor at the minimum window, and segments can't
-                // wrap. Side by side while it fits, stacked when it doesn't.
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
-                        newItemsLabel
-                        newItemsSegments
-                        Spacer()
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        newItemsLabel
-                        newItemsSegments
-                    }
+                // Inert while a pass runs: the pass works off the edits it
+                // started with and clears them all on success, so a drop
+                // made meanwhile would be drawn, then forgotten. Dimmed, not
+                // covered — "Applying…" on the title row already says why.
+                Group {
+                    EditorSectionView(
+                        section: .visible,
+                        title: "Visible",
+                        caption: "Always there when you need them",
+                        symbol: "eye"
+                    )
+                    EditorSectionView(
+                        section: .hidden,
+                        title: "Hidden",
+                        caption: "Out of the way, back with a hover or a click",
+                        symbol: "eye.slash"
+                    )
+                    EditorSectionView(
+                        section: .alwaysHidden,
+                        title: "Always Hidden",
+                        caption: "Gone for good, unless you double-click or ⌥-click the chevron",
+                        symbol: "moon"
+                    )
                 }
+                .disabled(appState.applying)
+                .opacity(appState.applying ? 0.5 : 1)
+                .animation(.easeOut(duration: 0.2), value: appState.applying)
 
+                // The dashed "New" tile in the strips IS the new-icons
+                // destination, and separators are edited on their own tiles:
+                // nothing sits between the strips and the launchers.
                 AppLaunchersStrip()
 
                 PelmetItemsStrip()
-
-                SeparatorStrip()
         }
         .animation(.spring(duration: 0.3), value: appState.settings.sectionModel)
         .environment(dragSession)
-        // Editing the bar shows the bar: reveal everything while this tab is
-        // open so drags in the editor and in the real menubar stay in sync.
-        .onAppear {
-            appState.reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
-        }
+        // The editor is a drawing, nothing in the bar needs to be on screen
+        // for it. Apply reveals what it must measure, then puts the bar
+        // back (Gab, 2026-09-20).
         .onDisappear {
-            // Collapse the « if a placement expanded it during this session.
-            OverflowChevron.restoreAfterEditing()
             appState.applyPointerDisplayPolicyAfterDismissal()
         }
     }
@@ -349,13 +366,13 @@ private struct NewItemsChip: View {
                             style: StrokeStyle(lineWidth: 1, dash: [4, 3])
                         )
                 )
-            Text("New")
+            Text("New items")
                 .font(.system(size: 9))
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
                 .frame(maxWidth: 52)
         }
-        .help("New menu bar icons land here — drag into another section to change it")
+        .help("New menu bar icons land in this section. Drag this marker to another section to change where they go.")
         .onDrag {
             session.begin(.newItemsChip)
             return NSItemProvider(object: Self.dragID as NSString)
@@ -399,6 +416,17 @@ private struct ItemTile: View {
     @State private var cardShown = false
     @State private var cardHovered = false
     @State private var cardWork: Task<Void, Never>?
+    /// A separator tile's options (style, opacity or width, Remove).
+    @State private var optionsShown = false
+
+    /// This tile's separator, when it is one: specs are keyed by the
+    /// ItemID they mint, so match on the section key.
+    private var separatorIndex: Int? {
+        guard item.id.isPelmetSeparator else { return nil }
+        return appState.settings.separators.firstIndex {
+            SeparatorManager.itemID(for: $0).sectionKey == item.id.sectionKey
+        }
+    }
 
     private var displayName: String {
         if item.id.bundleID == PelmetBundle.textInputAgentID {
@@ -429,6 +457,9 @@ private struct ItemTile: View {
                 }
             }
             return names.joined(separator: ", ")
+        }
+        if MenuBarPolicy.systemItem(for: item.id) == .primaryBentoBox {
+            return String(localized: "Control Center")
         }
         if item.id.rawValue.contains("::com.apple.menuextra.") {
             let suffix = item.id.rawValue.components(separatedBy: ".").last ?? String(localized: "System")
@@ -497,11 +528,13 @@ private struct ItemTile: View {
         hasLauncher && !isAppLauncher
     }
 
-    /// macOS pins this host's spot (SystemUIServer's Siri and Time
-    /// Machine). It hides, it just can't be dragged — so the tile says so
-    /// rather than looking as movable as its neighbours.
+    /// macOS pins this item's spot (SystemUIServer's Siri and Time
+    /// Machine, Control Center and the clock at the bar's end). It hides,
+    /// it just can't be dragged — so the tile says so rather than looking
+    /// as movable as its neighbours.
     private var isPinnedBySystem: Bool {
         MenuBarPolicy.isPinnedAppleHost(item.id.bundleID)
+            || MenuBarPolicy.isPinnedSystemItem(item.id)
     }
 
     /// Only SystemUIServer's pair has no capturable icon; the other pinned
@@ -625,6 +658,15 @@ private struct ItemTile: View {
                         .offset(x: 4, y: -4)
                         .help("Icons from the same app hide together")
                 }
+                if appState.isOutOfPlace(item.id) {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .padding(2)
+                        .background(Circle().fill(.background))
+                        .offset(x: -4, y: -4)
+                        .help("Not in place yet — it hides with this section, but sits on the other side of the chevron until Apply moves it")
+                }
                 if isSystemIcon {
                     Image(systemName: "apple.logo")
                         .font(.system(size: 7, weight: .bold))
@@ -660,8 +702,11 @@ private struct ItemTile: View {
                 missingReplacements: item.id.bundleID == PelmetBundle.systemUIServerID
                     ? appState.missingAppleReplacements
                     : [],
+                pinnedSystemItem: MenuBarPolicy.isPinnedSystemItem(item.id) ? MenuBarPolicy.systemItem(for: item.id) : nil,
                 usePelmetReplacements: { appState.useAppleExtraReplacements() },
-                addLauncher: MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID) ? nil : item.id.bundleID.map { bundle in
+                // A system icon shares the agent's bundle: a launcher for it
+                // would open MenuBarAgent and draw nothing (the clock, 2026-09-21).
+                addLauncher: isSystemIcon || MenuBarPolicy.isBundleHideableAppleHost(item.id.bundleID) ? nil : item.id.bundleID.map { bundle in
                     { appState.addAppLauncher(bundleID: bundle, name: displayName, in: section) }
                 }
             )
@@ -670,13 +715,44 @@ private struct ItemTile: View {
                 scheduleCard()
             }
         }
+        .onTapGesture {
+            if separatorIndex != nil { optionsShown = true }
+        }
+        .popover(isPresented: $optionsShown, arrowEdge: .bottom) {
+            @Bindable var state = appState
+            if let i = separatorIndex {
+                SeparatorOptions(separator: $state.settings.separators[i]) {
+                    // Read the id BEFORE the removal: the predicate runs
+                    // inside a modify access on `settings`, and a binding
+                    // get in there re-enters the getter (exclusivity crash).
+                    let id = appState.settings.separators[i].id
+                    optionsShown = false
+                    appState.removeSeparator(id)
+                }
+            }
+        }
+        // A separator added from the title row opens its options once, so
+        // the style and width read as the user's to set.
+        .onChange(of: appState.newlyAddedSeparatorID, initial: true) { _, added in
+            guard let added, let i = separatorIndex,
+                  appState.settings.separators[i].id == added else { return }
+            appState.newlyAddedSeparatorID = nil
+            optionsShown = true
+        }
         .onDrag {
             hovered = false
             cardShown = false
+            optionsShown = false
             session.begin(.item(item.id, home: section, homeIndex: index))
             return NSItemProvider(object: item.id.rawValue as NSString)
         }
         .contextMenu {
+            if separatorIndex != nil {
+                Button("Remove separator") {
+                    let id = appState.settings.separators[separatorIndex!].id
+                    appState.removeSeparator(id)
+                }
+            }
             if isUnhideable || isSuperseded, let bundle = item.id.bundleID {
                 if hasLauncher {
                     Text("Launcher added — now turn this icon off in \(displayName)'s settings")
@@ -711,6 +787,9 @@ private struct InactiveIconCard: View {
     /// on, rather than dead-ending on "can't move it". Empty for the other
     /// pinned host (Kerberos), which has no replacement.
     let missingReplacements: [ExtraKind]
+    /// The clock or Control Center: pinned at the bar's end, hideable
+    /// through the allowlist.
+    let pinnedSystemItem: SystemItem?
     let usePelmetReplacements: () -> Void
     let addLauncher: (() -> Void)?
 
@@ -760,7 +839,13 @@ private struct InactiveIconCard: View {
                 case [.siri, .timeMachine]:
                     Text("Siri and Time Machine are locked macOS system icons. Turn on Pelmet's Siri and Time Machine below for separate icons you can move.")
                 default:
-                    Text("Pelmet can hide \(name), but macOS keeps it in its own spot, so the editor can't move it.")
+                    if pinnedSystemItem == .clock {
+                        Text("The clock always sits at the right edge, so it can't be moved. Drop it in a hidden section to hide it.")
+                    } else if pinnedSystemItem == .primaryBentoBox {
+                        Text("Control Center always sits next to the clock, so it can't be moved. Drop it in a hidden section to hide it.")
+                    } else {
+                        Text("Pelmet can hide \(name), but macOS keeps it in its own spot, so the editor can't move it.")
+                    }
                 }
             } else if immovable {
                 Text("Stays where its app put it")
@@ -848,7 +933,7 @@ private struct PelmetItemsStrip: View {
         VStack(alignment: .leading, spacing: 8) {
             CardHeader(
                 symbol: "sparkles", title: "Pelmet items",
-                caption: "Pelmet's own system extras — they hide like any icon"
+                caption: "System features as icons you can hide and move"
             ) {
                 Menu {
                     if shortcutNames.isEmpty {
@@ -878,46 +963,46 @@ private struct PelmetItemsStrip: View {
             VStack(alignment: .leading, spacing: 12) {
                 PelmetItemRow(
                     symbol: "playpause.fill", title: "Media controls",
-                    caption: "Click to play or pause, right-click for tracks.",
+                    caption: "Play, pause and switch tracks without leaving the bar.",
                     isOn: hasKind(.mediaControls),
                     style: styleBinding(.mediaControls),
                     rule: ruleBinding(.mediaControls)
                 ) { toggleKind(.mediaControls, on: $0) }
                 PelmetItemRow(
                     symbol: "video.fill", title: "Camera & mic indicator",
-                    caption: "Appears while a camera or mic is live.",
+                    caption: "Know when your camera or mic is on.",
                     isOn: hasKind(.cameraMicIndicator)
                 ) { toggleKind(.cameraMicIndicator, on: $0) }
                 PelmetItemRow(
                     symbol: "siri", title: "Siri",
-                    caption: "Opens Siri. Apple's own icon turns off in System Settings while this is on.",
+                    caption: "Siri, as an icon you can move. Replaces Apple's while it's on.",
                     isOn: hasKind(.siri)
                 ) { toggleKind(.siri, on: $0) }
                 PelmetItemRow(
                     symbol: "timer", title: "Timer",
-                    caption: "A countdown that stays in the bar. Click for durations, rings when it ends.",
+                    caption: "A countdown that stays in view and rings when it ends.",
                     isOn: hasKind(.timer)
                 ) { toggleKind(.timer, on: $0) }
                 PelmetItemRow(
                     symbol: "moon.fill", title: "Focus",
-                    caption: "Shows which Focus is on. Click for the Focus panel.",
+                    caption: "See which Focus is on and switch it in a click.",
                     isOn: hasKind(.focus),
                     rule: ruleBinding(.focus)
                 ) { toggleKind(.focus, on: $0) }
                 PelmetItemRow(
                     symbol: ExtraGlyph.timeMachineSymbol, title: "Time Machine",
-                    caption: "Latest backup, Back Up Now. Apple's own icon turns off in System Settings while this is on.",
+                    caption: "Your last backup at a glance, back up now. Replaces Apple's while it's on.",
                     isOn: hasKind(.timeMachine),
                     rule: ruleBinding(.timeMachine)
                 ) { toggleKind(.timeMachine, on: $0) }
                 PelmetItemRow(
                     symbol: "", image: ExtraGlyph.airdrop, title: "AirDrop",
-                    caption: "Opens AirDrop in Finder.",
+                    caption: "AirDrop one click away.",
                     isOn: hasKind(.airdrop)
                 ) { toggleKind(.airdrop, on: $0) }
                 PelmetItemRow(
                     symbol: "person.crop.circle", title: "Fast user switching",
-                    caption: "Other users, the login window, lock screen.",
+                    caption: "Switch user or lock the screen in a click.",
                     isOn: hasKind(.userSwitching)
                 ) { toggleKind(.userSwitching, on: $0) }
                 ForEach(appState.settings.extraItems.filter { $0.kind == .shortcut }) { spec in
@@ -1054,7 +1139,7 @@ private struct AppLaunchersStrip: View {
             // nav yields to the CTA it duplicates.
             CardHeader(
                 symbol: "app.dashed", title: "App launchers",
-                caption: "A Pelmet icon that opens an app — hides like any icon"
+                caption: "Add any app to your menu bar"
             ) { EmptyView() }
 
             VStack(alignment: .leading, spacing: 0) {
@@ -1388,84 +1473,16 @@ private struct SeparatorGlyph: View {
     }
 }
 
-private struct SeparatorStrip: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        @Bindable var state = appState
-        VStack(alignment: .leading, spacing: 8) {
-            CardHeader(
-                symbol: "divide", title: "Separators",
-                caption: "Dividers for the bar — ⌘-drag them anywhere"
-            ) {
-                Button {
-                    appState.settings.separators.append(SeparatorSpec(style: .dot))
-                    appState.settingsChanged()
-                } label: {
-                    AddTrigger(title: "Separator", menuChevron: false)
-                }
-                .buttonStyle(.plain)
-            }
-
-            if !appState.settings.separators.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach($state.settings.separators) { $separator in
-                        SeparatorChip(separator: $separator) {
-                            // Read the binding BEFORE the removeAll: the
-                            // predicate runs inside a modify access on
-                            // `settings`, and a @Binding get in there re-enters
-                            // the settings getter — exclusivity crash.
-                            let id = separator.id
-                            appState.settings.separators.removeAll { $0.id == id }
-                            appState.settingsChanged()
-                        }
-                    }
-                    Spacer()
-                }
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.35)))
-            }
-        }
-    }
-}
-
-private struct SeparatorChip: View {
+/// A separator's options, shown in a popover on its editor tile: the
+/// style chooser (real glyphs, current one ring-selected), the one thing
+/// that style tunes, and Remove.
+private struct SeparatorOptions: View {
     @Environment(AppState.self) private var appState
     @Binding var separator: SeparatorSpec
-    let onDelete: () -> Void
-    @State private var showsChooser = false
-    @State private var hovered = false
+    let onRemove: () -> Void
 
     var body: some View {
-        Button {
-            showsChooser = true
-        } label: {
-            ZStack(alignment: .topTrailing) {
-                SeparatorGlyph(style: separator.style)
-                    .foregroundStyle(separator.style == .space ? .tertiary : .secondary)
-                    .opacity(separator.style == .space ? 1 : max(separator.opacity, 0.25))
-                    .frame(width: 30, height: 30)
-                    .background(
-                        RoundedRectangle(cornerRadius: 9)
-                            .fill(.background.opacity(0.8))
-                            .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-                    )
-                if hovered {
-                    Button(action: onDelete) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .offset(x: 5, y: -5)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .popover(isPresented: $showsChooser, arrowEdge: .bottom) {
-            // The chooser renders the real glyphs, current one ring-selected.
-            VStack(spacing: 10) {
+        VStack(spacing: 10) {
             HStack(spacing: 6) {
                 ForEach(SeparatorStyle.allCases, id: \.self) { style in
                     Button {
@@ -1530,17 +1547,23 @@ private struct SeparatorChip: View {
                 }
                 .help("Separator opacity in the menu bar")
             }
-            }
-            .padding(10)
-            .frame(width: 240)
-            // The popover focuses its first taker and rings it, which read as
-            // a second selection competing with the tint ring that marks the
-            // style actually in use (Gab, 2026-09-17: "the Focused state on
-            // the most left item that always remains there"). One signal per
-            // state. Disabling the EFFECT, not focusability, so the controls
-            // stay keyboard-reachable; it propagates to the whole subtree.
-            .focusEffectDisabled()
+            // Quiet text, not a bordered button: removal is the one
+            // destructive act here and red already says so.
+            Button("Remove", role: .destructive, action: onRemove)
+                .buttonStyle(.plain)
+                .font(.callout)
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(10)
+        .frame(width: 240)
+        // The popover focuses its first taker and rings it, which read as
+        // a second selection competing with the tint ring that marks the
+        // style actually in use (Gab, 2026-09-17: "the Focused state on
+        // the most left item that always remains there"). One signal per
+        // state. Disabling the EFFECT, not focusability, so the controls
+        // stay keyboard-reachable; it propagates to the whole subtree.
+        .focusEffectDisabled()
     }
 
     /// Localized twin of `SeparatorStyle.displayName` (PelmetCore has no catalog).

@@ -81,6 +81,13 @@ final class MenuBarBandMonitor {
                 dragSinceAdoption = true
                 appState.pointerReturnedToBand()  // cancels any rehide countdown
                 PelmetLog.log("band: ⌘-drag started")
+                // Nothing walks icons into the hidden run any more, so the
+                // run must be on screen to be a drop target. A deliberate
+                // reveal: the countdown re-arms at the drop (below) and the
+                // band gate holds it while the pointer is still up here.
+                if !appState.isRevealed {
+                    appState.reveal([.hidden], reason: .barDrag)
+                }
             }
         case .leftMouseUp:
             guard cmdDragActive else { return }
@@ -155,6 +162,11 @@ final class MenuBarBandMonitor {
         if inBand, !pointerInBand {
             pointerInBand = true
             appState.pointerReturnedToBand()
+            // The right half of the band is where reveals and clock clicks
+            // come from: a dropped picture is retaken on the way in (#49,
+            // #51: a straight approach to the clock never crosses the
+            // hover zone, and every clock click captured live).
+            if let screen, location.x >= screen.frame.midX { appState.pointerEnteredHoverZone() }
         } else if !inBand, pointerInBand {
             pointerInBand = false
             hoverSuppressedUntilExit = false
@@ -172,6 +184,7 @@ final class MenuBarBandMonitor {
         if inZone, !pointerInHoverZone {
             pointerInHoverZone = true
             PelmetLog.log("band: hover zone entered at x=\(Int(location.x)) (mid \(Int(screen?.frame.midX ?? -1)))")
+            appState.pointerEnteredHoverZone()
             // A synthetic placement warps the pointer through the band — a
             // hover reveal mid-drag injects a reveal/conceal cycle under the
             // running drag (frames shift mid-measurement; seen live during
@@ -192,19 +205,19 @@ final class MenuBarBandMonitor {
         point.x >= screen.frame.midX && !isPastRevealTriggerZone(point, on: screen)
     }
 
-    /// True while rehide should hold off: pointer in the band, over a
-    /// menubar-anchored menu/popover, or interacting with Pelmet's own windows.
-    func shouldDeferRehide() -> Bool {
-        if pointerInBand { return true }
+    /// Why rehide holds off: pointer in the band, Pelmet's own editor or
+    /// onboarding in front, or a menubar-anchored menu/popover under the
+    /// pointer. Nil when nothing holds. One window list per verdict: the
+    /// old Bool + diagnostic-twin pair walked the list twice per deferred
+    /// reveal (perf audit 2026-09-15, fix 4b).
+    enum DeferReason: String { case band, active, elevated }
+
+    func rehideDeferReason() -> DeferReason? {
+        if pointerInBand { return .band }
         // Pelmet frontmost only holds the bar for the layout editor and the
         // onboarding demo — the General tab is not a reason to stay revealed.
-        if NSApp.isActive, appState?.editorHoldsBar == true || OnboardingController.shared.isPresented { return true }
-        return pointerIsOverElevatedWindow()
-    }
-
-    /// Diagnostic twin of `shouldDeferRehide` — which gate held.
-    func deferReason() -> String {
-        "band=\(pointerInBand) active=\(NSApp.isActive) elevated=\(pointerIsOverElevatedWindow())"
+        if NSApp.isActive, appState?.editorHoldsBar == true || OnboardingController.shared.isPresented { return .active }
+        return pointerIsOverElevatedWindow() ? .elevated : nil
     }
 
     /// Deliberately narrow: only visible, menu/popover-sized windows at
@@ -262,6 +275,7 @@ final class MenuBarBandMonitor {
         hoverTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { _ in
             Task { @MainActor [weak self] in
                 guard let self, let appState = self.appState, self.pointerInHoverZone else { return }
+                PerfTrace.markTrigger("hover")
                 // Re-verify against the LIVE pointer, not just the
                 // tracked flag — the flag lags by one event-delivery
                 // latency, which is exactly a fast swipe-through. A
@@ -319,6 +333,9 @@ final class MenuBarBandMonitor {
             // item's phantom position has no element under it) and toggle a
             // reveal under the running drag (seen live during rescue).
             guard !appState.syntheticDragInFlight else { return }
+            // Stamped before the gates so the perf line counts the
+            // hit-test IPCs a click pays on its way to `dispatch`.
+            PerfTrace.markTrigger("click")
             // The window-server hit-test is the arbiter for clicks too. On
             // its own `isEmptyMenuBarArea` reads any foreign AXWindow/AXGroup
             // — and a nil hit — as empty bar, so a right-click on an app that
@@ -427,13 +444,30 @@ final class MenuBarBandMonitor {
     }
 
     private var lastForeignOverlay: String?
+    /// The last window-info verdict, keyed by window number. The hit-test
+    /// IPC still runs on every move so a new window under the pointer is
+    /// seen at once; only the window-info fetch for the SAME window is
+    /// skipped for 250ms (perf audit 2026-09-15, fix 4a: the two IPCs were
+    /// half the in-band per-move cost). A live resize across the
+    /// band-height threshold is the one thing the TTL bounds.
+    private var overlayVerdict: (number: Int, verdict: String?, takenAt: TimeInterval)?
 
     /// Owner + size of another process's tall window under the point, or nil
     /// when the hit is the bar (or one of our own covers / ghosts).
     private func foreignOverlay(under point: NSPoint, of screen: NSScreen) -> String? {
         let number = NSWindow.windowNumber(at: point, belowWindowWithWindowNumber: 0)
-        guard number > 0,
-              let windows = CGWindowListCopyWindowInfo(.optionIncludingWindow, CGWindowID(number)) as? [[String: Any]],
+        guard number > 0 else { return nil }
+        let now = ProcessInfo.processInfo.systemUptime
+        if let cached = overlayVerdict, cached.number == number, now - cached.takenAt < 0.25 {
+            return cached.verdict
+        }
+        let verdict = foreignOverlayVerdict(windowNumber: number, of: screen)
+        overlayVerdict = (number, verdict, now)
+        return verdict
+    }
+
+    private func foreignOverlayVerdict(windowNumber number: Int, of screen: NSScreen) -> String? {
+        guard let windows = CGWindowListCopyWindowInfo(.optionIncludingWindow, CGWindowID(number)) as? [[String: Any]],
               let window = windows.first,
               let pid = window[kCGWindowOwnerPID as String] as? Int32,
               pid != ProcessInfo.processInfo.processIdentifier,
@@ -500,12 +534,14 @@ final class MenuBarBandMonitor {
     }
 
     /// The reveal triggers (hover dwell, empty-area click) work on the
-    /// strip left of the chevron only — the middle of the screen to
-    /// Pelmet's icon, where the hidden icons land. The icon itself and
-    /// everything right of it — the visible section, the system items,
-    /// Control Center, the clock — is a place the user goes for its own
-    /// sake (Gab, 2026-09-19); the icon's click toggles through its own
-    /// button. With the chevron switched off the bound is the visible
+    /// strip up to and including the chevron — the middle of the screen to
+    /// Pelmet's icon, where the hidden icons land. Everything right of the
+    /// icon — the visible section, the system items, Control Center, the
+    /// clock — is a place the user goes for its own sake (Gab, 2026-09-19);
+    /// the icon's click toggles through its own button. The icon was left
+    /// out of the hover zone at first; with the chevron on, a hover that
+    /// stops on the icon itself and reveals nothing read as broken (Gab,
+    /// 2026-09-20). With the chevron switched off the bound is the visible
     /// section's leftmost live icon, and with nothing in Visible either it
     /// falls back to the pinned pair.
     private func isPastRevealTriggerZone(_ point: NSPoint, on screen: NSScreen) -> Bool {
@@ -514,7 +550,7 @@ final class MenuBarBandMonitor {
     }
 
     /// Main-display x past which the reveal triggers stop: the chevron's
-    /// left edge, else the leftmost live icon assigned to Visible.
+    /// right edge, else the leftmost live icon assigned to Visible.
     private func revealTriggerMaxX() -> CGFloat? {
         guard let appState, let items = appState.snapshot?.items,
               let primaryMaxX = NSScreen.screens.first?.frame.maxX else { return nil }
@@ -523,7 +559,7 @@ final class MenuBarBandMonitor {
             return (item.id, frame)
         }
         if let chevron = live.first(where: { MenuBarPolicy.isChevronID($0.id, pelmetBundleID: PelmetBundle.mainID) }) {
-            return chevron.frame.minX
+            return chevron.frame.maxX
         }
         let model = appState.settings.sectionModel
         return live.filter { model.section(of: $0.id) == .visible }.map(\.frame.minX).min()

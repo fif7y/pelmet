@@ -124,9 +124,10 @@ public struct SectionModel: Codable, Equatable, Sendable {
         for item in items {
             let key = item.sectionKey
             guard let bundle = item.bundleID, newBundles.contains(bundle),
-                  assignments[key] == nil, !routed.contains(key)
+                  assignments[key] == nil, !routed.contains(key),
+                  let home = RosterRule.landing(for: item, newItemsDestination: newItemsDestination)
             else { continue }
-            assignments[key] = newItemsDestination
+            assignments[key] = home
             routed.append(key)
         }
         // Front of the order: macOS spawns new icons at the far LEFT of the
@@ -135,10 +136,12 @@ public struct SectionModel: Codable, Equatable, Sendable {
         return true
     }
 
+    /// The membership half, the seam the new core grows from
+    /// (docs/CORE-SETS.md): `assignments` are the roster's members.
+    public var roster: Roster { Roster(members: assignments) }
+
     public func section(of item: ItemID) -> Section {
-        // Canonical key first; full-ID fallback keeps pre-migration blobs
-        // (and probe tooling) working until canonicalize() rewrites them.
-        assignments[item.sectionKey] ?? assignments[item] ?? .visible
+        roster.section(of: item)
     }
 
     /// One-time migration to canonical keys: collapses every title-variant
@@ -211,39 +214,17 @@ public struct SectionModel: Codable, Equatable, Sendable {
         return changed
     }
 
-    /// Bundles pinned on screen for the given reveal state: any observed item
-    /// in `.visible` or a revealed section pins its whole bundle (hiding is
-    /// per-bundle). Items absent from `assignments` are visible by default.
     public func mustShowBundles(
         observedItems: [ItemID],
         revealing revealed: Set<Section>
     ) -> Set<String> {
-        var mustShow = Set<String>()
-        for item in observedItems {
-            guard let bundle = item.bundleID else { continue }
-            let section = self.section(of: item)
-            if section == .visible || revealed.contains(section) {
-                mustShow.insert(bundle)
-            }
-        }
-        return mustShow
+        roster.mustShowBundles(observedItems: observedItems, revealing: revealed)
     }
 
-    /// Bundle-granularity conflict check against the currently observed items:
-    /// a bundle can only be concealed if none of its items must remain visible.
     public func concealableBundleIDs(
         observedItems: [ItemID],
         revealing revealed: Set<Section>
     ) -> Set<String> {
-        let mustShow = mustShowBundles(observedItems: observedItems, revealing: revealed)
-        var wantHide = Set<String>()
-        for item in observedItems {
-            guard let bundle = item.bundleID else { continue }
-            let section = self.section(of: item)
-            if section != .visible, !revealed.contains(section) {
-                wantHide.insert(bundle)
-            }
-        }
-        return wantHide.subtracting(mustShow)
+        roster.concealableBundleIDs(observedItems: observedItems, revealing: revealed)
     }
 }

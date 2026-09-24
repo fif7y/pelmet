@@ -40,7 +40,13 @@ struct ShortcutRecorder: View {
         Button {
             recording ? stopRecording() : startRecording()
         } label: {
-            Group {
+            // The chip keeps the width of its widest label at rest. A
+            // click grew "⌥⌘N" into "Type shortcut…", the row's ViewThatFits
+            // flipped to its vertical candidate, and the recorder there was
+            // a fresh view with `recording` false again — the click did
+            // nothing (#54, Korean, the Notification Center row).
+            ZStack {
+                Text("Type shortcut…").hidden()
                 if recording {
                     Text("Type shortcut…")
                 } else if let shortcut {
@@ -49,6 +55,7 @@ struct ShortcutRecorder: View {
                     Text("Record shortcut")
                 }
             }
+            .fixedSize()
             // System font, not monospaced: mono shrinks ⇧⌥⌘ to specks. Apple's
             // menus draw modifier glyphs this size with a touch of tracking.
             .font(.system(size: 13, weight: .medium))
@@ -124,7 +131,7 @@ struct ShortcutRecorder: View {
     }
 
     /// AppKit modifier flags → the Carbon mask RegisterEventHotKey wants.
-    private static func carbonModifiers(from flags: NSEvent.ModifierFlags) -> UInt32 {
+    static func carbonModifiers(from flags: NSEvent.ModifierFlags) -> UInt32 {
         var mods: UInt32 = 0
         if flags.contains(.control) { mods |= UInt32(controlKey) }
         if flags.contains(.option) { mods |= UInt32(optionKey) }
@@ -142,7 +149,18 @@ struct ShortcutRecorder: View {
         return out
     }
 
-    private static func keyName(keyCode: Int, chars: String?) -> String {
+    /// The key's name for display. `chars` is `charactersIgnoringModifiers`,
+    /// which follows the ACTIVE input source: recording ⌥A with Korean input
+    /// on named the shortcut `⌥ㅁ`, and it stayed that way after switching
+    /// back to Roman. The registration is by key code and fired on the A key
+    /// the whole time — only the label was wrong. macOS names shortcuts from
+    /// the Roman layout, so ask that layout first and keep `chars` as the
+    /// fallback for a key it cannot translate.
+    static func keyName(
+        keyCode: Int,
+        chars: String?,
+        romanKey: @MainActor (Int) -> String? = romanKeyName
+    ) -> String {
         let special: [Int: String] = [
             kVK_Space: "Space", kVK_Return: "↩", kVK_Tab: "⇥",
             kVK_ForwardDelete: "⌦", kVK_LeftArrow: "←", kVK_RightArrow: "→",
@@ -153,6 +171,72 @@ struct ShortcutRecorder: View {
             kVK_F9: "F9", kVK_F10: "F10", kVK_F11: "F11", kVK_F12: "F12",
         ]
         if let name = special[keyCode] { return name }
+        if let roman = romanKey(keyCode), !roman.isEmpty { return roman.uppercased() }
         return chars?.uppercased() ?? "?"
+    }
+
+    /// What `keyCode` types on the current ASCII-capable layout, unmodified.
+    /// Nil when there is no such layout or the key does not produce a
+    /// character on it (a dead key, a keypad code some layouts omit).
+    static func romanKeyName(keyCode: Int) -> String? {
+        guard let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let raw = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
+        else { return nil }
+        let data = Unmanaged<CFData>.fromOpaque(raw).takeUnretainedValue() as Data
+        return data.withUnsafeBytes { buffer -> String? in
+            guard let layout = buffer.baseAddress?.assumingMemoryBound(to: UCKeyboardLayout.self) else { return nil }
+            var deadKeyState: UInt32 = 0
+            var length = 0
+            var characters = [UniChar](repeating: 0, count: 4)
+            let status = UCKeyTranslate(
+                layout,
+                UInt16(keyCode),
+                UInt16(kUCKeyActionDisplay),
+                0,
+                UInt32(LMGetKbdType()),
+                OptionBits(kUCKeyTranslateNoDeadKeysMask),
+                &deadKeyState,
+                characters.count,
+                &length,
+                &characters
+            )
+            guard status == noErr, length > 0 else { return nil }
+            return String(utf16CodeUnits: characters, count: length)
+        }
+    }
+}
+
+/// macOS's own shortcuts (System Settings › Keyboard › Keyboard Shortcuts).
+/// `RegisterEventHotKey` accepts a combination the system already holds
+/// and the system then consumes the key first, so the handler never runs
+/// and the registration's return says nothing (#55: ⌥A, Show Notification
+/// Center, recorded fine and never fired). The list lives in
+/// `com.apple.symbolichotkeys`, each entry `enabled` + `value.parameters`
+/// = [character, keyCode, AppKit modifier mask].
+enum SystemShortcuts {
+    static func owns(_ spec: HotkeySpec) -> Bool {
+        guard let table = UserDefaults(suiteName: "com.apple.symbolichotkeys")?
+            .dictionary(forKey: "AppleSymbolicHotKeys") else { return false }
+        let wanted = appKitMask(fromCarbon: spec.modifiers)
+        return table.values.contains { entry in
+            guard let entry = entry as? [String: Any],
+                  (entry["enabled"] as? Bool ?? (entry["enabled"] as? Int == 1)),
+                  let value = entry["value"] as? [String: Any],
+                  let parameters = value["parameters"] as? [Any], parameters.count >= 3,
+                  let keyCode = (parameters[1] as? NSNumber)?.uint32Value,
+                  let mask = (parameters[2] as? NSNumber)?.uint32Value else { return false }
+            return keyCode == spec.keyCode && mask & Self.allModifiers == wanted
+        }
+    }
+
+    private static let allModifiers = UInt32(NSEvent.ModifierFlags([.shift, .control, .option, .command]).rawValue)
+
+    private static func appKitMask(fromCarbon mods: UInt32) -> UInt32 {
+        var flags: NSEvent.ModifierFlags = []
+        if mods & UInt32(controlKey) != 0 { flags.insert(.control) }
+        if mods & UInt32(optionKey) != 0 { flags.insert(.option) }
+        if mods & UInt32(shiftKey) != 0 { flags.insert(.shift) }
+        if mods & UInt32(cmdKey) != 0 { flags.insert(.command) }
+        return UInt32(flags.rawValue)
     }
 }

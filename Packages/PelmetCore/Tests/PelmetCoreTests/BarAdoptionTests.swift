@@ -58,6 +58,42 @@ struct BarAdoptionTests {
         #expect(result?.zones[siri.rawValue] == nil)
     }
 
+    @Test func chevronDraggedLeftAdoptsTheCrossedItemsInOnePass() {
+        // 2026-09-20: the chevron ⌘-dragged two slots left. Both icons now
+        // right of it read Visible and were parked in "confirming on the
+        // next pass"; the bar concealed them before any pass could agree,
+        // and the next revealed pass voided the reading as a boundary move.
+        // Nothing but the user moves the chevron: crossed items adopt now.
+        let two = ItemID(rawValue: "status:com.example.Two::Item-0")
+        var model = SectionModel()
+        model.assignments[velja.sectionKey] = .hidden
+        model.assignments[two.sectionKey] = .hidden
+        model.assignments[anchor.sectionKey] = .hidden
+        model.order[.hidden] = [anchor.sectionKey, velja.sectionKey, two.sectionKey]
+        let result = BarAdoption.reconcile(
+            items: [
+                (id: anchor, minX: 1400),
+                (id: chevron, minX: 1449),
+                (id: velja, minX: 1480),
+                (id: two, minX: 1510),
+                (id: figma, minX: 1540),
+            ],
+            model: model,
+            previousZones: [anchor.rawValue: .hidden, velja.rawValue: .hidden, two.rawValue: .hidden, figma.rawValue: .visible],
+            previousChevronX: 1529,
+            userDragged: true,
+            pelmetBundleID: pelmet,
+            draggedID: chevron
+        )
+        #expect(result?.changed == true)
+        #expect(result?.model.section(of: velja) == .visible)
+        #expect(result?.model.section(of: two) == .visible)
+        #expect(result?.model.section(of: anchor) == .hidden)
+        #expect(result?.model.section(of: figma) == .visible)
+        #expect(result?.pendingZones.isEmpty == true)
+        #expect(result?.model.order[.hidden] == [anchor.sectionKey])
+    }
+
     @Test func movedChevronReBaselinesInsteadOfAdopting() {
         // Figma, 2026-09-08: registered right of the chevron and adopted
         // Visible; on conceal Pelmet's extras right of the chevron folded and

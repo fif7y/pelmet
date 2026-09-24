@@ -51,12 +51,11 @@ public enum SystemItem: Int, CaseIterable, Sendable {
     case volume = 5
     case wifi = 6
     case screenMirroring = 7
-    /// Control Center ("bento box" is its internal name). Deliberately
-    /// unmapped in systemItem(for:) — the agent keeps Control Center visible
-    /// under any assertion regardless of allowlist (verified fc3f64c: the
-    /// identifier space truly stops at 8; CC-pinned modules collateral-hide,
-    /// CC itself never does). Kept to document the raw MBSystemItemIdentifier
-    /// range, not to be produced.
+    /// Control Center ("bento box" is its internal name). Hides like the
+    /// clock once left out of the allowlist (probed 2026-09-22: the icon and
+    /// its location arrow leave the bar with 0…7 allowed, stay with 0…8).
+    /// The "never hides" reading of fc3f64c was never tested: every
+    /// assertion Pelmet held until then allowed 8.
     case primaryBentoBox = 8
 }
 
@@ -77,7 +76,18 @@ public enum MenuBarPolicy {
         if raw.hasSuffix(".display") || raw.hasSuffix(".displays") { return .displays }
         if raw.hasSuffix(".textinput") || raw.hasSuffix(".keyboard") { return .keyboard }
         if raw.hasSuffix(".screen-mirroring") { return .screenMirroring }
+        if raw.hasSuffix(".controlcenter") { return .primaryBentoBox }
         return nil
+    }
+
+    /// System items macOS draws in a fixed spot at the bar's end: the clock
+    /// always ends it, Control Center always sits left of the clock. Both
+    /// hide through the allowlist like Sound, but no drag moves them.
+    public static func isPinnedSystemItem(_ id: ItemID) -> Bool {
+        switch systemItem(for: id) {
+        case .clock, .primaryBentoBox: true
+        default: false
+        }
     }
 
     /// Bundles whose items legitimately mix live and hidden — never subject
@@ -108,7 +118,8 @@ public enum MenuBarPolicy {
     /// zone-adopted, never routed as newly installed, only the menuextra →
     /// SystemItem allowlist can touch their items (or nothing can). The
     /// agent hosts the menuextras, the input menu agent is
-    /// `SystemItem.keyboard`, Control Center never hides. Until 2026-09-19
+    /// `SystemItem.keyboard`, and Control Center's icon is the agent's
+    /// (`SystemItem.primaryBentoBox`), not its process's. Until 2026-09-19
     /// this was every `com.apple.` bundle, and each Apple app with an item
     /// of its own (Kerberos #24, Passwords #34, Weather #36) needed a patch
     /// by name to become hideable and could never be moved.
@@ -224,6 +235,20 @@ public enum MenuBarGeometry {
     /// other displays carry their own coordinate origins and fall outside.
     public static func isInBand(_ frame: CGRect) -> Bool {
         frame.minY > bandTopInset && frame.minY < bandBottomLimit
+    }
+
+    /// True when a frame sits in the menubar band of `display` (its bounds
+    /// in the same CG top-left global space, `CGDisplayBounds`). The agent
+    /// draws an adopted item once per display, and the walk keeps the main
+    /// copy only when there is one: at boot every item is still in the bar,
+    /// a notched built-in overflows, and the only copy left is the one on a
+    /// side display (BenQ at y=-113, 2026-09-21). A registration the agent
+    /// has NOT adopted is drawn on no display at all (x=4800 y=-164,
+    /// 2026-09-02).
+    public static func isInBand(_ frame: CGRect, ofDisplay display: CGRect) -> Bool {
+        let y = frame.minY - display.minY
+        return y > bandTopInset && y < bandBottomLimit
+            && frame.midX >= display.minX && frame.midX < display.maxX
     }
 
     /// In the band AND on the primary display. A display parked beside the

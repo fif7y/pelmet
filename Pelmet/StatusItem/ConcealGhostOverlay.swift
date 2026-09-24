@@ -64,6 +64,8 @@ final class ConcealGhostOverlay {
     /// keep the single-cover call shape.
     struct GhostSet {
         fileprivate let overlays: [ConcealGhostOverlay]
+        /// The covers' ids as they read in the `ghost:` lines, "#3 #4".
+        var ids: String { overlays.map { "#\($0.id)" }.joined(separator: " ") }
         func dismiss() { for overlay in overlays { overlay.dismiss() } }
         func fadeOut(duration: CFTimeInterval = ConcealGhostOverlay.dismissDuration, slide: Bool = false) {
             for overlay in overlays { overlay.fadeOut(duration: duration, slide: slide) }
@@ -73,6 +75,17 @@ final class ConcealGhostOverlay {
         /// (the picture is simply there, or simply lifted by the caller).
         func animate(_ move: AnimationRecipe.Move, entering: Bool) {
             for overlay in overlays { overlay.animate(move, entering: entering) }
+        }
+        /// Reveal the pictures from their right end leftwards, the way
+        /// Notification Center's panel slides in under the bar (#51).
+        func wipeInFromRight(insets: [CGFloat], frame: CFTimeInterval, delay: CFTimeInterval, edge: CGFloat) {
+            for overlay in overlays { overlay.wipeInFromRight(insets: insets, frame: frame, delay: delay, edge: edge) }
+        }
+        /// Darken the pictures the way Notification Center's open panel
+        /// darkens the bar through the glass (measured 2026-09-22: ×0.965
+        /// at the top row to ×0.89 at the bottom).
+        func addPanelShade() {
+            for overlay in overlays { overlay.addPanelShade() }
         }
     }
 
@@ -157,12 +170,15 @@ final class ConcealGhostOverlay {
     /// same backdrop; a moved, resized, raised or closed window changes
     /// it, and a picture of the bar taken under the old one is stale (#33:
     /// a Finder window's top edge slid in with the bar).
-    static func backdropSignature(of rect: CGRect?, in list: [[String: Any]]? = nil) -> [Int] {
+    /// `primaryOnly`: the primary display's band alone (the clock blink's
+    /// under-panel picture is only ever shown there, and window traffic
+    /// near the other bars invalidated it on every other click).
+    static func backdropSignature(of rect: CGRect?, in list: [[String: Any]]? = nil, primaryOnly: Bool = false) -> [Int] {
         guard let rect, rect.width > 8, let list = list ?? onScreenWindows(),
               let primary = NSScreen.screens.first else { return [] }
         let me = ProcessInfo.processInfo.processIdentifier
         let barLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
-        let zones: [CGRect] = NSScreen.screens.compactMap { screen in
+        let zones: [CGRect] = (primaryOnly ? [primary] : NSScreen.screens).compactMap { screen in
             guard let displayID = screen.directDisplayID else { return nil }
             let bounds = CGDisplayBounds(displayID)
             let shift = screen.frame.maxX - primary.frame.maxX
@@ -179,11 +195,78 @@ final class ConcealGhostOverlay {
                   let b = w[kCGWindowBounds as String] as? [String: CGFloat],
                   let x = b["X"], let y = b["Y"], let width = b["Width"], let height = b["Height"]
             else { continue }
+            // Notification Center is not a backdrop: its panel's state is
+            // tracked on its own (`revealCoverUnderPanel`, the clock relay),
+            // its windows linger in this list ~0.6s past the panel's exit,
+            // its desktop widgets hide while the panel is open, and the
+            // Dock raises a display-sized backstop under it. In the
+            // signature they dropped the idle picture on every open and
+            // again a second after every close (#51, 2026-09-22).
+            let owner = w[kCGWindowOwnerName as String] as? String ?? ""
+            if owner == "Notification Center" { continue }
+            if owner == "Dock", width >= 1000, height >= 700 { continue }
             let frame = CGRect(x: x, y: y, width: width, height: height)
             guard zones.contains(where: { $0.intersects(frame) }) else { continue }
             runs.append((id, [Int(id), Int(x), Int(y), Int(width), Int(height)]))
         }
         return runs.sorted { $0.0 < $1.0 }.flatMap(\.1)
+    }
+    /// What the bar's glass shows besides windows: the wallpaper behind each
+    /// screen and the appearance. Two ints appended to the window
+    /// signature, so a new wallpaper or a light/dark flip drops the
+    /// pictures the way a moved window does (Gab, 2026-09-22: the blink
+    /// cover showed the previous wallpaper for a quarter of an hour once
+    /// it stopped capturing live, PR #50).
+    static let surfaceSignatureCount = 2
+    /// The wallpaper store's index is rewritten on every change, including
+    /// the ones `desktopImageURL` misses: picking another variant of the
+    /// same dynamic wallpaper keeps the path (Gab, 2026-09-22 14:21: the
+    /// store changed, the URL did not, and the parked picture of the old
+    /// wallpaper was restored a second later).
+    private static let wallpaperStoreIndex = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/com.apple.wallpaper/Store/Index.plist").path
+    static func surfaceSignature() -> [Int] {
+        var hasher = Hasher()
+        for screen in NSScreen.screens {
+            hasher.combine(NSWorkspace.shared.desktopImageURL(for: screen)?.path ?? "")
+        }
+        let modified = (try? FileManager.default.attributesOfItem(atPath: wallpaperStoreIndex))?[.modificationDate] as? Date
+        hasher.combine(modified?.timeIntervalSinceReferenceDate ?? 0)
+        return [NSApp.effectiveAppearance.name.rawValue.hashValue, hasher.finalize()]
+    }
+
+    /// Mean luminance of the picture's columns over `primaryX` (debug: is a
+    /// picture of the bar under Notification Center's panel darker?).
+    static func meanLuma(_ snap: BarSnapshot, primaryX: ClosedRange<CGFloat>) -> Double {
+        let scale = CGFloat(snap.image.width) / snap.windowFrame.width
+        let x0 = max(0, Int((primaryX.lowerBound - snap.windowFrame.minX) * scale))
+        let x1 = min(snap.image.width, Int((primaryX.upperBound - snap.windowFrame.minX) * scale))
+        guard x1 > x0, let data = snap.image.dataProvider?.data, let ptr = CFDataGetBytePtr(data) else { return -1 }
+        let bpr = snap.image.bytesPerRow, bpp = snap.image.bitsPerPixel / 8
+        var sum = 0.0, n = 0.0
+        for y in stride(from: 0, to: snap.image.height, by: 4) {
+            for x in stride(from: x0, to: x1, by: 4) {
+                let o = y * bpr + x * bpp
+                sum += (Double(ptr[o]) + Double(ptr[o + 1]) + Double(ptr[o + 2])) / 3; n += 1
+            }
+        }
+        return n > 0 ? sum / n : -1
+    }
+
+    /// Who moved between two signatures, by owner, for the log (#49: the
+    /// changes were almost all one window in and out of the zone, and the
+    /// count alone never said which).
+    static func backdropMovers(from old: [Int], to new: [Int], in list: [[String: Any]]?) -> String {
+        func runs(_ sig: [Int]) -> Set<[Int]> { Set(stride(from: 0, to: sig.count, by: 5).map { Array(sig[$0..<min($0 + 5, sig.count)]) }) }
+        if old.suffix(surfaceSignatureCount) != new.suffix(surfaceSignatureCount) { return "wallpaper or appearance" }
+        let changed = runs(old.dropLast(surfaceSignatureCount)).symmetricDifference(runs(new.dropLast(surfaceSignatureCount))).compactMap(\.first)
+        var names: [String] = []
+        for id in Set(changed).sorted() {
+            let owner = list?.first { ($0[kCGWindowNumber as String] as? NSNumber)?.intValue == id }?[kCGWindowOwnerName as String] as? String
+            let name = owner ?? "closed"
+            if !names.contains(name) { names.append(name) }
+        }
+        return names.prefix(4).joined(separator: ", ") + (names.count > 4 ? ", …" : "")
     }
     /// How far below the band a window still tints it: the glass blur
     /// and a window's shadow both reach a few dozen points.
@@ -193,6 +276,10 @@ final class ConcealGhostOverlay {
     private let imageView: NSImageView
     private var finished = false
     private var stoodDown = false
+    /// One per cover, in the `ghost:` log lines, so a cover that outlived
+    /// its blink can be matched to the line that raised it (#52).
+    private static var nextID = 0
+    let id: Int
 
     /// A captured strip image ready to float — pre-captured at conceal settle
     /// so the reveal path pays zero capture latency.
@@ -439,6 +526,71 @@ final class ConcealGhostOverlay {
         }
     }
 
+    /// The same pictures narrowed to `span` (absolute x in points, primary
+    /// coordinates — every other display holds the right-anchored
+    /// translation, as in `snapshotSet`), padded the way a capture of that
+    /// span would have been so the background stays continuous.
+    ///
+    /// All or nothing: a picture that does not reach both ends of the span
+    /// is dropped and the caller captures live. A cover with a gap at one
+    /// end shows the round trip it exists to hide.
+    static func cropped(_ snaps: [BarSnapshot], toPrimaryX span: ClosedRange<CGFloat>) -> [BarSnapshot] {
+        guard !snaps.isEmpty, span.upperBound - span.lowerBound > 8,
+              let primaryMaxX = NSScreen.screens.first?.frame.maxX
+        else { return [] }
+        var out: [BarSnapshot] = []
+        for snap in snaps {
+            let frame = snap.windowFrame
+            guard let screen = NSScreen.screens.first(where: {
+                $0.frame.intersects(frame)
+            }) else { return [] }
+            let shift = screen.frame.maxX - primaryMaxX
+            guard let columns = cropColumns(
+                span: (span.lowerBound + shift)...(span.upperBound + shift),
+                frame: frame, imageWidth: snap.image.width
+            ) else { return [] }
+            let scale = CGFloat(snap.image.width) / frame.width
+            guard let image = snap.image.cropping(to: CGRect(
+                x: columns.lowerBound, y: 0,
+                width: columns.count, height: snap.image.height
+            )) else { return [] }
+            out.append(BarSnapshot(
+                image: image,
+                windowFrame: NSRect(
+                    x: frame.minX + CGFloat(columns.lowerBound) / scale, y: frame.minY,
+                    width: CGFloat(columns.count) / scale, height: frame.height
+                ),
+                takenAt: snap.takenAt
+            ))
+        }
+        return out
+    }
+
+    /// The pixel columns of `span` inside a picture that floats at `frame`,
+    /// padded the way `snapshotSet` pads a capture of that span. Nil when
+    /// the picture does not reach both ends, or when what is left is too
+    /// narrow to float. Pure geometry, so the crop is testable without a
+    /// display (see `BarSnapshotCropTests`).
+    static func cropColumns(span: ClosedRange<CGFloat>, frame: NSRect, imageWidth: Int) -> Range<Int>? {
+        guard frame.width > 0, imageWidth > 0 else { return nil }
+        // The leading side is clamped, not required: `snapshotSet` stops a
+        // capture at the notch and the display edge, and a cover rect that
+        // budgets for icons sliding in routinely starts off-screen (a blink
+        // cover measured -430 on a bar starting at 0). A live capture of
+        // that span would have been cut at the same place, so a picture
+        // that starts there is not short — it is the same picture.
+        let wantMinX = max(span.lowerBound - capturePadding, frame.minX)
+        // The trailing side is required: it lands just short of the clock,
+        // and a picture cut before it would leave the clock uncovered.
+        let wantMaxX = span.upperBound + capturePadding
+        guard wantMaxX <= frame.maxX + 0.5 else { return nil }
+        let scale = CGFloat(imageWidth) / frame.width
+        let x0 = max(0, Int(((wantMinX - frame.minX) * scale).rounded()))
+        let x1 = min(imageWidth, Int(((wantMaxX - frame.minX) * scale).rounded()))
+        guard x1 - x0 > 8 else { return nil }
+        return x0..<x1
+    }
+
     /// Snapshots on other displays are the primary strip translated
     /// right-anchored (snapshotSet); `keep` is given in primary coordinates.
     /// The primary strip is the one on the primary display — not the one
@@ -562,6 +714,8 @@ final class ConcealGhostOverlay {
     private init(snapshot: BarSnapshot, safety: TimeInterval, startHidden: Bool = false, beneath: CGWindowID? = nil) {
         let frame = snapshot.windowFrame
         let shot = snapshot.image
+        Self.nextID += 1
+        id = Self.nextID
         window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -574,7 +728,15 @@ final class ConcealGhostOverlay {
         imageView.frame = NSRect(origin: .zero, size: frame.size)
         imageView.wantsLayer = true
         if startHidden { imageView.layer?.opacity = 0 }
-        window.contentView = imageView
+        // A layer-hosting root: a layer added into the image view's own
+        // (AppKit-managed) layer dropped out for single frames every
+        // ~180ms (Gab's clicks at 60fps, 2026-09-22 15:16), a shade that
+        // flickered. Sublayers of a root we own are left alone.
+        let root = NSView(frame: NSRect(origin: .zero, size: frame.size))
+        root.layer = CALayer()
+        root.wantsLayer = true
+        root.addSubview(imageView)
+        window.contentView = root
         if let beneath {
             window.order(.below, relativeTo: Int(beneath))
         } else {
@@ -582,10 +744,17 @@ final class ConcealGhostOverlay {
         }
         window.displayIfNeeded()
         Self.activeStripCount += 1
-        PelmetLog.log("ghost: strip up \(Int(frame.width))×\(Int(frame.height)) @x=\(Int(frame.minX))")
+        PelmetLog.log("ghost: strip #\(id) up \(Int(frame.width))×\(Int(frame.height)) @x=\(Int(frame.minX)) safety \(Int(safety * 1000))ms")
         // Safety: never leave a stale cover if the caller's task dies.
-        DispatchQueue.main.asyncAfter(deadline: .now() + safety) { [weak self] in
-            self?.fadeOut()
+        // Strong self on purpose: a cover nobody held any more (#52, a
+        // shaded picture raised after its blink had been dismissed) was
+        // freed with its window still ordered in, and a weak timer had
+        // nothing left to fade. The window is what stays on screen, so
+        // the timer must be what keeps the cover alive until it lifts.
+        DispatchQueue.main.asyncAfter(deadline: .now() + safety) { [self] in
+            guard !finished else { return }
+            PelmetLog.log("ghost: strip #\(id) safety fade")
+            fadeOut()
         }
     }
 
@@ -594,6 +763,49 @@ final class ConcealGhostOverlay {
         guard !stoodDown else { return }
         stoodDown = true
         Self.activeStripCount -= 1
+    }
+
+    func addPanelShade() {
+        guard !finished, let root = window.contentView?.layer else { return }
+        let shade = CAGradientLayer()
+        shade.frame = root.bounds
+        // Layer space is bottom-up: the darker end is the bar's bottom row.
+        shade.colors = [CGColor(gray: 0, alpha: 0.11), CGColor(gray: 0, alpha: 0.035)]
+        shade.startPoint = CGPoint(x: 0.5, y: 0); shade.endPoint = CGPoint(x: 0.5, y: 1)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        root.addSublayer(shade)
+        CATransaction.commit()
+    }
+
+    /// A wipe from the right that replays Notification Center's own
+    /// slide: the root layer takes a mask whose soft left edge (`edge`
+    /// points, the panel's blurred leading edge under the glass) sits at
+    /// `insets[i]` points in from the display's right edge at frame `i`,
+    /// starting `delay` seconds from now. The picture carries the exact
+    /// look of the bar under the panel; the mask carries its motion.
+    func wipeInFromRight(insets: [CGFloat], frame: CFTimeInterval, delay: CFTimeInterval, edge: CGFloat) {
+        guard !finished, insets.count >= 2, let root = window.contentView?.layer,
+              let screen = NSScreen.screens.first(where: { $0.frame.intersects(window.frame) }) else { return }
+        let width = window.frame.width
+        let mask = CAGradientLayer()
+        mask.frame = CGRect(x: 0, y: 0, width: width * 2 + edge, height: window.frame.height)
+        mask.colors = [CGColor(gray: 0, alpha: 0), CGColor(gray: 0, alpha: 1), CGColor(gray: 0, alpha: 1)]
+        mask.locations = [0, NSNumber(value: Double(min(1, edge / max(mask.frame.width, 1)))), 1]
+        mask.startPoint = CGPoint(x: 0, y: 0.5); mask.endPoint = CGPoint(x: 1, y: 0.5)
+        // Layer x of the soft edge's left end for a panel edge `inset` in.
+        func x(_ inset: CGFloat) -> CGFloat { screen.frame.maxX - inset - window.frame.minX - edge / 2 }
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        mask.transform = CATransform3DMakeTranslation(x(insets[0]), 0, 0)
+        root.mask = mask
+        let anim = CAKeyframeAnimation(keyPath: "transform.translation.x")
+        anim.values = insets.map { x($0) }
+        anim.calculationMode = .linear
+        anim.duration = frame * Double(insets.count - 1)
+        anim.beginTime = mask.convertTime(CACurrentMediaTime(), from: nil) + delay
+        anim.fillMode = .backwards
+        mask.add(anim, forKey: "pelmetWipe")
+        mask.transform = CATransform3DMakeTranslation(x(insets[insets.count - 1]), 0, 0)
+        CATransaction.commit()
     }
 
     /// Drop the cover with no animation — the Instant reveal style: whatever

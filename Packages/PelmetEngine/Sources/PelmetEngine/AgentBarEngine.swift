@@ -1,4 +1,4 @@
-// EngineGoldenGate.swift
+// AgentBarEngine.swift
 // The macOS 27 engine: converges the real menubar toward the desired
 // SectionModel using assessment-mode assertions (hide), positions-plist writes
 // (order), and AX (observe/click). One actor — every mutation is serialized,
@@ -8,7 +8,39 @@ import AppKit
 import Foundation
 import PelmetCore
 
-public actor EngineGoldenGate: MenuBarEngine {
+/// Phase timings of one converge, for the app's per-transition perf line.
+/// Diagnostics only — nothing reads it to decide anything.
+public struct ConvergeTiming: Sendable {
+    public enum Outcome: String, Sendable {
+        case swapped, noop, dropped, emptyWalk, unavailable, activationNil, superseded
+    }
+    /// The pre-swap AX walk (`refreshSnapshot`), ms — or the mirror reuse.
+    public var walkMS = 0
+    public var walkReused = false
+    /// `ConvergePlan.compute` plus the running-apps fetch, ms.
+    public var planMS = 0
+    /// From the activate call to the completion (or the deadline), ms.
+    public var activateMS = 0
+    public var activated = false
+    /// `previous.invalidate()` (the old assertion's XPC), ms.
+    public var invalidateMS = 0
+    public var outcome: Outcome = .superseded
+
+    private var walkLabel: String { walkReused ? "mirror \(walkMS)ms" : "walk \(walkMS)ms" }
+
+    public var summary: String {
+        switch outcome {
+        case .swapped:
+            return "\(walkLabel) plan \(planMS)ms activate \(activateMS)ms\(activated ? "" : " (unconfirmed)") invalidate \(invalidateMS)ms"
+        case .noop, .dropped:
+            return "\(walkLabel) plan \(planMS)ms \(outcome.rawValue)"
+        default:
+            return "\(walkLabel) \(outcome.rawValue)"
+        }
+    }
+}
+
+public actor AgentBarEngine: MenuBarEngine {
     public nonisolated let capabilities = EngineCapabilities(
         canHide: AssessmentMode.isAvailable,
         hideGranularity: .bundleID,
@@ -20,7 +52,6 @@ public actor EngineGoldenGate: MenuBarEngine {
     private nonisolated let eventContinuation: AsyncStream<EngineEvent>.Continuation
 
     private let enumerator = ItemEnumerator()
-    private var prefsWatcher: AgentPrefsWatcher?
 
     /// Called on the main actor at the exact moment an assertion swap is
     /// issued (and on assertion drop), passing the revealed sections. App-side
@@ -76,6 +107,15 @@ public actor EngineGoldenGate: MenuBarEngine {
     /// allow-all assertion that un-hides everything for a beat.
     private var emptyAXRetriesRemaining = EngineTiming.emptyAXRetries
 
+    /// Timings of the most recent converge that ran to a decision (PerfTrace
+    /// reads it right after `reveal`/`conceal` return).
+    public private(set) var lastConvergeTiming: ConvergeTiming?
+    private var timing = ConvergeTiming()
+
+    private static func ms(since start: Date) -> Int {
+        Int((-start.timeIntervalSinceNow * 1000).rounded())
+    }
+
     public init() {
         var continuation: AsyncStream<EngineEvent>.Continuation!
         self.eventStream = AsyncStream { continuation = $0 }
@@ -87,11 +127,6 @@ public actor EngineGoldenGate: MenuBarEngine {
     public func start() async {
         guard !started else { return }
         started = true
-        let watcher = AgentPrefsWatcher { [weak self] in
-            Task { await self?.handleExternalPrefsChange() }
-        }
-        watcher.start()
-        prefsWatcher = watcher
         _ = await refreshSnapshot()
     }
 
@@ -100,8 +135,6 @@ public actor EngineGoldenGate: MenuBarEngine {
     /// stays true so a later `start()` is a no-op instead of running with a
     /// dead stream.
     public func stop() async {
-        prefsWatcher?.stop()
-        prefsWatcher = nil
         invalidateAssertion()
         // Ends any `for await` over `events` instead of hanging it forever.
         eventContinuation.finish()
@@ -137,8 +170,30 @@ public actor EngineGoldenGate: MenuBarEngine {
         await converge()
     }
 
+    /// Bundle ids of the running applications, pushed by the app from its
+    /// KVO on `NSWorkspace.runningApplications`.
+    private var runningBundles: Set<String>?
+
+    public func setRunningBundles(_ bundles: Set<String>) {
+        runningBundles = bundles
+    }
+
     public func quiesced(for interval: TimeInterval) -> Bool {
         Date().timeIntervalSince(lastSwapAt) > interval
+    }
+
+    /// The mirror when it was walked at rest — `restWalkDelay` past the
+    /// last swap, so the agent's reflow was over — and is recent enough
+    /// (`restSnapshotReuse`). Nil means the bar may have changed since:
+    /// walk. Only Pelmet's own swaps move the bar's contents on their own;
+    /// app launches and user drags reach the mirror through the walks the
+    /// app already runs for them.
+    public var restSnapshot: EngineSnapshot? {
+        guard let last = lastSnapshot, !last.items.isEmpty,
+              last.takenAt.timeIntervalSince(lastSwapAt) >= EngineTiming.restWalkDelay,
+              Date().timeIntervalSince(last.takenAt) < EngineTiming.restSnapshotReuse
+        else { return nil }
+        return last
     }
 
     /// Fresh registrations under ANY active assertion park offscreen and
@@ -225,7 +280,6 @@ public actor EngineGoldenGate: MenuBarEngine {
     /// it, so the hint keeps future spawns landing in model order.
     public func writeOrderHint() async {
         let snapshot = await refreshSnapshot()
-        prefsWatcher?.suppress()
         AgentPositionStore.writeOrder(desiredOrderedTags(from: snapshot))
     }
 
@@ -237,17 +291,45 @@ public actor EngineGoldenGate: MenuBarEngine {
     private func converge() async {
         convergeEpoch += 1
         let epoch = convergeEpoch
-        let snapshot = await refreshSnapshot()
+        timing = ConvergeTiming()
+        // Stamped whatever the outcome — a superseded converge reads
+        // `superseded` rather than leaving the previous one's numbers
+        // under the next perf line.
+        defer { lastConvergeTiming = timing }
+        var phase = Date()
+        let snapshot: EngineSnapshot
+        if let rest = restSnapshot {
+            // The bar has not reflowed since this walk: plan from it. A
+            // bundle that appeared since is caught by the walk behind the
+            // swap, one converge later — the same window the app already
+            // has between walks at rest.
+            snapshot = rest
+            timing.walkReused = true
+        } else {
+            snapshot = await refreshSnapshot()
+        }
+        timing.walkMS = Self.ms(since: phase)
         guard epoch == convergeEpoch else { return }
         if snapshot.items.isEmpty {
+            timing.outcome = .emptyWalk
             deferEmptyWalkRetry()
             return
         }
         emptyAXRetriesRemaining = EngineTiming.emptyAXRetries
         // Running-app set: consulted by the stale prune below (quit apps) and
         // the allowlist build. Fetched once, up front.
-        let runningBundles = await MainActor.run {
-            Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        phase = Date()
+        // The app keeps this set from its KVO on runningApplications; the
+        // main-actor hop it replaced waited on a busy main thread (plan
+        // read 1–19ms, 2026-09-21). Fetched once when nothing was pushed.
+        let runningBundles: Set<String>
+        if let known = self.runningBundles {
+            runningBundles = known
+        } else {
+            runningBundles = await MainActor.run {
+                Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+            }
+            self.runningBundles = runningBundles
         }
         guard epoch == convergeEpoch else { return }
         // The pure decision step — "existing" set (observed ∪ carried
@@ -263,17 +345,20 @@ public actor EngineGoldenGate: MenuBarEngine {
             steadyExtras: steadyExtras,
             exemptBundles: Self.identityExemptBundles
         )
+        timing.planMS = Self.ms(since: phase)
         for (id, reason) in plan.stale {
             PelmetLog.log("converge: pruned concealed \(reason == .staleAlias ? "stale alias" : "entry for quit app") \(id.rawValue)")
         }
 
         guard AssessmentMode.isAvailable else {
+            timing.outcome = .unavailable
             if assertion != nil { invalidateAssertion() }
             eventContinuation.yield(.availabilityChanged(false))
             return
         }
 
         if plan.dropAssertion {
+            timing.outcome = .dropped
             await dropAssertionPath(epoch: epoch)
             return
         }
@@ -350,6 +435,7 @@ public actor EngineGoldenGate: MenuBarEngine {
            activeConcealable == concealable,
            activeSystemAllow == Set(allowedSystem.map(\.rawValue)),
            let activeAllowlist, activeAllowlist.isSuperset(of: allowedBundles) {
+            timing.outcome = .noop
             PelmetLog.log("converge: no-op (concealable=\(concealable.count), allow=\(allowedBundles.count))")
             // The assertion stands, but the bookkeeping may not: a carried
             // id whose section is now revealed is no longer concealed, and
@@ -373,6 +459,7 @@ public actor EngineGoldenGate: MenuBarEngine {
         // activation must never wedge the converge path. 3s is generous; the
         // observed completion latency is <100ms.
         let activationBox = ActivationBox()
+        let activateStarted = Date()
         let handle = AssessmentMode.activate(allowing: allowedSystem, bundleIDs: Array(allowedBundles)) { error in
             activationBox.resolve(error == nil)
         }
@@ -386,6 +473,7 @@ public actor EngineGoldenGate: MenuBarEngine {
             // the next converge toward this target won't match the no-op
             // guard, so retrying stays possible. Invalidating `previous` here
             // used to kill the still-current assertion and wedge the state.
+            timing.outcome = .activationNil
             PelmetLog.log("converge: activation returned nil handle — keeping previous assertion")
             eventContinuation.yield(.convergeFailed("assertion activation failed"))
             return
@@ -395,18 +483,16 @@ public actor EngineGoldenGate: MenuBarEngine {
         activeConcealable = concealable
         activeSystemAllow = Set(allowedSystem.map(\.rawValue))
         lastSwapAt = Date()
-        var activated = false
-        let deadline = Date().addingTimeInterval(EngineTiming.activationDeadline)
-        while Date() < deadline {
-            if let result = activationBox.result {
-                activated = result
-                break
-            }
-            try? await Task.sleep(for: EngineTiming.activationPoll)
-        }
+        // Resumed by the completion the moment it lands (measured 2026-09-21:
+        // the old 50ms poll made every swap read 50–55ms) or by the deadline.
+        let activated = await activationBox.wait(deadline: .seconds(EngineTiming.activationDeadline))
+        timing.activateMS = Self.ms(since: activateStarted)
+        timing.activated = activated
         // Swap order matters: activate the new state, then drop the old
         // assertion so there is no flash of everything-visible in between.
+        let invalidateStarted = Date()
         previous?.invalidate()
+        timing.invalidateMS = Self.ms(since: invalidateStarted)
         guard epoch == convergeEpoch else { return }
 
         if !activated {
@@ -420,28 +506,59 @@ public actor EngineGoldenGate: MenuBarEngine {
             PelmetLog.log("converge: assertion active")
         }
         // Stamp the concealed set NOW — observers must union it from the
-        // moment the swap is issued. The slow part (polling AX until the
-        // concealed bundles actually drop out) moves OFF the critical path:
-        // holding converge (and therefore the settle report) hostage to up to
-        // 3s of verify polling made every queued transition — hover right
-        // after a conceal, rapid toggles — wait a visible beat before moving.
-        let after = await refreshSnapshot()
-        guard epoch == convergeEpoch else { return }
+        // moment the swap is issued — on the pre-swap items: the post-swap
+        // walk blocks on the agent's reflow (measured 2026-09-21: 53–193ms,
+        // longer the sooner it starts) and holding converge for it held the
+        // settle report, the rehide countdown and every queued transition.
+        // The walk runs behind the swap instead and refreshes the mirror
+        // when it lands (it fires itemsChanged as it always did).
+        timing.outcome = .swapped
+        // Stamped with the swap time, not the mirror's: `snapshot()` reads
+        // it inside its TTL right after the swap instead of walking
+        // mid-reflow (a 200ms walk on the settle path, 2026-09-21 11:05),
+        // and `restSnapshot` stays nil until a walk at rest replaces it.
         lastSnapshot = EngineSnapshot(
-            items: after.items,
+            items: snapshot.items,
             concealed: plan.concealed,
-            takenAt: after.takenAt
+            takenAt: Date()
         )
-        // The post-swap walk is the verify's first poll: when it already
-        // shows every concealable bundle gone there is nothing to poll for,
-        // and a hover cycle skips a full AX walk (~100ms on the actor).
+        Task { await self.walkAfterSwap(concealable: concealable, epoch: epoch) }
+    }
+
+    /// The post-swap walk, off the critical path. It is the verify's first
+    /// poll: when it already shows every concealable bundle gone there is
+    /// nothing to poll for. A newer converge owns the state (and walks for
+    /// itself) once the epoch has moved.
+    private func walkAfterSwap(concealable: Set<String>, epoch: Int) async {
+        guard epoch == convergeEpoch else { return }
+        let started = Date()
+        let after = await refreshSnapshot()
+        PelmetLog.log("converge: post-swap walk \(Self.ms(since: started))ms (background)")
+        guard epoch == convergeEpoch else { return }
         let stillVisible = after.items.contains { item in
             guard let bundle = item.id.bundleID else { return false }
             return concealable.contains(bundle)
         }
         if stillVisible {
-            Task { await self.verifyConcealment(of: concealable) }
+            await verifyConcealment(of: concealable)
         }
+        // A walk that ran inside the reflow can list half the strip (AX
+        // adds freshly revealed items progressively). One more at rest
+        // makes the mirror whole, so the next transition can plan and
+        // measure from it instead of walking (`restSnapshot`).
+        // Not epoch-gated: the itemsChanged this walk fires runs a no-op
+        // converge (a new epoch) before the bar is at rest, and its walk is
+        // mid-reflow too. A newer SWAP moves `lastSwapAt`, so the wait
+        // below simply extends to that one's rest.
+        var untilRest = EngineTiming.restWalkDelay - Date().timeIntervalSince(lastSwapAt)
+        while untilRest > 0 {
+            try? await Task.sleep(for: .seconds(untilRest))
+            untilRest = EngineTiming.restWalkDelay - Date().timeIntervalSince(lastSwapAt)
+        }
+        guard restSnapshot == nil else { return }
+        let restStarted = Date()
+        _ = await refreshSnapshot()
+        PelmetLog.log("converge: rest walk \(Self.ms(since: restStarted))ms (background)")
     }
 
     /// Background verify-after-apply: bounded poll until the concealed
@@ -469,16 +586,41 @@ public actor EngineGoldenGate: MenuBarEngine {
         eventContinuation.yield(.convergeFailed("concealed items still visible after verify window"))
     }
 
-    /// Thread-safe one-shot result for the assertion completion (delivered on
-    /// an arbitrary queue by the private framework).
+    /// Thread-safe one-shot for the assertion completion (delivered on an
+    /// arbitrary queue by the private framework, possibly late, possibly
+    /// never, possibly twice). The first `resolve` wins; `wait` resumes on
+    /// it at once, or with `false` at the deadline — a dud completion that
+    /// lands after the deadline is ignored, as before.
     private final class ActivationBox: @unchecked Sendable {
         private let lock = NSLock()
         private var value: Bool?
-        var result: Bool? {
-            lock.withLock { value }
-        }
+        private var waiter: CheckedContinuation<Bool, Never>?
+
         func resolve(_ success: Bool) {
-            lock.withLock { if value == nil { value = success } }
+            lock.lock()
+            guard value == nil else { lock.unlock(); return }
+            value = success
+            let waiter = self.waiter
+            self.waiter = nil
+            lock.unlock()
+            waiter?.resume(returning: success)
+        }
+
+        func wait(deadline: Duration) async -> Bool {
+            await withCheckedContinuation { continuation in
+                lock.lock()
+                if let value {
+                    lock.unlock()
+                    continuation.resume(returning: value)
+                    return
+                }
+                waiter = continuation
+                lock.unlock()
+                Task {
+                    try? await Task.sleep(for: deadline)
+                    self.resolve(false)
+                }
+            }
         }
     }
 
@@ -553,12 +695,5 @@ public actor EngineGoldenGate: MenuBarEngine {
         }
         lastSnapshot = snapshot
         return snapshot
-    }
-
-    private func handleExternalPrefsChange() async {
-        // Adopt, don't correct: notify the app layer so it can pull the new
-        // order into the model. No engine-side counter-writes.
-        eventContinuation.yield(.externalOrderChange)
-        _ = await refreshSnapshot()
     }
 }

@@ -47,6 +47,20 @@ enum MediaKey: Int32 {
 final class ExtrasManager {
     private weak var appState: AppState?
     private var items: [UUID: NSStatusItem] = [:]
+    /// What each item's button last showed, by a key of the inputs that
+    /// picked the image. Every `button.image` swap costs ~5ms of main
+    /// thread on macOS 27 (replicant snapshot + scene IPC), and the reflow
+    /// companion re-applies every item on every swap; an unchanged glyph
+    /// is skipped (2026-09-21). A button whose image is nil (fresh item)
+    /// always draws.
+    private var glyphKeys: [UUID: String] = [:]
+
+    private func setGlyph(_ item: NSStatusItem, id: UUID, key: String, make: () -> NSImage?) {
+        guard let button = item.button else { return }
+        if glyphKeys[id] == key, button.image != nil { return }
+        button.image = make()
+        glyphKeys[id] = key
+    }
     private var specs: [UUID: ExtraItemSpec] = [:]
     private var lastVisible: [UUID: Bool] = [:]
     /// Every extra allows the native ⌘-drag off the bar; AppKit reports it
@@ -84,6 +98,10 @@ final class ExtrasManager {
     /// list sees every activation policy (same lesson as AppState's relaunch
     /// observer, 2026-09-09).
     private var runningAppsObservation: NSKeyValueObservation?
+    /// Extras sitting out of the bar (camera off, no audio, app not running)
+    /// attached invisibly for the length of an Apply pass so they have a
+    /// slot to drag — see `attachForApply`.
+    private var attachedForApply: Set<UUID> = []
 
     init(appState: AppState) {
         self.appState = appState
@@ -116,6 +134,7 @@ final class ExtrasManager {
         for (id, item) in items where !wanted.contains(id) {
             NSStatusBar.system.removeStatusItem(item)
             items.removeValue(forKey: id)
+            glyphKeys.removeValue(forKey: id)
             specs.removeValue(forKey: id)
             lastVisible.removeValue(forKey: id)
             lastRunning.removeValue(forKey: id)
@@ -233,7 +252,7 @@ final class ExtrasManager {
         systemCameraPillVisible: Bool
     ) {
         for (id, item) in items {
-            guard let spec = specs[id] else { continue }
+            guard let spec = specs[id], !attachedForApply.contains(id) else { continue }
             let section = model.section(of: Self.itemID(for: spec))
             var visible = section == .visible || revealed.contains(section)
             switch spec.kind {
@@ -258,13 +277,13 @@ final class ExtrasManager {
                         try? await Task.sleep(for: AppTiming.cameraIndicatorPlaceDebounce)
                         guard let self, !Task.isCancelled,
                               self.lastCameraIndicatorVisible else { return }
-                        // Zone only: the walk to the exact slot rode the
-                        // next hover reveal as a visible drag (#39).
-                        self.appState?.queueDynamicExtraPlacement(itemID, zoneOnly: true)
+                        // The indicator is on screen: through the Apply
+                        // door now (docs/CORE-SETS.md §Own items).
+                        self.appState?.placeOwnItemSoon(itemID)
                     }
                 } else if !visible, lastCameraIndicatorVisible {
                     cameraPlacementDebounce?.cancel()
-                    appState?.cancelDynamicExtraPlacement(itemID)
+                    appState?.cancelOwnItemPlacement(itemID)
                 }
                 lastCameraIndicatorVisible = visible
             case .mediaControls:
@@ -286,9 +305,9 @@ final class ExtrasManager {
                     // model's.
                     let itemID = Self.itemID(for: spec)
                     if visible, lastVisible[id] != true {
-                        appState?.queueDynamicExtraPlacement(itemID)
+                        appState?.placeOwnItemSoon(itemID)
                     } else if !visible, lastVisible[id] == true {
-                        appState?.cancelDynamicExtraPlacement(itemID)
+                        appState?.cancelOwnItemPlacement(itemID)
                     }
                 }
             case .appLauncher:
@@ -308,10 +327,10 @@ final class ExtrasManager {
                         if visible {
                             appState?.placeOwnItemSoon(itemID)
                         } else {
-                            appState?.queueDynamicExtraPlacement(itemID)
+                            appState?.placeOwnItemAtNextReveal(itemID)
                         }
                     } else if !running, lastRunning[id] == true {
-                        appState?.cancelDynamicExtraPlacement(itemID)
+                        appState?.cancelOwnItemPlacement(itemID)
                     }
                 }
                 lastRunning[id] = running
@@ -332,10 +351,10 @@ final class ExtrasManager {
                     if sectionVisible {
                         appState?.placeOwnItemSoon(itemID)
                     } else {
-                        appState?.queueDynamicExtraPlacement(itemID)
+                        appState?.placeOwnItemAtNextReveal(itemID)
                     }
                 } else if !active, lastTimerActive {
-                    appState?.cancelDynamicExtraPlacement(itemID)
+                    appState?.cancelOwnItemPlacement(itemID)
                 }
                 lastTimerActive = active
             case .timeMachine:
@@ -351,10 +370,10 @@ final class ExtrasManager {
                         if sectionVisible {
                             appState?.placeOwnItemSoon(itemID)
                         } else {
-                            appState?.queueDynamicExtraPlacement(itemID)
+                            appState?.placeOwnItemAtNextReveal(itemID)
                         }
                     } else if !running, lastBackupRunning {
-                        appState?.cancelDynamicExtraPlacement(itemID)
+                        appState?.cancelOwnItemPlacement(itemID)
                     }
                     lastBackupRunning = running
                 }
@@ -375,10 +394,10 @@ final class ExtrasManager {
                     if sectionVisible {
                         appState?.placeOwnItemSoon(itemID)
                     } else {
-                        appState?.queueDynamicExtraPlacement(itemID)
+                        appState?.placeOwnItemAtNextReveal(itemID)
                     }
                 } else if !active, lastFocusActive {
-                    appState?.cancelDynamicExtraPlacement(itemID)
+                    appState?.cancelOwnItemPlacement(itemID)
                 }
                 lastFocusActive = active
             case .shortcut, .userSwitching, .siri:
@@ -388,6 +407,32 @@ final class ExtrasManager {
             // A hidden glyph keeps its last frame and stops ticking.
             animators[id]?.paused = !visible
         }
+    }
+
+    /// An own extra that is out of the bar has no slot, so Apply could not
+    /// move it: a Camera moved in the editor while the camera was off only
+    /// found its slot at the next camera-on edge (2026-09-20). For the pass,
+    /// every idle extra joins the layout at alpha 0 (the agent gives it the
+    /// slot it remembers), gets dragged like any icon, and leaves again in
+    /// `detachAfterApply`; its next real entry lands at the new slot.
+    func attachForApply() -> [ItemID] {
+        var attached: [ItemID] = []
+        for (id, item) in items where lastVisible[id] != true && !preattached.contains(id) {
+            guard let spec = specs[id] else { continue }
+            StatusItemFader.attach(item, shownLength: Self.shownLength(for: spec))
+            attachedForApply.insert(id)
+            attached.append(Self.itemID(for: spec))
+        }
+        return attached
+    }
+
+    func detachAfterApply() {
+        for id in attachedForApply {
+            items[id]?.length = 0
+            items[id]?.isVisible = false
+        }
+        attachedForApply.removeAll()
+        applyCurrent()
     }
 
     /// Section-governed items about to be revealed UNCOVERED join the layout
@@ -786,10 +831,11 @@ final class ExtrasManager {
     /// The active mode's own symbol (macOS names it in the log line); an
     /// outlined moon while off, the way Apple's always-shown item rests.
     private func updateFocusGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
-        guard let button = item.button else { return }
         let symbol = focusStatus?.active?.symbol ?? "moon"
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: spec.itemTitle)
-            ?? NSImage(systemSymbolName: "moon.fill", accessibilityDescription: spec.itemTitle)
+        setGlyph(item, id: spec.id, key: "focus:\(symbol)") {
+            NSImage(systemSymbolName: symbol, accessibilityDescription: spec.itemTitle)
+                ?? NSImage(systemSymbolName: "moon.fill", accessibilityDescription: spec.itemTitle)
+        }
     }
 
     private func focusChanged() {
@@ -809,10 +855,9 @@ final class ExtrasManager {
         guard let button = item.button else { return }
         let text = pelmetTimer?.display
         let done = pelmetTimer?.state == .done
-        button.image = NSImage(
-            systemSymbolName: done ? "bell.fill" : "timer",
-            accessibilityDescription: spec.itemTitle
-        )
+        setGlyph(item, id: spec.id, key: "timer:\(done)") {
+            NSImage(systemSymbolName: done ? "bell.fill" : "timer", accessibilityDescription: spec.itemTitle)
+        }
         if let text {
             let size = NSFont.menuBarFont(ofSize: 0).pointSize
             button.attributedTitle = NSAttributedString(
@@ -857,15 +902,15 @@ final class ExtrasManager {
             return
         }
         animators[spec.id]?.stop()
-        button.image = NSImage(
-            systemSymbolName: mediaPlaying ? "pause.fill" : "play.fill",
-            accessibilityDescription: spec.itemTitle
-        )
+        let playing = mediaPlaying
+        setGlyph(item, id: spec.id, key: "media:\(playing)") {
+            NSImage(systemSymbolName: playing ? "pause.fill" : "play.fill", accessibilityDescription: spec.itemTitle)
+        }
     }
 
     /// The drawn AirDrop mark.
     private func updateAirDropGlyph(_ item: NSStatusItem, spec: ExtraItemSpec) {
-        item.button?.image = ExtraGlyph.airdrop
+        setGlyph(item, id: spec.id, key: "airdrop") { ExtraGlyph.airdrop }
     }
 
     /// Apple's own faces: the clock while idle, the arrows while a backup
@@ -897,6 +942,8 @@ final class ExtrasManager {
         let camera = monitor?.cameraActive ?? false
         let mic = monitor?.micActive ?? false
         let symbol = camera ? "video.fill" : (mic ? "mic.fill" : "video.fill")
+        let key = "camera:\(symbol):\(camera):\(mic)"
+        guard glyphKeys[spec.id] != key || item.button?.image == nil else { return }
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: String(localized: "Camera & Mic"))
         if camera || mic {
             image?.isTemplate = false
@@ -905,6 +952,7 @@ final class ExtrasManager {
             item.button?.contentTintColor = nil
         }
         item.button?.image = image
+        glyphKeys[spec.id] = key
     }
 
     // MARK: Actions

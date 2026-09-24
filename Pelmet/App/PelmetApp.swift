@@ -32,8 +32,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !relaunching else { return }
         appState.start()
-        if AppLanguage.takeReopenSettingsFlag() {
-            appState.openSettings()
+        if let tab = AppLanguage.takeReopenSettingsTab() {
+            appState.openSettings(tab: tab)
         }
     }
 

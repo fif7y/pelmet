@@ -66,6 +66,11 @@ final class SparkleController: NSObject {
     /// Settings › About "Get beta releases"; read by `allowedChannels(for:)`.
     @ObservationIgnored var betaUpdates: () -> Bool = { false }
 
+    /// Every reminder (banner, menu line, sidebar chip) lands in the About
+    /// pane with its "Update to…" button lit — never straight in Sparkle's
+    /// window. AppState wires this to `openSettings(tab: .about)`.
+    @ObservationIgnored var openUpdateHub: () -> Void = {}
+
     /// True once Info.plist carries a real Sparkle public key. The About
     /// pane hides its update button entirely in unconfigured dev builds.
     var isConfigured: Bool {
@@ -85,6 +90,7 @@ final class SparkleController: NSObject {
             userDriverDelegate: self
         )
         UNUserNotificationCenter.current().delegate = self
+        registerNotificationCategory()
         // A banner posted by the previous run (the update it announced is
         // what just launched, or the process is gone) would only ever open
         // "Pelmet is not open anymore".
@@ -139,6 +145,45 @@ final class SparkleController: NSObject {
     // MARK: - Update notification
 
     nonisolated private static let notificationID = "app.fif7y.Pelmet.update"
+    nonisolated private static let updateActionID = "app.fif7y.Pelmet.update.install"
+
+    /// A found update is reminded once a day while it stays pending — the
+    /// banner is transient, and Sparkle never re-checks while an update
+    /// session is live, so without this the reminder was once per launch.
+    private static let reminderInterval: TimeInterval = 24 * 60 * 60
+    @ObservationIgnored private var reminderTimer: Timer?
+    @ObservationIgnored private var reminderStaged = false
+
+    private func scheduleReminder(version: String, staged: Bool) {
+        reminderTimer?.invalidate()
+        reminderStaged = staged
+        reminderTimer = Timer.scheduledTimer(withTimeInterval: Self.reminderInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let version = self.availableVersion, self.notifyOnUpdates() else { return }
+                PelmetLog.log("sparkle: daily reminder for \(version)")
+                self.postUpdateNotification(version: version, staged: self.reminderStaged)
+            }
+        }
+    }
+
+    private func cancelReminder() {
+        reminderTimer?.invalidate()
+        reminderTimer = nil
+    }
+
+    /// The banner carries an "Update" button (hover / long-press) besides
+    /// its click-through body.
+    private func registerNotificationCategory() {
+        let action = UNNotificationAction(
+            identifier: Self.updateActionID,
+            title: String(localized: "Update"),
+            options: [.foreground]
+        )
+        let category = UNNotificationCategory(
+            identifier: Self.notificationID, actions: [action], intentIdentifiers: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+    }
 
     private func postUpdateNotification(version: String, staged: Bool = false) {
         Task {
@@ -153,12 +198,12 @@ final class SparkleController: NSObject {
                 return
             }
             let content = UNMutableNotificationContent()
+            content.categoryIdentifier = Self.notificationID
+            content.title = String(localized: "Update available")
             if staged {
-                content.title = String(localized: "Pelmet \(version) is ready")
-                content.body = String(localized: "Installs when you quit. Click to update now.")
+                content.body = String(localized: "Pelmet \(version) is ready. Click here to install it now.")
             } else {
-                content.title = String(localized: "Pelmet \(version) is available")
-                content.body = String(localized: "A few seconds and a relaunch. Click to update.")
+                content.body = String(localized: "Click here to update Pelmet to \(version).")
             }
             // Quiet app: a banner, no sound.
             let request = UNNotificationRequest(identifier: Self.notificationID, content: content, trigger: nil)
@@ -196,8 +241,9 @@ extension SparkleController: SPUStandardUserDriverDelegate {
     ) {
         let version = update.displayVersionString
         Task { @MainActor in
-            if !handleShowingUpdate, notifyOnUpdates() {
-                postUpdateNotification(version: version)
+            if !handleShowingUpdate {
+                if notifyOnUpdates() { postUpdateNotification(version: version) }
+                scheduleReminder(version: version, staged: false)
             }
         }
     }
@@ -212,13 +258,14 @@ extension SparkleController: SPUStandardUserDriverDelegate {
 }
 
 extension SparkleController: UNUserNotificationCenterDelegate {
-    /// Clicking the banner opens the install window.
+    /// Clicking the banner, or its Update button, opens the About pane
+    /// with "Update to…" ready.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
         guard response.notification.request.identifier == Self.notificationID else { return }
-        await MainActor.run { checkForUpdates() }
+        await MainActor.run { openUpdateHub() }
     }
 
     /// Show the banner even while Pelmet is the active app (settings open).
@@ -250,6 +297,7 @@ extension SparkleController: SPUUpdaterDelegate {
         Task { @MainActor in
             self.status = .upToDate
             self.installNow = nil
+            self.cancelReminder()
         }
     }
 
@@ -274,6 +322,7 @@ extension SparkleController: SPUUpdaterDelegate {
             if self.notifyOnUpdates() {
                 self.postUpdateNotification(version: version, staged: true)
             }
+            self.scheduleReminder(version: version, staged: true)
         }
         return true
     }
@@ -281,6 +330,7 @@ extension SparkleController: SPUUpdaterDelegate {
     nonisolated func updater(_ updater: SPUUpdater, willInstallUpdate item: SUAppcastItem) {
         Task { @MainActor in
             self.installNow = nil
+            self.cancelReminder()
             self.clearUpdateNotification()
         }
     }
