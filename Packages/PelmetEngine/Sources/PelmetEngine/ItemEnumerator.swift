@@ -142,7 +142,7 @@ public actor ItemEnumerator {
                 }
             case "AXButton":
                 // Plain NSStatusItem buttons (Pelmet's own chevron/separators,
-                // Thaw's dividers) sit in the tree as bare AXButtons — no
+                // other apps' dividers) sit in the tree as bare AXButtons — no
                 // nested AXApplication. Attribute by the button's owning pid.
                 if let item = describeLeaf(child, frame: frame) { return item }
             default:
