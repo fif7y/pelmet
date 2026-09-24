@@ -16879,6 +16879,122 @@
         }
       }
     },
+    "macOS takes %@ off the bar while anything is hidden, because it runs from outside Applications. Open it from the Applications folder instead.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS nimmt %@ aus der Leiste, solange etwas ausgeblendet ist, weil es außerhalb von „Programme“ läuft. Öffne es stattdessen aus dem Ordner „Programme“."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS quita %@ de la barra mientras haya algo oculto, porque se ejecuta fuera de Aplicaciones. Ábrelo desde la carpeta Aplicaciones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS retire %@ de la barre tant que quelque chose est masqué, car l’app tourne hors du dossier Applications. Ouvrez-la plutôt depuis le dossier Applications."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS toglie %@ dalla barra finché qualcosa è nascosto, perché gira fuori da Applicazioni. Aprila dalla cartella Applicazioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ は「アプリケーション」フォルダの外から実行されているため、何かを隠している間はmacOSがバーから外します。「アプリケーション」フォルダから開いてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@이(가) 응용 프로그램 폴더 밖에서 실행되어, 무언가 숨겨져 있는 동안 macOS가 막대에서 뺍니다. 응용 프로그램 폴더에서 여세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O macOS tira %@ da barra enquanto algo estiver oculto, porque ele roda fora de Aplicativos. Abra-o pela pasta Aplicativos."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS убирает %@ из строки, пока что-то скрыто, потому что приложение запущено не из папки «Программы». Откройте его из папки «Программы»."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 在“应用程序”文件夹之外运行，所以只要有图标被隐藏，macOS 就会把它移出菜单栏。请改从“应用程序”文件夹打开它。"
+          }
+        }
+      }
+    },
+    "macOS takes %@ off the bar while anything is hidden, even though Pelmet leaves it visible.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS nimmt %@ aus der Leiste, solange etwas ausgeblendet ist, obwohl Pelmet es sichtbar lässt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS quita %@ de la barra mientras haya algo oculto, aunque Pelmet lo deje visible."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS retire %@ de la barre tant que quelque chose est masqué, même si Pelmet la laisse visible."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS toglie %@ dalla barra finché qualcosa è nascosto, anche se Pelmet la lascia visibile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmetが表示のままにしていても、何かを隠している間はmacOSが %@ をバーから外します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet이 보이게 두어도, 무언가 숨겨져 있는 동안 macOS가 %@을(를) 막대에서 뺍니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O macOS tira %@ da barra enquanto algo estiver oculto, mesmo com o Pelmet deixando-o visível."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS убирает %@ из строки, пока что-то скрыто, хотя Pelmet оставляет его видимым."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要有图标被隐藏，macOS 就会把 %@ 移出菜单栏，即使 Pelmet 让它保持可见。"
+          }
+        }
+      }
+    },
     "macOS uses this shortcut. Turn it off in System Settings › Keyboard › Keyboard Shortcuts, or record another.": {
       "localizations": {
         "de": {

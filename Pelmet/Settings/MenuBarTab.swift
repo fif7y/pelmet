@@ -694,6 +694,8 @@ private struct ItemTile: View {
                 name: displayName,
                 hasLauncher: hasLauncher,
                 helperHosted: appState.isBundlelessHost(item.id),
+                destroyed: appState.isDestroyedHost(item.id),
+                outsideApplications: appState.runsOutsideApplications(item.id),
                 immovable: isImmovable && !isUnhideable,
                 pinnedBySystem: isPinnedBySystem,
                 missingReplacements: item.id.bundleID == PelmetBundle.systemUIServerID
@@ -774,6 +776,11 @@ private struct InactiveIconCard: View {
     /// The icon's host is a bundle-less helper — the one cause Pelmet can
     /// name; otherwise the bar simply kept the icon when asked to hide it.
     let helperHosted: Bool
+    /// The bar took the icon down although Pelmet allowed it.
+    let destroyed: Bool
+    /// …and the app runs from outside an Applications folder, the one
+    /// cause of that we know.
+    let outsideApplications: Bool
     /// Hides fine, won't be moved: the app's tray swallows synthetic drags.
     let immovable: Bool
     /// Hides fine, won't be moved, and no launcher applies: macOS itself
@@ -853,6 +860,11 @@ private struct InactiveIconCard: View {
                     .font(.headline)
                 if helperHosted {
                     Text("\(name) runs its menu bar icon from a helper macOS doesn't count as an app, so it won't show.")
+                } else if destroyed, outsideApplications {
+                    Text("macOS takes \(name) off the bar while anything is hidden, because it runs from outside Applications. Open it from the Applications folder instead.")
+                } else if destroyed {
+                    // Pelmet never asked to hide it (#66): the bar took it.
+                    Text("macOS takes \(name) off the bar while anything is hidden, even though Pelmet leaves it visible.")
                 } else {
                     Text("macOS kept it in the bar when Pelmet asked to hide it.")
                 }

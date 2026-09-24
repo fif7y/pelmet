@@ -1713,6 +1713,18 @@ final class AppState {
         destroyedKeys.contains(id.sectionKey)
     }
 
+    /// The app's running copy lives outside an Applications folder. macOS
+    /// matches the allowlist through LaunchServices and misses a copy run
+    /// from a build folder, so the assertion hides it whatever Pelmet
+    /// allows (DerivedData, proven 2026-08-29; #66's local cmux build).
+    func runsOutsideApplications(_ id: ItemID) -> Bool {
+        guard let bundle = id.bundleID,
+              let path = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first?.bundleURL?.path
+        else { return false }
+        let homeApplications = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications").path
+        return !["/Applications/", "/System/Applications/", homeApplications + "/"].contains { path.hasPrefix($0) }
+    }
+
     // MARK: - Effects
 
     /// Pelmet-owned items hide by their OWN visibility, not the assertion —
