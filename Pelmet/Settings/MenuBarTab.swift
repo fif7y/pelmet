@@ -31,20 +31,17 @@ struct ApplyBarButton: View {
             .buttonStyle(.plain)
             .disabled(appState.applying)
             .help("Add a divider to the bar — click its tile to pick a style")
-            // The pass runs silently with the cursor hidden (blind spot 3):
-            // say what it did, or people press it twice.
+            // A pass that moved everything says so through the button, grey
+            // once the bar matches. Only what it couldn't move needs words
+            // (#60: "Moved 1" stayed up long after anyone cared).
             if !appState.applying, let report = appState.applyReport {
-                Group {
-                    let notMoved = report.failed.count + report.skipped.filter { $0.why == .notOnScreen }.count
-                    if notMoved == 0 {
-                        Text("Moved \(report.applied.count)")
-                    } else {
-                        Text("Moved \(report.applied.count), \(notMoved) not moved")
-                            .help("Icons behind macOS's « have no place to be dragged from yet")
-                    }
+                let notMoved = report.failed.count + report.skipped.filter { $0.why == .notOnScreen }.count
+                if notMoved > 0 {
+                    Text("\(notMoved) not moved")
+                        .help("Icons behind macOS's « have no place to be dragged from yet")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
-                .font(.callout)
-                .foregroundStyle(.secondary)
             }
             if !appState.settings.orderEdits.isEmpty, !appState.applying {
                 Button("Discard") { appState.discardOrderEdits() }

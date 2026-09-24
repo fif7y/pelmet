@@ -20,7 +20,12 @@ final class AppState {
     /// Settings window tab. Owned here (not view @State) so every window
     /// open can reset it to General — reopening straight onto the Menu Bar
     /// tab fired its full-reveal preview unprompted.
-    var settingsTab: SettingsTab = .general
+    var settingsTab: SettingsTab = .general {
+        didSet {
+            // Apply's "N not moved" belongs to the editor it came from (#60).
+            if oldValue == .menuBar, settingsTab != .menuBar { applyReport = nil }
+        }
+    }
     /// While the settings window is open, auto-rehide is fully suppressed —
     /// the user is mid-workflow between the editor and the bar, and nothing
     /// should collapse under them. Closing the window re-conceals.
@@ -43,6 +48,7 @@ final class AppState {
         didSet {
             guard oldValue != settingsWindowVisible else { return }
             if !settingsWindowVisible {
+                applyReport = nil
                 applyPointerDisplayPolicyAfterDismissal()
             }
         }
