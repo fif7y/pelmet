@@ -1,0 +1,46 @@
+{
+  "fill" : {
+    "automatic-gradient" : "srgb:0.40784,0.25490,0.92941,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : true,
+          "image-name" : "dots.svg",
+          "name" : "dots"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.4
+      }
+    },
+    {
+      "layers" : [
+        {
+          "glass" : true,
+          "image-name" : "P.svg",
+          "name" : "P"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.4
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}
