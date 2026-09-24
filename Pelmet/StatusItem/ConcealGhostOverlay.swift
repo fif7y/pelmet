@@ -177,6 +177,7 @@ final class ConcealGhostOverlay {
         guard let rect, rect.width > 8, let list = list ?? onScreenWindows(),
               let primary = NSScreen.screens.first else { return [] }
         let me = ProcessInfo.processInfo.processIdentifier
+        let notificationCenter = ClockClickRelay.notificationCenterPID()
         let barLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
         let zones: [CGRect] = (primaryOnly ? [primary] : NSScreen.screens).compactMap { screen in
             guard let displayID = screen.directDisplayID else { return nil }
@@ -202,8 +203,9 @@ final class ConcealGhostOverlay {
             // Dock raises a display-sized backstop under it. In the
             // signature they dropped the idle picture on every open and
             // again a second after every close (#51, 2026-09-22).
+            // By pid, not name: the owner name is localized ("알림 센터").
+            if ClockClickRelay.isNotificationCenterWindow(w, pid: notificationCenter) { continue }
             let owner = w[kCGWindowOwnerName as String] as? String ?? ""
-            if owner == "Notification Center" { continue }
             if owner == "Dock", width >= 1000, height >= 700 { continue }
             let frame = CGRect(x: x, y: y, width: width, height: height)
             guard zones.contains(where: { $0.intersects(frame) }) else { continue }
