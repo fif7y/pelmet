@@ -98,6 +98,18 @@ if [[ -n "$GENERATE_APPCAST" ]]; then
     # (both names: nook-era DMGs still live in the releases dir and the appcast)
     perl -pi -e 's#(releases/download/)v[\w.-]+/((?:Nook|Pelmet)-([\w.-]+)\.dmg)#$1v$3/$2#g' \
         "$RELEASES_DIR/appcast.xml"
+    # Same for deltas: PelmetNN-MM.delta lives on the release of build NN,
+    # whose tag comes from the item carrying <sparkle:version>NN.
+    perl -0777 -pi -e '
+        my %tag;
+        while (/<item>(.*?)<\/item>/sg) {
+            my $item = $1;
+            my ($build) = $item =~ m#<sparkle:version>([^<]+)<#;
+            my ($short) = $item =~ m#<sparkle:shortVersionString>([^<]+)<#;
+            $tag{$build} = "v$short" if defined $build && defined $short;
+        }
+        s#(releases/download/)v[\w.-]+/(Pelmet(\d+)-\d+\.delta)#exists $tag{$3} ? "$1$tag{$3}/$2" : $&#ge;
+    ' "$RELEASES_DIR/appcast.xml"
     echo "==> Appcast written to $RELEASES_DIR/appcast.xml (prior-version URLs re-pointed)"
 else
     echo "warning: generate_appcast not found in DerivedData — build the app once so SPM fetches Sparkle, or download the Sparkle release tools" >&2
