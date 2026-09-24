@@ -71,6 +71,9 @@ enum AppTiming {
     /// How long a reveal waits for a cover retake still in flight (#49):
     /// a capture runs ~90ms here, up to ~470ms on a four-display Mac.
     static let coverRetakeWait: TimeInterval = 0.6
+    /// How long a transition waits for the previous one's pictures to lift
+    /// (#61): a lift lands 560–680ms after its click, measured 2026-09-24.
+    static let previousLiftWait: TimeInterval = 0.8
     /// Backdrop check delay after an animated window move (tiling key,
     /// activation, Space switch): a Space switch animates ~0.5s. A mouse-up
     /// is checked at once — the window is already where the drag left it.

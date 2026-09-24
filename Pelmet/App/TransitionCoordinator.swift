@@ -67,6 +67,9 @@ final class TransitionCoordinator {
     /// The cover was dropped for a changed backdrop and not retaken yet.
     private var revealCoverWanted = false
     private var precaptureInFlight = false
+    /// Pictures of the last transition still on screen (cover lift, exit
+    /// strip). See `awaitPreviousLift`.
+    private var liftsInFlight = 0
     /// The dropped cover, kept with the signature it was taken under. Most
     /// changes are one window in and out of the zone (#49's log: 9→8→9;
     /// Notification Center opening and closing under the clock): when the
@@ -148,6 +151,20 @@ final class TransitionCoordinator {
     /// Smooth exemption it keeps), then wait for whichever is in flight —
     /// bounded, so a slow capture degrades to the uncovered reveal it
     /// always was rather than holding the bar.
+    /// The state machine releases a queued toggle at settle, ~100ms in, but
+    /// the pictures lift ~500ms later. A transition started under them
+    /// captured and covered on top of a moving picture: the icons vanished
+    /// in two frames and the next reveal drew stale copies beside the real
+    /// ones (#61, 60fps burst 2026-09-24). Wait them out, bounded.
+    private func awaitPreviousLift() async {
+        guard liftsInFlight > 0 else { return }
+        let started = Date()
+        while liftsInFlight > 0, Date().timeIntervalSince(started) < AppTiming.previousLiftWait {
+            try? await Task.sleep(for: .milliseconds(15))
+        }
+        PelmetLog.log("transition: waited \(Int(-started.timeIntervalSinceNow * 1000))ms for the last lift\(liftsInFlight > 0 ? " — still up, going on" : "")")
+    }
+
     private func awaitCoverRetake(style: RevealAnimation) async {
         guard revealCoverSnapshot.isEmpty, precaptureInFlight || (revealCoverWanted && style != .smooth) else { return }
         if !precaptureInFlight {
@@ -245,6 +262,7 @@ final class TransitionCoordinator {
     func performReveal(_ sections: Set<PelmetCore.Section>, trace: PerfTrace) {
         Task {
             guard let appState else { return }
+            await awaitPreviousLift()
             let style = appState.settings.revealAnimation
             let recipe = AnimationRecipe.recipe(for: style)
             // Two pictures make the style: the empty bar (hides the agent's
@@ -343,6 +361,7 @@ final class TransitionCoordinator {
                 // hidden icons jump a few points as the bar finished
                 // settling beneath the picture (Gab, 2026-09-08).
                 let liftAt = Date().addingTimeInterval(AppTiming.entranceCoverHold)
+                liftsInFlight += 1
                 Task { @MainActor in
                     await appState.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
                     let remaining = liftAt.timeIntervalSinceNow
@@ -352,9 +371,11 @@ final class TransitionCoordinator {
                         cover.dismiss()
                     } else if case .fade(let duration) = recipe.exit {
                         cover.fadeOut(duration: duration)
+                        try? await Task.sleep(for: .seconds(duration))
                     } else {
                         cover.dismiss()
                     }
+                    liftsInFlight -= 1
                     trace.finish("lift")
                 }
             }
@@ -369,6 +390,7 @@ final class TransitionCoordinator {
     func performConceal(trace: PerfTrace) {
         Task {
             guard let appState else { return }
+            await awaitPreviousLift()
             let style = appState.settings.revealAnimation
             let recipe = AnimationRecipe.recipe(for: style)
             // Mirror of the reveal: the empty-bar picture over the strip
@@ -425,12 +447,21 @@ final class TransitionCoordinator {
                 // (measured 2026-09-08) — lifting the cover on swap-quiet
                 // alone (150ms) showed its tail. Hold for both.
                 let liftAt = Date().addingTimeInterval(AppTiming.exitCoverHold)
+                liftsInFlight += 1
                 Task { @MainActor in
                     await appState.waitUntilQuiesced(interval: 0.15, deadline: 2, poll: .milliseconds(30))
                     let remaining = liftAt.timeIntervalSinceNow
                     if remaining > 0 { try? await Task.sleep(for: .seconds(remaining)) }
                     cover.dismiss()
+                    liftsInFlight -= 1
                     trace.finish("lift")
+                }
+            } else if strip != nil, case .fade(let duration) = recipe.exit {
+                // Fade's exit is the strip alone: up for its duration.
+                liftsInFlight += 1
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(duration))
+                    liftsInFlight -= 1
                 }
             }
             PelmetLog.log("effect conceal settled")
