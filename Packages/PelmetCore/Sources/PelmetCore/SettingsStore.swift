@@ -280,7 +280,7 @@ public struct ExtraItemSpec: Codable, Equatable, Identifiable, Sendable {
 /// Glyph for Pelmet's own menu bar icon. Each style has a concealed and a
 /// revealed face so the icon keeps pointing at what a click will do.
 public enum StatusIconStyle: String, Codable, CaseIterable, Sendable, Identifiable {
-    case chevron, arrow, eye, dots, grid, panel
+    case chevron, arrow, eye, dots, grid, panel, dot
 
     public var id: String { rawValue }
 
@@ -293,7 +293,14 @@ public enum StatusIconStyle: String, Codable, CaseIterable, Sendable, Identifiab
         case .dots: "ellipsis"
         case .grid: "square.grid.2x2"
         case .panel: revealed ? "rectangle.righthalf.inset.filled" : "rectangle.lefthalf.inset.filled"
+        case .dot: revealed ? "circlebadge" : "circlebadge.fill"
         }
+    }
+
+    /// Symbol point size when the style draws smaller than the bar's
+    /// default 13. The dot at 13 read too big next to the chevron (#62).
+    public var symbolPointSize: Double? {
+        self == .dot ? 9 : nil
     }
 }
 

@@ -524,7 +524,7 @@ struct SettingToggleRow: View {
     }
 }
 
-/// Six glyphs for the menu bar icon, drawn at bar size. Picking one repaints
+/// Seven glyphs for the menu bar icon, drawn at bar size. Picking one repaints
 /// the live status item through settingsChanged().
 struct StatusIconPicker: View {
     @Binding var selection: StatusIconStyle
@@ -532,7 +532,7 @@ struct StatusIconPicker: View {
     var body: some View {
         HStack(spacing: 2) {
             ForEach(StatusIconStyle.allCases) { style in
-                StatusIconTile(symbol: style.symbol(revealed: false), selected: selection == style) {
+                StatusIconTile(symbol: style.symbol(revealed: false), size: style.symbolPointSize ?? 13, selected: selection == style) {
                     selection = style
                 }
             }
@@ -545,6 +545,7 @@ struct StatusIconPicker: View {
 
 private struct StatusIconTile: View {
     let symbol: String
+    let size: Double
     let selected: Bool
     let action: () -> Void
     @State private var hovered = false
@@ -552,7 +553,7 @@ private struct StatusIconTile: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: size, weight: .medium))
                 .foregroundStyle(selected ? PelmetAccent.accent : .secondary)
                 .frame(width: 30, height: 24)
                 .background(

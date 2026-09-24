@@ -107,17 +107,20 @@ final class PelmetStatusItem {
         // The style is only a preference — losing the weak appState is not a
         // reason to show nothing.
         let style = appState?.settings.statusIconStyle ?? .chevron
-        let glyph = NSImage(
+        let symbol = NSImage(
             systemSymbolName: style.symbol(revealed: revealedFace),
             accessibilityDescription: "Pelmet"
         )
+        // One configuration, applied once: a second withSymbolConfiguration
+        // replaces the first, so the warning palette would drop the size.
+        let size = style.symbolPointSize.map { NSImage.SymbolConfiguration(pointSize: $0, weight: .regular) }
+        let glyph = size.flatMap { symbol?.withSymbolConfiguration($0) } ?? symbol
         guard warning else {
             item.button?.image = glyph
             return
         }
-        let tinted = glyph?.withSymbolConfiguration(
-            NSImage.SymbolConfiguration(paletteColors: [.systemOrange])
-        )
+        let palette = NSImage.SymbolConfiguration(paletteColors: [.systemOrange])
+        let tinted = symbol?.withSymbolConfiguration(size.map { $0.applying(palette) } ?? palette)
         tinted?.isTemplate = false
         item.button?.image = tinted ?? glyph
     }

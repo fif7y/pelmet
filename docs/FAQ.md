@@ -165,9 +165,10 @@ still opens the menu, and the shortcut still works. The switch is locked on
 while the Pelmet icon is hidden, because then it is the way back to Settings.
 
 **Can I change the Pelmet icon?**
-Settings → General → Icon. Six styles: chevron, arrow, eye, dots, grid and
-panel. Chevron, arrow, eye and panel flip to a revealed face while the bar is
-open, so the icon keeps pointing at what a click will do.
+Settings → General → Icon. Seven styles: chevron, arrow, eye, dots, grid,
+panel and dot. Chevron, arrow, eye and panel flip to a revealed face while the
+bar is open, so the icon keeps pointing at what a click will do. The dot is
+filled while the icons are hidden and an outline while they're shown.
 
 **How short can the hover delay be?**
 0.1 to 0.5 seconds, in 0.1 steps. Auto-rehide runs from instant to 5 seconds

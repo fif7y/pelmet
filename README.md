@@ -92,8 +92,8 @@ seconds) or the moment you click somewhere else.
   The only connection Pelmet ever makes is checking for its own updates.
 - **Signed updates.** Sparkle with EdDSA signatures, checked against a
   signed appcast.
-- **Your icon, or none.** Six menu bar icon styles (chevron, arrow, eye,
-  dots, grid, panel), or turn the icon off entirely and reach Settings by
+- **Your icon, or none.** Seven menu bar icon styles (chevron, arrow, eye,
+  dots, grid, panel, dot), or turn the icon off entirely and reach Settings by
   shortcut or right-click.
 - **Speaks your language.** English, German, French, Spanish, Italian,
   Portuguese (Brazil), Japanese, Simplified Chinese, Korean and Russian.
