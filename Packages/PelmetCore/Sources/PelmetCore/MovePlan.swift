@@ -148,7 +148,13 @@ public enum MovePlan {
         }
         var run = desired(.alwaysHidden) + desired(.hidden)
         if let chevron, live.contains(chevron) { run.append(chevron) }
-        run += desired(.visible)
+        // The pinned run at the bar's right end (Control Center, the clock)
+        // takes no icon right of it. The editor inserted One Thing before an
+        // own item the order kept after the clock, and Apply aimed the drag
+        // past the clock: "1 not moved" on every pass (2026-09-25).
+        let trailingPinned = Set(bar.reversed().prefix { pinned.contains($0) })
+        let visible = desired(.visible)
+        run += visible.filter { !trailingPinned.contains($0) } + visible.filter(trailingPinned.contains)
         let runs = [run]
 
         var moves: [Move] = []

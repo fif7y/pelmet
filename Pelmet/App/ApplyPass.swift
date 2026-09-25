@@ -98,9 +98,21 @@ enum ApplyPass {
     /// the Apply count (a wrong-side icon lights the button without a
     /// reveal). The pass itself measures live.
     static func rememberedFrames(_ snap: EngineSnapshot, appState: AppState) -> [ItemID: CGRect] {
-        var frames = primaryFrames(snap)
+        // Own extras in a concealed section are leaving the layout
+        // (StatusItemFader: collapsed at 0.26s, gone at 0.7s). The walk after
+        // a conceal reads them beside the chevron, their concealed neighbours
+        // gone: that snapshot put Siri right of Snib, and every drop into
+        // Hidden until the next reveal drew it last (2026-09-25).
+        let revealed = appState.revealedSectionsForExtras
+        let roster = appState.settings.sectionModel.roster
+        var frames = primaryFrames(snap).filter { key, _ in
+            guard MenuBarPolicy.isPelmetExtraID(key) else { return true }
+            let section = roster.section(of: key)
+            return section == .visible || revealed.contains(section)
+        }
         let live = Set(snap.items.map(\.id.sectionKey))
         let chevronNow = appState.pelmetChevronItem(in: snap).flatMap { frames[$0.id.sectionKey]?.midX }
+        var rememberedAlwaysHidden = Set<ItemID>()
         for id in snap.concealed where !live.contains(id.sectionKey) {
             let key = id.sectionKey
             guard var f = appState.rememberedFrames[key] else { continue }
@@ -110,6 +122,18 @@ enum ApplyPass {
                 f = f.offsetBy(dx: now - then, dy: 0)
             }
             frames[key] = f
+            if roster.section(of: key) == .alwaysHidden { rememberedAlwaysHidden.insert(key) }
+        }
+        // Always Hidden is seen only in a full reveal, Hidden in every hover,
+        // and the chevron alone does not re-anchor one against the other: the
+        // separator remembered at launch, before Siri joined Hidden, read
+        // inside it and lit "Apply (1)" with nothing to do (2026-09-25). No
+        // reading sees across that line while Always Hidden is concealed, so
+        // its remembered icons keep their order, left of Hidden.
+        let hiddenLeft = frames.filter { roster.section(of: $0.key) == .hidden }.map(\.value.minX).min()
+        let groupRight = rememberedAlwaysHidden.compactMap { frames[$0]?.maxX }.max()
+        if let hiddenLeft, let groupRight, groupRight > hiddenLeft {
+            for key in rememberedAlwaysHidden { frames[key] = frames[key]?.offsetBy(dx: hiddenLeft - groupRight, dy: 0) }
         }
         return frames
     }
@@ -213,6 +237,13 @@ enum ApplyPass {
         let engine = appState.engine
         var report = ApplyReport()
         let screenMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        // What the button counted when it was pressed. A counted icon the
+        // pass then finds behind the « (the idle extras it attaches can push
+        // it there) needs the « expanded like a drawn one, or the pass plans
+        // nothing and the count comes straight back (Figma, 2026-09-25).
+        let counted: Set<ItemID> = appState.snapshot.map {
+            Set(plan(for: appState, snapshot: $0, remembered: true).moves.map(\.item))
+        } ?? []
 
         // Hidden items have frames only under a reveal, and the plan is the
         // whole bar. Reveal everything and let the editor hold it. An own
@@ -260,7 +291,9 @@ enum ApplyPass {
         switch scope {
         case .wholeBar:
             planFor = { self.plan(for: appState, snapshot: $0) }
-            trappedFor = { trappedEdited($0, edits: appState.settings.orderEdits) }
+            trappedFor = {
+                trappedEdited($0, edits: appState.settings.orderEdits).union(trapped($0).intersection(counted))
+            }
         case .ownItem(let own):
             // The item's section as the editor draws it counts as the edit,
             // so the plan puts the newcomer between its roster neighbours;
@@ -316,7 +349,7 @@ enum ApplyPass {
             await OverflowToggle.collapseIfLeftExpanded()
         }
         if !trappedForPass.isEmpty {
-            PelmetLog.log("apply: \(trappedForPass.count) drawn icon(s) behind the « — expanding it")
+            PelmetLog.log("apply: \(trappedForPass.count) icon(s) to move behind the « — expanding it")
             expandedToggle = await OverflowToggle.expandForPass()
             if expandedToggle != nil {
                 snap = await engine.snapshot()

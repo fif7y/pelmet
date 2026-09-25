@@ -1452,13 +1452,12 @@ final class AppState {
     /// starts from. A drawing that drifted from the bar without an edit is
     /// harmless until an edit makes the plan honour it, and then one drop
     /// read "Apply (2)" (2026-09-21). Members the bar has no frame for keep
-    /// their drawn place after the framed ones.
+    /// their drawn slot (`BarAdoption.refill`).
     func barBasedOrder(in section: PelmetCore.Section, model: SectionModel) -> [ItemID] {
         let members = model.order[section] ?? currentOrder(in: section)
         guard let snapshot else { return members }
         let onBar = ApplyPass.barOrder(ApplyPass.rememberedFrames(snapshot, appState: self))
-            .filter(members.contains)
-        return onBar + members.filter { !onBar.contains($0) }
+        return BarAdoption.refill(members, inBarOrder: onBar)
     }
 
     /// The on-screen left-to-right order of a section right now (fallback when
@@ -1853,13 +1852,25 @@ final class AppState {
     /// ⌘-dragged into Hidden while the 10s pass ran — the drop was lost and
     /// the item never adopted, 2026-09-08). Replayed when the chain ends.
     private var queuedDragEndX: CGFloat?
+    /// A drop's chain is running: the bar stays revealed until it has read
+    /// where the icon landed (the band's `.drag` rehide hold). A conceal
+    /// mid-chain took the dropped icon, still in its old section, off the
+    /// bar (2026-09-25).
+    private(set) var dropAdoptionInFlight = false
+    /// The app whose icon the last ⌘-drag grabbed (the band's hit-test at
+    /// mouse-down), nil when unknown.
+    private var lastDropBundle: String?
 
     /// When the band monitor last saw a user ⌘-drag end. The order
     /// supervisor stays out of the way while that adoption lands.
     private(set) var lastUserDragEndedAt: Date?
 
-    func adoptSectionsFromBar(retry: Int = 0, dragEndX: CGFloat? = nil) {
-        if retry == 0, dragEndX != nil { lastUserDragEndedAt = .now }
+    func adoptSectionsFromBar(retry: Int = 0, dragEndX: CGFloat? = nil, draggedBundle: String? = nil) {
+        if retry == 0, dragEndX != nil {
+            lastUserDragEndedAt = .now
+            dropAdoptionInFlight = true
+            lastDropBundle = draggedBundle
+        }
         if retry == 0 {
             guard !adoptionInFlight else {
                 if let dragEndX { queuedDragEndX = dragEndX }
@@ -1876,6 +1887,7 @@ final class AppState {
                 guard retry < AppTiming.adoptMaxDeferrals else {
                     PelmetLog.log("adopt: gave up after \(retry) deferrals")
                     adoptionInFlight = false
+                    dropAdoptionInFlight = false
                     if let queued = queuedDragEndX {
                         queuedDragEndX = nil
                         adoptSectionsFromBar(dragEndX: queued)
@@ -1899,8 +1911,18 @@ final class AppState {
                 adoptSectionsFromBar(retry: retry + 1, dragEndX: dragEndX)
                 return
             }
+            // The dropped icon is still in MenuBarAgent's drop animation (up
+            // to 1.6s on a crowded bar): nothing under the drop yet, and a
+            // pass now loses which icon the user moved (2026-09-25).
+            if let dragEndX, !Self.dropLanded(snap, at: dragEndX, bundle: lastDropBundle), retry < AppTiming.adoptMaxDeferrals {
+                PelmetLog.log("adopt: nothing under the drop yet — waiting (retry=\(retry))")
+                try? await Task.sleep(for: AppTiming.adoptDeferralDelay)
+                adoptSectionsFromBar(retry: retry + 1, dragEndX: dragEndX)
+                return
+            }
             defer {
                 adoptionInFlight = false
+                dropAdoptionInFlight = false
                 if let queued = queuedDragEndX {
                     queuedDragEndX = nil
                     PelmetLog.log("adopt: replaying queued drop x=\(Int(queued))")
@@ -2188,6 +2210,20 @@ final class AppState {
         return hosts
     }
 
+    /// A primary-band frame sits under the drop x: the dropped icon has
+    /// landed where `adopt` looks for it.
+    /// With the grabbed app known, it must be that app's icon.
+    private static func dropLanded(_ snap: EngineSnapshot, at x: CGFloat, bundle: String?) -> Bool {
+        let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        return snap.items.contains { item in
+            guard let frame = item.frame, MenuBarGeometry.isInBand(frame),
+                  frame.midX > 0, frame.midX < primaryMaxX,
+                  bundle.map({ item.id.bundleID == $0 }) ?? true
+            else { return false }
+            return frame.minX - 8 <= x && x <= frame.maxX + 8
+        }
+    }
+
     private func adopt(from snap: EngineSnapshot, dragEndX: CGFloat? = nil) {
         // No showStatusItem guard: with the Pelmet icon hidden reconcile
         // falls back to cluster-edge boundaries, where zone adoption applies
@@ -2215,7 +2251,11 @@ final class AppState {
                 .compactMap { item -> (id: ItemID, distance: CGFloat)? in
                     guard let frame = item.frame else { return nil }
                     guard frame.minX - 8 <= x, x <= frame.maxX + 8 else { return nil }
-                    return (item.id, abs(frame.midX - x))
+                    // The grabbed app's icon wins over a neighbour under the
+                    // same x: Pelmet's own icon next to the drop took the
+                    // credit for One Thing's drag (2026-09-25).
+                    let grabbed = lastDropBundle.map { item.id.bundleID == $0 } ?? false
+                    return (item.id, abs(frame.midX - x) - (grabbed ? 10_000 : 0))
                 }
                 .min { $0.distance < $1.distance }
             if let hit { PelmetLog.log("adopt: dragged=\(hit.id.rawValue)") }

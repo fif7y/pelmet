@@ -50,6 +50,22 @@ public enum BarAdoption {
     /// a real user drag does. That makes zone-CHANGE the safe adoption
     /// trigger: a settings-assigned item still sitting in its old zone is
     /// never "corrected" back.
+    /// `order` with its on-bar members re-sorted into `bar`'s order, in the
+    /// slots they already hold. Members the bar has no frame for stay put.
+    /// Pelmet's Siri leaves the layout while Hidden is concealed, so it is
+    /// neither live nor concealed: appended after the framed icons, every
+    /// drop into Hidden drew it last and Apply dragged it to the far right
+    /// (2026-09-25).
+    public static func refill(_ order: [ItemID], inBarOrder bar: [ItemID]) -> [ItemID] {
+        let members = Set(order)
+        let onBar = bar.filter(members.contains)
+        let framed = Set(onBar)
+        var result = order
+        let slots = order.indices.filter { framed.contains(order[$0]) }
+        for (slot, id) in zip(slots, onBar) { result[slot] = id }
+        return result
+    }
+
     public static func reconcile(
         items: [(id: ItemID, minX: CGFloat?)],
         model startModel: SectionModel,
@@ -290,7 +306,14 @@ public enum BarAdoption {
             // toggled on gets a spec and no order entry — its first bar X is
             // the only slot there is. Looking it up in `liveX` force-unwrapped
             // nil: a trap on the first adopt pass of every launch (#13).
-            var slotX = liveX
+            // Own items hold their slots but still sit where they sit, so a
+            // newcomer slots in against them too: One Thing, adopted right of
+            // Media, found no member left of it and went first (2026-09-25).
+            var slotX = items.reduce(into: liveX) {
+                guard let x = $1.minX else { return }
+                let key = $1.id.sectionKey
+                $0[key] = min($0[key] ?? .greatestFiniteMagnitude, x)
+            }
             let missing: [(key: ItemID, x: CGFloat)] = items.compactMap {
                 guard let minX = $0.minX, !known.contains($0.id.sectionKey),
                       model.section(of: $0.id) == section,
@@ -303,6 +326,14 @@ public enum BarAdoption {
                 slotX[key] = x
                 let insertAfter = newOrder.lastIndex { slotX[$0].map { $0 < x } == true }
                 newOrder.insert(key, at: insertAfter.map { $0 + 1 } ?? 0)
+            }
+            if section == .visible {
+                // Control Center and the clock end the bar, so they end the
+                // drawing too. An own item holding a slot after them drew
+                // Camera right of the clock, and a drop next to it aimed
+                // Apply past the clock (2026-09-25).
+                let pinnedEnd = newOrder.filter(MenuBarPolicy.isPinnedSystemItem)
+                newOrder = newOrder.filter { !MenuBarPolicy.isPinnedSystemItem($0) } + pinnedEnd
             }
             if newOrder != order {
                 model.order[section] = newOrder

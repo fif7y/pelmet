@@ -25,6 +25,14 @@ final class MenuBarBandMonitor {
     /// a catch-all for missed mouse-ups — but unconditionally snapshotting the
     /// AX tree on EVERY top-edge graze was the tax; only drags change layout.
     private var dragSinceAdoption = false
+    /// A drop waiting for its adoption pass. The bar must stay revealed
+    /// until then: a dropped item keeps its old section, and a conceal took
+    /// it off the bar before adoption could read where it landed.
+    private var dropAdoptionPending = false
+    /// The app owning the status item under the last mouse-down, and the one
+    /// the running ⌘-drag grabbed: the drop's adoption looks for its icon.
+    private var lastHitOwner: String?
+    private var dragOwner: String?
     /// Set by a deliberate conceal (chevron / empty-area click) so the hover
     /// path can't undo it while the pointer is still where it clicked.
     private var hoverSuppressedUntilExit = false
@@ -79,6 +87,7 @@ final class MenuBarBandMonitor {
             if !cmdDragActive {
                 cmdDragActive = true
                 dragSinceAdoption = true
+                dragOwner = lastHitOwner
                 appState.pointerReturnedToBand()  // cancels any rehide countdown
                 PelmetLog.log("band: ⌘-drag started")
                 // Nothing walks icons into the hidden run any more, so the
@@ -92,16 +101,23 @@ final class MenuBarBandMonitor {
         case .leftMouseUp:
             guard cmdDragActive else { return }
             cmdDragActive = false
+            // The mouse-up was seen: the band-exit catch-all must not adopt
+            // early without the drop x. MenuBarAgent's drag image under the
+            // pointer reads as leaving the band right after the drop, and
+            // that pass blamed the drag on Pelmet's own icon (2026-09-25).
+            dragSinceAdoption = false
+            dropAdoptionPending = true
             // The drop x identifies WHICH item was dragged (it lands under
             // the cursor) — chevron-less zone adoption needs that identity.
             let dropX = NSEvent.mouseLocation.x
-            PelmetLog.log("band: ⌘-drag ended → adopting (dropX=\(Int(dropX)))")
+            let owner = dragOwner
+            PelmetLog.log("band: ⌘-drag ended → adopting (dropX=\(Int(dropX)), grabbed \(owner ?? "unknown"))")
             // Give MenuBarAgent a beat to finalize the new position, then
             // adopt before rehide can run a stale conceal.
             DispatchQueue.main.asyncAfter(deadline: .now() + AppTiming.dragAdoptDelay) { [weak self] in
                 guard let self, let appState = self.appState else { return }
-                self.dragSinceAdoption = false
-                appState.adoptSectionsFromBar(dragEndX: dropX)
+                self.dropAdoptionPending = false
+                appState.adoptSectionsFromBar(dragEndX: dropX, draggedBundle: owner)
                 if appState.isRevealed {
                     appState.pointerLeftBand()  // re-arm the countdown
                 }
@@ -210,10 +226,11 @@ final class MenuBarBandMonitor {
     /// pointer. Nil when nothing holds. One window list per verdict: the
     /// old Bool + diagnostic-twin pair walked the list twice per deferred
     /// reveal (perf audit 2026-09-15, fix 4b).
-    enum DeferReason: String { case band, active, elevated }
+    enum DeferReason: String { case band, active, elevated, drag }
 
     func rehideDeferReason() -> DeferReason? {
         if pointerInBand { return .band }
+        if cmdDragActive || dropAdoptionPending || appState?.dropAdoptionInFlight == true { return .drag }
         // Pelmet frontmost only holds the bar for the layout editor and the
         // onboarding demo — the General tab is not a reason to stay revealed.
         if NSApp.isActive, appState?.editorHoldsBar == true || OnboardingController.shared.isPresented { return .active }
@@ -627,6 +644,7 @@ final class MenuBarBandMonitor {
             && (role == "AXMenuBar"
                 || owner == PelmetBundle.agentID
                 || role == "AXWindow" || role == "AXGroup")
+        lastHitOwner = role == "AXMenuBarItem" && owner != "?" ? owner : nil
         PelmetLog.log("band: hit-test role=\(role) owner=\(owner) → empty=\(empty)")
         return empty
     }

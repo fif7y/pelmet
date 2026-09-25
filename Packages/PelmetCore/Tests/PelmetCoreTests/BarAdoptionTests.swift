@@ -527,6 +527,29 @@ struct BarAdoptionTests {
         #expect(result?.changed == true)
         #expect(result?.model.order[.hidden] == [figma.sectionKey, velja.sectionKey])
     }
+
+    // Gab's bar, 2026-09-25: One Thing ⌘-dragged in right of Media went to
+    // the front of Visible, and Camera held a slot after the clock.
+    @Test func newcomerSlotsAgainstOwnItemsAndThePinnedEndStaysLast() {
+        let media = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.MediaControls")
+        let camera = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.CameraMic")
+        let cc = ItemID.status(bundle: "com.apple.MenuBarAgent", title: "com.apple.menuextra.controlcenter")
+        let clock = ItemID.status(bundle: "com.apple.MenuBarAgent", title: "com.apple.menuextra.clock")
+        var model = SectionModel()
+        model.order[.visible] = [media.sectionKey, cc.sectionKey, clock.sectionKey, camera.sectionKey]
+        let result = BarAdoption.reconcile(
+            items: [
+                (id: chevron, minX: 1399), (id: media, minX: 1437), (id: velja, minX: 1475),
+                (id: camera, minX: 1599), (id: cc, minX: 1645), (id: clock, minX: 1684),
+            ],
+            model: model,
+            previousZones: [velja.rawValue: .visible],
+            pelmetBundleID: pelmet
+        )
+        #expect(result?.model.order[.visible] == [
+            media.sectionKey, velja.sectionKey, camera.sectionKey, cc.sectionKey, clock.sectionKey,
+        ])
+    }
 }
 
 extension BarAdoptionTests {
@@ -596,5 +619,21 @@ extension BarAdoptionTests {
         #expect(result?.changed == true)
         #expect(result?.model.order[.visible]
             == [camera.sectionKey, media.sectionKey, battery.sectionKey, clock.sectionKey])
+    }
+
+    @Test func refillKeepsOffBarMembersInTheirSlots() {
+        // Hidden while concealed (2026-09-25): Pelmet's Siri has left the
+        // layout, the apps have remembered frames. Siri stays second.
+        let passwords = ItemID(rawValue: "bundle:com.apple.Passwords.MenuBarExtra")
+        let siri = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.Siri")
+        let utils = ItemID(rawValue: "bundle:com.vorssaint.utils")
+        let weather = ItemID(rawValue: "bundle:com.apple.weather.menu")
+        let snib = ItemID(rawValue: "bundle:app.fif7y.Snib")
+        let chevron = ItemID(rawValue: "status:app.fif7y.Pelmet::Pelmet.StatusItem")
+        #expect(BarAdoption.refill([passwords, siri, utils, weather, snib], inBarOrder: [passwords, utils, weather, snib, chevron])
+            == [passwords, siri, utils, weather, snib])
+        // The framed members still take the bar's order around it.
+        #expect(BarAdoption.refill([passwords, siri, utils, weather, snib], inBarOrder: [utils, passwords, snib, weather])
+            == [utils, siri, passwords, snib, weather])
     }
 }

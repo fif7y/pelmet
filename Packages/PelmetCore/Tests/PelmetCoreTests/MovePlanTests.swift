@@ -143,6 +143,31 @@ import Testing
         #expect(MovePlan.heaviestIncreasing([1, 2, 0], weights: [1, 1, 10]) == [2])
     }
 
+    @Test func nothingIsAimedPastThePinnedEnd() {
+        // Gab's bar, 2026-09-25: the order kept Camera after the clock, and a
+        // drop before Camera drew One Thing there too. Both land left of CC.
+        let cc = ItemID.status(bundle: "com.apple.MenuBarAgent", title: "com.apple.menuextra.controlcenter")
+        let clock = ItemID.status(bundle: "com.apple.MenuBarAgent", title: "com.apple.menuextra.clock")
+        var members = roster.members
+        for id in [v1, v2, cc, clock] { members[id] = .visible }
+        let plan = MovePlan.compute(
+            bar: [c, chevron, v2, v1, cc, clock],
+            edits: OrderEdits(order: [.visible: [v2, cc, clock, v1]]),
+            roster: Roster(members: members), chevron: chevron,
+            pinned: [cc, clock]
+        )
+        #expect(plan.moves.isEmpty)
+        let drop = MovePlan.compute(
+            bar: [c, chevron, a, v2, v1, cc, clock],
+            edits: OrderEdits(order: [.visible: [v2, cc, clock, a, v1]]),
+            roster: Roster(members: members.merging([a: .visible]) { $1 }), chevron: chevron,
+            pinned: [cc, clock]
+        )
+        // One swap of a and v2 (either may move), never a slot past CC.
+        #expect(drop.moves.count == 1)
+        #expect(drop.moves.allSatisfy { $0.after != clock && $0.after != cc && $0.before != nil })
+    }
+
     @Test func pinnedHostMidBarIsOrderedAround() {
         // Pinned host sits between b and a; editor wants a, host, b.
         // The host never moves: a and b each cross it.
