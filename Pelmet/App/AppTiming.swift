@@ -25,6 +25,9 @@ enum AppTiming {
     /// Longest the blink cover waits for the concealed items to leave the
     /// AX tree after the re-acquire before lifting anyway.
     static let clockBlinkCoverDeadline: TimeInterval = 1.5
+    /// Camera & mic relay (#68): longest Apple's pill may take to rejoin
+    /// the AX tree after the drop before the relay gives up on it.
+    static let audioVideoPillWait: TimeInterval = 1
     /// Notification Center's panel slides in over ~100ms from Pelmet's
     /// press; the blink cover crossfades from the bare still to the
     /// under-panel one over that slide, starting at the press.

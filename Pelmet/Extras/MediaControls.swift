@@ -979,10 +979,19 @@ final class ExtrasManager {
                 updateMediaSymbol(statusItem.value, spec: spec)
             }
         case .cameraMicIndicator:
-            // Informational; click opens Privacy settings for a quick audit.
-            NSWorkspace.shared.open(
-                URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera")!
-            )
+            // Apple's own pill (video effects, mic mode, Stop Sharing), which
+            // no assertion lets on the bar (#68). A right-click, or no pill
+            // to open, goes to Privacy settings for a quick audit.
+            let privacy = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera")!
+            guard !rightClick else { NSWorkspace.shared.open(privacy); return }
+            guard !AudioVideoPill.clickClosedPanel(), let appState else { return }
+            // The item's own spot (global, top-left origin): the pill to
+            // press is the copy on this item's display.
+            let frame = sender.window?.frame ?? .zero
+            let point = CGPoint(x: frame.midX, y: (NSScreen.screens.first?.frame.maxY ?? 0) - frame.midY)
+            Task { @MainActor in
+                if !(await appState.openAudioVideoPill(near: point)) { NSWorkspace.shared.open(privacy) }
+            }
         case .airdrop:
             openAirDrop()
         case .shortcut:

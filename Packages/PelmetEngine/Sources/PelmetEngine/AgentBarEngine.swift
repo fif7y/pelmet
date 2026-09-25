@@ -634,11 +634,11 @@ public actor AgentBarEngine: MenuBarEngine {
     /// this returns, and the invalidate XPC is already queued ahead of it.
     /// Bumps the converge epoch so an in-flight converge can't re-assert
     /// between the drop and the click.
-    public func beginClockBlink() -> Bool {
+    public func beginClockBlink(label: String = "clock") -> Bool {
         guard assertion != nil else { return false }
         convergeEpoch += 1
         invalidateAssertion()
-        PelmetLog.log("clock: blink — assertion dropped for the click")
+        PelmetLog.log("\(label): blink — assertion dropped for the click")
         return true
     }
 

@@ -912,6 +912,46 @@ final class AppState {
         }
     }
 
+    /// Set while the Camera & mic relay has the assertion down: Apple's
+    /// pill is back on the bar for that moment, and Pelmet's item must not
+    /// step aside for it (a reflow under the cover, and again after).
+    private var audioVideoRelayActive = false
+
+    /// The Camera & mic item was clicked: open Apple's own pill (#68) the
+    /// way a clock click opens Notification Center, the assertion dropped
+    /// under a picture of the bar and back once the panel is up. False
+    /// when no pill or panel showed, for the caller's fallback.
+    func openAudioVideoPill(near point: CGPoint) async -> Bool {
+        guard !clockBlinkInFlight else {
+            PelmetLog.log("audiovideo: blink in flight — press ignored")
+            return true
+        }
+        clockBlinkInFlight = true
+        audioVideoRelayActive = true
+        defer {
+            clockBlinkInFlight = false
+            // Until the re-acquire has taken the pill back off the bar.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(AppTiming.clockBlinkCoverDeadline))
+                audioVideoRelayActive = false
+            }
+        }
+        // The agent answers AX only once the drop's reflow is done: the
+        // pill came back 0.6–1.25s after it, and a cover on the usual 2.5s
+        // safety faded before the re-acquire had hidden the bar again.
+        let cover = await transitions.beginBarCover(
+            label: "audiovideo",
+            safety: AppTiming.transitionCoverSafety + AppTiming.audioVideoPillWait + AppTiming.clockPressVerify
+        )
+        let blinked = await engine.beginClockBlink(label: "audiovideo")
+        let opened = await AudioVideoPill.open(near: point)
+        guard blinked else { cover?.dismiss(); return opened }
+        try? await Task.sleep(for: AppTiming.clockBlinkReacquire)
+        await engine.endClockBlink()
+        if let cover { transitions.endBarCover(cover, label: "audiovideo") }
+        return opened
+    }
+
     // MARK: - Section helper events (HelperHosts)
 
     /// A helper registered an item. Mid-session that registration sits
@@ -1758,10 +1798,12 @@ final class AppState {
     /// asserting away Pelmet's bundle would take the chevron too.
     var revealedSectionsForExtras: Set<PelmetCore.Section> { currentRevealedSections }
 
-    /// macOS force-shows its camera pill through the assertion while the
-    /// camera is live; Pelmet's indicator defers to it to avoid duplication.
+    /// Apple's camera pill is on the bar, which only happens with no
+    /// assertion held (a full reveal); Pelmet's indicator defers to it to
+    /// avoid duplication. Not while the relay has it up for a click.
     var systemCameraPillVisible: Bool {
-        (snapshot?.items ?? []).contains {
+        guard !audioVideoRelayActive else { return false }
+        return (snapshot?.items ?? []).contains {
             $0.id.rawValue.contains("menuextra.audiovideo") && $0.frame != nil
         }
     }
