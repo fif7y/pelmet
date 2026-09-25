@@ -42,6 +42,7 @@ final class AppState {
     /// it) — the General row says so beside the recorder.
     private(set) var hotkeyConflict = false
     private(set) var settingsHotkeyConflict = false
+    private(set) var alwaysHiddenHotkeyConflict = false
     private(set) var notificationCenterHotkeyConflict = false
 
     var settingsWindowVisible = false {
@@ -272,13 +273,16 @@ final class AppState {
             case .toggle: self?.toggle(reason: .hotkey)
             case .settings: self?.openSettings()
             case .notificationCenter: self?.openNotificationCenter()
+            case .alwaysHidden: self?.toggleAll(reason: .hotkey)
             }
         }
         hotkeyConflict = !hotkey.register(settings.hotkey, slot: .toggle)
         settingsHotkeyConflict = !hotkey.register(settings.settingsHotkey, slot: .settings)
+        alwaysHiddenHotkeyConflict = !hotkey.register(settings.alwaysHiddenHotkey, slot: .alwaysHidden)
         notificationCenterHotkeyConflict = !hotkey.register(activeNotificationCenterHotkey, slot: .notificationCenter)
         registeredHotkey = settings.hotkey
         registeredSettingsHotkey = settings.settingsHotkey
+        registeredAlwaysHiddenHotkey = settings.alwaysHiddenHotkey
         registeredNotificationCenterHotkey = activeNotificationCenterHotkey
         self.hotkey = hotkey
 
@@ -584,7 +588,7 @@ final class AppState {
 
     // MARK: - Intents (UI + monitors call these)
 
-    func toggle(reason: RevealReason) {
+    func toggle(reason: RevealReason, sections: Set<PelmetCore.Section> = [.hidden]) {
         PerfTrace.markTrigger("\(reason)")
         // A click landing in the first moments of a hover reveal: the
         // pointer reached the chevron, the hover fired ~100ms later, and
@@ -606,7 +610,7 @@ final class AppState {
             dispatch(rehide.handle(.revealRequested(hoverSections, reason)))
             return
         }
-        let effects = rehide.handle(.toggleRequested([.hidden], reason))
+        let effects = rehide.handle(.toggleRequested(sections, reason))
         PelmetLog.log("toggle(\(reason)) state=\(rehide.state) effects=\(effects)")
         dispatch(effects)
         // A deliberate conceal under a hovering pointer must STAY concealed:
@@ -621,6 +625,25 @@ final class AppState {
     func reveal(_ sections: Set<PelmetCore.Section>, reason: RevealReason) {
         PerfTrace.markTrigger("\(reason)")
         dispatch(rehide.handle(.revealRequested(sections, reason)))
+    }
+
+    /// The Always Hidden shortcut (#67): everything out, or everything back
+    /// once it is all out. A reveal that left Always Hidden in widens to
+    /// include it instead of closing: the key asked for more, not less.
+    func toggleAll(reason: RevealReason) {
+        let all: Set<PelmetCore.Section> = [.hidden, .alwaysHidden]
+        let showing: Set<PelmetCore.Section>? = {
+            switch rehide.state {
+            case .revealed(let sections, _): sections
+            case .transitioning(target: .reveal(let sections, _), queued: nil): sections
+            default: nil
+            }
+        }()
+        if let showing, !showing.contains(.alwaysHidden) {
+            reveal(all, reason: reason)
+        } else {
+            toggle(reason: reason, sections: all)
+        }
     }
 
     /// When the last hover reveal's effect started — the earliest the user
@@ -742,6 +765,7 @@ final class AppState {
     private var settingsApplyWork: Task<Void, Never>?
     private var registeredHotkey: HotkeySpec?
     private var registeredSettingsHotkey: HotkeySpec?
+    private var registeredAlwaysHiddenHotkey: HotkeySpec?
     private var registeredNotificationCenterHotkey: HotkeySpec?
     /// The shortcut rides on the clock relay: off with it, not on its own.
     private var activeNotificationCenterHotkey: HotkeySpec? {
@@ -990,6 +1014,10 @@ final class AppState {
         if settings.settingsHotkey != registeredSettingsHotkey {
             settingsHotkeyConflict = !(hotkey?.register(settings.settingsHotkey, slot: .settings) ?? true)
             registeredSettingsHotkey = settings.settingsHotkey
+        }
+        if settings.alwaysHiddenHotkey != registeredAlwaysHiddenHotkey {
+            alwaysHiddenHotkeyConflict = !(hotkey?.register(settings.alwaysHiddenHotkey, slot: .alwaysHidden) ?? true)
+            registeredAlwaysHiddenHotkey = settings.alwaysHiddenHotkey
         }
         if activeNotificationCenterHotkey != registeredNotificationCenterHotkey {
             notificationCenterHotkeyConflict = !(hotkey?.register(activeNotificationCenterHotkey, slot: .notificationCenter) ?? true)

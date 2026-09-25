@@ -5047,6 +5047,64 @@
         }
       }
     },
+    "Everything at once, press again to hide it all.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles auf einmal, erneut drücken blendet alles aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo a la vez, pulsa de nuevo para ocultarlo todo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout d'un coup, appuyez à nouveau pour tout masquer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto insieme, premi di nuovo per nascondere tutto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを一度に表示。もう一度押すとすべて隠します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번에 모두 표시, 다시 누르면 모두 숨깁니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tudo de uma vez, pressione de novo para ocultar tudo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Всё сразу, нажмите ещё раз, чтобы всё скрыть."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次显示全部，再按一次全部隐藏。"
+          }
+        }
+      }
+    },
     "Expanded": {
       "localizations": {
         "de": {

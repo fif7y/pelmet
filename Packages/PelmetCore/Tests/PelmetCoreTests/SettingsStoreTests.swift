@@ -44,4 +44,17 @@ struct SettingsStoreTests {
         // Placing the section that held the created item retires it from Discard.
         #expect(edits.created.isEmpty)
     }
+
+    // The Always Hidden shortcut (#67) is never off: an upgraded blob and a
+    // null both take ⌃⌥⌘, and a recorded one survives a save.
+    @Test func alwaysHiddenHotkeyDefaultsAndRoundTrips() throws {
+        let legacy = try JSONDecoder().decode(SettingsStore.self, from: Data("{}".utf8))
+        #expect(legacy.alwaysHiddenHotkey == .alwaysHiddenDefault)
+        let null = try JSONDecoder().decode(SettingsStore.self, from: Data(#"{"alwaysHiddenHotkey":null}"#.utf8))
+        #expect(null.alwaysHiddenHotkey == .alwaysHiddenDefault)
+        var settings = SettingsStore()
+        settings.alwaysHiddenHotkey = HotkeySpec(keyCode: 0x2F, modifiers: 0x900, display: "⌥⌘.")
+        let back = try JSONDecoder().decode(SettingsStore.self, from: JSONEncoder().encode(settings))
+        #expect(back.alwaysHiddenHotkey == settings.alwaysHiddenHotkey)
+    }
 }

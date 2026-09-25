@@ -475,6 +475,8 @@ T = {
     "Restore %@": dict(de="%@ wiederherstellen", fr="Rétablir %@", es="Restaurar %@", it="Ripristina %@", pt="Restaurar %@", ja="%@ に戻す", zh="恢复为 %@", ko="%@ 로 되돌리기", ru="Вернуть %@"),
     "Open Settings": dict(de="Einstellungen öffnen", fr="Ouvrir les réglages", es="Abrir ajustes", it="Apri impostazioni", pt="Abrir ajustes", ja="設定を開く", zh="打开设置", ko="설정 열기", ru="Открыть настройки"),
     "Get back here from any app.": dict(de="Von jeder App aus hierher zurück.", fr="Revenez ici depuis n'importe quelle app.", es="Vuelve aquí desde cualquier app.", it="Torna qui da qualsiasi app.", pt="Volte aqui de qualquer app.", ja="どのアプリからでもここに戻れます。", zh="从任何 App 都能回到这里。", ko="어떤 앱에서든 여기로 돌아오세요.", ru="Вернуться сюда из любого приложения."),
+    # Always Hidden shortcut (#67, 2026-09-25)
+    "Everything at once, press again to hide it all.": dict(de="Alles auf einmal, erneut drücken blendet alles aus.", fr="Tout d'un coup, appuyez à nouveau pour tout masquer.", es="Todo a la vez, pulsa de nuevo para ocultarlo todo.", it="Tutto insieme, premi di nuovo per nascondere tutto.", pt="Tudo de uma vez, pressione de novo para ocultar tudo.", ja="すべてを一度に表示。もう一度押すとすべて隠します。", zh="一次显示全部，再按一次全部隐藏。", ko="한 번에 모두 표시, 다시 누르면 모두 숨깁니다.", ru="Всё сразу, нажмите ещё раз, чтобы всё скрыть."),
     # Pelmet timer + fast user switching (2026-09-15)
     "Timer": dict(de="Timer", fr="Minuteur", es="Temporizador", it="Timer", pt="Timer", ja="タイマー", zh="计时器", ko="타이머", ru="Таймер"),
     "Users": dict(de="Benutzer", fr="Utilisateurs", es="Usuarios", it="Utenti", pt="Usuários", ja="ユーザ", zh="用户", ko="사용자", ru="Пользователи"),

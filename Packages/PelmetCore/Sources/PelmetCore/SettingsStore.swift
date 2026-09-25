@@ -25,6 +25,9 @@ public struct HotkeySpec: Codable, Equatable, Sendable {
     public static let `default` = HotkeySpec(keyCode: 0x2B, modifiers: 0x900, display: "⌥⌘,")
     /// ⇧⌥⌘, opens Settings — the toggle combo plus shift (shiftKey = 0x200).
     public static let settingsDefault = HotkeySpec(keyCode: 0x2B, modifiers: 0xB00, display: "⇧⌥⌘,")
+    /// ⌃⌥⌘, shows Always Hidden too (#67) — the toggle combo plus control
+    /// (controlKey = 0x1000). With the icon off it is the only way there.
+    public static let alwaysHiddenDefault = HotkeySpec(keyCode: 0x2B, modifiers: 0x1900, display: "⌃⌥⌘,")
     /// ⌥⌘N opens Notification Center (#44): macOS's own shortcut is refused
     /// while a hide assertion holds, so Pelmet offers one that runs the
     /// clock relay. kVK_ANSI_N = 0x2D.
@@ -327,6 +330,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     /// Never off: a missing, null or unreadable value takes the default.
     public var hotkey: HotkeySpec? = .default
     public var settingsHotkey: HotkeySpec? = .settingsDefault
+    public var alwaysHiddenHotkey: HotkeySpec? = .alwaysHiddenDefault
 
     public var revealTriggers = RevealTriggers()
     public var autoRehide: Bool = true
@@ -428,7 +432,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     // failing the whole decode and silently resetting the user's settings)
 
     private enum CodingKeys: String, CodingKey {
-        case onboardingCompleted, launchAtLogin, showStatusItem, hotkey, settingsHotkey
+        case onboardingCompleted, launchAtLogin, showStatusItem, hotkey, settingsHotkey, alwaysHiddenHotkey
         case revealTriggers, autoRehide, rehideDelay, rehideOnClickElsewhere, revealAnimation
         case hideSystemExtras, showMediaControls, extraItems, sectionModel, separators
         case displayTemplate, displayOverrides
@@ -453,6 +457,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         showStatusItem = field(Bool.self, .showStatusItem, defaults.showStatusItem)
         hotkey = field(HotkeySpec?.self, .hotkey, defaults.hotkey) ?? defaults.hotkey
         settingsHotkey = field(HotkeySpec?.self, .settingsHotkey, defaults.settingsHotkey) ?? defaults.settingsHotkey
+        alwaysHiddenHotkey = field(HotkeySpec?.self, .alwaysHiddenHotkey, defaults.alwaysHiddenHotkey) ?? defaults.alwaysHiddenHotkey
         revealTriggers = field(RevealTriggers.self, .revealTriggers, defaults.revealTriggers)
         autoRehide = field(Bool.self, .autoRehide, defaults.autoRehide)
         rehideDelay = field(TimeInterval.self, .rehideDelay, defaults.rehideDelay)

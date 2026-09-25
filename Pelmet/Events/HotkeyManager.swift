@@ -8,7 +8,7 @@ import PelmetCore
 import PelmetEngine
 
 final class HotkeyManager {
-    enum Slot: UInt32 { case toggle = 1, settings = 2, notificationCenter = 3 }
+    enum Slot: UInt32 { case toggle = 1, settings = 2, notificationCenter = 3, alwaysHidden = 4 }
 
     private var hotKeyRefs: [Slot: EventHotKeyRef] = [:]
     private var handlerRef: EventHandlerRef?

@@ -655,6 +655,13 @@ private struct GeneralPane: View {
                 ShortcutRecorder(shortcut: binding(\.hotkey), fallback: .default)
             }
             SettingRow(
+                title: "Show Always-Hidden Too",
+                caption: hotkeyCaption(appState.settings.alwaysHiddenHotkey, conflict: appState.alwaysHiddenHotkeyConflict,
+                                       otherwise: "Everything at once, press again to hide it all.")
+            ) {
+                ShortcutRecorder(shortcut: binding(\.alwaysHiddenHotkey), fallback: .alwaysHiddenDefault)
+            }
+            SettingRow(
                 title: "Open Settings",
                 caption: hotkeyCaption(appState.settings.settingsHotkey, conflict: appState.settingsHotkeyConflict,
                                        otherwise: "Get back here from any app.")
