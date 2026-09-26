@@ -16,12 +16,6 @@ BUILD_DIR="$REPO_ROOT/build/release"
 RELEASES_DIR="$REPO_ROOT/build/releases"   # generate_appcast scans this dir
 NOTARY_PROFILE="${NOTARY_PROFILE:-nook-notary}"
 
-# macOS 27 SDK lives in the beta Xcode on the dev machine; CI xcode-selects
-# its own, so only default when the beta install is actually present.
-if [[ -z "${DEVELOPER_DIR:-}" && -d /Applications/Xcode-beta.app ]]; then
-    export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
-fi
-
 # project.yml carries MARKETING_VERSION twice (app target + the helper
 # template); they must agree, and one line is all the release name gets.
 VERSIONS=$(sed -n 's/^ *MARKETING_VERSION: "\(.*\)"/\1/p' project.yml | sort -u)
