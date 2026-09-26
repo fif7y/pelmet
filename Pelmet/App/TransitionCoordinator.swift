@@ -497,13 +497,13 @@ final class TransitionCoordinator {
         /// cluster show its own change during the drop: Pelmet's own items
         /// trade places with the system's and the cluster shifts (Gab:
         /// "the icons change since the Pelmet icon goes away").
+        ///
+        /// Never past it: the picture can be up to 15 minutes old, and a
+        /// cover over the clock showed the minute it was taken in under
+        /// every blink (22:41 at 22:42, 2026-09-25). Notification Center's
+        /// panel shades the live clock itself; the wipe replays its filmed
+        /// trajectory in display coordinates, so the two meet at the clock.
         let anchorMinX: CGFloat
-        /// Where the cover ends: the display's right edge (less the
-        /// capture's padding, which the crop adds back). Notification
-        /// Center's panel shades the bar from ~410pt in to the edge; a
-        /// cover that stopped at the clock left the real panel moving
-        /// beside the picture's wipe (Gab, 2026-09-22 17:14).
-        let endX: CGFloat
         let band: CGRect
     }
 
@@ -526,14 +526,17 @@ final class TransitionCoordinator {
         // and the display edge, and a wider picture of static bar is free.
         let concealedGrowth = CGFloat(appState.snapshot?.concealed.count ?? 0) * 40
         let minX = min(leftmost, revealCoverRect?.minX ?? leftmost) - 24 - concealedGrowth
-        return BarCoverGeometry(minX: minX, anchorMinX: clock.minX, endX: primaryMaxX - ConcealGhostOverlay.capturePadding, band: band)
+        return BarCoverGeometry(minX: minX, anchorMinX: clock.minX, band: band)
     }
+
+    /// Where a cover anchored on a clock at `anchorMinX` ends.
+    private static func coverEnd(anchorMinX: CGFloat) -> CGFloat { anchorMinX - 2 - ConcealGhostOverlay.capturePadding }
 
     /// The capture pads 6pt past the rect on both sides (continuous
     /// background); the right edge must land short of the clock AFTER
     /// that padding or the picture eats the date's first letter.
     private func barCoverRect(_ geometry: BarCoverGeometry, anchorMinX: CGFloat? = nil) -> CGRect {
-        let maxX = geometry.endX
+        let maxX = Self.coverEnd(anchorMinX: anchorMinX ?? geometry.anchorMinX)
         return CGRect(
             x: geometry.minX, y: geometry.band.minY,
             width: maxX - geometry.minX, height: geometry.band.height
@@ -583,7 +586,7 @@ final class TransitionCoordinator {
             PelmetLog.log("clock: debug — no cover")
             return nil
         }
-        var spanEnd = geometry.endX
+        var spanEnd = Self.coverEnd(anchorMinX: geometry.anchorMinX)
         var span = geometry.minX...spanEnd
         // The picture the idle pre-capture already holds spans this cover
         // (scheduleRevealCoverPrecapture widens it to), so cut the cover
@@ -644,8 +647,9 @@ final class TransitionCoordinator {
             snaps = await ConcealGhostOverlay.snapshotSet(of: rect(anchorMinX: anchorNow))
         }
         let cover = ConcealGhostOverlay.begin(from: snaps, safety: safety)
-        PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(geometry.minX))..\(Int(geometry.endX)) anchor \(Int(geometry.anchorMinX))→\(Int(anchorNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
-        return cover.map { BlinkCover($0, span: geometry.minX...geometry.endX, safety: safety, pictures: snaps) }
+        let end = Self.coverEnd(anchorMinX: anchorNow)
+        PelmetLog.log("\(label): cover \(cover == nil ? "none" : "up") \(Int(geometry.minX))..\(Int(end)) anchor \(Int(geometry.anchorMinX))→\(Int(anchorNow)) after \(walks) walk(s)\(indicatorLit ? ", indicator lit" : ""), ready in \(Int(-started.timeIntervalSinceNow * 1000))ms")
+        return cover.map { BlinkCover($0, span: geometry.minX...end, safety: safety, pictures: snaps) }
     }
 
     /// Entrance blink, as Notification Center's panel slides in: the
