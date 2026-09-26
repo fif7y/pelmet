@@ -916,6 +916,8 @@ final class AppState {
     /// pill is back on the bar for that moment, and Pelmet's item must not
     /// step aside for it (a reflow under the cover, and again after).
     private var audioVideoRelayActive = false
+    /// Which relay the flag belongs to: only the latest one clears it.
+    private var audioVideoRelayGeneration = 0
 
     /// The Camera & mic item was clicked: open Apple's own pill (#68) the
     /// way a clock click opens Notification Center, the assertion dropped
@@ -929,13 +931,11 @@ final class AppState {
         }
         clockBlinkInFlight = true
         audioVideoRelayActive = true
+        audioVideoRelayGeneration += 1
+        let generation = audioVideoRelayGeneration
         defer {
             clockBlinkInFlight = false
-            // Until the re-acquire has taken the pill back off the bar.
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(AppTiming.clockBlinkCoverDeadline))
-                audioVideoRelayActive = false
-            }
+            Task { @MainActor in await settleAfterAudioVideoRelay(generation) }
         }
         // The agent answers AX only once the drop's reflow is done: the
         // pill came back 0.6–1.25s after it, and a cover on the usual 2.5s
@@ -951,6 +951,40 @@ final class AppState {
         await engine.endClockBlink()
         if let cover { transitions.endBarCover(cover, label: "audiovideo") }
         return opened
+    }
+
+    /// The re-acquire leaves AX mid-reflow for up to ~0.8s: Apple's pill
+    /// and the revealed icons still listed, overlapping (read as icons
+    /// behind the «), and that stale walk stayed the snapshot. Once the
+    /// flag cleared on a timer, the next extras apply saw the pill "up" and
+    /// Camera & mic stepped aside until the next reveal; a second relay
+    /// inside the first one's timer lost the flag mid-drop the same way
+    /// (#68, 2-3 clicks in a row). Hold the flag until a fresh walk shows
+    /// the bar settled, keep that walk, re-apply, and only for the latest
+    /// relay.
+    private func settleAfterAudioVideoRelay(_ generation: Int) async {
+        let deadline = Date().addingTimeInterval(AppTiming.clockBlinkCoverDeadline)
+        let screenMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
+        func settled(_ snap: EngineSnapshot) -> Bool {
+            let frames = snap.items.compactMap(\.frame).filter { $0.width > 4 && PlacementGeometry.isPrimary($0, screenMaxX: screenMaxX) }
+            return !snap.items.contains { $0.id.rawValue.hasSuffix(AudioVideoPill.identifier) && $0.frame != nil }
+                && PlacementGeometry.overflowTrapped(frames).isEmpty
+        }
+        var snap = await engine.freshSnapshot()
+        var walks = 1
+        while !settled(snap), Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(150))
+            guard generation == audioVideoRelayGeneration else { return }
+            snap = await engine.freshSnapshot()
+            walks += 1
+        }
+        guard generation == audioVideoRelayGeneration else { return }
+        PelmetLog.log("audiovideo: bar \(settled(snap) ? "settled" : "still unsettled at the deadline") after \(walks) walk(s)")
+        updateSnapshot(snap)
+        audioVideoRelayActive = false
+        // A transition in flight re-applies at its settle catch-up.
+        guard !isTransitioning else { return }
+        extras?.apply(model: settings.sectionModel, revealed: currentRevealedSections, systemCameraPillVisible: systemCameraPillVisible)
     }
 
     // MARK: - Section helper events (HelperHosts)
