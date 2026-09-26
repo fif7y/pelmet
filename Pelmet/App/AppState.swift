@@ -919,9 +919,10 @@ final class AppState {
 
     /// The Camera & mic item was clicked: open Apple's own pill (#68) the
     /// way a clock click opens Notification Center, the assertion dropped
-    /// under a picture of the bar and back once the panel is up. False
-    /// when no pill or panel showed, for the caller's fallback.
-    func openAudioVideoPill(near point: CGPoint) async -> Bool {
+    /// under a picture of the bar and back once the panel is up. A SharePlay
+    /// session passes Apple's SharePlay icon ahead of the pill. False when
+    /// no pill or panel showed, for the caller's fallback.
+    func openAudioVideoPill(near point: CGPoint, identifiers: [String] = [AudioVideoPill.identifier]) async -> Bool {
         guard !clockBlinkInFlight else {
             PelmetLog.log("audiovideo: blink in flight — press ignored")
             return true
@@ -944,7 +945,7 @@ final class AppState {
             safety: AppTiming.transitionCoverSafety + AppTiming.audioVideoPillWait + AppTiming.clockPressVerify
         )
         let blinked = await engine.beginClockBlink(label: "audiovideo")
-        let opened = await AudioVideoPill.open(near: point)
+        let opened = await AudioVideoPill.open(near: point, identifiers: identifiers)
         guard blinked else { cover?.dismiss(); return opened }
         try? await Task.sleep(for: AppTiming.clockBlinkReacquire)
         await engine.endClockBlink()
@@ -1805,6 +1806,18 @@ final class AppState {
         guard !audioVideoRelayActive else { return false }
         return (snapshot?.items ?? []).contains {
             $0.id.rawValue.contains("menuextra.audiovideo") && $0.frame != nil
+        }
+    }
+
+    /// When one of Pelmet's own items last came, left or changed face.
+    var ownBarChangedAt: Date { extras?.lastBarChange ?? .distantPast }
+
+    /// Apple's SharePlay icon is on screen (a full reveal lets it back):
+    /// the Camera & mic item steps aside for it as it does for the pill.
+    var systemSharePlayVisible: Bool {
+        guard !audioVideoRelayActive else { return false }
+        return (snapshot?.items ?? []).contains {
+            $0.id.rawValue.hasSuffix(AudioVideoPill.sharePlayIdentifier) && $0.frame != nil
         }
     }
 

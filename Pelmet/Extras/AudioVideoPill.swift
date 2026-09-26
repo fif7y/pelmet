@@ -8,6 +8,9 @@
 // (Gab, 2026-09-25 13:33). Probed 13:40 with Pelmet quit: an AX press opens
 // Control Center's panel (one window, layer 101) ~150ms later, and a second
 // press closes it.
+// With a SharePlay session and no call, the pill wears the SharePlay glyph
+// and holds its controls; Control Center's separate FaceTime extra is
+// pressed first in case a build shows one (none did, 2026-09-25).
 
 import AppKit
 import PelmetCore
@@ -16,6 +19,8 @@ import PelmetEngine
 @MainActor
 enum AudioVideoPill {
     nonisolated static let identifier = "com.apple.menuextra.audiovideo"
+    /// Apple's SharePlay icon, Control Center's FaceTime extra.
+    nonisolated static let sharePlayIdentifier = "com.apple.menuextra.faceTime"
     nonisolated static let controlCenterID = "com.apple.controlcenter"
 
     /// The panel Pelmet opened, while it is up. Never read at click time:
@@ -36,13 +41,14 @@ enum AudioVideoPill {
     }
 
     /// Press the pill on the display under `point` once the dropped
-    /// assertion has put it back, and wait for its panel. False when no
-    /// pill came back or no panel showed.
-    static func open(near point: CGPoint) async -> Bool {
+    /// assertion has put it back, and wait for its panel. `identifiers` in
+    /// order of preference: the first one back on the bar is pressed. False
+    /// when none came back or no panel showed.
+    static func open(near point: CGPoint, identifiers: [String] = [identifier]) async -> Bool {
         let display = ClockClickRelay.display(under: point)
         let wait = AppTiming.audioVideoPillWait, verify = AppTiming.clockPressVerify
         guard let window = await Task.detached(priority: .userInitiated, operation: {
-            await press(on: display, wait: wait, verify: verify)
+            await press(on: display, identifiers: identifiers, wait: wait, verify: verify)
         }).value
         else { return false }
         panelWindow = window
@@ -67,25 +73,26 @@ enum AudioVideoPill {
         }
     }
 
-    nonisolated private static func press(on display: CGDirectDisplayID?, wait: TimeInterval, verify: TimeInterval) async -> Int? {
+    nonisolated private static func press(on display: CGDirectDisplayID?, identifiers: [String], wait: TimeInterval, verify: TimeInterval) async -> Int? {
         guard let agent = NSRunningApplication.runningApplications(withBundleIdentifier: PelmetBundle.agentID).first
         else { return nil }
         let app = AXUIElementCreateApplication(agent.processIdentifier)
         let started = Date()
-        var pill = find(in: app, on: display)
+        var pill = find(in: app, on: display, identifiers: identifiers)
         let firstWalk = Int(-started.timeIntervalSinceNow * 1000)
         var walks = 1
         while pill == nil, Date().timeIntervalSince(started) < wait {
             try? await Task.sleep(for: .milliseconds(30))
-            pill = find(in: app, on: display)
+            pill = find(in: app, on: display, identifiers: identifiers)
             walks += 1
         }
         let back = Int(-started.timeIntervalSinceNow * 1000)
-        guard let pill else {
-            PelmetLog.log("audiovideo: no pill in the bar after \(back)ms (\(walks) walks, first \(firstWalk)ms)")
+        let names = identifiers.map { $0.replacingOccurrences(of: "com.apple.menuextra.", with: "") }
+        guard let (pill, found) = pill else {
+            PelmetLog.log("audiovideo: no \(names.joined(separator: "/")) in the bar after \(back)ms (\(walks) walks, first \(firstWalk)ms)")
             return nil
         }
-        PelmetLog.log("audiovideo: pill back at \(back)ms (\(walks) walks, first \(firstWalk)ms)")
+        PelmetLog.log("audiovideo: \(found.replacingOccurrences(of: "com.apple.menuextra.", with: "")) back at \(back)ms (\(walks) walks, first \(firstWalk)ms)")
         let before = panelWindows()
         for attempt in 1...2 {
             let sent = AXUIElementPerformAction(pill, kAXPressAction as CFString) == .success
@@ -103,25 +110,32 @@ enum AudioVideoPill {
         return nil
     }
 
-    /// The pill on `display`, else on any display: a copy only exists while
-    /// no assertion holds, and one without a frame is still arriving.
-    nonisolated private static func find(in app: AXUIElement, on display: CGDirectDisplayID?) -> AXUIElement? {
-        var pills: [(AXUIElement, CGRect)] = []
-        collect(app, depth: 8, into: &pills)
-        return (pills.first { ClockClickRelay.display(under: CGPoint(x: $0.1.midX, y: $0.1.midY)) == display } ?? pills.first)?.0
+    /// The most preferred item back on the bar, the copy on `display` else
+    /// on any display: a copy only exists while no assertion holds, and one
+    /// without a frame is still arriving.
+    nonisolated private static func find(in app: AXUIElement, on display: CGDirectDisplayID?, identifiers: [String]) -> (AXUIElement, String)? {
+        var pills: [(AXUIElement, CGRect, String)] = []
+        collect(app, depth: 8, matching: Set(identifiers), into: &pills)
+        for id in identifiers {
+            let copies = pills.filter { $0.2 == id }
+            if let pill = copies.first(where: { ClockClickRelay.display(under: CGPoint(x: $0.1.midX, y: $0.1.midY)) == display }) ?? copies.first {
+                return (pill.0, id)
+            }
+        }
+        return nil
     }
 
-    nonisolated private static func collect(_ element: AXUIElement, depth: Int, into pills: inout [(AXUIElement, CGRect)]) {
+    nonisolated private static func collect(_ element: AXUIElement, depth: Int, matching ids: Set<String>, into pills: inout [(AXUIElement, CGRect, String)]) {
         var value: AnyObject?
         AXUIElementCopyAttributeValue(element, kAXIdentifierAttribute as CFString, &value)
-        if value as? String == identifier {
-            if let frame = frame(of: element), frame.width > 0 { pills.append((element, frame)) }
+        if let id = value as? String, ids.contains(id) {
+            if let frame = frame(of: element), frame.width > 0 { pills.append((element, frame, id)) }
             return
         }
         guard depth > 0 else { return }
         var children: AnyObject?
         AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
-        for child in (children as? [AXUIElement]) ?? [] { collect(child, depth: depth - 1, into: &pills) }
+        for child in (children as? [AXUIElement]) ?? [] { collect(child, depth: depth - 1, matching: ids, into: &pills) }
     }
 
     nonisolated private static func frame(of element: AXUIElement) -> CGRect? {

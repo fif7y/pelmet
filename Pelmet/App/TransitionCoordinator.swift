@@ -594,7 +594,13 @@ final class TransitionCoordinator {
         // hover-revealed bar does not look like it.
         backdropMayHaveChanged()
         if appState.currentRevealedSections.isEmpty {
-            let whole = freshEmptyBarSnapshots(cropped: false)
+            var whole = freshEmptyBarSnapshots(cropped: false)
+            // The backdrop signature can't see Pelmet's own items, and this
+            // cover spans them: one that changed since shows the old bar.
+            if let taken = whole.first?.takenAt, taken < appState.ownBarChangedAt {
+                PelmetLog.log("\(label): idle picture predates an own item's change, capturing")
+                whole = []
+            }
             // Right after the panel has left, the clock sits 3pt right of
             // rest for a moment; a picture that short at the clock end
             // still serves (the cover ends in bare bar before the clock).

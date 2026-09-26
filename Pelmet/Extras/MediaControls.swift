@@ -54,12 +54,18 @@ final class ExtrasManager {
     /// is skipped (2026-09-21). A button whose image is nil (fresh item)
     /// always draws.
     private var glyphKeys: [UUID: String] = [:]
+    /// When an own item last came, left, or changed face in the bar. The
+    /// blink cover's idle picture predates anything after it and would show
+    /// the bar as it was (Camera & mic's SharePlay face missing for 0.65s
+    /// under the click's cover, 60fps burst 2026-09-25).
+    private(set) var lastBarChange = Date.distantPast
 
     private func setGlyph(_ item: NSStatusItem, id: UUID, key: String, make: () -> NSImage?) {
         guard let button = item.button else { return }
         if glyphKeys[id] == key, button.image != nil { return }
         button.image = make()
         glyphKeys[id] = key
+        if lastVisible[id] == true { lastBarChange = Date() }
     }
     private var specs: [UUID: ExtraItemSpec] = [:]
     private var lastVisible: [UUID: Bool] = [:]
@@ -79,6 +85,9 @@ final class ExtrasManager {
     /// Which Focus is on, alive while a Focus item exists.
     private var focusStatus: FocusStatus?
     private var lastFocusActive = false
+    /// Whether a SharePlay session with no call is live, alive while a
+    /// Camera & mic item exists.
+    private var sharePlayStatus: SharePlayStatus?
     /// One clock per media item drawing the animated bars (see ExtraGlyphs).
     private var animators: [UUID: ExtraAnimator] = [:]
     /// Play/pause state the media glyph shows. Click intent drives it (players
@@ -226,6 +235,17 @@ final class ExtrasManager {
             status.stop()
             focusStatus = nil
         }
+        if newSpecs.contains(where: { $0.kind == .cameraMicIndicator }) {
+            if sharePlayStatus == nil {
+                let status = SharePlayStatus()
+                status.onChange = { [weak self] in self?.applyCurrent() }
+                sharePlayStatus = status
+                status.start()
+            }
+        } else if let status = sharePlayStatus {
+            status.stop()
+            sharePlayStatus = nil
+        }
         let needsCameraMonitor = newSpecs.contains {
             $0.kind == .cameraMicIndicator || $0.kind == .mediaControls
         }
@@ -258,10 +278,11 @@ final class ExtrasManager {
             switch spec.kind {
             case .cameraMicIndicator:
                 // Pure indicator, like Apple's: exists ONLY while hardware is
-                // live (section decides where it appears, not whether). Defers
-                // to the system pill when that one is on screen.
-                let active = cameraMicMonitor?.isActive ?? false
-                visible = active && !systemCameraPillVisible
+                // live, or a SharePlay session with no call (section decides
+                // where it appears, not whether). Defers to the system pill,
+                // or Apple's SharePlay icon, when that one is on screen.
+                let active = (cameraMicMonitor?.isActive ?? false) || (sharePlayStatus?.isLive ?? false)
+                visible = active && !systemCameraPillVisible && !(appState?.systemSharePlayVisible ?? false)
                 updateCameraSymbol(item, spec: spec)
                 // Re-entering layout (isVisible flip) parks the item wherever
                 // the agent decides, not at its model slot. Never drag here:
@@ -483,6 +504,7 @@ final class ExtrasManager {
         }
         guard lastVisible[id] != visible else { return }
         lastVisible[id] = visible
+        lastBarChange = Date()
         let wasPreattached = preattached.remove(id) != nil
         PelmetLog.log("extras: \(specs[id]?.itemTitle ?? "?") → \(visible ? (wasPreattached ? "fade (attached ahead)" : "show") : "hide (ghost)")")
         // Runs as the engine's reflow companion, so timing coincides with the
@@ -941,7 +963,11 @@ final class ExtrasManager {
         let monitor = cameraMicMonitor
         let camera = monitor?.cameraActive ?? false
         let mic = monitor?.micActive ?? false
-        let symbol = camera ? "video.fill" : (mic ? "mic.fill" : "video.fill")
+        // SharePlay with no call: the pill wears its glyph, even with the
+        // camera up (FaceTime's open window keeps it running); the colour
+        // stays the privacy signal, plain when nothing records.
+        let sharePlay = sharePlayStatus?.isLive ?? false
+        let symbol = sharePlay ? "shareplay" : (camera ? "video.fill" : (mic ? "mic.fill" : "video.fill"))
         let key = "camera:\(symbol):\(camera):\(mic)"
         guard glyphKeys[spec.id] != key || item.button?.image == nil else { return }
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: String(localized: "Camera & Mic"))
@@ -953,9 +979,17 @@ final class ExtrasManager {
         }
         item.button?.image = image
         glyphKeys[spec.id] = key
+        if lastVisible[spec.id] == true { lastBarChange = Date() }
     }
 
     // MARK: Actions
+
+    /// The item's own spot (global, top-left origin): the Apple item to
+    /// press is the copy on this item's display.
+    private static func barPoint(of sender: NSStatusBarButton) -> CGPoint {
+        let frame = sender.window?.frame ?? .zero
+        return CGPoint(x: frame.midX, y: (NSScreen.screens.first?.frame.maxY ?? 0) - frame.midY)
+    }
 
     @objc private func clicked(_ sender: NSStatusBarButton) {
         guard
@@ -985,12 +1019,13 @@ final class ExtrasManager {
             let privacy = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera")!
             guard !rightClick else { NSWorkspace.shared.open(privacy); return }
             guard !AudioVideoPill.clickClosedPanel(), let appState else { return }
-            // The item's own spot (global, top-left origin): the pill to
-            // press is the copy on this item's display.
-            let frame = sender.window?.frame ?? .zero
-            let point = CGPoint(x: frame.midX, y: (NSScreen.screens.first?.frame.maxY ?? 0) - frame.midY)
+            let point = Self.barPoint(of: sender)
+            // A SharePlay session with no call: Apple's SharePlay icon first.
+            let ids = (sharePlayStatus?.isLive ?? false)
+                ? [AudioVideoPill.sharePlayIdentifier, AudioVideoPill.identifier]
+                : [AudioVideoPill.identifier]
             Task { @MainActor in
-                if !(await appState.openAudioVideoPill(near: point)) { NSWorkspace.shared.open(privacy) }
+                if !(await appState.openAudioVideoPill(near: point, identifiers: ids)) { NSWorkspace.shared.open(privacy) }
             }
         case .airdrop:
             openAirDrop()

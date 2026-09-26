@@ -152,7 +152,8 @@ final class FocusStatus {
 
     /// Reassembles the pipe's chunks into lines. The readability handler
     /// runs serially on the handle's own queue, hence the unchecked mark.
-    nonisolated private final class LineSplitter: @unchecked Sendable {
+    /// SharePlayStatus reads its stream through this too.
+    nonisolated final class LineSplitter: @unchecked Sendable {
         private var pending = Data()
 
         func split(appending chunk: Data) -> [String] {
@@ -168,7 +169,7 @@ final class FocusStatus {
         }
     }
 
-    nonisolated private static func run(_ arguments: [String]) -> [String] {
+    nonisolated static func run(_ arguments: [String]) -> [String] {
         let process = Process()
         if let tool = arguments.first, tool.hasPrefix("/") {
             process.executableURL = URL(fileURLWithPath: tool)
@@ -183,7 +184,7 @@ final class FocusStatus {
         do {
             try process.run()
         } catch {
-            PelmetLog.log("focus: log \(arguments.first ?? "") failed — \(error.localizedDescription)")
+            PelmetLog.log("log: \(arguments.first ?? "") failed — \(error.localizedDescription)")
             return []
         }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()

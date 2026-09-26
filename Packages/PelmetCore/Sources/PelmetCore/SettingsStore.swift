@@ -137,6 +137,10 @@ public struct SeparatorSpec: Codable, Equatable, Identifiable, Sendable {
 
 public enum ExtraKind: String, Codable, CaseIterable, Sendable {
     case mediaControls
+    /// The camera pill's twin, and SharePlay's: with no call, a session
+    /// (from Messages, or kept after hanging up) shows the SharePlay glyph
+    /// and opens Apple's SharePlay controls, the ones a call keeps in the
+    /// pill (2026-09-25).
     case cameraMicIndicator
     case airdrop
     case shortcut
@@ -210,9 +214,9 @@ public enum ExtraStyle: String, Codable, CaseIterable, Sendable {
 
 extension ExtraKind {
     /// The kinds that stand in for a collateral-hidden system extra
-    /// (Now Playing, the camera pill, AirDrop, Focus, the Clock timer, fast
-    /// user switching). Siri and Time Machine replace SystemUIServer items,
-    /// which hide by the allowlist like any app.
+    /// (Now Playing, the camera pill and SharePlay, AirDrop, Focus, the
+    /// Clock timer, fast user switching). Siri and Time Machine replace
+    /// SystemUIServer items, which hide by the allowlist like any app.
     public static let collateralReplicas: Set<ExtraKind> = [
         .mediaControls, .cameraMicIndicator, .airdrop, .focus, .timer, .userSwitching,
     ]
