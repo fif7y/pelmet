@@ -3,6 +3,22 @@
     <channel>
         <title>Nook</title>
         <item>
+            <title>0.3.1-beta.3</title>
+            <pubDate>Tue, 29 Sep 2026 20:51:41 -0400</pubDate>
+            <sparkle:channel>beta</sparkle:channel>
+            <sparkle:version>59</sparkle:version>
+            <sparkle:shortVersionString>0.3.1-beta.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.1-beta.3/Pelmet-0.3.1-beta.3.dmg" length="4220291" type="application/octet-stream" sparkle:edSignature="j7MSl8bH4yX5HMcRgntNeJWg1Bo3dqFS6tw9lzck0dVYoOCjGsgSg9vLk8QLVhAj9s/VFYtYDRIhA4cYnlItCQ=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.1-beta.3/Pelmet59-58.delta" sparkle:deltaFrom="58" length="1172278" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="SQJ7y7cUWSwuzoT+EmGyyShn4B9k+ms0do9BP+rROmMp+mVeFfDDN+ck1YxBpE0mr+p9rka2ImYdxrtwRUxADA=="/>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.1-beta.3/Pelmet59-57.delta" sparkle:deltaFrom="57" length="1224714" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="zvw4KOKbKez2/khMsrj+24JNF7jIRMiIC1BlD8Sv2pBlq6VyL5uTU0dNKxa68BRxvM/XkxzudNkCqDpJdoewAg=="/>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.1-beta.3/Pelmet59-56.delta" sparkle:deltaFrom="56" length="1347230" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="ENgUZbprivjF6A/wADkFejajnoCcf5eoAF4Tf/mBoznQTuVRdQFQhnnoyRBABZrDcUV9FCGWn6+nI/dKNZGgDA=="/>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.1-beta.3/Pelmet59-55.delta" sparkle:deltaFrom="55" length="1345726" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="41sLi3i9n3KBXRYomv3Jug549FQ1aXV0gNbQgf7KAr+ub8AOhQh0OHlY2TcxUdu+BeR2mH/D31Lm0LCEkInzAw=="/>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.1-beta.3/Pelmet59-54.delta" sparkle:deltaFrom="54" length="1358450" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="dHDfEfUCMYzOha+oa31i4sLZaelLBbfb+aJ7cgyy11ufORGvJZhjfWPkToSezLP+wgCoszOsU0V7zcbXZ1tBDQ=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.3.1-beta.2</title>
             <pubDate>Sat, 26 Sep 2026 00:43:29 -0400</pubDate>
             <sparkle:channel>beta</sparkle:channel>
@@ -47,22 +63,6 @@
                 <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.0/Pelmet56-53.delta" sparkle:deltaFrom="53" length="196062" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="+HX9QXSJjTwsIUh9xd/glQ3giWJOSA4any2GM/6ZyhL/0rmFaFb4fRU0iHOfCEaSenoKUB7A+t0atpNKEh6ABA=="/>
                 <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.0/Pelmet56-52.delta" sparkle:deltaFrom="52" length="240046" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="6ouiMBEcSFBVaqN9FSXqE91bjBFiXfukQNQCV4GuyUlX5kdzqHbod5jzob824Y5EwuSUHkBDdtiC7oxLq47jAw=="/>
                 <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.0/Pelmet56-51.delta" sparkle:deltaFrom="51" length="259290" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="CIbcb5HBvNOsQnPna4m/24ZPByK3s4ttQ5Ug/2p93JSijOf5hyg+NRfnRxOtPpu2hRugaUvhrvGx9t7nTBI9Cg=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>0.3.0-beta.7</title>
-            <pubDate>Wed, 23 Sep 2026 10:25:51 -0400</pubDate>
-            <sparkle:channel>beta</sparkle:channel>
-            <sparkle:version>55</sparkle:version>
-            <sparkle:shortVersionString>0.3.0-beta.7</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.0-beta.7/Pelmet-0.3.0-beta.7.dmg" length="2545161" type="application/octet-stream" sparkle:edSignature="s5kD5McdXzejOB1GNXmemEMMw/YYCZPqmoPSz2DTsd+0T9sRMBhFVNn9/gt7ETICe0M3++ISSBX0RPC5ofKzBw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.0-beta.7/Pelmet55-54.delta" sparkle:deltaFrom="54" length="172586" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="bEH7Cmofe3QcLWopJr4gydDSxCHLfr20LgQTpaw4KdBplW+sFoF5p/SJ9+BkCcsLRaYYnLU7bhbO7vz3gKu9Cg=="/>
-                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.0-beta.7/Pelmet55-53.delta" sparkle:deltaFrom="53" length="185106" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="xKNK0hbTUXcz3FJidP/e5+o3j5CAgvCcN68YjazpbWSxldE7yNALBFhpynSQqsiWSJY89kOKh13o1qA1OMFmAQ=="/>
-                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.0-beta.7/Pelmet55-52.delta" sparkle:deltaFrom="52" length="234502" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="jnHrEZLk5FHVtE29nYJC32//hdxCTIAoDfd75Jhzp4LZOnjD2ZjVcEXejVACc8d7V+0Wa4t7blSe+MtrwzMUCg=="/>
-                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.0-beta.7/Pelmet55-51.delta" sparkle:deltaFrom="51" length="252694" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Vq2uAUtAlZ3NNUID5bHeXctTN7spXLQrJWtanOHwtNrDik7sLlLSl+4Nian30hSIk8eafU48FdMDu2n14LUDDw=="/>
-                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.0-beta.7/Pelmet55-50.delta" sparkle:deltaFrom="50" length="279538" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="EFHpeVz23qBxR97JuutvTdx6QeVagnuKjggMZxqRxfSv9GcWe9CLgQ5CZ9WTliL4jL9yQ3ZkI74glvcTidbVBA=="/>
             </sparkle:deltas>
         </item>
         <item>
