@@ -46,6 +46,20 @@ final class SparkleController: NSObject {
 
     private var controller: SPUStandardUpdaterController?
 
+    /// The found update's notes (the appcast item's HTML description), for
+    /// About's "What's new" before the click that installs it. Nil for
+    /// releases cut before the notes were embedded.
+    private(set) var pendingNotes: String?
+
+    /// This build's own notes, bundled at build time from
+    /// docs/release-notes/v<version>.md (project.yml post-build script).
+    static let installedNotes: String? = Bundle.main
+        .url(forResource: "ReleaseNotes", withExtension: "html")
+        .flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+
+    /// Set by the "is installed" banner: About opens with the notes up.
+    var notesRequested = false
+
     /// Auto-download staged an update to install on quit: Sparkle hands
     /// over an "install now" block and shows NO UI until quit or a long
     /// idle — so the banner, chip and menu line install through this.
@@ -95,6 +109,7 @@ final class SparkleController: NSObject {
         // what just launched, or the process is gone) would only ever open
         // "Pelmet is not open anymore".
         clearUpdateNotification()
+        announceInstalledUpdate()
         PelmetLog.log("sparkle: updater started, feed=\(Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String ?? "?")")
     }
 
@@ -145,6 +160,8 @@ final class SparkleController: NSObject {
     // MARK: - Update notification
 
     nonisolated private static let notificationID = "app.fif7y.Pelmet.update"
+    nonisolated private static let installedID = "app.fif7y.Pelmet.installed"
+    private static let lastBuildKey = "app.fif7y.Pelmet.lastLaunchedBuild"
     nonisolated private static let updateActionID = "app.fif7y.Pelmet.update.install"
 
     /// A found update is reminded once a day while it stays pending — the
@@ -186,6 +203,34 @@ final class SparkleController: NSObject {
     }
 
     private func postUpdateNotification(version: String, staged: Bool = false) {
+        let content = UNMutableNotificationContent()
+        content.categoryIdentifier = Self.notificationID
+        content.title = String(localized: "Update available")
+        if staged {
+            content.body = String(localized: "Pelmet \(version) is ready. Click here to install it now.")
+        } else {
+            content.body = String(localized: "Click here to update Pelmet to \(version).")
+        }
+        deliver(content, id: Self.notificationID, log: "update notification for \(version)")
+    }
+
+    /// First launch of a newer build: one banner pointing at its notes,
+    /// never a window (same rule as the reminders). Only with "Notify me"
+    /// on and notes in the bundle; a first install stays quiet.
+    private func announceInstalledUpdate() {
+        let info = Bundle.main
+        let build = Int(info.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "") ?? 0
+        let previous = UserDefaults.standard.integer(forKey: Self.lastBuildKey)
+        UserDefaults.standard.set(build, forKey: Self.lastBuildKey)
+        guard previous > 0, build > previous, Self.installedNotes != nil, notifyOnUpdates() else { return }
+        let version = info.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "Pelmet \(version) is installed")
+        content.body = String(localized: "See what's new")
+        deliver(content, id: Self.installedID, log: "installed notification for \(version) (was build \(previous))")
+    }
+
+    private func deliver(_ content: UNMutableNotificationContent, id: String, log: String) {
         Task {
             let center = UNUserNotificationCenter.current()
             var settings = await center.notificationSettings()
@@ -197,18 +242,10 @@ final class SparkleController: NSObject {
                 PelmetLog.log("sparkle: notification not authorized — About chip only")
                 return
             }
-            let content = UNMutableNotificationContent()
-            content.categoryIdentifier = Self.notificationID
-            content.title = String(localized: "Update available")
-            if staged {
-                content.body = String(localized: "Pelmet \(version) is ready. Click here to install it now.")
-            } else {
-                content.body = String(localized: "Click here to update Pelmet to \(version).")
-            }
             // Quiet app: a banner, no sound.
-            let request = UNNotificationRequest(identifier: Self.notificationID, content: content, trigger: nil)
+            let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
             try? await center.add(request)
-            PelmetLog.log("sparkle: posted update notification for \(version)")
+            PelmetLog.log("sparkle: posted \(log)")
         }
     }
 
@@ -264,8 +301,19 @@ extension SparkleController: UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        guard response.notification.request.identifier == Self.notificationID else { return }
-        await MainActor.run { openUpdateHub() }
+        let id = response.notification.request.identifier
+        PelmetLog.log("sparkle: banner clicked \(id)")
+        switch id {
+        case Self.notificationID:
+            await MainActor.run { openUpdateHub() }
+        case Self.installedID:
+            await MainActor.run {
+                notesRequested = true
+                openUpdateHub()
+            }
+        default:
+            return
+        }
     }
 
     /// Show the banner even while Pelmet is the active app (settings open).
@@ -285,10 +333,20 @@ extension SparkleController: SPUUpdaterDelegate {
         MainActor.assumeIsolated { betaUpdates() ? ["beta"] : [] }
     }
 
+    /// The item's embedded notes when they are HTML (what release.sh puts
+    /// in the appcast); plain-text or missing descriptions show nothing.
+    nonisolated private static func htmlNotes(of item: SUAppcastItem) -> String? {
+        guard let notes = item.itemDescription, !notes.isEmpty,
+              item.itemDescriptionFormat == nil || item.itemDescriptionFormat == "html" else { return nil }
+        return notes
+    }
+
     nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
         let version = item.displayVersionString
+        let notes = Self.htmlNotes(of: item)
         Task { @MainActor in
             self.status = .available(version: version)
+            self.pendingNotes = notes
             PelmetLog.log("sparkle: update available \(version)")
         }
     }
@@ -296,6 +354,7 @@ extension SparkleController: SPUUpdaterDelegate {
     nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
         Task { @MainActor in
             self.status = .upToDate
+            self.pendingNotes = nil
             self.installNow = nil
             self.cancelReminder()
         }

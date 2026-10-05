@@ -2,6 +2,7 @@
 // Agent app (LSUIElement): no dock icon; lives in the menubar. Settings and
 // onboarding windows activate the app transiently.
 
+import PelmetEngine
 import SwiftUI
 
 @main
@@ -43,9 +44,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Relaunching Pelmet (Finder/Spotlight) while it runs opens Settings —
-    /// one of the iconless-mode entry points.
+    /// one of the iconless-mode entry points. A click on one of Pelmet's
+    /// banners reopens the app too, racing the banner's own handler: an
+    /// open Settings keeps the tab it was just sent to (About), or the
+    /// banner landed on General.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        appState.openSettings()
+        PelmetLog.log("reopen: settings visible=\(appState.settingsWindowVisible) tab=\(appState.settingsTab)")
+        appState.openSettings(tab: appState.settingsWindowVisible ? appState.settingsTab : .general)
         return true
     }
 }

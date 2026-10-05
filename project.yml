@@ -71,6 +71,24 @@ targets:
         copy:
           destination: wrapper
           subpath: Contents/Helpers
+    postBuildScripts:
+      # This version's notes ship inside the app for About's "What's new"
+      # (same snippet release.sh embeds in the appcast).
+      - name: Bundle release notes
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - $(SRCROOT)/scripts/release-notes-html.py
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ReleaseNotes.html
+        script: |
+          NOTES="$SRCROOT/docs/release-notes/v$MARKETING_VERSION.md"
+          OUT="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/ReleaseNotes.html"
+          if [ -f "$NOTES" ]; then
+            /usr/bin/python3 "$SRCROOT/scripts/release-notes-html.py" "$NOTES" "$OUT"
+          else
+            echo "warning: no $NOTES, About shows no What's new"
+            rm -f "$OUT"
+          fi
     info:
       path: Pelmet/Info.plist
       properties:

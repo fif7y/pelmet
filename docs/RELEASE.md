@@ -94,6 +94,14 @@ Plan and rationale: `docs/BETA-CHANNEL-PLAN.md`. Mechanics:
   frozen nook mirror). Skip the Homebrew cask.
 - Notes in `docs/release-notes/vX.Y.Z-beta.N.md`; the stable's notes are the
   roll-up.
+- The notes file is also what users see in the app: `release.sh` renders it
+  (`scripts/release-notes-html.py`) next to the DMG, `generate_appcast`
+  embeds it in the item's description (Sparkle's update window, About's
+  "What's new" for a waiting update), and every build bundles its own as
+  `ReleaseNotes.html` (About's "What's new in this version"). Commit the
+  notes with the version bump, before the build. A leading `>` quote becomes
+  the tinted announcement box at the top; the beta opt-in sentence is
+  dropped in-app.
 - Stable roll-up every one or two weeks, Tuesdays: a fresh build from the
   last beta's commit with the plain version and the next build number.
 - A build whose version carries `-beta.` turns "Get beta releases" on at

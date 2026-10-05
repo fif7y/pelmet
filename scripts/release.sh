@@ -66,6 +66,17 @@ if [[ -z "${SKIP_NOTARIZE:-}" ]]; then
     spctl -a -t open --context context:primary-signature -v "$DMG" || true
 fi
 
+echo "==> Release notes for the update window"
+# Same basename as the DMG: generate_appcast embeds a body-less HTML file
+# as the item's <description>, which Sparkle's update window shows (and
+# About's "What's new" reads for a waiting update).
+NOTES_MD="docs/release-notes/v$VERSION.md"
+if [[ -f "$NOTES_MD" ]]; then
+    python3 scripts/release-notes-html.py "$NOTES_MD" "$RELEASES_DIR/Pelmet-$VERSION.html"
+else
+    echo "warning: no $NOTES_MD, the update window shows no notes" >&2
+fi
+
 echo "==> Generating Sparkle appcast"
 # generate_appcast ships in the Sparkle SPM artifact bundle; find it in DerivedData.
 # Prefer the repo-local SPM artifacts (this build's own checkout) over a glob
@@ -82,6 +93,7 @@ if [[ -n "$GENERATE_APPCAST" ]]; then
     # Signs with the EdDSA private key from the keychain (generate_keys), or
     # from a file when SPARKLE_KEY_FILE is set (CI).
     APPCAST_ARGS=(--download-url-prefix "https://github.com/fif7y/pelmet/releases/download/v$VERSION/")
+    APPCAST_ARGS+=(--full-release-notes-url "https://github.com/fif7y/pelmet/releases")
     [[ -n "${SPARKLE_KEY_FILE:-}" ]] && APPCAST_ARGS+=(--ed-key-file "$SPARKLE_KEY_FILE")
     [[ -n "$CHANNEL" ]] && APPCAST_ARGS+=(--channel "$CHANNEL")
     "$GENERATE_APPCAST" "${APPCAST_ARGS[@]}" "$RELEASES_DIR"

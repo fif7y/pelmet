@@ -1266,6 +1266,7 @@ struct InstagramGlyph: View {
 
 private struct AboutPane: View {
     @Environment(AppState.self) private var appState
+    @State private var notesShown = false
 
     private var version: String {
         let info = Bundle.main
@@ -1296,6 +1297,7 @@ private struct AboutPane: View {
                 if SparkleController.shared.isConfigured {
                     updateRow
                 }
+                notesLink
                 Button("Replay the intro") {
                     OnboardingController.shared.present(appState: appState)
                 }
@@ -1320,7 +1322,45 @@ private struct AboutPane: View {
         // 60 scrolled the pane by a row once the beta toggle joined the
         // Updates card (Gab, 2026-09-21): the default window shows it whole.
         .padding(.top, 20)
-        .onAppear { SparkleController.shared.probe() }
+        .onAppear {
+            SparkleController.shared.probe()
+            takeNotesRequest()
+        }
+        .onChange(of: SparkleController.shared.notesRequested) { takeNotesRequest() }
+    }
+
+    /// The "is installed" banner asks for the notes to open with the pane.
+    private func takeNotesRequest() {
+        guard SparkleController.shared.notesRequested else { return }
+        SparkleController.shared.notesRequested = false
+        notesShown = true
+    }
+
+    /// "What's new" under the update chip: the waiting update's notes
+    /// before the click that installs it, otherwise this version's own.
+    /// A quiet link, the notes live in a popover (one recipe with
+    /// Sparkle's update window: same HTML, same stylesheet).
+    @ViewBuilder private var notesLink: some View {
+        let sparkle = SparkleController.shared
+        if let version = sparkle.availableVersion {
+            if let html = sparkle.pendingNotes {
+                notesButton("What's new", title: String(localized: "What's new in \(version)"), html: html)
+            }
+        } else if let html = SparkleController.installedNotes {
+            let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+            notesButton("What's new in this version", title: String(localized: "What's new in \(short)"), html: html)
+        }
+    }
+
+    private func notesButton(_ label: LocalizedStringKey, title: String, html: String) -> some View {
+        Button(label) { notesShown.toggle() }
+            .buttonStyle(.plain)
+            .font(.callout.weight(.medium))
+            .foregroundStyle(PelmetAccent.accent)
+            .pointerStyle(.link)
+            .popover(isPresented: $notesShown, arrowEdge: .bottom) {
+                ReleaseNotesView(title: title, html: html)
+            }
     }
 
     /// Two preferences, both quiet by design: scheduled checks never open a
