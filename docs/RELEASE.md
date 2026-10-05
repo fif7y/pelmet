@@ -66,11 +66,12 @@ Everything below the one-time setup is: bump version → run script → publish.
    curl -s "https://fif7y.github.io/pelmet/appcast.xml?cb=$RANDOM" \
      | grep -o '<sparkle:shortVersionString>[^<]*' | head -1
    ```
-5. **Legacy feed mirror** — nook-era installs (≤ 0.1.4) poll
-   `https://fif7y.github.io/nook/appcast.xml`, served by the stub repo
-   `fif7y/nook` (GitHub Pages paths don't redirect on repo rename). Push the
-   same `appcast.xml` to that stub's `gh-pages` too, until that feed's traffic
-   dies off.
+5. **Legacy feed mirror: frozen at 0.3.1, don't push to it.** Nook-era
+   installs (≤ 0.1.4) poll `https://fif7y.github.io/nook/appcast.xml`, served
+   by the stub repo `fif7y/nook` (GitHub Pages paths don't redirect on repo
+   rename). Every build since the 0.1.5 bridge points `SUFeedURL` at the
+   Pelmet feed, so one update from that feed is enough to cross over. It
+   carries 0.3.1 for that, and nothing newer is needed.
 6. Bump the Homebrew cask: `fif7y/homebrew-tap` → `Casks/pelmet.rb`, set
    `version` and the DMG's `sha256` (`shasum -a 256 build/releases/Pelmet-<v>.dmg`),
    push with the same identity rule as step 4, then confirm the published DMG
@@ -89,8 +90,8 @@ Plan and rationale: `docs/BETA-CHANNEL-PLAN.md`. Mechanics:
 - `CHANNEL=beta scripts/release.sh` — `generate_appcast --channel beta` tags
   the new items; stable items stay untagged in the same `appcast.xml`.
 - GitHub release `vX.Y.Z-beta.N` with `--prerelease` (the download badge and
-  "Latest" stay on stable). Push the appcast to gh-pages and the nook mirror
-  as usual. Skip the Homebrew cask.
+  "Latest" stay on stable). Push the appcast to gh-pages as usual (not the
+  frozen nook mirror). Skip the Homebrew cask.
 - Notes in `docs/release-notes/vX.Y.Z-beta.N.md`; the stable's notes are the
   roll-up.
 - Stable roll-up every one or two weeks, Tuesdays: a fresh build from the
