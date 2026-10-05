@@ -10499,6 +10499,64 @@
         }
       }
     },
+    "On the chevron, and in empty menu bar space when the option above is on": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf dem Chevron, und auf freier Menüleistenfläche, wenn die Option darüber an ist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En el chevrón, y en un área vacía de la barra de menús si la opción de arriba está activada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur le chevron, et dans une zone vide de la barre des menus si l’option au-dessus est activée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sul chevron, e su un’area vuota della barra dei menu se l’opzione sopra è attiva"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェブロンで。上のオプションがオンなら、メニューバーの空いている場所でも"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "셰브론에서, 위 옵션이 켜져 있으면 메뉴 막대 빈 곳에서도"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No chevron, e em uma área vazia da barra de menus quando a opção acima está ativada"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На шевроне, а при включённом параметре выше и на пустой области строки меню"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在尖角符号上，上方选项开启时也可在菜单栏空白处"
+          }
+        }
+      }
+    },
     "One person builds it on evenings and weekends. No account, no tracking, no upsell.\nIf it earned a spot in your bar, here's how to help.": {
       "localizations": {
         "de": {

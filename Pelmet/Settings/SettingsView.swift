@@ -931,7 +931,9 @@ private struct BehaviorPane: View {
             }
             SettingToggleRow(title: "Reveal on click in empty menu bar area", isOn: binding(\.revealTriggers.clickEnabled))
                 .settingAnchor("clickReveal")
-            SettingToggleRow(title: "Double-click reveals always-hidden too", isOn: binding(\.revealTriggers.doubleClickForAlwaysHidden))
+            SettingToggleRow(title: "Double-click reveals always-hidden too",
+                             caption: "On the chevron, and in empty menu bar space when the option above is on",
+                             isOn: binding(\.revealTriggers.doubleClickForAlwaysHidden))
                 .settingAnchor("doubleClickReveal")
         }
 

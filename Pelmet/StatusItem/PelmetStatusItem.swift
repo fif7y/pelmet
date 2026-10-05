@@ -62,6 +62,8 @@ final class PelmetStatusItem {
     /// re-applied without the caller re-stating it (and vice versa).
     private var revealedFace = false
     private var warning = false
+    /// Uptime of the last left click on the chevron, to time a double (#77).
+    private var lastLeftClickAt: TimeInterval?
 
     /// An available update earns a 5pt accent dot at the chevron's top
     /// right — the one surface most users ever look at. It lives until the
@@ -148,15 +150,34 @@ final class PelmetStatusItem {
         // currentEvent is nil for synthetic AX presses (VoiceOver etc.) —
         // treat those as a plain left-click toggle instead of bailing.
         let event = NSApp.currentEvent
-        PelmetLog.log("statusItem clicked: type=\(event?.type.rawValue ?? 0)")
+        // macOS 27 hands the chevron's action an event without the click's
+        // modifiers (#77: three ⌥-clicks logged as plain toggles), so ⌥ is
+        // read from the live keyboard state and a double is timed here
+        // rather than taken from the event's clickCount.
+        let option = NSEvent.modifierFlags.contains(.option) || event?.modifierFlags.contains(.option) == true
+        let now = ProcessInfo.processInfo.systemUptime
+        let isDouble = lastLeftClickAt.map { now - $0 <= NSEvent.doubleClickInterval } ?? false
+        PelmetLog.log("statusItem clicked: type=\(event?.type.rawValue ?? 0) option=\(option) count=\(event?.clickCount ?? 0) double=\(isDouble)")
         if event?.type == .rightMouseUp {
+            lastLeftClickAt = nil
             item.menu = Self.contextMenu(appState: appState)
             item.button?.performClick(nil)
             item.menu = nil
             // performClick returns once the menu is dismissed; it fades for
             // a beat after that (see `ConcealGhostOverlay.menuClosedAt`).
             ConcealGhostOverlay.menuClosedAt = Date()
-        } else if event?.modifierFlags.contains(.option) == true {
+            return
+        }
+        // A third click starts a new sequence instead of chaining doubles.
+        lastLeftClickAt = isDouble ? nil : now
+        if option {
+            appState.reveal([.hidden, .alwaysHidden], reason: .statusItem)
+        } else if isDouble, appState.settings.revealTriggers.doubleClickForAlwaysHidden {
+            // Second click of a double on the chevron (#77): the first one
+            // already toggled, this widens the reveal to Always Hidden. A
+            // reveal mid-transition unions, never narrows. On a revealed bar
+            // the first click conceals and this reopens it wider, a brief
+            // flash kept over delaying every closing click.
             appState.reveal([.hidden, .alwaysHidden], reason: .statusItem)
         } else {
             appState.toggle(reason: .statusItem)
