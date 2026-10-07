@@ -2019,17 +2019,20 @@ final class AppState {
         let front = NSWorkspace.shared.frontmostApplication
         let report = await ApplyPass.run(appState: self, scope: .strays(allowed))
         if !report.applied.isEmpty { await engine.writeOrderHint() }
-        satisfyDrawnEdits(for: report.applied.filter(report.drawn.contains))
+        satisfyDrawnEdits(for: report.applied)
         if let front, !report.abandoned, front.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             await restoreFocus(to: front)
         }
         return report
     }
 
-    /// A stray that landed in the slot the editor drew for it is applied:
+    /// A stray that landed on its side is applied, as after an Apply pass:
     /// Discard has nothing to put back, and a section whose drawing the bar
     /// now matches in full clears (`pruneSettledOrderEdits`), so Apply's
-    /// count drops for it. Other pending reorders stay as they are.
+    /// count drops for it. Other pending reorders stay as they are. Every
+    /// landing counts, the chevron end too: only drawn-slot ones did, and an
+    /// editor move that went to the chevron end kept its `previousSection`
+    /// and Apply lit (vorssaint Visible → Hidden, 2026-10-07).
     private func satisfyDrawnEdits(for landed: [ItemID]) {
         guard !landed.isEmpty else { return }
         var edits = settings.orderEdits
@@ -2037,7 +2040,7 @@ final class AppState {
         if edits != settings.orderEdits { settings.orderEdits = edits }
         pruneSettledOrderEdits()
         settings.save()
-        PelmetLog.log("group: drawn edit satisfied for [\(landed.map(\.rawValue).joined(separator: ", "))] — Apply has \(pendingMoveCount) left")
+        PelmetLog.log("group: edit satisfied for [\(landed.map(\.rawValue).joined(separator: ", "))] — Apply has \(pendingMoveCount) left")
     }
 
     private func restoreFocus(to app: NSRunningApplication) async {
@@ -2113,11 +2116,20 @@ final class AppState {
         // had placed everything (Today, Figma, four idle separators,
         // 2026-10-07).
         let present = Set(snapshot.items.map { $0.id.sectionKey })
+        // Relative order says nothing about the chevron: an icon drawn into
+        // Hidden but still on the Visible side matched its drawing, the edit
+        // cleared before the grouper ran, and it went to the chevron end
+        // instead of its drawn slot (vorssaint, Snib, 2026-10-07). Reading
+        // its side off the bar missed too, with the chevron behind the « mid
+        // reflow. A drop between sections stays unsettled until a pass lands
+        // it (`previousSection` cleared), so its section's drawing waits.
+        let crossing = Set(settings.orderEdits.previousSection.keys)
         var edits = settings.orderEdits
         for (section, allDrawn) in edits.order {
             let drawn = allDrawn.filter { present.contains($0.sectionKey) }
             let onBar = bar.filter { roster.section(of: $0) == section }
             let drawnSet = Set(drawn), barSet = Set(onBar)
+            guard drawnSet.isDisjoint(with: crossing) else { continue }
             // A drawn item the bar cannot see (behind the «, or never
             // framed) is exactly what the edit is about — it stays pending
             // until a pass can reach it. Only an edit the bar already
@@ -2129,8 +2141,9 @@ final class AppState {
             }
         }
         guard edits != settings.orderEdits else { return }
+        let cleared = settings.orderEdits.order.keys.filter { edits.order[$0] == nil }
         settings.orderEdits = edits
-        PelmetLog.log("editor: drawing matches the bar again — edit cleared")
+        PelmetLog.log("editor: drawing matches the bar again — edit cleared (\(cleared.map { "\($0)" }.sorted().joined(separator: ", ")))")
     }
 
     /// A removed separator or extra leaves its drawn slot behind in the

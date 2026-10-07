@@ -22,9 +22,6 @@ struct ApplyReport: Equatable {
     /// A grouping pass that gave up before its first drag because the user
     /// was typing or pointing again: nothing moved, nothing was spent.
     var abandoned = false
-    /// Grouping pass: the strays that went to the slot the editor drew for
-    /// them. Their pending edit is satisfied once they land.
-    var drawn: Set<ItemID> = []
 }
 
 @MainActor
@@ -445,7 +442,6 @@ enum ApplyPass {
                 let neighbours = "after \(move.after?.rawValue ?? "-"), before \(move.before?.rawValue ?? "-")"
                 switch plan.placements[move.item] {
                 case .drawn?:
-                    report.drawn.insert(move.item)
                     PelmetLog.log("group: \(move.item.rawValue) → its drawn slot (\(neighbours))")
                 case .drawnUnavailable?:
                     PelmetLog.log("group: \(move.item.rawValue) drawn slot unavailable (no drawn neighbour on screen) → chevron end (\(neighbours))")
