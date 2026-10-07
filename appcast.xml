@@ -3,6 +3,45 @@
     <channel>
         <title>Nook</title>
         <item>
+            <title>0.3.2-beta.2</title>
+            <pubDate>Wed, 07 Oct 2026 18:21:21 -0400</pubDate>
+            <sparkle:fullReleaseNotesLink>https://github.com/fif7y/pelmet/releases</sparkle:fullReleaseNotesLink>
+            <sparkle:channel>beta</sparkle:channel>
+            <sparkle:version>64</sparkle:version>
+            <sparkle:shortVersionString>0.3.2-beta.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<style>:root{color-scheme:light dark;--fg:#1d1d1f;--muted:#6e6e73;--accent:#6841ed;--tint:rgba(104,65,237,.09)}
+@media (prefers-color-scheme:dark){:root{--fg:#f2f2f7;--muted:#98989f;--accent:#a28cf8;--tint:rgba(126,95,242,.2)}}
+body{margin:0;padding:12px 16px 14px;font:13px/1.45 -apple-system,system-ui,sans-serif;color:var(--fg);-webkit-font-smoothing:antialiased}
+h2{font-size:14px;font-weight:600;margin:16px 0 4px}
+h3{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px}
+p{margin:0 0 8px}
+ul{margin:0 0 8px;padding-left:18px}
+li{margin:0 0 4px}
+li::marker{color:var(--muted)}
+a{color:var(--accent);text-decoration:none}
+code{font:12px ui-monospace,monospace}
+.announce{background:var(--tint);border-radius:10px;padding:10px 12px;margin:0 0 12px}
+.announce p:last-child{margin:0}
+.announce strong{color:var(--accent)}
+body>:first-child{margin-top:0}</style>
+<h3>New</h3>
+<ul><li>Shortcuts can be turned off. Hover a shortcut in Settings and click the ×, or press ⌫ while recording, and it reads "None" so another app can have the combo. ↺ brings the default back (<a href="https://github.com/fif7y/pelmet/issues/79">#79</a>, thanks @gasparschott).</li><li>Icons stay in their section. macOS sometimes drops a hidden icon right of the chevron (after a ⌘-drag, or an app relaunching into a crowded bar). Pelmet now moves it back on its own once you leave the mouse and keyboard alone for a couple of seconds, so your visible icons stay put when you reveal. Visible icons that end up on the left go back right too. This needs the Pelmet icon in the menu bar (<a href="https://github.com/fif7y/pelmet/issues/80">#80</a>, thanks @Erimus-Koo).</li><li>Release notes show up in the update window, and About has a "What's new in this version" link.</li></ul>
+<h3>Fixed</h3>
+<ul><li>Clicking the clock opens Notification Center again on macOS 27.2 beta 3, where it used to flash open and close right away. ⌥⌘N works there too.</li></ul>
+<h3>Also</h3>
+<ul><li>The Apply button goes grey once the menu bar matches your settings.</li><li>Dropping an icon between sections in Menu Bar settings keeps it where you dropped it while it moves.</li><li>The "Your menu bar is full" note moved to the top of the Menu Bar pane as "N behind «", and only shows when the bar stays full.</li></ul>
+]]></description>
+            <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.2-beta.2/Pelmet-0.3.2-beta.2.dmg" length="4623837" type="application/octet-stream" sparkle:edSignature="HwK7VgQWmyTGLgP35qIxlto3yIom1oyKhaHPWjOxYZPm6syk2PIaJIHzamBKYl9AKDYXbxf+3jlVzxZ0zKDJAQ=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.2-beta.2/Pelmet64-63.delta" sparkle:deltaFrom="63" length="409354" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Sz5hEj/AiC9GxgeiQ4N22RwOhW1ES8Fk/WwzMgUaXUePPmQcP7B8N6eBx2Kus+pVIAbkad2d4dolYbrlsLtkDg=="/>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.2-beta.2/Pelmet64-62.delta" sparkle:deltaFrom="62" length="410318" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="7ehpbAQtQ16CKlhWOLhE+fFDqPEiRa/0Ucv04sGOoL0CYKsWC6vmJQD3d2tSjjAfD2tkzv0vvVrKUiRxOnZ9AQ=="/>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.2-beta.2/Pelmet64-61.delta" sparkle:deltaFrom="61" length="412990" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="rs8ydTfrVga6t6k6f1sD6guRBvtu3FQH0yMWgTQVVQn9W04AhygpgkfHoxVRSgki8Xu9xK/5qXeqmOYwvrgiAA=="/>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.2-beta.2/Pelmet64-60.delta" sparkle:deltaFrom="60" length="674754" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="ycILiVRC/e6jxUWwyrACpyBUgeTQiCWNBILUXdcHe8uxv8d7KjVOHPO7Yz+hlR1Uc/ZoX846RxdWsn5KpdjnBg=="/>
+                <enclosure url="https://github.com/fif7y/pelmet/releases/download/v0.3.2-beta.2/Pelmet64-59.delta" sparkle:deltaFrom="59" length="706702" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977840" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="oJG85hMK9Apuqts0D6rFODL+5maojSgxvme2hWrdIulCSYVSrGy6O1F/sBhGW3dfLA8C4pTNPiDlEOHrP0znDA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.3.2-beta.1</title>
             <pubDate>Mon, 05 Oct 2026 18:48:02 -0400</pubDate>
             <sparkle:channel>beta</sparkle:channel>
