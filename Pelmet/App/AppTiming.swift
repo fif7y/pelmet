@@ -22,6 +22,11 @@ enum AppTiming {
     /// ~250ms, and the retry then closed the panel the first press had
     /// opened (#53); the extra budget only costs when the panel is late.
     static let clockPressVerify: TimeInterval = 0.6
+    /// How long after the press the panel must still be up for the press to
+    /// count, checked once per macOS build. On 27.2 beta 3 it asks for a
+    /// close 78ms after the open and its window leaves the list ~450ms
+    /// after the press, Pelmet or not (2026-10-07).
+    static let clockPressHold: TimeInterval = 0.8
     /// Longest the blink cover waits for the concealed items to leave the
     /// AX tree after the re-acquire before lifting anyway.
     static let clockBlinkCoverDeadline: TimeInterval = 1.5

@@ -314,18 +314,34 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
     /// assertion held, and on 27.0.1 every click turned press lost the
     /// panel (#74). Such a Mac replays the click instead, the path every
     /// direct click took before 0.3.1-beta.4. Kept per build, so an update
-    /// tries the press again.
+    /// tries the press again. 27.2 beta 3 opens the panel on the press and
+    /// closes it 78ms later, Pelmet quit or not, while a real click keeps it
+    /// (2026-10-07): a panel that shows and leaves on its own counts too.
     private static let pressDeadKey = "pelmet.clockPressDeadOnBuild"
+    /// The build on which a press was seen to keep the panel up for
+    /// `clockPressHold`: later presses skip that wait, which is picture time
+    /// on the bar.
+    private static let pressHoldsKey = "pelmet.clockPressHoldsOnBuild"
     private static var osBuild: String { ProcessInfo.processInfo.operatingSystemVersionString }
 
     @MainActor static var pressNeverOpensPanel: Bool {
         UserDefaults.standard.string(forKey: pressDeadKey) == osBuild
     }
 
+    @MainActor static var pressHoldsPanel: Bool {
+        UserDefaults.standard.string(forKey: pressHoldsKey) == osBuild
+    }
+
     @MainActor static func notePressNeverOpensPanel() {
         guard !pressNeverOpensPanel else { return }
         UserDefaults.standard.set(osBuild, forKey: pressDeadKey)
-        PelmetLog.log("clock: the press never opened the panel on \(osBuild) — clicks are replayed from now on")
+        PelmetLog.log("clock: the press does not keep the panel open on \(osBuild) — clicks are replayed from now on")
+    }
+
+    @MainActor static func notePressHoldsPanel() {
+        guard !pressHoldsPanel else { return }
+        UserDefaults.standard.set(osBuild, forKey: pressHoldsKey)
+        PelmetLog.log("clock: the press keeps the panel open on \(osBuild)")
     }
 
     /// A real HID-source click with click state set — the agent ignores
@@ -345,6 +361,12 @@ nonisolated final class ClockClickRelay: @unchecked Sendable {
         else { return }
         down.setIntegerValueField(.mouseEventClickState, value: 1)
         up.setIntegerValueField(.mouseEventClickState, value: 1)
+        // Only plain clicks are relayed, and the shortcut fires with ⌥⌘
+        // still down (held through a run of ⌥⌘N, Gab 2026-10-07): a ⌘ mouse
+        // down on the bar drags the item. Cleared, the clock opens the panel
+        // with the keys physically held.
+        down.flags = []
+        up.flags = []
         down.post(tap: .cghidEventTap)
         usleep(useconds_t(AppTiming.clockReplayHold * 1_000_000))
         up.post(tap: .cghidEventTap)

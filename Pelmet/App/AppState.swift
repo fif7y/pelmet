@@ -988,7 +988,9 @@ final class AppState {
     /// The Notification Center shortcut (#44): the OS one is refused while
     /// the assertion holds, whatever presses it. Runs the clock relay's
     /// dot-zone path — AX press on the clock, the pointer never moves —
-    /// aimed at the clock's centre from the latest walk.
+    /// aimed at the clock's centre from the latest walk. Where the press
+    /// does not keep the panel open (27.2 beta 3) it clicks the clock and
+    /// puts the pointer back.
     private func openNotificationCenter() {
         guard let frame = snapshot?.items.first(where: { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") })?.frame else {
             PelmetLog.log("clock: shortcut — no clock in the walk, nothing to press")
@@ -1089,10 +1091,12 @@ final class AppState {
                 }
             }
             var blinked = await engine.beginClockBlink()
-            if !viaShortcut, ClockClickRelay.pressNeverOpensPanel {
-                // This macOS never opened the panel on a press: replay the
-                // click, once the button is up (the cover is often up before
-                // the finger is, since the idle picture).
+            if ClockClickRelay.pressNeverOpensPanel {
+                // This macOS never keeps the panel open on a press: replay
+                // the click, once the button is up (the cover is often up
+                // before the finger is, since the idle picture). The
+                // shortcut clicks the clock too and puts the pointer back,
+                // a one-frame jump over a dead ⌥⌘N (Gab, 2026-10-07).
                 await ClockClickRelay.waitForButtonRelease()
                 replayClick(false)
                 panelStarting()
@@ -1111,7 +1115,9 @@ final class AppState {
                 // Presses that went out, waited their whole window with the
                 // assertion still down, and brought no panel.
                 var cleanMisses = 0
+                var pressedAt = Date()
                 for attempt in 1...2 where !opened {
+                    pressedAt = Date()
                     // `pelmet.debug.clockPressNoop`: report the press sent
                     // without pressing, the way it lands on 27.0.x, to test
                     // that path on a macOS where the press works.
@@ -1129,7 +1135,25 @@ final class AppState {
                     PelmetLog.log("clock: press \(attempt) \(pressed ? "sent" : "refused") - NC \(opened ? "open" : "not open")")
                     if pressed, !opened, await !engine.holdsAssertion { cleanMisses += 1 }
                 }
-                if !opened, !viaShortcut {
+                // Once per macOS build, the panel must still be up a moment
+                // after the press: 27.2 beta 3 shows it and closes it on its
+                // own (2026-10-07). This click and every later one on that
+                // build replay, which keeps it.
+                if opened, !ClockClickRelay.pressHoldsPanel {
+                    var held = true
+                    while held, Date() < pressedAt.addingTimeInterval(AppTiming.clockPressHold) {
+                        try? await Task.sleep(for: .milliseconds(30))
+                        held = ClockClickRelay.notificationCenterIsOpen()
+                    }
+                    if held {
+                        ClockClickRelay.notePressHoldsPanel()
+                    } else {
+                        PelmetLog.log("clock: the panel left on its own after the press")
+                        ClockClickRelay.notePressNeverOpensPanel()
+                        opened = false
+                    }
+                }
+                if !opened {
                     // The drop's own reflow can converge and take the
                     // assertion back while the presses wait (the endClockBlink
                     // note), and the replay below would be refused too: drop
@@ -1142,15 +1166,7 @@ final class AppState {
                         blinked = await engine.beginClockBlink() || blinked
                     }
                     if cleanMisses > 0 { ClockClickRelay.notePressNeverOpensPanel() }
-                }
-                if !opened {
-                    // A key never moves the pointer: the shortcut stops at
-                    // the presses rather than warp it to the clock (#53).
-                    if viaShortcut {
-                        PelmetLog.log("clock: shortcut — panel not seen after 2 presses, no click replayed")
-                    } else {
-                        replayClick(false); panelStarting()
-                    }
+                    replayClick(false); panelStarting()
                 }
             } else {
                 PelmetLog.log("clock: no clock element under the target, replaying the click")
