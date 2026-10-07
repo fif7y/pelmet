@@ -201,6 +201,7 @@ T = {
         zh="尚未就位——它随此分区隐藏，但在应用之前仍位于尖角符号另一侧",
         ko="아직 제자리가 아닙니다. 이 섹션과 함께 숨겨지지만 적용할 때까지 셰브런 반대편에 있습니다",
         ru="Ещё не на месте — скрывается с этой секцией, но остаётся по другую сторону шеврона, пока Применить его не переместит"),
+    "%lld behind «": dict(de="%lld hinter «", fr="%lld derrière «", es="%lld detrás de «", it="%lld dietro «", pt="%lld atrás do «", ja="%lld 個が « の後ろ", zh="%lld 个在 « 后面", ko="%lld개가 « 뒤에", ru="За «: %lld"),
     "%lld not moved": dict(de="%lld nicht verschoben", fr="%lld non déplacé(s)", es="%lld sin mover", it="%lld non spostati", pt="%lld não movido(s)", ja="%lld 個未移動", zh="%lld 个未移动", ko="%lld개 이동 안 됨", ru="Не перемещено: %lld"),
     "Tidying…": dict(de="Wird aufgeräumt …", fr="Rangement…", es="Ordenando…", it="Riordino…", pt="Organizando…", ja="整理中…", zh="正在整理…", ko="정리 중…", ru="Упорядочивание…"),
     "Tidy bar order": dict(de="Leiste aufräumen", fr="Ranger la barre", es="Ordenar la barra", it="Riordina la barra", pt="Organizar a barra", ja="バーの並びを整理", zh="整理菜单栏顺序", ko="막대 순서 정리", ru="Упорядочить строку"),

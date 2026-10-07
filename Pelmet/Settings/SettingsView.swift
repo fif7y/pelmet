@@ -142,6 +142,10 @@ struct SettingsView: View {
                         HStack(alignment: .firstTextBaseline) {
                             Text(appState.settingsTab.title)
                                 .font(.system(size: 22, weight: .semibold))
+                            if appState.settingsTab == .menuBar {
+                                OverflowHint()
+                                    .padding(.leading, 8)
+                            }
                             Spacer()
                             if appState.settingsTab == .menuBar {
                                 ApplyBarButton()

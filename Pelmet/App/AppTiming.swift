@@ -162,6 +162,10 @@ enum AppTiming {
     static let groupingMaxWait: Duration = .seconds(6)
     /// An NSMenu fades for a beat after its tracking ends.
     static let groupingMenuHold: TimeInterval = 1
+    /// How long the bar must stay full before the editor says so. Pelmet's
+    /// own reflow after a drop or at Apply's start overflows for 0.4–1.3s
+    /// (six times in one morning, 2026-10-07).
+    static let overflowNoticeDelay: Duration = .seconds(2)
     /// Post-drag read: the agent animates the drop (~300ms slide, measured
     /// 2026-09-08) and a single fixed-delay read judged mid-flight frames as
     /// misses. Wait the floor, then re-read every poll until the dragged

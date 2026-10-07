@@ -71,6 +71,30 @@ struct ApplyBarButton: View {
     }
 }
 
+/// Sits on the pane's title row, between the title and the actions: a
+/// full bar is worth a word, never a banner that pushes the editor down
+/// (the note flashed in on every drop, 2026-10-07). Appears only once the
+/// bar has stayed full (`AppState.overflowNoticeCount`); the sentence is
+/// the tooltip.
+struct OverflowHint: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        let count = appState.overflowNoticeCount
+        Group {
+            if count > 0 {
+                Label("\(count) behind «", systemImage: "rectangle.compress.vertical")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .help("Your menu bar is full: \(count) icons sit behind macOS's « until there's room. Pelmet leaves them where they are.")
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: count > 0)
+    }
+}
+
 /// One header for every card below the editor: title and action on one
 /// line, a single short caption underneath. Hierarchy comes from type
 /// size and the caption's own line, not from cramming both into a row.
@@ -134,14 +158,6 @@ struct MenuBarTab: View {
                     )
                     .font(.callout)
                     .foregroundStyle(.orange)
-                }
-                if appState.overflowTrappedCount > 0 {
-                    Label(
-                        "Your menu bar is full: \(appState.overflowTrappedCount) icons sit behind macOS's « until there's room. Pelmet leaves them where they are.",
-                        systemImage: "rectangle.compress.vertical"
-                    )
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
                 }
 
                 // Inert while a pass runs: the pass works off the edits it

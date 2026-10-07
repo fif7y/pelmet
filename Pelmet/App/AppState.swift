@@ -2578,6 +2578,11 @@ final class AppState {
     /// the editor's note only: Apply reports them as skipped.
     private(set) var overflowTrappedCount = 0
     private var lastOverflowRead = 0
+    /// The editor's full-bar hint: `overflowTrappedCount` once it has held
+    /// `AppTiming.overflowNoticeDelay`. Shown at once, the note flashed in
+    /// on every drop and shoved the editor down (2026-10-07).
+    private(set) var overflowNoticeCount = 0
+    @ObservationIgnored private var overflowNoticeTask: Task<Void, Never>?
 
     private func noteOverflow(in snap: EngineSnapshot) {
         let primaryMaxX = NSScreen.screens.first?.frame.maxX ?? .greatestFiniteMagnitude
@@ -2598,6 +2603,20 @@ final class AppState {
                 : "overflow: cleared")
         }
         overflowTrappedCount = trapped
+        if trapped == 0 {
+            overflowNoticeTask?.cancel()
+            overflowNoticeTask = nil
+            overflowNoticeCount = 0
+        } else if overflowNoticeCount > 0 {
+            overflowNoticeCount = trapped
+        } else if overflowNoticeTask == nil {
+            overflowNoticeTask = Task { [weak self] in
+                try? await Task.sleep(for: AppTiming.overflowNoticeDelay)
+                guard let self, !Task.isCancelled else { return }
+                self.overflowNoticeTask = nil
+                self.overflowNoticeCount = self.overflowTrappedCount
+            }
+        }
     }
 
     func updateSnapshot(_ snap: EngineSnapshot) {
