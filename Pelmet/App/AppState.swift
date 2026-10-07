@@ -2107,8 +2107,15 @@ final class AppState {
         guard let snapshot, !settings.orderEdits.isEmpty else { return }
         let bar = ApplyPass.barOrder(ApplyPass.rememberedFrames(snapshot, appState: self))
         let roster = settings.sectionModel.roster
+        // An icon not on the bar at all (its app not running, an idle
+        // extra) is no edit, as Apply drops it (`dropAbsentSkips`): counted
+        // here it kept the drawing pending and Apply lit after the grouper
+        // had placed everything (Today, Figma, four idle separators,
+        // 2026-10-07).
+        let present = Set(snapshot.items.map { $0.id.sectionKey })
         var edits = settings.orderEdits
-        for (section, drawn) in edits.order {
+        for (section, allDrawn) in edits.order {
+            let drawn = allDrawn.filter { present.contains($0.sectionKey) }
             let onBar = bar.filter { roster.section(of: $0) == section }
             let drawnSet = Set(drawn), barSet = Set(onBar)
             // A drawn item the bar cannot see (behind the «, or never
@@ -2668,6 +2675,14 @@ final class AppState {
         snapshot = snap
         grouper.noteChange()
         seedOrderEditsFromStoredOrderIfNeeded(snap)
+        // A drawing the bar already matches clears itself here too, not only
+        // after an editor drop: an app quitting or the grouper's own pass can
+        // settle it, and Apply stayed lit with nothing to move.
+        if !applying {
+            let before = settings.orderEdits
+            pruneSettledOrderEdits()
+            if settings.orderEdits != before { settings.save() }
+        }
         clockRelay?.updateClockFrame(
             snap.items.first { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }?.frame
         )
