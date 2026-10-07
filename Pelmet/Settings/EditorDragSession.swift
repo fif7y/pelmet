@@ -30,6 +30,9 @@ final class EditorDragSession {
     private(set) var payload: Payload?
     var target: Target?
     private var endWatcher: Task<Void, Never>?
+    /// A tile is lifted right now, in any session: the automatic grouping
+    /// pass waits it out (the user is mid-gesture in the editor).
+    private(set) static var anyActive = false
 
     var liftedItem: ItemID? {
         if case .item(let id, _, _) = payload { return id }
@@ -39,6 +42,7 @@ final class EditorDragSession {
     func begin(_ payload: Payload) {
         PelmetLog.log("editor-drag: begin \(payload)")
         self.payload = payload
+        Self.anyActive = true
         target = nil
         endWatcher?.cancel()
         // SwiftUI exposes no drag-end hook and the drop delegate only fires
@@ -64,6 +68,7 @@ final class EditorDragSession {
         endWatcher = nil
         payload = nil
         target = nil
+        Self.anyActive = false
     }
 }
 

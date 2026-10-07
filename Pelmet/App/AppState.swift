@@ -10,7 +10,12 @@ import SwiftUI
 @Observable
 final class AppState {
     let engine = AgentBarEngine()
-    var settings = SettingsStore.load()
+    var settings = SettingsStore.load() {
+        // Every path that moves an icon between sections (the editor drop,
+        // adoption, Discard, the command bar) assigns the roster through
+        // here, and not all of them go through `settingsChanged`.
+        didSet { grouper.noteRoster(settings.sectionModel.roster) }
+    }
     private(set) var snapshot: EngineSnapshot?
     private(set) var accessibilityGranted = AccessibilityAccess.isGranted
     /// Optional grant behind the hide/reveal covers; re-read while the
@@ -74,6 +79,8 @@ final class AppState {
     @ObservationIgnored private lazy var press = ItemPress(appState: self)
     /// The keyboard way into the bar (see CommandBarController).
     @ObservationIgnored lazy var commandBar = CommandBarController(appState: self)
+    /// Keeps icons on their section's side of the chevron (see SectionGrouper).
+    @ObservationIgnored private(set) lazy var grouper = SectionGrouper(appState: self)
     private var rehide = RehideStateMachine()
     private var rehideTimer: Timer?
     /// One "rehide: deferred" line per armed countdown, not one per re-arm.
@@ -114,6 +121,7 @@ final class AppState {
         presentOnboardingIfNeeded()
         buildBarItems()
         startMonitors()
+        grouper.start()
         startEngineEventPump()
         bootEngine()
         observeDebugOpenMenu()
@@ -1946,6 +1954,110 @@ final class AppState {
         }
     }
 
+    // MARK: - Keep sections grouped (docs/CORE-SETS.md, #80)
+
+    /// Why the automatic grouping pass must not start right now (nil = the
+    /// door is open). `transient` gates clear on their own and are re-checked
+    /// on the debounce beat; the others wait for the snapshot or roster
+    /// change that ends them (overflow, a policy switched off).
+    func groupingGate() -> (why: String, transient: Bool)? {
+        // Boot: the bar is still attaching, as for the own-item passes.
+        guard engineStarted, let adopted = ownItemsAdoptedAt,
+              ContinuousClock.now >= adopted + AppTiming.bootOwnItemLead
+        else { return ("booting", true) }
+        guard accessibilityGranted else { return ("no accessibility access", false) }
+        // The bar's frames and the pointer are not ours right now.
+        if applying { return ("an Apply pass has the bar", true) }
+        if isTransitioning { return ("reveal or conceal in progress", true) }
+        if clockBlinkInFlight || audioVideoRelayActive { return ("clock or Camera & mic relay in flight", true) }
+        if press.isRunning { return ("item menu relay in flight", true) }
+        if !ownItemPassLeads.isEmpty { return ("own item placement queued", true) }
+        if adoptionInFlight || dropAdoptionInFlight { return ("user drag being adopted", true) }
+        // Icons behind the native « have phantom frames; Apply reports them.
+        if overflowTrappedCount > 0 { return ("bar overflows", false) }
+        // Something of the user's is open on screen.
+        if grouper.menuIsOpen { return ("menu open", true) }
+        // Another app's open menu (or one ItemPress opened for a concealed
+        // item): any pop-up-menu-level window on screen, from any process.
+        if let owner = SectionGrouper.popUpMenuOwner() { return ("menu window on screen (\(owner))", true) }
+        if commandBar.isOpen { return ("command bar open", true) }
+        if EditorDragSession.anyActive { return ("editor drag in progress", true) }
+        if OnboardingController.shared.isPresented { return ("onboarding showing", true) }
+        // The editor holds the bar for Apply only, so `.active` is no reason:
+        // an editor drop is the main way a stray appears.
+        if let reason = bandMonitor?.rehideDeferReason(), reason != .active {
+            return ("pointer or drag in the bar: \(reason.rawValue)", true)
+        }
+        if NSEvent.pressedMouseButtons != 0 { return ("mouse button down", true) }
+        if CGDisplayIsAsleep(CGMainDisplayID()) != 0 { return ("display asleep", true) }
+        if Self.sessionAway { return ("screen locked", true) }
+        // The quiet Apply asks of the pointer, asked of the keyboard too:
+        // the ⌘-click of a drag makes the icon's app frontmost, and a
+        // keystroke then lands in it. A busy user defers the pass instead of
+        // starting one that seizes input after Apply's 8s wait.
+        if ApplyPass.secondsSinceAnyInput() < AppTiming.applyIdleGap { return ("input active", true) }
+        return nil
+    }
+
+    /// The session is locked or switched to another user: drags would go to
+    /// the login window.
+    private static var sessionAway: Bool {
+        guard let session = CGSessionCopyCurrentDictionary() as? [String: Any] else { return false }
+        return (session["CGSSessionScreenIsLocked"] as? Bool) == true
+            || (session[kCGSessionOnConsoleKey as String] as? Bool) == false
+    }
+
+    /// One pass for `allowed` (the strays Pelmet can explain), through the
+    /// Apply door. nil when an Apply pass already has the bar. Never touches
+    /// `orderEdits` or the button's report: what the user drew stays pending
+    /// for the button. The drags make the dragged icon's app frontmost (only
+    /// Settings is refocused by the pass), so whoever had focus gets it back.
+    func runGroupingPass(allowing allowed: Set<ItemID>) async -> ApplyReport? {
+        guard !applying else { return nil }
+        applying = true
+        defer { applying = false }
+        let front = NSWorkspace.shared.frontmostApplication
+        let report = await ApplyPass.run(appState: self, scope: .strays(allowed))
+        if !report.applied.isEmpty { await engine.writeOrderHint() }
+        satisfyDrawnEdits(for: report.applied.filter(report.drawn.contains))
+        if let front, !report.abandoned, front.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            await restoreFocus(to: front)
+        }
+        return report
+    }
+
+    /// A stray that landed in the slot the editor drew for it is applied:
+    /// Discard has nothing to put back, and a section whose drawing the bar
+    /// now matches in full clears (`pruneSettledOrderEdits`), so Apply's
+    /// count drops for it. Other pending reorders stay as they are.
+    private func satisfyDrawnEdits(for landed: [ItemID]) {
+        guard !landed.isEmpty else { return }
+        var edits = settings.orderEdits
+        for id in landed { edits.previousSection.removeValue(forKey: id.sectionKey) }
+        if edits != settings.orderEdits { settings.orderEdits = edits }
+        pruneSettledOrderEdits()
+        settings.save()
+        PelmetLog.log("group: drawn edit satisfied for [\(landed.map(\.rawValue).joined(separator: ", "))] — Apply has \(pendingMoveCount) left")
+    }
+
+    private func restoreFocus(to app: NSRunningApplication) async {
+        func isFront() -> Bool { NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier }
+        // The flip lands on the agent's beat.
+        try? await Task.sleep(for: .milliseconds(250))
+        guard !isFront(), !app.isTerminated else { return }
+        app.activate()
+        try? await Task.sleep(for: .milliseconds(150))
+        if !isFront() {
+            // Cooperative activation can refuse a background app: ask the
+            // app itself (public AX, already trusted for the pass).
+            AXUIElementSetAttributeValue(
+                AXUIElementCreateApplication(app.processIdentifier), kAXFrontmostAttribute as CFString, kCFBooleanTrue
+            )
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        PelmetLog.log("group: focus handed back to \(app.localizedName ?? "pid \(app.processIdentifier)") — \(isFront() ? "front" : "not front")")
+    }
+
     /// 0.3.0 upgrade (docs/CORE-SETS.md §Upgrade): a 0.2.x build kept a
     /// per-section order its own placement was still realising; the sets
     /// core moves nothing on its own. Once, at the first snapshot that
@@ -2554,6 +2666,7 @@ final class AppState {
             PelmetLog.log("snapshot: destroyed by the bar \(destroyedKeys.map(\.rawValue))")
         }
         snapshot = snap
+        grouper.noteChange()
         seedOrderEditsFromStoredOrderIfNeeded(snap)
         clockRelay?.updateClockFrame(
             snap.items.first { $0.id.rawValue.hasSuffix("::com.apple.menuextra.clock") }?.frame

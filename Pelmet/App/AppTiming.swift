@@ -151,6 +151,17 @@ enum AppTiming {
     /// shielded drag rather than a pass that never starts.
     static let applyIdleGap: TimeInterval = 1.5
     static let applyIdleMaxWait: TimeInterval = 8
+    /// Keep sections grouped (docs/CORE-SETS.md, #80): the check waits this
+    /// long after the last snapshot or roster change, so a reflow, a drop
+    /// animation or a burst of registrations settles before anything is
+    /// planned (and re-checks at this beat while a gate is closed).
+    static let groupingDebounce: Duration = .seconds(2)
+    /// …but never longer than this from the first unchecked change: a bar
+    /// that keeps changing (hover reveals, covers, reflows every second or
+    /// two) starved the pure debounce, and an editor drop was never looked at.
+    static let groupingMaxWait: Duration = .seconds(6)
+    /// An NSMenu fades for a beat after its tracking ends.
+    static let groupingMenuHold: TimeInterval = 1
     /// Post-drag read: the agent animates the drop (~300ms slide, measured
     /// 2026-09-08) and a single fixed-delay read judged mid-flight frames as
     /// misses. Wait the floor, then re-read every poll until the dragged

@@ -81,6 +81,8 @@ final class ItemPress {
 
     private weak var appState: AppState?
     private var current: Run?
+    /// A relay is on the bar (locating, revealing, clicking, putting back).
+    var isRunning: Bool { current != nil }
 
     init(appState: AppState) {
         self.appState = appState

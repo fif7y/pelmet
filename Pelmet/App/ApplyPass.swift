@@ -19,6 +19,12 @@ struct ApplyReport: Equatable {
     var failed: [ItemID] = []
     var skipped: [Skipped] = []
     var planned = 0
+    /// A grouping pass that gave up before its first drag because the user
+    /// was typing or pointing again: nothing moved, nothing was spent.
+    var abandoned = false
+    /// Grouping pass: the strays that went to the slot the editor drew for
+    /// them. Their pending edit is satisfied once they land.
+    var drawn: Set<ItemID> = []
 }
 
 @MainActor
@@ -144,10 +150,17 @@ enum ApplyPass {
         frames.sorted { $0.value.minX < $1.value.minX }.map(\.key)
     }
 
-    static func plan(
-        for appState: AppState, snapshot snap: EngineSnapshot, edits: OrderEdits? = nil,
-        remembered: Bool = false
-    ) -> MovePlan.Plan {
+    /// What both the plan and the stray check read off the bar.
+    private struct BarFacts {
+        let bar: [ItemID]
+        let roster: Roster
+        let chevron: ItemID?
+        let pinned: Set<ItemID>
+    }
+
+    private static func barFacts(
+        for appState: AppState, snapshot snap: EngineSnapshot, remembered: Bool
+    ) -> BarFacts {
         let frames = remembered ? rememberedFrames(snap, appState: appState) : primaryFrames(snap)
         let bar = barOrder(frames)
         let chevron = appState.pelmetChevronItem(in: snap)?.id.sectionKey
@@ -169,6 +182,68 @@ enum ApplyPass {
                 || (isProtectedSystemItem($0) && inTrailingCluster($0)
                     && roster.section(of: $0) == .visible)
         })
+        return BarFacts(bar: bar, roster: roster, chevron: chevron, pinned: pinned)
+    }
+
+    /// Pelmet's own items on the bar (extras, separators, replicas, the
+    /// chevron): placed through their own scope and Apply, never by the
+    /// grouping policy.
+    private static func ownKeys(in bar: [ItemID]) -> Set<ItemID> {
+        Set(bar.filter { $0.bundleID.map(PelmetBundle.ownIDs.contains) ?? false })
+    }
+
+    /// Icons whose side of the chevron disagrees with their section right
+    /// now, left to right (docs/CORE-SETS.md §Keep sections grouped). Read
+    /// the same way the Apply count reads the bar: remembered frames
+    /// stand in for concealed icons.
+    static func strays(
+        for appState: AppState, snapshot snap: EngineSnapshot, remembered: Bool = true
+    ) -> [ItemID] {
+        let facts = barFacts(for: appState, snapshot: snap, remembered: remembered)
+        return MovePlan.strays(
+            bar: facts.bar, roster: facts.roster, chevron: facts.chevron,
+            pinned: facts.pinned, exempt: ownKeys(in: facts.bar)
+        )
+    }
+
+    /// One look at every icon the snapshot knows, for `StrayLedger`: its
+    /// side of the chevron on the (remembered) primary bar, its section and
+    /// the process behind it. The pid is what tells a relaunch from an icon
+    /// that stayed.
+    static func sightings(for appState: AppState, snapshot snap: EngineSnapshot) -> [StrayLedger.Sighting] {
+        let facts = barFacts(for: appState, snapshot: snap, remembered: true)
+        var pids: [ItemID: Int32] = [:]
+        for item in snap.items where item.pid > 0 { pids[item.id.sectionKey] = item.pid }
+        let known = Set(snap.items.map(\.id.sectionKey))
+            .union(snap.concealed.map(\.sectionKey))
+            .union(facts.bar)
+        return known.compactMap { id in
+            guard id != facts.chevron else { return nil }
+            return StrayLedger.Sighting(
+                id: id,
+                side: StrayLedger.side(of: id, in: facts.bar, chevron: facts.chevron),
+                section: facts.roster.section(of: id),
+                pid: pids[id]
+            )
+        }
+    }
+
+    /// `strays` plans the grouping policy's pass instead: only the listed
+    /// strays move (every other icon, strays Pelmet has no explanation for
+    /// included, is an anchor) and the drawing is read for them alone: a
+    /// stray the editor drew lands in its drawn slot.
+    static func plan(
+        for appState: AppState, snapshot snap: EngineSnapshot, edits: OrderEdits? = nil,
+        remembered: Bool = false, strays allowed: Set<ItemID>? = nil
+    ) -> MovePlan.Plan {
+        let facts = barFacts(for: appState, snapshot: snap, remembered: remembered)
+        if let allowed {
+            return MovePlan.strayPlan(
+                bar: facts.bar, roster: facts.roster, chevron: facts.chevron,
+                pinned: facts.pinned, exempt: Set(facts.bar).subtracting(allowed),
+                edits: edits ?? appState.settings.orderEdits
+            )
+        }
         // The one anchor is the chevron (passed separately). Every other own
         // item — extras, replicas, launchers, separators — drags like any
         // icon: registration never places an own item (a separator moved to
@@ -176,11 +251,11 @@ enum ApplyPass {
         // Apply skipped it as an anchor, 2026-09-20 20:19).
         let own = Set<ItemID>()
         return MovePlan.compute(
-            bar: bar,
+            bar: facts.bar,
             edits: edits ?? appState.settings.orderEdits,
-            roster: roster,
-            chevron: chevron,
-            pinned: pinned,
+            roster: facts.roster,
+            chevron: facts.chevron,
+            pinned: facts.pinned,
             ownItems: own
         )
     }
@@ -188,9 +263,16 @@ enum ApplyPass {
     /// Seconds since the last physical pointer event (public CGEventSource
     /// counters; our own synthetic events count too, which is fine — the
     /// pass only asks before its first drag).
-    private static func secondsSincePointerActivity() -> TimeInterval {
+    static func secondsSincePointerActivity() -> TimeInterval {
         let types: [CGEventType] = [.mouseMoved, .leftMouseDown, .leftMouseUp, .leftMouseDragged, .rightMouseDown, .scrollWheel]
         return types.map { CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: $0) }.min() ?? .infinity
+    }
+
+    /// Seconds since the last input of any kind, keyboard included (a
+    /// grouping pass hands the foreground to the dragged icon's app, which
+    /// would take the user's keystrokes mid-sentence).
+    static func secondsSinceAnyInput() -> TimeInterval {
+        CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!)
     }
 
     private static func waitForIdlePointer() async {
@@ -230,6 +312,12 @@ enum ApplyPass {
         /// (probed 2026-09-20), so the one door is the only way to move
         /// them — docs/CORE-SETS.md §Own items.
         case ownItem(ItemID)
+        /// "Keep sections grouped" (docs/CORE-SETS.md, #80): only the given
+        /// strays, icons on the wrong side of the chevron that Pelmet can
+        /// explain (`StrayLedger`), cross it. No edits are read, no
+        /// separator re-host, no idle extras attached, no « expanded; the
+        /// bar is revealed only when a move touches a concealed icon.
+        case strays(Set<ItemID>)
     }
 
     /// Runs the whole pass. The caller owns `applying` and the report.
@@ -249,8 +337,32 @@ enum ApplyPass {
         // whole bar. Reveal everything and let the editor hold it. An own
         // item is placed among what is on screen right now.
         var revealedForPass = false
-        if case .wholeBar = scope {
-            revealedForPass = !appState.currentRevealedSections.isSuperset(of: [.hidden, .alwaysHidden])
+        let wholeReveal = !appState.currentRevealedSections.isSuperset(of: [.hidden, .alwaysHidden])
+        switch scope {
+        case .wholeBar:
+            revealedForPass = wholeReveal
+        case .strays(let allowed):
+            // A concealed icon has no live frame, so a move that names one
+            // (as the mover or as a bound) needs the reveal. A shown icon
+            // crossing to the shown side, between shown neighbours, does
+            // not: the bar stays shut.
+            // A stray drawn into a concealable section has its drawn
+            // neighbours there too (some are own extras the collapsed bar
+            // does not frame): reveal to find the slot.
+            if wholeReveal, let snap = appState.snapshot {
+                let roster = appState.settings.sectionModel.roster
+                let edits = appState.settings.orderEdits
+                let drawnIntoConcealed = allowed.contains { id in
+                    let section = roster.section(of: id)
+                    return section != .visible && edits.order[section]?.contains(id) == true
+                }
+                revealedForPass = drawnIntoConcealed
+                    || plan(for: appState, snapshot: snap, remembered: true, strays: allowed).moves.contains { move in
+                        [move.item, move.after, move.before].compactMap { $0 }.contains { roster.section(of: $0) != .visible }
+                    }
+            }
+        case .ownItem:
+            break
         }
         if revealedForPass {
             appState.reveal([.hidden, .alwaysHidden], reason: .settingsPreview)
@@ -294,6 +406,9 @@ enum ApplyPass {
             trappedFor = {
                 trappedEdited($0, edits: appState.settings.orderEdits).union(trapped($0).intersection(counted))
             }
+        case .strays(let allowed):
+            planFor = { self.plan(for: appState, snapshot: $0, strays: allowed) }
+            trappedFor = { _ in [] }
         case .ownItem(let own):
             // The item's section as the editor draws it counts as the edit,
             // so the plan puts the newcomer between its roster neighbours;
@@ -325,6 +440,20 @@ enum ApplyPass {
         for (id, why) in plan.skipped {
             PelmetLog.log("apply: skip \(id.rawValue) (\(why))")
         }
+        if case .strays = scope {
+            for move in plan.moves {
+                let neighbours = "after \(move.after?.rawValue ?? "-"), before \(move.before?.rawValue ?? "-")"
+                switch plan.placements[move.item] {
+                case .drawn?:
+                    report.drawn.insert(move.item)
+                    PelmetLog.log("group: \(move.item.rawValue) → its drawn slot (\(neighbours))")
+                case .drawnUnavailable?:
+                    PelmetLog.log("group: \(move.item.rawValue) drawn slot unavailable (no drawn neighbour on screen) → chevron end (\(neighbours))")
+                default:
+                    PelmetLog.log("group: \(move.item.rawValue) not drawn → chevron end (\(neighbours))")
+                }
+            }
+        }
         // Icons behind the « that a drawn edit names: the pass expands the
         // « (one shielded click), which gives them frames left of the
         // notch (probed 2026-09-20, drags across the notch land first try),
@@ -334,7 +463,19 @@ enum ApplyPass {
         dropAbsentSkips(&report, snap: snap)
         guard !plan.moves.isEmpty || !trappedForPass.isEmpty else { return report }
 
-        await waitForIdlePointer()
+        if case .strays = scope {
+            // The reveal above took over a second: idle then is not idle now.
+            // A busy user means no pass at all (never the shielded drag a
+            // busy pointer gets from Apply after its 8s wait): the reveal is
+            // closed again by the defer above and the budget stays unspent.
+            guard secondsSinceAnyInput() >= AppTiming.applyIdleGap else {
+                PelmetLog.log("group: pass abandoned — input")
+                report.abandoned = true
+                return report
+            }
+        } else {
+            await waitForIdlePointer()
+        }
         let holdsSettings = appState.settingsWindowVisible
         if holdsSettings { SettingsWindowController.shared.holdAboveDrag() }
         defer {
