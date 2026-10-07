@@ -33,7 +33,7 @@ final class HotkeyManager {
     @discardableResult
     func register(_ spec: HotkeySpec?, slot: Slot) -> Bool {
         unregister(slot)
-        guard let spec else { return true }
+        guard let spec, !spec.isOff else { return true }
         installHandlerIfNeeded()
 
         var ref: EventHotKeyRef?

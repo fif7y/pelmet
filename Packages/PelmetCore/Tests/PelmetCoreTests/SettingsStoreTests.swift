@@ -58,7 +58,19 @@ struct SettingsStoreTests {
         #expect(back.alwaysHiddenHotkey == settings.alwaysHiddenHotkey)
     }
 
-    // The command bar's shortcut (⌥⌘K) is never off either.
+    // Turned off on purpose (#79) survives a save; only a missing, null or
+    // unreadable value falls back to the default.
+    @Test func turnedOffHotkeyRoundTrips() throws {
+        var settings = SettingsStore()
+        settings.hotkey = .off
+        settings.searchHotkey = .off
+        let back = try JSONDecoder().decode(SettingsStore.self, from: JSONEncoder().encode(settings))
+        #expect(back.hotkey?.isOff == true && back.searchHotkey?.isOff == true)
+        #expect(back.settingsHotkey == .settingsDefault)
+        #expect(!HotkeySpec.default.isOff)
+    }
+
+    // The command bar's shortcut (⌥⌘K) falls back to its default too.
     @Test func searchHotkeyDefaultsAndRoundTrips() throws {
         let legacy = try JSONDecoder().decode(SettingsStore.self, from: Data("{}".utf8))
         #expect(legacy.searchHotkey == .searchDefault)

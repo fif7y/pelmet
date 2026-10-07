@@ -799,7 +799,11 @@ private struct GeneralPane: View {
             // "Without it" is advice for a state you are not in while the
             // icon is there — it belongs to the card only once it applies.
             if !appState.settings.showStatusItem {
-                SettingNote("Without it: press \(settingsShortcut), reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.")
+                if let settingsShortcut {
+                    SettingNote("Without it: press \(settingsShortcut), reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.")
+                } else {
+                    SettingNote("Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.")
+                }
             }
         }
 
@@ -880,15 +884,21 @@ private struct GeneralPane: View {
         )
     }
 
-    private var settingsShortcut: String {
-        appState.settings.settingsHotkey?.display ?? HotkeySpec.settingsDefault.display
+    /// Nil when the user turned the Settings shortcut off (#79).
+    private var settingsShortcut: String? {
+        let spec = appState.settings.settingsHotkey ?? .settingsDefault
+        return spec.isOff ? nil : spec.display
     }
 
     /// One-time orientation when the user goes iconless.
     func showIconlessHint() {
         let alert = NSAlert()
         alert.messageText = String(localized: "Pelmet stays a click away")
-        alert.informativeText = String(localized: "You can always open Pelmet Settings by:\n\n•  Pressing \(settingsShortcut)\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar")
+        if let settingsShortcut {
+            alert.informativeText = String(localized: "You can always open Pelmet Settings by:\n\n•  Pressing \(settingsShortcut)\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar")
+        } else {
+            alert.informativeText = String(localized: "You can always open Pelmet Settings by:\n\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar")
+        }
         alert.alertStyle = .informational
         alert.runModal()
     }

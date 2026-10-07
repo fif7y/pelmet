@@ -4641,60 +4641,60 @@
         }
       }
     },
-    "Click, then press the new shortcut. ⎋ cancels, ⌫ restores %@.": {
+    "Click, then press the new shortcut. ⌫ turns it off, ⎋ cancels.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Klicken, dann das neue Kürzel drücken. ⎋ bricht ab, ⌫ stellt %@ wieder her."
+            "value": "Klicken, dann das neue Kürzel drücken. ⌫ schaltet es aus, ⎋ bricht ab."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haz clic y pulsa el nuevo atajo. ⎋ cancela, ⌫ restaura %@."
+            "value": "Haz clic y pulsa el nuevo atajo. ⌫ lo desactiva, ⎋ cancela."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cliquez, puis tapez le nouveau raccourci. ⎋ annule, ⌫ rétablit %@."
+            "value": "Cliquez, puis tapez le nouveau raccourci. ⌫ le désactive, ⎋ annule."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fai clic, poi premi la nuova scorciatoia. ⎋ annulla, ⌫ ripristina %@."
+            "value": "Fai clic, poi premi la nuova scorciatoia. ⌫ la disattiva, ⎋ annulla."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クリックしてから新しいショートカットを押します。⎋ でキャンセル、⌫ で %@ に戻します。"
+            "value": "クリックしてから新しいショートカットを押します。⌫ でオフ、⎋ でキャンセル。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "클릭한 뒤 새 단축키를 누르세요. ⎋ 취소, ⌫ 는 %@ 로 되돌립니다."
+            "value": "클릭한 뒤 새 단축키를 누르세요. ⌫ 는 끄기, ⎋ 는 취소입니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Clique e pressione o novo atalho. ⎋ cancela, ⌫ restaura %@."
+            "value": "Clique e pressione o novo atalho. ⌫ o desativa, ⎋ cancela."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нажмите, затем введите новое сочетание. ⎋ отменяет, ⌫ возвращает %@."
+            "value": "Нажмите, затем введите новое сочетание. ⌫ выключает его, ⎋ отменяет."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "点击后按下新快捷键。⎋ 取消，⌫ 恢复为 %@。"
+            "value": "点击后按下新快捷键。⌫ 关闭，⎋ 取消。"
           }
         }
       }
@@ -10031,6 +10031,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "资料库中没有快捷指令"
+          }
+        }
+      }
+    },
+    "None": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keins"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ninguno"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "なし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없음"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无"
           }
         }
       }
@@ -17691,6 +17749,64 @@
         }
       }
     },
+    "Turn Off": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desactivar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactiver"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disattiva"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフにする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끄기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desativar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключить"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
+          }
+        }
+      }
+    },
     "Turn this icon off in %@'s settings. The launcher takes over from there.": {
       "localizations": {
         "de": {
@@ -19195,6 +19311,122 @@
           "stringUnit": {
             "state": "translated",
             "value": "隐藏后：可按 %@，通过 Spotlight 重新打开 Pelmet，或右键点击分隔符或菜单栏的空白处。"
+          }
+        }
+      }
+    },
+    "Without it: reopen Pelmet from Spotlight, or right-click a separator or empty menu bar spot.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Symbol: Pelmet erneut über Spotlight öffnen oder mit der rechten Maustaste auf einen Trenner oder eine freie Stelle der Menüleiste klicken."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin él: vuelve a abrir Pelmet desde Spotlight, o haz clic derecho en un separador o en un espacio vacío de la barra de menús."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans elle : rouvrez Pelmet depuis Spotlight, ou faites un clic droit sur un séparateur ou une zone vide de la barre des menus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senza icona: riapri Pelmet da Spotlight, oppure fai clic destro su un separatore o su uno spazio vuoto della barra dei menu."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非表示の場合：SpotlightからPelmetを再度開くか、区切りまたはメニューバーの空いている場所を右クリックしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "숨기면: Spotlight에서 Pelmet을 다시 열거나, 구분선 또는 메뉴 막대의 빈 곳을 오른쪽 클릭하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem ele: reabra o Pelmet pelo Spotlight, ou clique com o botão direito em um separador ou em um espaço vazio da barra de menus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без значка: откройте Pelmet через Spotlight или нажмите правой кнопкой на разделитель или пустое место строки меню."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏后：可通过 Spotlight 重新打开 Pelmet，或右键点击分隔符或菜单栏的空白处。"
+          }
+        }
+      }
+    },
+    "You can always open Pelmet Settings by:\n\n•  Opening Pelmet again from Spotlight or Finder\n•  Right-clicking any Pelmet separator in the menu bar\n•  Right-clicking an empty spot in the menu bar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Pelmet-Einstellungen sind jederzeit erreichbar:\n\n•  Pelmet erneut über Spotlight oder den Finder öffnen\n•  Rechtsklick auf einen Pelmet-Trenner in der Menüleiste\n•  Rechtsklick auf eine freie Stelle der Menüleiste"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siempre puedes abrir los ajustes de Pelmet:\n\n•  Abriendo Pelmet de nuevo desde Spotlight o el Finder\n•  Haciendo clic derecho en cualquier separador de Pelmet en la barra de menús\n•  Haciendo clic derecho en un espacio vacío de la barra de menús"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez toujours ouvrir les réglages de Pelmet :\n\n•  En rouvrant Pelmet depuis Spotlight ou le Finder\n•  Par un clic droit sur un séparateur Pelmet dans la barre des menus\n•  Par un clic droit sur une zone vide de la barre des menus"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puoi sempre aprire le impostazioni di Pelmet:\n\n•  Riaprendo Pelmet da Spotlight o dal Finder\n•  Con un clic destro su un separatore Pelmet nella barra dei menu\n•  Con un clic destro su uno spazio vuoto della barra dei menu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet設定は次の方法でいつでも開けます：\n\n•  SpotlightまたはFinderからPelmetを再度開く\n•  メニューバーのPelmet区切りを右クリック\n•  メニューバーの空いている場所を右クリック"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet 설정은 언제든지 다음 방법으로 열 수 있습니다:\n\n•  Spotlight 또는 Finder에서 Pelmet을 다시 열기\n•  메뉴 막대의 Pelmet 구분선을 오른쪽 클릭\n•  메뉴 막대의 빈 곳을 오른쪽 클릭"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você sempre pode abrir os ajustes do Pelmet:\n\n•  Abrindo o Pelmet novamente pelo Spotlight ou pelo Finder\n•  Clicando com o botão direito em qualquer separador do Pelmet na barra de menus\n•  Clicando com o botão direito em um espaço vazio da barra de menus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки Pelmet всегда можно открыть:\n\n•  Снова открыв Pelmet через Spotlight или Finder\n•  Правым щелчком по любому разделителю Pelmet в строке меню\n•  Правым щелчком по пустому месту строки меню"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你随时可以通过以下方式打开 Pelmet 设置：\n\n•  在 Spotlight 或访达中再次打开 Pelmet\n•  右键点击菜单栏中的任意 Pelmet 分隔符\n•  右键点击菜单栏的空白处"
           }
         }
       }

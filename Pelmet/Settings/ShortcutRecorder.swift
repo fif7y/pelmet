@@ -1,7 +1,8 @@
 // ShortcutRecorder.swift
 // Click-to-record global shortcut. A local keyDown monitor inside our own
 // settings window, so recording needs no extra permission. ⎋ cancels,
-// ⌫ puts `fallback` back — a shortcut is never off (Gab, 2026-09-15).
+// ⌫ turns the shortcut off (#79), and the ↺ inside the chip
+// always brings `fallback` back (⌫ once left no way back, 2026-09-15).
 
 import Carbon.HIToolbox
 import PelmetCore
@@ -9,31 +10,54 @@ import SwiftUI
 
 struct ShortcutRecorder: View {
     @Binding var shortcut: HotkeySpec?
-    /// What ⌫ restores.
+    /// What the restore button brings back.
     let fallback: HotkeySpec
     @State private var recording = false
+    @State private var hovering = false
     @State private var monitor: Any?
 
+    private var isOff: Bool { shortcut?.isOff == true }
+
     var body: some View {
-        HStack(spacing: 6) {
-            chip
-            // A custom combo gets a way back to the default without knowing
-            // about ⌫ — the × only exists while there is something to undo.
-            if !recording, let shortcut, shortcut != fallback {
-                Button {
-                    commit(fallback)
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.tertiary)
+        // Both glyphs sit inside the chip's spare width, mirrored: the row
+        // never changes size, so nothing moves and the settings rows'
+        // ViewThatFits never re-lays mid-click (#54). A restore button
+        // beside the chip shifted it left on every custom shortcut, and its
+        // exit animation left the chip offset (Gab, 2026-10-07).
+        chip
+            // A custom or turned-off shortcut gets a way back to the default
+            // without knowing about ⌫ — only while there is something to undo.
+            .overlay(alignment: .leading) {
+                if !recording, let shortcut, shortcut != fallback {
+                    glyph("arrow.counterclockwise.circle.fill", help: "Restore \(fallback.display)") {
+                        commit(fallback)
+                    }
+                    .padding(.leading, 6)
                 }
-                .buttonStyle(.plain)
-                .focusEffectDisabled()
-                .help("Restore \(fallback.display)")
             }
+            // Turning a shortcut off, only under the pointer: a clash with
+            // another app's shortcut is rare (#79) and earns no switch.
+            .overlay(alignment: .trailing) {
+                if hovering, !recording, let shortcut, !shortcut.isOff {
+                    glyph("xmark.circle.fill", help: "Turn Off") { commit(.off) }
+                        .padding(.trailing, 6)
+                        .transition(.opacity)
+                }
+            }
+            .onHover { hovering = $0 }
+            .animation(.easeInOut(duration: 0.12), value: hovering)
+            .onDisappear(perform: stopRecording)
+    }
+
+    private func glyph(_ name: String, help: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: name)
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
         }
-        .animation(.easeInOut(duration: 0.15), value: shortcut == fallback)
-        .onDisappear(perform: stopRecording)
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+        .help(help)
     }
 
     private var chip: some View {
@@ -49,6 +73,8 @@ struct ShortcutRecorder: View {
                 Text("Type shortcut…").hidden()
                 if recording {
                     Text("Type shortcut…")
+                } else if isOff {
+                    Text("None").foregroundStyle(.secondary)
                 } else if let shortcut {
                     Text(verbatim: shortcut.display)
                 } else {
@@ -75,7 +101,7 @@ struct ShortcutRecorder: View {
         }
         .buttonStyle(.plain)
         .focusEffectDisabled()
-        .help("Click, then press the new shortcut. ⎋ cancels, ⌫ restores \(fallback.display).")
+        .help("Click, then press the new shortcut. ⌫ turns it off, ⎋ cancels.")
     }
 
     private func startRecording() {
@@ -106,7 +132,7 @@ struct ShortcutRecorder: View {
             stopRecording()
             return true
         case kVK_Delete:
-            commit(fallback)
+            commit(.off)
             return true
         default:
             break

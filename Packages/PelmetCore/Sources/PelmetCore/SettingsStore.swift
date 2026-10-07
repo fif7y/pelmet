@@ -35,6 +35,11 @@ public struct HotkeySpec: Codable, Equatable, Sendable {
     /// ⌥⌘K opens the command bar (⌥⌘Space belongs to Finder's search
     /// window). kVK_ANSI_K = 0x28.
     public static let searchDefault = HotkeySpec(keyCode: 0x28, modifiers: 0x900, display: "⌥⌘K")
+    /// A shortcut the user turned off (#79: Pelmet's combos clashed with
+    /// Keyboard Maestro). A value, not nil: a missing or null field still
+    /// decodes to the default, and no key has this code.
+    public static let off = HotkeySpec(keyCode: .max, modifiers: 0)
+    public var isOff: Bool { keyCode == Self.off.keyCode }
 
     private enum CodingKeys: String, CodingKey { case keyCode, modifiers, display }
 
@@ -343,7 +348,8 @@ public struct SettingsStore: Codable, Equatable, Sendable {
     public var launchAtLogin: Bool = false
     public var showStatusItem: Bool = true
     public var statusIconStyle: StatusIconStyle = .chevron
-    /// Never off: a missing, null or unreadable value takes the default.
+    /// Off only as `.off`, set on purpose: a missing, null or unreadable
+    /// value takes the default.
     public var hotkey: HotkeySpec? = .default
     public var settingsHotkey: HotkeySpec? = .settingsDefault
     public var alwaysHiddenHotkey: HotkeySpec? = .alwaysHiddenDefault
