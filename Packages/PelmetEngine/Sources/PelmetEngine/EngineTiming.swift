@@ -22,6 +22,7 @@ enum EngineTiming {
     /// Empty-AX-walk deferral: bounded retries while the agent tree is unreadable.
     static let emptyAXRetries = 6
     static let emptyAXRetryDelay: Duration = .milliseconds(500)
+    static let emptyAXSlowRetryDelay: Duration = .seconds(2)
     /// Ignore teardown signals inside this window after a swap (AX drop-out lag).
     static let teardownSettleWindow: TimeInterval = 3
     /// Assertion activation completion: deadline for a dud completion

@@ -40,8 +40,14 @@ public actor ItemEnumerator {
     /// from the positions plist domain (`status:<bundle>::<title>`); we build
     /// the same shape from the AX tree so both sources agree.
     public func snapshotItems() -> [RawItem] {
-        guard let agent = resolveAgent() else { return [] }
-        guard let windows = copyAttribute(agent, kAXChildrenAttribute) as? [AXUIElement] else {
+        guard let agent = resolveAgent() else {
+            noteEmpty("MenuBarAgent not running")
+            return []
+        }
+        var value: CFTypeRef?
+        let error = AXUIElementCopyAttributeValue(agent, kAXChildrenAttribute as CFString, &value)
+        guard let windows = value as? [AXUIElement] else {
+            noteEmpty("agent tree unreadable (AXError \(error.rawValue))")
             return []
         }
         var byID: [ItemID: RawItem] = [:]
@@ -72,7 +78,19 @@ public actor ItemEnumerator {
                 }
             }
         }
-        return order.compactMap { byID[$0] }
+        let items = order.compactMap { byID[$0] }
+        noteEmpty(items.isEmpty ? "agent tree has \(windows.count) window(s), no items" : nil)
+        return items
+    }
+
+    private var lastEmptyReason: String?
+    /// Why a walk came back empty, once per reason, and once when the tree
+    /// reads again: an empty walk holds converge off, so hidden icons stay
+    /// on the bar for as long as these last.
+    private func noteEmpty(_ reason: String?) {
+        guard reason != lastEmptyReason else { return }
+        lastEmptyReason = reason
+        PelmetLog.log(reason.map { "enumerate: empty — \($0)" } ?? "enumerate: agent tree reads again")
     }
 
     /// In the band AND inside the main display's bounds (CG global space,

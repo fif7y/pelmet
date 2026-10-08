@@ -123,6 +123,14 @@ public actor AgentBarEngine: MenuBarEngine {
     /// readable yet (launch, locked screen) — planning from it swaps in an
     /// allow-all assertion that un-hides everything for a beat.
     private var emptyAXRetriesRemaining = EngineTiming.emptyAXRetries
+    /// Past the fast retries, a slow one keeps coming until the bar reads:
+    /// nothing else walks at rest, and the bounded retries alone left a
+    /// fresh launch un-hidden until the next hover (2026-10-08, 17s).
+    private var emptyAXSlow = false
+    /// The one pending retry, so converges that walk empty for other
+    /// reasons don't each start a chain of their own.
+    private var emptyAXRetry: Task<Void, Never>?
+    private var emptyAXSince: Date?
 
     /// Timings of the most recent converge that ran to a decision (PerfTrace
     /// reads it right after `reveal`/`conceal` return).
@@ -353,7 +361,12 @@ public actor AgentBarEngine: MenuBarEngine {
             deferEmptyWalkRetry()
             return
         }
+        if let since = emptyAXSince {
+            PelmetLog.log("converge: AX walk back after \(Self.ms(since: since))ms empty")
+            emptyAXSince = nil
+        }
         emptyAXRetriesRemaining = EngineTiming.emptyAXRetries
+        emptyAXSlow = false
         // Running-app set: consulted by the stale prune below (quit apps) and
         // the allowlist build. Fetched once, up front.
         phase = Date()
@@ -410,17 +423,28 @@ public actor AgentBarEngine: MenuBarEngine {
     /// items, so this is the agent tree not being readable yet (launch,
     /// locked screen). A plan computed from it has concealable=[] and
     /// would swap in an allow-all assertion — a momentary un-hide flash
-    /// followed by a second animated swap when AX populates. Defer with a
-    /// bounded retry; past the bound, the itemsChanged fired by the first
-    /// successful re-walk re-converges us.
+    /// followed by a second animated swap when AX populates. Defer with fast
+    /// retries, then slow ones until a walk reads: nothing else walks at
+    /// rest, so a bound left the bar un-hidden until the next interaction.
     private func deferEmptyWalkRetry() {
-        PelmetLog.log("converge: AX walk empty — deferring (retries left \(emptyAXRetriesRemaining))")
+        if emptyAXSince == nil { emptyAXSince = Date() }
+        guard emptyAXRetry == nil else { return }
+        let delay: Duration
         if emptyAXRetriesRemaining > 0 {
+            PelmetLog.log("converge: AX walk empty — deferring (retries left \(emptyAXRetriesRemaining))")
             emptyAXRetriesRemaining -= 1
-            Task {
-                try? await Task.sleep(for: EngineTiming.emptyAXRetryDelay)
-                await self.converge()
+            delay = EngineTiming.emptyAXRetryDelay
+        } else {
+            if !emptyAXSlow {
+                emptyAXSlow = true
+                PelmetLog.log("converge: AX walk still empty — retrying every \(EngineTiming.emptyAXSlowRetryDelay) until the bar reads")
             }
+            delay = EngineTiming.emptyAXSlowRetryDelay
+        }
+        emptyAXRetry = Task {
+            try? await Task.sleep(for: delay)
+            self.emptyAXRetry = nil
+            await self.converge()
         }
     }
 
