@@ -657,11 +657,38 @@ final class MenuBarBandMonitor {
             guard let frame = item.frame, MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX) else { return nil }
             return (item.id, frame)
         }
-        if let chevron = live.first(where: { MenuBarPolicy.isChevronID($0.id, pelmetBundleID: PelmetBundle.mainID) }) {
-            return chevron.frame.maxX
+        let walked = live.first(where: { MenuBarPolicy.isChevronID($0.id, pelmetBundleID: PelmetBundle.mainID) })?.frame.maxX
+        // The chevron's own window first: right after a swap the snapshot
+        // still holds the other layout's frames, and a hover resting by the
+        // chevron read as past the zone (#84).
+        if let drawn = liveChevronMaxX() {
+            noteEdgeMismatch(drawn: drawn, walked: walked)
+            return drawn
         }
+        if let walked { return walked }
         let model = appState.settings.sectionModel
         return live.filter { model.section(of: $0.id) == .visible }.map(\.frame.minX).min()
+    }
+
+    /// The drawn chevron's right edge as a main-display x (the bar repeats
+    /// on every screen at the same right inset), nil when it isn't in a
+    /// screen's band (icon off, behind Apple's «, not placed yet).
+    private func liveChevronMaxX() -> CGFloat? {
+        guard let frame = appState?.chevronWindowFrame,
+              let primary = NSScreen.screens.first,
+              let geometry = screenGeometry(containing: NSPoint(x: frame.midX, y: frame.midY)),
+              geometry.band.intersects(frame) else { return nil }
+        return primary.frame.maxX - (geometry.frame.maxX - frame.maxX)
+    }
+
+    private var lastEdgeMismatch: String?
+    /// One line each time the drawn and walked edges start or stop
+    /// disagreeing: how stale the snapshot's chevron gets, live.
+    private func noteEdgeMismatch(drawn: CGFloat, walked: CGFloat?) {
+        let note = walked.flatMap { abs($0 - drawn) > 4 ? "drawn \(Int(drawn)) vs walked \(Int($0))" : nil }
+        guard note != lastEdgeMismatch else { return }
+        lastEdgeMismatch = note
+        if let note { PelmetLog.log("band: chevron edge \(note)") }
     }
 
     /// Main-display x where Control Center / the clock begin (the leftmost

@@ -887,6 +887,9 @@ final class AppState {
         return false
     }
 
+    /// The chevron's drawn frame, nil with the icon off.
+    var chevronWindowFrame: NSRect? { statusItem?.windowFrame }
+
     /// Revealed OR heading there — what the chevron should show.
     private var isRevealedOrRevealing: Bool {
         switch rehide.state {

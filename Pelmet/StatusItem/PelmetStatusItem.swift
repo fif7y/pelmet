@@ -65,6 +65,15 @@ final class PelmetStatusItem {
     /// Uptime of the last left click on the chevron, to time a double (#77).
     private var lastLeftClickAt: TimeInterval?
 
+    /// Where the chevron is drawn right now, in screen coordinates. AppKit
+    /// keeps the button's window on the drawn item (popovers anchor to it),
+    /// so this never lags a reflow the way a walked frame can. Nil before
+    /// the item is placed or once it's off the bar.
+    var windowFrame: NSRect? {
+        guard let frame = item.button?.window?.frame, frame.width > 0, frame.height > 0 else { return nil }
+        return frame
+    }
+
     /// An available update earns a 5pt accent dot at the chevron's top
     /// right — the one surface most users ever look at. It lives until the
     /// install relaunches the app.
