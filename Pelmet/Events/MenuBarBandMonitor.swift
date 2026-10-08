@@ -255,7 +255,15 @@ final class MenuBarBandMonitor {
             // come from: a dropped picture is retaken on the way in (#49,
             // #51: a straight approach to the clock never crosses the
             // hover zone, and every clock click captured live).
-            if let screen, location.x >= screen.frame.midX { appState.pointerEnteredHoverZone() }
+            if let screen, location.x >= screen.frame.midX {
+                appState.pointerEnteredHoverZone()
+                // A dwell here reveals nothing: name the edge, so a hover that
+                // "did nothing" reads as a zone question in the log (#84).
+                if !isHoverZone(location, of: screen) {
+                    let edge = revealTriggerMaxX() ?? pinnedZoneMinX()
+                    PelmetLog.log("band: entered past the hover zone at x=\(Int(location.x)) (edge \(edge.map { String(Int($0)) } ?? "none"))")
+                }
+            }
         } else if !inBand, pointerInBand {
             pointerInBand = false
             hoverSuppressedUntilExit = false
@@ -357,8 +365,11 @@ final class MenuBarBandMonitor {
 
     private func scheduleHoverReveal() {
         guard let appState,
-              appState.settings.revealTriggers.hoverEnabled, !appState.isRevealed,
-              !appState.syntheticDragInFlight, !hoverSuppressedUntilExit else { return }
+              appState.settings.revealTriggers.hoverEnabled, !appState.isRevealed else { return }
+        guard !appState.syntheticDragInFlight, !hoverSuppressedUntilExit else {
+            PelmetLog.log("band: hover refused — \(hoverSuppressedUntilExit ? "concealed under the pointer, waits for it to leave the bar" : "synthetic drag in flight")")
+            return
+        }
         // Floor: otherwise the bar flaps open on the way to a hot corner.
         let delay = max(appState.settings.revealTriggers.hoverDelay, AppTiming.hoverDelayFloor)
         hoverTimer?.invalidate()
@@ -374,7 +385,10 @@ final class MenuBarBandMonitor {
                 guard let geometry = self.screenGeometry(containing: location),
                       self.isBarHover(location, of: geometry),
                       self.isHoverZone(location, of: geometry.screen),
-                      !appState.syntheticDragInFlight else { return }
+                      !appState.syntheticDragInFlight else {
+                    PelmetLog.log("band: hover dropped at the dwell's end, pointer at x=\(Int(location.x)) y=\(Int(location.y))")
+                    return
+                }
                 appState.reveal([.hidden], reason: .hover)
             }
         }
@@ -385,6 +399,10 @@ final class MenuBarBandMonitor {
     /// mid-flight — the entry edge is already spent, so without this the bar
     /// stays shut under a hovering pointer until it leaves and re-enters.
     func suppressHoverUntilPointerLeaves() {
+        // Only a pointer on the bar can reopen what was just concealed, and
+        // only leaving the bar clears the flag: set from the shortcut with
+        // the pointer elsewhere, it ate the next hover visit whole (#84).
+        guard pointerInBand else { return }
         hoverSuppressedUntilExit = true
         hoverTimer?.invalidate()
     }
