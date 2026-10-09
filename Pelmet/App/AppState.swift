@@ -79,6 +79,8 @@ final class AppState {
     @ObservationIgnored private lazy var press = ItemPress(appState: self)
     /// The keyboard way into the bar (see CommandBarController).
     @ObservationIgnored lazy var commandBar = CommandBarController(appState: self)
+    /// Settings › Search's working demo; active while that pane shows.
+    @ObservationIgnored lazy var searchDemo = CommandBarController(appState: self, embedded: true)
     /// Keeps icons on their section's side of the chevron (see SectionGrouper).
     @ObservationIgnored private(set) lazy var grouper = SectionGrouper(appState: self)
     private var rehide = RehideStateMachine()
@@ -294,7 +296,15 @@ final class AppState {
             case .settings: self?.openSettings()
             case .notificationCenter: self?.openNotificationCenter()
             case .alwaysHidden: self?.toggleAll(reason: .hotkey)
-            case .search: self?.commandBar.toggle(source: "hotkey")
+            case .search:
+                // Settings › Search in front: the demo there takes it.
+                if let self, self.searchDemo.isInFront, !self.commandBar.isOpen {
+                    // Scrolled into view: the pane may be down at the list.
+                    self.settingsFocusRow = "searchDemo"
+                    self.searchDemo.focus()
+                } else {
+                    self?.commandBar.toggle(source: "hotkey")
+                }
             }
         }
         hotkeyConflict = !hotkey.register(settings.hotkey, slot: .toggle)

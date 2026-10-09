@@ -8,6 +8,10 @@
 // The corpus is built when the panel opens (candidates fold their text once),
 // so a keystroke only ranks. Everything is logged under `search:` with its
 // timings, so the budgets are read from the log.
+//
+// Settings › Search runs a second one, embedded: the same view and keys in
+// the pane instead of a panel, its picks as real as the panel's. Its close
+// puts it back at rest where it is, and it logs under `search demo:`.
 
 import AppKit
 import Carbon.HIToolbox
@@ -20,6 +24,12 @@ final class CommandBarController {
     private weak var appState: AppState?
     private let model = CommandBarModel()
     private var panel: KeyableGlassPanel?
+    /// Settings › Search's demo: no panel, the pane's window is the host.
+    let embedded: Bool
+    /// Panes showing the demo. A closed Settings window's pane can say it
+    /// disappeared after a new one appeared, so the last one out turns it off.
+    private var hosts = 0
+    private var logTag: String { embedded ? "search demo" : "search" }
 
     private var candidates: [SearchCandidate] = []
     private var entries: [String: CommandBarEntry] = [:]
@@ -42,6 +52,7 @@ final class CommandBarController {
     private var clickMonitor: Any?
     private var moveMonitors: [Any] = []
     private var resignObserver: NSObjectProtocol?
+    private var becomeKeyObserver: NSObjectProtocol?
     private var announceTask: Task<Void, Never>?
 
     /// What the panel shows. ⌘K moves between the first two; the last two
@@ -55,8 +66,9 @@ final class CommandBarController {
     private var resultsQuery = ""
     private var resultsSelectedID: String?
 
-    init(appState: AppState) {
+    init(appState: AppState, embedded: Bool = false) {
         self.appState = appState
+        self.embedded = embedded
         history = Self.loadHistory()
     }
 
@@ -74,7 +86,7 @@ final class CommandBarController {
 
     /// `query`: typed in for the person (Settings › Search's Try links).
     func open(source: String, query: String? = nil) {
-        guard !isOpen, let appState,
+        guard !embedded, !isOpen, let appState,
               let screen = NSScreen.underPointer ?? NSScreen.main ?? NSScreen.screens.first
         else { return }
         let started = ProcessInfo.processInfo.systemUptime
@@ -85,13 +97,7 @@ final class CommandBarController {
         isOpen = true
         openedAt = .now
         reKeyed = false
-        model.query = ""
-        model.completion = nil
-        model.rows = []
-        model.showsNoResults = false
-        model.selected = 0
-        model.field?.setText("")
-        resetMode()
+        clearModel()
         placement = (screen, anchorRight(on: screen, appState: appState))
         // Reopened mid-exit it fades back in from where it is.
         if !panel.isVisible { panel.alphaValue = 0 }
@@ -114,9 +120,7 @@ final class CommandBarController {
         let keyMs = elapsed()
         installMonitors()
 
-        let built = CommandBarCorpus.build(appState: appState)
-        candidates = built.map(\.candidate)
-        entries = Dictionary(built.map { ($0.candidate.id, $0) }, uniquingKeysWith: { first, _ in first })
+        loadCorpus()
         let corpusMs = elapsed() - keyMs
         showRest()
         if let query, !query.isEmpty {
@@ -133,6 +137,10 @@ final class CommandBarController {
     /// Fade out first; whatever the caller does next (an action) does not
     /// wait for it.
     func close(reason: String) {
+        if embedded {
+            settle(reason: reason)
+            return
+        }
         guard isOpen, let panel else { return }
         isOpen = false
         generation += 1
@@ -178,6 +186,133 @@ final class CommandBarController {
         model.placeholder = String(localized: "Search the menu bar")
     }
 
+    private func clearModel() {
+        model.query = ""
+        model.completion = nil
+        model.rows = []
+        model.showsNoResults = false
+        model.selected = 0
+        model.field?.setText("")
+        resetMode()
+    }
+
+    /// Candidates as the bar and settings are now, and the history as last
+    /// saved: the panel and the demo each save what they learn.
+    private func loadCorpus() {
+        guard let appState else { return }
+        history = Self.loadHistory()
+        let built = CommandBarCorpus.build(appState: appState)
+        candidates = built.map(\.candidate)
+        entries = Dictionary(built.map { ($0.candidate.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    // MARK: - Embedded (Settings › Search)
+
+    /// The view the demo shows, on the same model the keys drive.
+    var view: CommandBarView {
+        CommandBarView(
+            model: model,
+            onQueryChange: { [weak self] in self?.queryChanged($0) },
+            onChoose: { [weak self] index, modifiers in self?.choose(index: index, modifiers: modifiers) }
+        )
+    }
+
+    /// The glass's height for what the model shows: the panel's glass, and
+    /// the demo's frame.
+    var contentHeight: CGFloat {
+        if model.input != nil { return CommandBarLayout.panelHeight(listHeight: CommandBarLayout.inputListHeight) }
+        return CommandBarLayout.panelHeight(rows: model.rows.isEmpty ? (model.showsNoResults ? 1 : 0) : model.rows.count)
+    }
+
+    /// The pane is showing: at rest, keys taken while its field has focus.
+    func activate() {
+        guard embedded else { return }
+        hosts += 1
+        generation += 1
+        isOpen = true
+        openedAt = .now
+        clearModel()
+        model.dropOffset = 0
+        model.entered = true
+        installMonitors()
+        loadCorpus()
+        showRest()
+        PelmetLog.log("\(logTag): active, \(candidates.count) candidates")
+    }
+
+    func deactivate() {
+        guard embedded, isOpen else { return }
+        hosts = max(0, hosts - 1)
+        guard hosts == 0 else { return }
+        isOpen = false
+        generation += 1
+        removeMonitors()
+        announceTask?.cancel()
+        clearModel()
+    }
+
+    /// Focus the field, typing `query` in for the person when given (the
+    /// pane's Try links, the search shortcut while the pane is in front).
+    func focus(query: String? = nil) {
+        guard embedded, isOpen else { return }
+        if query != nil, mode != .results { resetMode() }
+        // Focus first: a field taking focus selects all its text, and the
+        // query's caret belongs at its end. Already in the demo (an alias
+        // half typed included), focus stays where it is.
+        let focused: Bool
+        if query == nil, demoHasFocus {
+            focused = true
+        } else if mode == .alias, let alias = model.aliasField?.field {
+            focused = hostWindow?.makeFirstResponder(alias) ?? false
+        } else {
+            focused = focusField()
+        }
+        if let query {
+            model.field?.setText(query)
+            queryChanged(query)
+        }
+        if !focused {
+            DispatchQueue.main.async { [weak self] in self?.focusField() }
+        }
+    }
+
+    /// The pane's window is key with the demo in it: where the search
+    /// shortcut lands instead of opening the panel.
+    var isInFront: Bool {
+        embedded && isOpen && model.field?.window?.isKeyWindow == true
+    }
+
+    /// Settings changed under the demo (an alias or a shortcut set in the
+    /// list) or its window came back: re-read, unless someone is mid-search.
+    func refresh() {
+        guard embedded, isOpen, mode == .results, FoldedText.normalized(model.query).isEmpty else { return }
+        loadCorpus()
+        showRest()
+    }
+
+    /// The demo's close: back to rest where it is. The corpus is re-read
+    /// after whatever the pick runs has started.
+    private func settle(reason: String) {
+        guard isOpen else { return }
+        announceTask?.cancel()
+        PelmetLog.log(String(format: "\(logTag): back to rest (%@) after %.1fs", reason, Date().timeIntervalSince(openedAt)))
+        openedAt = .now
+        clearModel()
+        showRest()
+        DispatchQueue.main.async { [weak self] in self?.refresh() }
+    }
+
+    /// The window the keys arrive in: the panel, or the pane's.
+    private var hostWindow: NSWindow? { embedded ? model.field?.window : panel }
+
+    /// The demo's own fields have focus, not the rest of the pane.
+    private var demoHasFocus: Bool {
+        guard let editor = hostWindow?.firstResponder as? NSTextView,
+              let owner = editor.delegate as? NSTextField
+        else { return false }
+        return owner === model.field?.field || owner === model.aliasField?.field
+    }
+
     private func animateIn(_ panel: KeyableGlassPanel) {
         // Reduce Motion keeps the fade and drops the 4pt travel.
         let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -221,8 +356,8 @@ final class CommandBarController {
 
     @discardableResult
     private func focusField() -> Bool {
-        guard let panel, let field = model.field?.field else { return false }
-        return panel.makeFirstResponder(field)
+        guard let window = hostWindow, let field = model.field?.field else { return false }
+        return window.makeFirstResponder(field)
     }
 
     // MARK: - Placement
@@ -266,13 +401,7 @@ final class CommandBarController {
     /// The glass's height follows the rows; its top edge stays under the bar.
     private func fitPanel() {
         guard let panel else { return }
-        let wanted: CGFloat
-        if model.input != nil {
-            wanted = glassHeight(listHeight: CommandBarLayout.inputListHeight)
-        } else {
-            let rows = model.rows.isEmpty ? (model.showsNoResults ? 1 : 0) : model.rows.count
-            wanted = glassHeight(listHeight: rows > 0 ? CommandBarLayout.listHeight(rows: rows) : 0)
-        }
+        let wanted = min(contentHeight, panel.frame.height)
         guard panel.glassHeight != wanted else { return }
         let started = ProcessInfo.processInfo.systemUptime
         panel.setGlassHeight(wanted)
@@ -335,16 +464,17 @@ final class CommandBarController {
         let applied = ProcessInfo.processInfo.systemUptime
         let fit = fitMs
         PelmetLog.log(String(
-            format: "search: rank %d char(s) → %d row(s) in %.2fms (rank %.2f, apply %.2f, fit %.2f)",
+            format: "\(logTag): rank %d char(s) → %d row(s) in %.2fms (rank %.2f, apply %.2f, fit %.2f)",
             text.count, matches.count, (applied - started) * 1000,
             (ranked - started) * 1000, (applied - ranked) * 1000 - fit, fit
         ))
         // The row views a change makes are built after this returns, in the
         // update the run loop does next: this line is when it is done.
         let chars = text.count
+        let tag = logTag
         Self.whenIdle {
             PelmetLog.log(String(
-                format: "search: %d char(s) drawn, idle %.2fms after the key",
+                format: "\(tag): %d char(s) drawn, idle %.2fms after the key",
                 chars, (ProcessInfo.processInfo.systemUptime - started) * 1000
             ))
         }
@@ -428,6 +558,20 @@ final class CommandBarController {
             let consumed = MainActor.assumeIsolated { self?.handleKey(event) ?? false }
             return consumed ? nil : event
         }
+        // The demo has no panel to close; it re-reads the bar when its
+        // window comes back (an icon moved or an app opened meanwhile).
+        if embedded {
+            becomeKeyObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main
+            ) { [weak self] note in
+                let window = (note.object as? NSWindow).map(ObjectIdentifier.init)
+                MainActor.assumeIsolated {
+                    guard let self, let window, window == self.hostWindow.map(ObjectIdentifier.init) else { return }
+                    self.refresh()
+                }
+            }
+            return
+        }
         // A click in another app or on the bar changes no key window here,
         // so the resign-key close alone would leave the panel up.
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
@@ -458,10 +602,12 @@ final class CommandBarController {
         if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
         moveMonitors.forEach(NSEvent.removeMonitor)
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
+        if let becomeKeyObserver { NotificationCenter.default.removeObserver(becomeKeyObserver) }
         keyMonitor = nil
         clickMonitor = nil
         moveMonitors = []
         resignObserver = nil
+        becomeKeyObserver = nil
     }
 
     /// Losing key is a click elsewhere, and closes. The first moments are
@@ -483,8 +629,8 @@ final class CommandBarController {
     /// True when the key was ours. Marked text (an input method mid-word)
     /// keeps every key.
     private func handleKey(_ event: NSEvent) -> Bool {
-        guard isOpen, event.window === panel else { return false }
-        if (panel?.firstResponder as? NSTextView)?.hasMarkedText() == true { return false }
+        guard isOpen, let window = hostWindow, event.window === window, !embedded || demoHasFocus else { return false }
+        if (window.firstResponder as? NSTextView)?.hasMarkedText() == true { return false }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             .subtracting([.capsLock, .numericPad, .function])
         // Recording takes every key but ⎋: ⌘K, ↩ and the arrows are all
@@ -507,14 +653,17 @@ final class CommandBarController {
         case 126 where flags.isEmpty && mode != .alias: // ↑
             move(-1)
             return true
-        case 48 where flags.isEmpty: // ⇥ keeps focus in the field either way
-            _ = acceptCompletion()
-            return true
+        case 48 where flags.isEmpty: // ⇥ keeps focus in the panel's field either way
+            // The demo's lets it move on to the pane, or the field would
+            // be a trap for the keyboard.
+            return acceptCompletion() || !embedded
         case 124 where flags.isEmpty: // →, at the end of the text
             return model.field?.caretAtEnd == true && acceptCompletion()
-        case 43 where flags == .command: // ⌘,
-            close(reason: "settings")
-            appState?.openSettings()
+        case 43 where flags == .command: // ⌘, (the demo is in Settings already)
+            if !embedded {
+                close(reason: "settings")
+                appState?.openSettings()
+            }
             return true
         case 40 where flags == .command: // ⌘K
             toggleActions()
@@ -523,7 +672,7 @@ final class CommandBarController {
             break
         }
         // The panel has no Edit menu to route these through.
-        if flags == .command, let editor = panel?.firstResponder as? NSTextView, let key = event.charactersIgnoringModifiers {
+        if flags == .command, let editor = window.firstResponder as? NSTextView, let key = event.charactersIgnoringModifiers {
             switch key {
             case "a": editor.selectAll(nil)
             case "c": editor.copy(nil)
@@ -575,11 +724,14 @@ final class CommandBarController {
         _ entry: CommandBarEntry, modifiers: NSEvent.ModifierFlags, query: String,
         row: Int?, of count: Int?, appState: AppState
     ) {
+        // The other bar may have saved (or Settings reset) since this one
+        // read it.
+        history = Self.loadHistory()
         history.record(id: entry.candidate.id, query: query, at: .now)
         saveHistory()
         let how = modifiers.contains(.command) ? "⌘↩" : "↩"
         let place = row.map { ", row \($0 + 1) of \(count ?? 0)" } ?? ""
-        PelmetLog.log("search: chose \(entry.candidate.id) (\(entry.candidate.kind.rawValue)\(place)) with \(how) — \(Self.describe(entry.action, modifiers: modifiers))")
+        PelmetLog.log("\(logTag): chose \(entry.candidate.id) (\(entry.candidate.kind.rawValue)\(place)) with \(how) — \(Self.describe(entry.action, modifiers: modifiers))")
         close(reason: "chose")
         perform(entry.action, modifiers: modifiers, appState: appState)
     }
@@ -637,6 +789,9 @@ final class CommandBarController {
     /// results, out of the results closes.
     private func escape() {
         switch mode {
+        case .results where embedded && FoldedText.normalized(model.query).isEmpty:
+            // Nothing to clear: the demo lets go of the keys.
+            hostWindow?.makeFirstResponder(nil)
         case .results: close(reason: "escape")
         case .actions: leaveActions()
         case .shortcut, .alias: endInput(selecting: actionsSelection)
@@ -671,7 +826,7 @@ final class CommandBarController {
         model.field?.setText("")
         model.query = ""
         showActions(filter: "")
-        PelmetLog.log("search: ⌘K — \(items.count) action(s) for \(entry.candidate.id)")
+        PelmetLog.log("\(logTag): ⌘K — \(items.count) action(s) for \(entry.candidate.id)")
         announce(String(localized: "Actions for \(entry.candidate.title)"))
     }
 
@@ -725,7 +880,7 @@ final class CommandBarController {
             chosen = actionItems.contains { $0.action == .showInBar } ? .showInBar : nil
         }
         guard let chosen else { return }
-        PelmetLog.log("search: action \(chosen.key) on \(entry.candidate.id)")
+        PelmetLog.log("\(logTag): action \(chosen.key) on \(entry.candidate.id)")
 
         switch (chosen, entry.action) {
         case (.openMenu, .item), (.showInBar, .item):
@@ -753,6 +908,7 @@ final class CommandBarController {
                 for running in NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID) { running.terminate() }
             }
         case (.forget, _):
+            history = Self.loadHistory()
             history.forget(id: entry.candidate.id)
             saveHistory()
             close(reason: "forgot")
@@ -829,7 +985,7 @@ final class CommandBarController {
         if let refusal = appState.setItemHotkey(spec, for: id) {
             NSSound.beep()
             model.inputMessage = Self.message(for: refusal, spec: spec)
-            PelmetLog.log("search: shortcut \(spec.display) for \(id.rawValue) refused — \(refusal)")
+            PelmetLog.log("\(logTag): shortcut \(spec.display) for \(id.rawValue) refused — \(refusal)")
             return true
         }
         endInput(selecting: .setShortcut)
@@ -866,8 +1022,9 @@ final class CommandBarController {
         appState?.searchHistoryRevision += 1
     }
 
-    /// Picks remembered, for the Settings row that resets them.
-    var historyPickCount: Int { history.picks.count }
+    /// Picks remembered, for the Settings row that resets them. Read from
+    /// what was saved: the demo learns too.
+    var historyPickCount: Int { Self.loadHistory().picks.count }
 
     /// Settings › General › Reset Search History.
     func resetHistory() {

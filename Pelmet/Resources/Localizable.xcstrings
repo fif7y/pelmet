@@ -19837,6 +19837,64 @@
         }
       }
     },
+    "Type to try it. It works for real: ↩ opens the icon's menu, ⌘K shows more.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe, um es auszuprobieren. Es funktioniert wirklich: ↩ öffnet das Menü des Symbols, ⌘K zeigt mehr."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribe para probarlo. Funciona de verdad: ↩ abre el menú del icono, ⌘K muestra más."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tapez pour l’essayer. Tout est réel : ↩ ouvre le menu de l’icône, ⌘K en montre plus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrivi per provarlo. Funziona davvero: ↩ apre il menu dell’icona, ⌘K mostra altro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力して試せます。実際に動作します：↩ でアイコンのメニューを開き、⌘K でその他の操作を表示します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "입력해서 사용해 보세요. 실제로 작동합니다. ↩ 아이콘 메뉴 열기, ⌘K 더 보기."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite para experimentar. Funciona de verdade: ↩ abre o menu do ícone, ⌘K mostra mais."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начните печатать, чтобы попробовать. Всё работает по-настоящему: ↩ открывает меню значка, ⌘K показывает больше."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入即可试用。一切都会真实执行：↩ 打开图标的菜单，⌘K 显示更多操作。"
+          }
+        }
+      }
+    },
     "Update": {
       "localizations": {
         "de": {

@@ -1,8 +1,9 @@
 // SearchPane.swift
-// Settings › Search: the command bar's shortcut, what it finds and the keys
-// it takes, every alias and icon shortcut in one list, and its history. The
-// list reads the command bar's own corpus, so names, icons and order are the
-// ones search shows (bar order, Hidden first).
+// Settings › Search: the command bar's shortcut and the command bar itself
+// to try, what it finds and the keys it takes, every alias and icon shortcut
+// in one list, and its history. The list reads the command bar's own corpus,
+// so names, icons and order are the ones search shows (bar order, Hidden
+// first).
 
 import AppKit
 import PelmetCore
@@ -33,6 +34,8 @@ struct SearchPane: View {
                     ShortcutRecorder(shortcut: searchHotkey, fallback: .searchDefault)
                 }
                 .settingAnchor("searchHotkey")
+                SearchDemoStage()
+                    .settingAnchor("searchDemo")
             }
             finds
             keys
@@ -48,7 +51,10 @@ struct SearchPane: View {
                         ? "Nothing to reset yet. Pelmet learns from the icons you open with Search."
                         : "Forgets which icons you open and what you typed to find them. Shortcuts and aliases stay."
                 ) {
-                    Button("Reset") { appState.commandBar.resetHistory() }
+                    Button("Reset") {
+                        appState.commandBar.resetHistory()
+                        appState.searchDemo.refresh()
+                    }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                         .disabled(searchPicks == 0)
@@ -56,7 +62,13 @@ struct SearchPane: View {
                 .settingAnchor("searchHistory")
             }
         }
-        .onAppear { corpus = CommandBarCorpus.build(appState: appState) }
+        .onAppear {
+            corpus = CommandBarCorpus.build(appState: appState)
+            appState.searchDemo.activate()
+        }
+        .onDisappear { appState.searchDemo.deactivate() }
+        .onChange(of: appState.settings.itemAliases) { appState.searchDemo.refresh() }
+        .onChange(of: appState.settings.itemHotkeys) { appState.searchDemo.refresh() }
     }
 
     // MARK: - What it finds
@@ -90,7 +102,11 @@ struct SearchPane: View {
     private func findRow(_ title: LocalizedStringKey, caption: LocalizedStringKey, query: String?) -> some View {
         SettingRow(title: title, caption: caption) {
             if let query {
-                Button("Try “\(query)”") { appState.commandBar.open(source: "settings", query: query) }
+                Button("Try “\(query)”") {
+                    // Typed into the demo above, scrolled into view.
+                    appState.settingsFocusRow = "searchDemo"
+                    appState.searchDemo.focus(query: query)
+                }
                     .buttonStyle(.plain)
                     .foregroundStyle(.tint)
             }
@@ -207,6 +223,55 @@ struct SearchPane: View {
                 appState.settingsChanged()
             }
         )
+    }
+}
+
+/// The command bar itself on a slice of desktop. Every key works and every
+/// pick is real: ↩ opens the icon's menu in the bar. The desktop is drawn,
+/// not the person's wallpaper: reading that file asks for access to the
+/// folder it lives in (iCloud Drive, Documents), 2026-10-09.
+private struct SearchDemoStage: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// Room for the bar at its tallest, under a strip of desktop.
+    private static let top: CGFloat = 22
+    private static let height = top + CommandBarLayout.panelHeight(listHeight: CommandBarLayout.tallestListHeight) + 18
+
+    var body: some View {
+        let demo = appState.searchDemo
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .top) {
+                backdrop
+                    .contentShape(Rectangle())
+                    .onTapGesture { demo.focus() }
+                    .accessibilityHidden(true)
+                demo.view
+                    .frame(maxWidth: CommandBarLayout.width)
+                    .frame(height: demo.contentHeight)
+                    .glassEffect(.regular, in: .rect(cornerRadius: GlassPanel.cornerRadius))
+                    .padding(.top, Self.top)
+                    .padding(.horizontal, 12)
+            }
+            .frame(height: Self.height)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            Text("Type to try it. It works for real: ↩ opens the icon's menu, ⌘K shows more.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Two soft blooms on a plain ground, enough for the glass to show.
+    private var backdrop: some View {
+        let dark = colorScheme == .dark
+        return ZStack {
+            Color(white: dark ? 0.1 : 0.93)
+            RadialGradient(colors: [Color(red: dark ? 0.24 : 0.73, green: dark ? 0.31 : 0.8, blue: dark ? 0.61 : 1), .clear],
+                           center: UnitPoint(x: 0.18, y: 0.08), startRadius: 0, endRadius: 380)
+            RadialGradient(colors: [Color(red: dark ? 0.49 : 0.96, green: dark ? 0.24 : 0.77, blue: dark ? 0.49 : 0.86), .clear],
+                           center: UnitPoint(x: 0.88, y: 0.26), startRadius: 0, endRadius: 340)
+        }
     }
 }
 

@@ -373,8 +373,13 @@ Rough total: 13–16 sessions.
 - **D3 Search tab timing.** Into 0.3.2, before Product Hunt (Gab overrode the
   post-launch recommendation). About 40 strings and a Settings change, so it
   needs a beta before the stable.
-- **D4 Search demo.** Try buttons open the real ⌥⌘K bar. No second command bar
-  in Settings.
+- **D4 Search demo.** Gab overrode the Try-links-only call: the tab embeds a
+  working command bar, as in the mock. It is a second `CommandBarController`
+  (`embedded: true`, `AppState.searchDemo`) on the same view and keys, so there
+  is one mechanism with two hosts. Picks are real, Try links type into it, and
+  ⌥⌘K focuses it while the tab is in front. Both instances re-read the saved
+  history before they rank. The stage is drawn, not the person's wallpaper:
+  reading that file raised an iCloud Drive access prompt.
 
 ## Timeline
 
