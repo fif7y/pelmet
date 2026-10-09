@@ -81,7 +81,12 @@ enum ApplyPass {
     /// leave the report — or Apply stays lit on "1 not moved" forever
     /// (Sconce, 13:46 2026-09-21). Icons behind the « stay: they are on the
     /// bar and a later pass reaches them.
-    static func dropAbsentSkips(_ report: inout ApplyReport, snap: EngineSnapshot) {
+    /// An own item's skip stays: missing from the walk means not laid out
+    /// yet (a locked screen reads empty), and the skip is what runs
+    /// `placeOwnItemNow`'s retry ladder. Dropped, the media control lost its
+    /// placement on every track change under a lock (2026-10-06).
+    static func dropAbsentSkips(_ report: inout ApplyReport, snap: EngineSnapshot, scope: Scope) {
+        if case .ownItem = scope { return }
         let onBar = Set(snap.items.map { $0.id.sectionKey })
         let absent = report.skipped.filter { $0.why == .notOnScreen && !onBar.contains($0.item.sectionKey) }
         guard !absent.isEmpty else { return }
@@ -456,7 +461,7 @@ enum ApplyPass {
         // re-plans on the shifted bar, and collapses it after. Never for a
         // pass whose edits stay clear of the «.
         let trappedForPass = trappedFor(snap)
-        dropAbsentSkips(&report, snap: snap)
+        dropAbsentSkips(&report, snap: snap, scope: scope)
         guard !plan.moves.isEmpty || !trappedForPass.isEmpty else { return report }
 
         if case .strays = scope {
@@ -494,7 +499,7 @@ enum ApplyPass {
                 plan = planFor(snap)
                 report.planned = plan.moves.count
                 report.skipped = plan.skipped.map { ApplyReport.Skipped(item: $0.0, why: $0.1) }
-                dropAbsentSkips(&report, snap: snap)
+                dropAbsentSkips(&report, snap: snap, scope: scope)
                 let framed = trappedForPass.filter { primaryFrames(snap)[$0] != nil }.count
                 PelmetLog.log("apply: « expanded — \(framed)/\(trappedForPass.count) framed, replanned \(plan.moves.count) move(s), \(plan.skipped.count) skipped")
             } else {
