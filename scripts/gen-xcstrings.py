@@ -225,6 +225,8 @@ T = {
     "Row": dict(de="Zeile", fr="Rangée", es="Fila", it="Riga", pt="Linha", ja="横一列", zh="单行", ko="한 줄", ru="Ряд"),
     "Show Names": dict(de="Namen zeigen", fr="Afficher les noms", es="Mostrar nombres", it="Mostra nomi", pt="Mostrar nomes", ja="名前を表示", zh="显示名称", ko="이름 표시", ru="Показывать названия"),
     "Open Right-Click Menu": dict(de="Kontextmenü öffnen", fr="Ouvrir le menu contextuel", es="Abrir menú contextual", it="Apri menu contestuale", pt="Abrir menu de contexto", ja="コンテキストメニューを開く", zh="打开右键菜单", ko="컨텍스트 메뉴 열기", ru="Открыть контекстное меню"),
+    "%lld per row": dict(de="%lld pro Zeile", fr="%lld par rangée", es="%lld por fila", it="%lld per riga", pt="%lld por linha", ja="1行に%lld個", zh="每行 %lld 个", ko="한 줄에 %lld개", ru="%lld в ряду"),
+    "Auto": dict(de="Automatisch", fr="Auto", es="Automático", it="Auto", pt="Automático", ja="自動", zh="自动", ko="자동", ru="Авто"),
     # ── Icon spacing (Behavior) ─────────────────────────────────────
     "Icon spacing": dict(de="Symbolabstand", fr="Espacement des icônes", es="Espaciado de iconos", it="Spaziatura icone", pt="Espaçamento dos ícones", ja="アイコンの間隔", zh="图标间距", ko="아이콘 간격", ru="Интервал значков"),
     "Space between icons": dict(de="Abstand zwischen Symbolen", fr="Espace entre les icônes", es="Espacio entre iconos", it="Spazio tra le icone", pt="Espaço entre os ícones", ja="アイコン同士の間隔", zh="图标之间的间距", ko="아이콘 사이 간격", ru="Расстояние между значками"),

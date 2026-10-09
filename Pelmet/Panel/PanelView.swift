@@ -49,6 +49,8 @@ struct PanelContent {
     var query = ""
     /// The tile Return opens and the arrows move.
     var selected: PanelTile?
+    /// While the left edge is dragged: "4 per row", "Auto".
+    var columnsTip: String?
     /// Nothing is hidden, or nothing matches: the panel says so instead of
     /// showing nothing.
     var isEmpty: Bool { blocks.allSatisfy { $0.count == 0 } }
@@ -68,6 +70,12 @@ struct PanelView: View {
     let onFold: () -> Void
     var tileMenu: (PanelTile) -> [PanelMenuRow] = { _ in [] }
     var panelMenu: () -> [PanelMenuRow] = { [] }
+    /// The left edge sets the columns: dragged (true when let go), and
+    /// double-clicked for Auto.
+    var onColumnsDrag: (Bool) -> Void = { _ in }
+    var onColumnsReset: () -> Void = {}
+
+    @State private var hovering = false
 
     @Environment(\.colorScheme) private var scheme
 
@@ -98,7 +106,14 @@ struct PanelView: View {
         }
         .padding(padding)
         .fixedSize()
+        .overlay(alignment: .leading) {
+            if content.layout == .panel, !content.isEmpty {
+                ColumnGrip(ink: ink, panelHovered: hovering, tip: content.columnsTip,
+                           onDrag: onColumnsDrag, onReset: onColumnsReset)
+            }
+        }
         .contentShape(Rectangle())
+        .onHover { hovering = $0 }
         .contextMenu { menu(panelMenu()) }
     }
 
@@ -412,5 +427,56 @@ private struct Caret: View {
                     on.toggle()
                 }
             }
+    }
+}
+
+/// The panel's left edge: drag it for more or fewer columns, double-click
+/// it for Auto (the mock's grip).
+private struct ColumnGrip: View {
+    let ink: PanelInk
+    let panelHovered: Bool
+    let tip: String?
+    let onDrag: (Bool) -> Void
+    let onReset: () -> Void
+    @State private var hovering = false
+    @State private var dragging = false
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Color.clear
+                .frame(width: 12)
+                .contentShape(Rectangle())
+                .overlay(alignment: .leading) {
+                    Capsule()
+                        .fill(hovering || dragging ? ink.secondary : ink.tertiary)
+                        .frame(width: 4, height: 26)
+                        .padding(.leading, 4)
+                        .opacity(hovering || dragging ? 1 : panelHovered ? 0.55 : 0)
+                        .animation(.easeOut(duration: 0.15), value: hovering || dragging || panelHovered)
+                }
+                .onHover { hovering = $0 }
+                .pointerStyle(.columnResize)
+                .gesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { _ in
+                            dragging = true
+                            onDrag(false)
+                        }
+                        .onEnded { _ in
+                            dragging = false
+                            onDrag(true)
+                        })
+                .simultaneousGesture(TapGesture(count: 2).onEnded(onReset))
+            if let tip {
+                Text(tip)
+                    .font(.system(size: 11))
+                    .foregroundStyle(ink.primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .padding(.leading, 16)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 }

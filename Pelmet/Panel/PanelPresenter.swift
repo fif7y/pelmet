@@ -44,6 +44,9 @@ final class PanelPresenter: RevealPresenter {
     /// What the last refresh drew, for Return and the arrows.
     private var lastModel: PanelModel?
     private var lastContent: PanelContent?
+    /// The grip's tip, and the wait before it goes.
+    private var columnsTip: String?
+    private var tipTask: Task<Void, Never>?
     private var keyMonitor: Any?
     private var passTask: Task<Void, Never>?
     /// Keys a pass looked for and could not picture (an item that draws
@@ -305,7 +308,9 @@ final class PanelPresenter: RevealPresenter {
             onPress: { [weak self] tile in self?.press(tile) },
             onFold: { [weak self] in self?.toggleFold() },
             tileMenu: { [weak self] tile in self?.menu(for: tile) ?? [] },
-            panelMenu: { [weak self] in self?.panelMenu() ?? [] })
+            panelMenu: { [weak self] in self?.panelMenu() ?? [] },
+            onColumnsDrag: { [weak self] ended in self?.dragColumns(ended: ended) },
+            onColumnsReset: { [weak self] in self?.resetColumns() })
         hosting.rootView = view
         // The hosting view sizes nothing (`sizingOptions = []`), so its
         // fitting size is zero: the view measures itself here.
@@ -369,6 +374,7 @@ final class PanelPresenter: RevealPresenter {
             .map { PanelGrid.neededColumns(of: $0.section.tiles, maximum: columns) }.max() ?? 1
         let didntFitShown = shown.contains { $0.section.kind == .didntFit }
         var content = PanelContent(layout: layout, query: query)
+        content.columnsTip = columnsTip
         content.blocks = shown.map { entry in
             PanelBlock(
                 kind: entry.section.kind,
@@ -443,6 +449,50 @@ final class PanelPresenter: RevealPresenter {
             }
         case .rowBreak:
             break
+        }
+    }
+
+    // MARK: - Columns
+
+    /// Columns from where the pointer is: the panel's right edge stays put,
+    /// so each tile's width left of it is one more column. Two at least, no
+    /// more than the widest section can fill, ten at most. Stored for the
+    /// current names mode.
+    private func dragColumns(ended: Bool) {
+        guard let appState, let window else { return }
+        let options = appState.settings.panel
+        let metrics = PanelMetrics.standard(layout: .panel, showsNames: options.showsNames)
+        let pitch = metrics.tileSize.width + metrics.columnGap
+        let want = Int(((window.frame.maxX - metrics.padding - NSEvent.mouseLocation.x + metrics.columnGap) / pitch).rounded())
+        let most = max(2, lastModel?.sections.map { PanelGrid.neededColumns(of: $0.tiles, maximum: 10) }.max() ?? 2)
+        let columns = min(max(want, 2), most)
+        if options.columns != columns {
+            appState.settings.panel.columns = columns
+            appState.settingsChanged()
+            PelmetLog.log("panel: \(columns) column(s)")
+        }
+        showTip(String(localized: "\(columns) per row"), for: ended ? 0.5 : nil)
+    }
+
+    private func resetColumns() {
+        guard let appState else { return }
+        appState.settings.panel.columns = nil
+        appState.settingsChanged()
+        PelmetLog.log("panel: columns Auto")
+        showTip(String(localized: "Auto"), for: 0.8)
+    }
+
+    /// Up until `seconds` pass, or until the next call when nil.
+    private func showTip(_ text: String, for seconds: Double?) {
+        tipTask?.cancel()
+        columnsTip = text
+        refresh()
+        guard let seconds else { return }
+        tipTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let self, !Task.isCancelled else { return }
+            self.columnsTip = nil
+            if self.isOpen { self.refresh() }
         }
     }
 
