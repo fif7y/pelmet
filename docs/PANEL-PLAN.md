@@ -187,8 +187,8 @@ tab and the target picker. Removed when the beta ships.
 - The Search tab (Phase 2) goes straight on `roster`: it ships in 0.3.2,
   before Product Hunt (D3).
 - Everything panel goes on branch `panel` off `roster`, in its own worktree
-  (`~/Projects/Pelmet-panel`), so launch work keeps going on `roster`. Merge
-  back after 0.3.2 stable ships.
+  (`~/Projects/Pelmet-panel`), so launch work keeps going on `roster`. It
+  merges into `roster` for the next beta (D5), once Phases 3–6 are green.
 - One Pelmet instance at a time: quit inside the run command, dev builds from
   `/Applications` (DerivedData builds hide regardless).
 - Before each install, compare the binary's mtime against `git status` in
@@ -380,6 +380,10 @@ Rough total: 13–16 sessions.
   ⌥⌘K focuses it while the tab is in front. Both instances re-read the saved
   history before they rank. The stage is drawn, not the person's wallpaper:
   reading that file raised an iCloud Drive access prompt.
+- **D5 Panel timing (2026-10-09 late).** Gab moved the panel into the next
+  beta: Phases 3–6 now, not after Product Hunt. Still open: whether build 65
+  waits for the panel or ships the Search tab first, and whether the panel is
+  in 0.3.2 stable or stays behind a beta-only switch for launch.
 
 ## Timeline
 
@@ -387,5 +391,7 @@ Rough total: 13–16 sessions.
 - ~Oct 14: 0.3.2 beta with the Search tab, on Gab's "cut". If build 65 is cut
   before the tab lands, the tab rides the next beta (tight for Oct 19).
 - Oct 19: 0.3.2 stable. Oct 21: Product Hunt.
-- Phase 1 on `panel` whenever launch work leaves room; from Oct 22, merge
+- Superseded by D5 (2026-10-09 late): the panel goes into the next beta, so
+  Phases 3–6 run now on `panel`, not after launch. Phase 1 done (`5a3d835`).
+- (Was) Phase 1 on `panel` whenever launch work leaves room; from Oct 22, merge
   `panel`, Phases 3–6, first Panel beta on "cut".
