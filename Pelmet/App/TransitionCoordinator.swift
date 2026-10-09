@@ -397,7 +397,9 @@ final class TransitionCoordinator {
             await engine.reveal(sections)
             trace.mark("engine")
             trace.note(await engine.lastConvergeTiming)
-            appState.updateSnapshot(await engine.snapshot())
+            let settled = await engine.snapshot()
+            appState.updateSnapshot(settled)
+            appState.recordDrawnOrder(settled, revealed: sections)
             if let cover {
                 // Hold until the engine is swap-quiet (under rapid hover
                 // cycles the real swap can land AFTER the settle report)

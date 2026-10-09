@@ -18,6 +18,11 @@ public enum RevealReason: Hashable, Sendable {
     /// The user started a ⌘-drag in the bar: the hidden run is only a drop
     /// target while it is on screen.
     case barDrag
+    /// The user asked to see one item in the real bar: a press on one of
+    /// Pelmet's own extras, ⌘↩ in Search. A panel can't show that, so routing
+    /// always picks the bar. The machine treats it like `.hotkey`: the
+    /// pointer never entered the bar either.
+    case itemInBar
 }
 
 public enum RehideTrigger: Hashable, Sendable {
@@ -246,7 +251,7 @@ public struct RehideStateMachine: Equatable, Sendable {
         // elsewhere, or the next press. The 0.75 s floor that replaced the
         // old open-shut flash read as "the first press did nothing" (Gab,
         // 2026-09-15).
-        if reason == .hotkey, policy.delay == 0 { return [.none] }
+        if reason == .hotkey || reason == .itemInBar, policy.delay == 0 { return [.none] }
         // Floor the settle-time arm: with the rehide delay dialed to 0, a
         // reveal whose pointer isn't parked in the band concealed within
         // milliseconds of settling — an unreadable open-shut flash. Pointer-

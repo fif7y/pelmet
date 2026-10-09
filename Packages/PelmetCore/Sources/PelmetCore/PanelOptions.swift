@@ -1,0 +1,75 @@
+// PanelOptions.swift
+// How the panel draws the hidden icons (docs/PANEL-PLAN.md §3). Lives in the
+// settings blob next to `hiddenIconsIn`. Every field falls back on its own, so
+// a blob from an older or newer build, or one edited by hand, costs only the
+// field that is wrong.
+
+import Foundation
+
+public struct PanelOptions: Codable, Equatable, Sendable {
+    /// What Always Hidden does when the panel opens. Raw values are the
+    /// stored form; the names the user reads are Settings' business.
+    public enum AlwaysHiddenMode: String, Codable, CaseIterable, Sendable {
+        /// Behind a fold row, closed on every open.
+        case folded
+        /// Behind the fold row, open or closed as the user left it
+        /// (`alwaysHiddenOpen`).
+        case asLeft
+        /// Not shown at rest. ⌥-click, search and dragging still reach it.
+        case hidden
+    }
+
+    /// A name under every tile.
+    public var showsNames: Bool = false
+    /// The most columns a row may have, one per names mode: the user sets
+    /// them by dragging the panel's edge, and each mode keeps its own width.
+    /// Nil is Auto, `autoColumns`.
+    public var columnsWithNames: Int?
+    public var columnsCompact: Int?
+    /// A Pelmet separator starts a new row of tiles instead of being dropped.
+    public var separatorsBreakRows: Bool = false
+    public var alwaysHidden: AlwaysHiddenMode = .folded
+    /// Where the fold was left; read only for `.asLeft`.
+    public var alwaysHiddenOpen: Bool = false
+
+    /// What Auto means: the widest a row grows. The grid is never wider than
+    /// its icons need, so a panel with three icons is three columns.
+    public static let autoColumns = 5
+    /// The drag handle's reach. A stored value outside it is pulled in.
+    public static let columnRange = 2...10
+
+    public init() {}
+
+    /// The setting for the current names mode.
+    public var columns: Int? {
+        get { showsNames ? columnsWithNames : columnsCompact }
+        set {
+            if showsNames { columnsWithNames = newValue } else { columnsCompact = newValue }
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case showsNames, columnsWithNames, columnsCompact, separatorsBreakRows, alwaysHidden, alwaysHiddenOpen
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = PanelOptions()
+        // `try?` per field for the same reason as SettingsStore: a present but
+        // invalid value (an unknown mode from a newer build) throws out of
+        // decodeIfPresent, and it must reset that field, not the whole panel.
+        func field<T: Decodable>(_ type: T.Type, _ key: CodingKeys, _ fallback: T) -> T {
+            ((try? c.decodeIfPresent(type, forKey: key)) ?? nil) ?? fallback
+        }
+        func count(_ key: CodingKeys) -> Int? {
+            ((try? c.decodeIfPresent(Int.self, forKey: key)) ?? nil)
+                .map { min(max($0, Self.columnRange.lowerBound), Self.columnRange.upperBound) }
+        }
+        showsNames = field(Bool.self, .showsNames, defaults.showsNames)
+        columnsWithNames = count(.columnsWithNames)
+        columnsCompact = count(.columnsCompact)
+        separatorsBreakRows = field(Bool.self, .separatorsBreakRows, defaults.separatorsBreakRows)
+        alwaysHidden = field(AlwaysHiddenMode.self, .alwaysHidden, defaults.alwaysHidden)
+        alwaysHiddenOpen = field(Bool.self, .alwaysHiddenOpen, defaults.alwaysHiddenOpen)
+    }
+}

@@ -179,6 +179,22 @@ import Testing
         #expect(machine.handle(.pointerLeft, now: now) == [.armTimer(now)])
     }
 
+    /// Show-in-bar is asked for like a hotkey: the pointer never entered the
+    /// bar, so Instant has nothing to wait on.
+    @Test func itemInBarRevealAtInstantRehideStaysUp() {
+        var machine = RehideStateMachine(policy: .init(autoRehide: true, delay: 0))
+        _ = machine.handle(.revealRequested([.hidden], .itemInBar), now: now)
+        #expect(machine.handle(.transitionSettled, now: now) == [.none])
+        #expect(machine.state == .revealed(sections: [.hidden], reason: .itemInBar))
+        #expect(machine.handle(.pointerLeft, now: now) == [.armTimer(now)])
+    }
+
+    @Test func itemInBarRevealWithDelayArmsTheDelay() {
+        var machine = RehideStateMachine(policy: .init(autoRehide: true, delay: 5))
+        _ = machine.handle(.revealRequested([.hidden], .itemInBar), now: now)
+        #expect(machine.handle(.transitionSettled, now: now) == [.armTimer(now.addingTimeInterval(5))])
+    }
+
     /// A configured delay still applies to a hotkey reveal.
     @Test func hotkeyRevealWithDelayArmsTheDelay() {
         var machine = RehideStateMachine(policy: .init(autoRehide: true, delay: 5))

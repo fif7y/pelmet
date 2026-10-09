@@ -368,6 +368,11 @@ public struct SettingsStore: Codable, Equatable, Sendable {
 
     public var revealAnimation: RevealAnimation = .smooth
 
+    /// Where hidden icons show up on a reveal: the menu bar as ever, the
+    /// panel, or the panel as a row (docs/PANEL-PLAN.md).
+    public var hiddenIconsIn: RevealTarget = .menuBar
+    public var panel = PanelOptions()
+
     /// Hold the hide-assertion even while revealed (allowlist just widens).
     /// Keeps macOS's collateral extras (Now Playing, camera pill, AirDrop…)
     /// consistently hidden instead of jumping in and out on every transition.
@@ -470,6 +475,7 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         case statusIconStyle
         case clockClickOpensNotificationCenter, notificationCenterHotkey
         case orderEdits
+        case hiddenIconsIn, panel
     }
 
     public init(from decoder: Decoder) throws {
@@ -510,6 +516,8 @@ public struct SettingsStore: Codable, Equatable, Sendable {
         clockClickOpensNotificationCenter = field(Bool.self, .clockClickOpensNotificationCenter, defaults.clockClickOpensNotificationCenter)
         notificationCenterHotkey = field(HotkeySpec?.self, .notificationCenterHotkey, defaults.notificationCenterHotkey) ?? defaults.notificationCenterHotkey
         orderEdits = field(OrderEdits.self, .orderEdits, defaults.orderEdits)
+        hiddenIconsIn = field(RevealTarget.self, .hiddenIconsIn, defaults.hiddenIconsIn)
+        panel = field(PanelOptions.self, .panel, defaults.panel)
     }
 
     // MARK: - Persistence

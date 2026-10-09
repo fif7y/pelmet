@@ -100,4 +100,54 @@ struct SettingsStoreTests {
         #expect(back.itemHotkeys == settings.itemHotkeys)
         #expect(back.itemAliases == settings.itemAliases)
     }
+
+    // Where hidden icons show up is a new field: an older blob has none and
+    // keeps the menu bar. A target this build doesn't know reads as the menu
+    // bar too, and the rest of the blob survives it.
+    @Test func hiddenIconsInDefaultsFallsBackAndRoundTrips() throws {
+        let legacy = try JSONDecoder().decode(SettingsStore.self, from: Data("{}".utf8))
+        #expect(legacy.hiddenIconsIn == .menuBar)
+        let unknown = try JSONDecoder().decode(
+            SettingsStore.self, from: Data(#"{"hiddenIconsIn":"floatingBar","autoRehide":false}"#.utf8))
+        #expect(unknown.hiddenIconsIn == .menuBar)
+        #expect(unknown.autoRehide == false)
+        let wrongType = try JSONDecoder().decode(
+            SettingsStore.self, from: Data(#"{"hiddenIconsIn":3,"rehideDelay":9}"#.utf8))
+        #expect(wrongType.hiddenIconsIn == .menuBar)
+        #expect(wrongType.rehideDelay == 9)
+        for target in RevealTarget.allCases {
+            var settings = SettingsStore()
+            settings.hiddenIconsIn = target
+            let back = try JSONDecoder().decode(SettingsStore.self, from: JSONEncoder().encode(settings))
+            #expect(back.hiddenIconsIn == target)
+        }
+    }
+
+    // The panel options are a new nested field: defaults for an older blob,
+    // and one bad option inside costs only itself.
+    @Test func panelOptionsDefaultFallBackAndRoundTrip() throws {
+        let legacy = try JSONDecoder().decode(SettingsStore.self, from: Data("{}".utf8))
+        #expect(legacy.panel == PanelOptions())
+        let notAnObject = try JSONDecoder().decode(
+            SettingsStore.self, from: Data(#"{"panel":"wide","hiddenIconsIn":"panel"}"#.utf8))
+        #expect(notAnObject.panel == PanelOptions())
+        #expect(notAnObject.hiddenIconsIn == .panel)
+        let oneBad = try JSONDecoder().decode(
+            SettingsStore.self,
+            from: Data(#"{"panel":{"alwaysHidden":"tucked","showsNames":true,"columnsWithNames":4}}"#.utf8))
+        #expect(oneBad.panel.alwaysHidden == .folded)
+        #expect(oneBad.panel.showsNames && oneBad.panel.columnsWithNames == 4)
+
+        var settings = SettingsStore()
+        settings.hiddenIconsIn = .row
+        settings.panel.showsNames = true
+        settings.panel.columnsWithNames = 6
+        settings.panel.columnsCompact = 3
+        settings.panel.separatorsBreakRows = true
+        settings.panel.alwaysHidden = .asLeft
+        settings.panel.alwaysHiddenOpen = true
+        let back = try JSONDecoder().decode(SettingsStore.self, from: JSONEncoder().encode(settings))
+        #expect(back.panel == settings.panel)
+        #expect(back == settings)
+    }
 }

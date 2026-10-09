@@ -75,6 +75,15 @@ final class AppState {
     }
 
     @ObservationIgnored lazy var transitions = TransitionCoordinator(appState: self, engine: engine)
+    @ObservationIgnored private lazy var barPresenter = BarPresenter(transitions: transitions)
+    /// Who drew the reveal that is up, so the conceal goes to the same one.
+    /// nil at rest.
+    @ObservationIgnored private var revealPresenter: (any RevealPresenter)?
+    /// Per revealed section, its items left to right as the last reveal
+    /// settle read them off the bar. Memory only: the panel's tile order
+    /// (`PanelModel.build(drawnOrder:)`), since the bar's order is read and
+    /// never stored.
+    @ObservationIgnored private(set) var lastDrawnOrder: [PelmetCore.Section: [ItemID]] = [:]
     /// Opens an item's menu in place, hidden or not (see ItemPress).
     @ObservationIgnored private lazy var press = ItemPress(appState: self)
     /// The keyboard way into the bar (see CommandBarController).
@@ -724,6 +733,7 @@ final class AppState {
     /// Show an item in the bar without clicking it: its section opens the
     /// way the hotkey opens it (Always Hidden with Hidden, as the Always
     /// Hidden shortcut does), and the rehide machine takes it from there.
+    /// Its own reason, so a panel setting never swallows the reveal.
     func showItemInBar(_ id: ItemID) {
         let key = id.sectionKey
         let section = settings.sectionModel.section(of: key)
@@ -737,7 +747,7 @@ final class AppState {
             return
         }
         PelmetLog.log("press: show \(key.rawValue) — revealing \(wanted.map(\.rawValue).sorted())")
-        reveal(wanted.union(currentRevealedSections), reason: .hotkey)
+        reveal(wanted.union(currentRevealedSections), reason: .itemInBar)
     }
 
     // MARK: - Pelmet's own extras
@@ -2363,9 +2373,18 @@ final class AppState {
                 var reason: RevealReason?
                 if case .transitioning(target: .reveal(_, let r), _) = rehide.state { reason = r }
                 if reason == .hover { hoverRevealStartedAt = .now }
-                transitions.performReveal(sections, trace: PerfTrace(kind: "reveal", reason: reason))
+                let trace = PerfTrace(kind: "reveal", reason: reason)
+                let presenter = presenter(for: reason)
+                revealPresenter = presenter
+                presenter.reveal(sections, trace: trace)
             case .conceal:
-                transitions.performConceal(trace: PerfTrace(kind: "conceal", reason: nil))
+                let trace = PerfTrace(kind: "conceal", reason: nil)
+                // The presenter that showed the reveal takes it down; with
+                // none up (a conceal at boot, or before any reveal) the bar
+                // is where the engine's conceal lands.
+                let presenter = revealPresenter ?? barPresenter
+                revealPresenter = nil
+                presenter.conceal(trace: trace)
             case .armTimer(let deadline):
                 rehideDeferLogged = false
                 scheduleRehideTimer(at: deadline)
@@ -2373,6 +2392,20 @@ final class AppState {
                 rehideTimer?.invalidate()
                 rehideTimer = nil
             }
+        }
+    }
+
+    /// Where a reveal gets drawn. No reason found for the transition goes to
+    /// the bar, as every reveal did before the setting existed.
+    private func presenter(for reason: RevealReason?) -> any RevealPresenter {
+        guard let reason else { return barPresenter }
+        switch RevealRouting.destination(for: reason, target: settings.hiddenIconsIn) {
+        case .bar:
+            return barPresenter
+        case .panel:
+            // Phase 3 adds PanelPresenter here. Until then the setting is
+            // stored but the bar still shows the icons.
+            return barPresenter
         }
     }
 
@@ -2647,6 +2680,20 @@ final class AppState {
                 self.overflowNoticeTask = nil
                 self.overflowNoticeCount = self.overflowTrappedCount
             }
+        }
+    }
+
+    /// Remembers the left-to-right order of each section that was just
+    /// revealed. Reads the snapshot already in hand: no walk, nothing
+    /// awaited. Concealed items have no frame (they leave the AX tree), so
+    /// only a section on the bar gets an order, and a walk that saw none of
+    /// a section's items keeps the order it had.
+    func recordDrawnOrder(_ snap: EngineSnapshot, revealed sections: Set<PelmetCore.Section>) {
+        let roster = settings.sectionModel.roster
+        let bar = ApplyPass.barOrder(ApplyPass.primaryFrames(snap))
+        for section in sections where section != .visible {
+            let drawn = bar.filter { roster.section(of: $0) == section }
+            if !drawn.isEmpty { lastDrawnOrder[section] = drawn }
         }
     }
 
