@@ -1278,46 +1278,8 @@ extension TransitionCoordinator {
                 if apart < 0.005 { break }
             }
             PelmetLog.log("pass: strip captured at \(ms())ms (\(strip.count) display(s), \(frames) frame(s), last \(String(format: "%.2f", lastApart * 100))% apart) x \(strip.map { "\(Int($0.windowFrame.minX))…\(Int($0.windowFrame.maxX))" }) items \(onPrimary.compactMap(\.frame).map { "\(Int($0.minX))…\(Int($0.maxX))" })")
-            // A plain strip carries the bar behind each icon: on glass that
-            // reads as a dark box, so without the cut-out the tiles keep
-            // their app icons.
-            if let cut = ConcealGhostOverlay.iconsOnly(strip, background: empty) {
-                if dump {
-                    Self.dumpPass(strip, name: "_strip")
-                    Self.dumpPass(empty, name: "_empty")
-                }
-                let primary = NSScreen.screens.first?.frame
-                if let index = cut.firstIndex(where: { snap in primary.map { $0.minX <= snap.windowFrame.midX && snap.windowFrame.midX <= $0.maxX } ?? true }) {
-                    let base = cut[index]
-                    // The strip as filmed and the empty bar under it: a
-                    // one-colour glyph is un-blended from the two.
-                    let raw = strip[index]
-                    let under = empty.first { abs($0.windowFrame.minY - raw.windowFrame.minY) < 1 && $0.windowFrame.intersects(raw.windowFrame) }
-                    let scale = CGFloat(base.image.width) / base.windowFrame.width
-                    for item in onPrimary {
-                        // Exactly the item's frame, less a point a side:
-                        // neighbouring frames overlap by a point or two, and
-                        // `cropped(toPrimaryX:)` pads, which let a
-                        // neighbour's capsule (Velja's, Herd's) ride along.
-                        guard let f = item.frame, f.minX >= base.windowFrame.minX, f.maxX <= base.windowFrame.maxX else { continue }
-                        let rect = CGRect(
-                            x: ((f.minX + 1 - base.windowFrame.minX) * scale).rounded(), y: 0,
-                            width: ((f.width - 2) * scale).rounded(), height: CGFloat(base.image.height))
-                        guard rect.width > 0, let image = base.image.cropping(to: rect) else { continue }
-                        let column = ConcealGhostOverlay.BarSnapshot(
-                            image: image,
-                            windowFrame: NSRect(x: f.minX + 1, y: base.windowFrame.minY, width: rect.width / scale, height: base.windowFrame.height),
-                            takenAt: base.takenAt)
-                        let bgRect = under.map { rect.offsetBy(dx: ((base.windowFrame.minX - $0.windowFrame.minX) * scale).rounded(), dy: 0) }
-                        guard let picture = ItemPictures.picture(
-                            from: column,
-                            raw: raw.image.cropping(to: rect),
-                            background: bgRect.flatMap { under?.image.cropping(to: $0) })
-                        else { continue }
-                        pictures?[item.id.sectionKey] = picture
-                        if dump { Self.dumpPass([column], name: item.id.rawValue) }
-                    }
-                }
+            for (key, picture) in Self.pictures(of: onPrimary.compactMap { item in item.frame.map { (item.id.sectionKey, $0) } }, strip: strip, empty: empty, dump: dump) {
+                pictures?[key] = picture
             }
             PelmetLog.log("pass: \(pictures?.count ?? 0) of \(onPrimary.count) pictures at \(ms())ms")
         }
@@ -1340,6 +1302,71 @@ extension TransitionCoordinator {
     }
 
     /// Debug trigger (`pelmet.debug.picturePass`): Hidden, dumped to disk.
+    /// A fresh picture of one item drawn on the bar right now: a relay's,
+    /// once its menu is gone and before it is put away, under the relay's
+    /// cover. Cut against the idle empty-bar picture; nil when there is
+    /// none fresh, and the next pass retakes it then.
+    func pictureItem(_ key: ItemID, frame: CGRect) async -> ItemPictures.Picture? {
+        guard appState?.screenRecordingGranted == true,
+              MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX)
+        else { return nil }
+        let empty = freshEmptyBarSnapshots(cropped: false)
+        guard !empty.isEmpty else { return nil }
+        let rect = CGRect(x: frame.minX - 8, y: frame.minY, width: frame.width + 16, height: frame.height)
+        let strip = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
+        return Self.pictures(of: [(key, frame)], strip: strip, empty: empty, dump: false)[key]
+    }
+
+    /// One picture per item, cut from a strip filmed with the items drawn,
+    /// against the empty bar. A plain strip carries the bar behind each
+    /// icon: on glass that reads as a dark box, so a strip that won't cut
+    /// out (an animated wallpaper) gives none, and the tiles keep their app
+    /// icons.
+    private static func pictures(
+        of items: [(key: ItemID, frame: CGRect)],
+        strip: [ConcealGhostOverlay.BarSnapshot], empty: [ConcealGhostOverlay.BarSnapshot], dump: Bool
+    ) -> [ItemID: ItemPictures.Picture] {
+        guard let cut = ConcealGhostOverlay.iconsOnly(strip, background: empty) else { return [:] }
+        if dump {
+            dumpPass(strip, name: "_strip")
+            dumpPass(empty, name: "_empty")
+        }
+        let primary = NSScreen.screens.first?.frame
+        guard let index = cut.firstIndex(where: { snap in primary.map { $0.minX <= snap.windowFrame.midX && snap.windowFrame.midX <= $0.maxX } ?? true })
+        else { return [:] }
+        let base = cut[index]
+        // The strip as filmed and the empty bar under it: a one-colour glyph
+        // is un-blended from the two.
+        let raw = strip[index]
+        let under = empty.first { abs($0.windowFrame.minY - raw.windowFrame.minY) < 1 && $0.windowFrame.intersects(raw.windowFrame) }
+        let scale = CGFloat(base.image.width) / base.windowFrame.width
+        var pictures: [ItemID: ItemPictures.Picture] = [:]
+        for (key, f) in items {
+            // Exactly the item's frame, less a point a side: neighbouring
+            // frames overlap by a point or two, and `cropped(toPrimaryX:)`
+            // pads, which let a neighbour's capsule (Velja's, Herd's) ride
+            // along.
+            guard f.minX >= base.windowFrame.minX, f.maxX <= base.windowFrame.maxX else { continue }
+            let rect = CGRect(
+                x: ((f.minX + 1 - base.windowFrame.minX) * scale).rounded(), y: 0,
+                width: ((f.width - 2) * scale).rounded(), height: CGFloat(base.image.height))
+            guard rect.width > 0, let image = base.image.cropping(to: rect) else { continue }
+            let column = ConcealGhostOverlay.BarSnapshot(
+                image: image,
+                windowFrame: NSRect(x: f.minX + 1, y: base.windowFrame.minY, width: rect.width / scale, height: base.windowFrame.height),
+                takenAt: base.takenAt)
+            let bgRect = under.map { rect.offsetBy(dx: ((base.windowFrame.minX - $0.windowFrame.minX) * scale).rounded(), dy: 0) }
+            guard let picture = ItemPictures.picture(
+                from: column,
+                raw: raw.image.cropping(to: rect),
+                background: bgRect.flatMap { under?.image.cropping(to: $0) })
+            else { continue }
+            pictures[key] = picture
+            if dump { dumpPass([column], name: key.rawValue) }
+        }
+        return pictures
+    }
+
     func debugPicturePass() async {
         _ = await picturePass([.hidden], dump: true)
     }

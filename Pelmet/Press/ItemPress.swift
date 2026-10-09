@@ -181,6 +181,9 @@ final class ItemPress {
         var target = onBar
         var revealed = false
         var toggle: OverflowToggle.Toggle?
+        // Unhighlighted, with nothing of its own open: the item can be
+        // pictured as the bar draws it.
+        var atRest = false
         if changesBar, !run.yielded {
             if revealsItem {
                 revealed = true
@@ -225,7 +228,9 @@ final class ItemPress {
             PelmetLog.log("press: \(key.rawValue) \(sign.map { "showed \($0.rawValue)" } ?? "showed nothing") at \(ms())ms")
             // An item that was never put away has nothing to wait for.
             if let sign, revealed || toggle != nil {
-                await waitUntilGone(key, sign: sign, pid: target.pid, before: before, geometry: geometry, run: run, elapsed: ms)
+                atRest = await waitUntilGone(key, sign: sign, pid: target.pid, before: before, geometry: geometry, run: run, elapsed: ms)
+            } else {
+                atRest = sign == nil
             }
         } else {
             PelmetLog.log("press: \(key.rawValue) — not on screen, \(ms())ms")
@@ -236,6 +241,12 @@ final class ItemPress {
             // lifted for the menu, or has run out its safety by now.
             cover?.dismiss()
             cover = await transitions.beginBarCover(label: "press")
+            // The panel's picture of it, as it looks now its menu is gone,
+            // filmed under the cover. Not at the cap: still open, the item
+            // is drawn highlighted.
+            if revealed, toggle == nil, atRest, !run.yielded, let frame = target?.frame, appState.revealTarget.panelLayout != nil {
+                await appState.panelPresenter.repicture(key, frame: frame)
+            }
             if let toggle { await OverflowToggle.collapseAfterPass(toggle) }
             if revealed {
                 await appState.engine.conceal(items: [key])
@@ -309,10 +320,12 @@ final class ItemPress {
     /// front" alone is a weak sign — an app can stay in front after its
     /// popover closed — so it is capped short. A yielded relay waits
     /// `pressYieldWait` at most, the press behind it is waiting.
+    /// True when it went: false at the cap or when a later press took over.
+    @discardableResult
     private func waitUntilGone(
         _ key: ItemID, sign: Sign, pid: pid_t, before: WindowCounts, geometry: Geometry,
         run: Run, elapsed ms: () -> Int
-    ) async {
+    ) async -> Bool {
         let cap = Date().addingTimeInterval(sign == .appInFront ? AppTiming.pressFrontCap : AppTiming.pressMenuCap)
         while Date() < run.capped(cap) {
             let still: Bool
@@ -321,10 +334,14 @@ final class ItemPress {
             case .ownWindow: still = await Self.counts(pid: pid, geometry: geometry).own > before.own
             case .appInFront: still = Self.isFrontmost(pid)
             }
-            if !still { break }
+            if !still {
+                PelmetLog.log("press: \(key.rawValue) gone at \(ms())ms")
+                return true
+            }
             try? await Task.sleep(for: .milliseconds(100))
         }
-        PelmetLog.log("press: \(key.rawValue) gone at \(ms())ms\(run.yielded ? " (yielded)" : "")")
+        PelmetLog.log("press: \(key.rawValue) given up at \(ms())ms\(run.yielded ? " (yielded)" : " (cap)")")
+        return false
     }
 
     // MARK: - Locating

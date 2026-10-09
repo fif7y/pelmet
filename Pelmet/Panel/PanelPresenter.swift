@@ -380,6 +380,19 @@ final class PanelPresenter: RevealPresenter {
 
     // MARK: - Pictures
 
+    /// A relay's fresh picture of the item it pressed, taken once its menu
+    /// is gone (ItemPress): whatever the press changed shows next open.
+    func repicture(_ key: ItemID, frame: CGRect) async {
+        guard let appState, let picture = await appState.transitions.pictureItem(key, frame: frame) else {
+            PelmetLog.log("panel: \(key.rawValue) not re-pictured")
+            return
+        }
+        pictures.store([key: picture])
+        unpicturable[key] = nil
+        PelmetLog.log("panel: \(key.rawValue) re-pictured")
+        if isOpen { refresh() }
+    }
+
     /// The pass, once, when the open panel shows tiles with no picture.
     private func picturePassIfNeeded(_ missing: [ItemID]) {
         guard passTask == nil, let appState, appState.screenRecordingGranted else { return }
