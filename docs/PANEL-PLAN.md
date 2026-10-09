@@ -1,6 +1,6 @@
 # Panel plan: hidden icons in a panel, plus Search in Settings
 
-Status: 2026-10-09. Decisions D1–D5 (section 9). Phases 0–2 done, Phase 3 v1 live on `panel` (results under Phase 3).
+Status: 2026-10-09. Decisions D1–D5 (section 9). Phases 0–3 done, Phase 4 done but drag, on `panel` (results under each phase). Next: Phase 5.
 Issue #26. The design is the mock in
 `~/Projects/pelmet-site/marketing/panel-mock/` (`index.html` = the panel,
 `settings.html` = the Settings Panel and Search tabs, private) and decisions
@@ -325,6 +325,23 @@ open panel to `~/Library/Logs/Pelmet/pass/panel.png`).
 - Drag between sections and up onto the bar = membership edits (decision D1).
 - Didn't fit section, launcher tiles (dim when not running), separators as row
   breaks.
+
+*Phase 4 results (2026-10-09, live on Gab's Mac).* Keyboard (`51d848f`):
+a panel opened on purpose takes keys through its local monitor; typing
+shows the search row and filters with `PanelModel.build(query:candidates:)`
+fed the command bar's corpus (read once per open), the best match selected;
+arrows run `PanelGrid.neighbour` and cross sections, ↓ past the last opens
+a folded Always Hidden; ↩ opens, Delete edits, Esc clears then closes. Not
+running apps assigned to a section are dimmed launcher tiles (Gab's Hidden
+went from 5 tiles to 10: judge). Right-click (`de7d17f`): tile menu (Open
+Menu, Open Right-Click Menu, Show in Menu Bar, Move to…, Quit) and panel
+menu (Layout Panel/Row as the setting, Show Names, Always Hidden, Pelmet
+Settings…); "as left" fold stored. `AXShowMenu` on a tile opens the panel's
+menu, not the tile's: test tile menus with a real right-click. Columns
+(`642188e`): the left-edge grip, 2…10 by the widest section, double-click
+Auto, "N per row" tip. Not done: drag between sections and onto the bar
+(after Phase 5: "Move to…" covers membership), panel picks don't feed the
+command bar's history (two writers would lose updates).
 
 **Phase 5 — Settings › Panel tab (2 sessions)**
 
