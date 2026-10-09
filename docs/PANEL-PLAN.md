@@ -381,9 +381,9 @@ Rough total: 13–16 sessions.
   history before they rank. The stage is drawn, not the person's wallpaper:
   reading that file raised an iCloud Drive access prompt.
 - **D5 Panel timing (2026-10-09 late).** Gab moved the panel into the next
-  beta: Phases 3–6 now, not after Product Hunt. Still open: whether build 65
-  waits for the panel or ships the Search tab first, and whether the panel is
-  in 0.3.2 stable or stays behind a beta-only switch for launch.
+  beta: Phases 3–6 now, not after Product Hunt. Build 65 waits for the panel
+  (one beta with the Search tab and the panel), and the panel ships in 0.3.2
+  stable for the Oct 21 launch, no beta-only switch.
 
 ## Timeline
 
@@ -393,5 +393,7 @@ Rough total: 13–16 sessions.
 - Oct 19: 0.3.2 stable. Oct 21: Product Hunt.
 - Superseded by D5 (2026-10-09 late): the panel goes into the next beta, so
   Phases 3–6 run now on `panel`, not after launch. Phase 1 done (`5a3d835`).
+  Build 65 = Search tab + panel, cut when Phases 3–6 are green and `panel`
+  is merged into `roster`; 0.3.2 stable with the panel by Mon Oct 19.
 - (Was) Phase 1 on `panel` whenever launch work leaves room; from Oct 22, merge
   `panel`, Phases 3–6, first Panel beta on "cut".
