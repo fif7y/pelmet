@@ -1170,3 +1170,83 @@ final class TransitionCoordinator {
         return union
     }
 }
+
+// MARK: - Panel spike S1: picture pass (debug only, docs/PANEL-PLAN.md)
+
+extension TransitionCoordinator {
+    /// With the bar at rest: Hidden revealed under a cover, each item
+    /// pictured with Pelmet's windows left out, concealed, cover lifted.
+    /// The question: can the panel get real pictures with nothing seen on
+    /// the bar, and what does it cost. Pictures land in
+    /// ~/Library/Logs/Pelmet/pass/.
+    func debugPicturePass() async {
+        guard let appState else { return }
+        let start = Date()
+        func ms() -> Int { Int(Date().timeIntervalSince(start) * 1000) }
+        guard appState.currentRevealedSections.isEmpty else {
+            PelmetLog.log("pass: bar is revealed, skipped")
+            return
+        }
+        let concealed = appState.snapshot?.concealed ?? []
+        var empty = freshEmptyBarSnapshots(cropped: false)
+        let emptySource = empty.isEmpty ? "captured" : "precaptured"
+        if empty.isEmpty {
+            empty = await ConcealGhostOverlay.snapshotSet(of: precaptureRect, excludingOwnWindows: true)
+        }
+        PelmetLog.log("pass: empty bar \(emptySource) at \(ms())ms (\(empty.count) display(s))")
+
+        pressBegan()
+        let cover = await beginBarCover(label: "pass")
+        PelmetLog.log("pass: cover \(cover == nil ? "none" : "up") at \(ms())ms")
+        await engine.reveal([.hidden])
+        await appState.waitUntilQuiesced(interval: 0.2, deadline: 2, poll: .milliseconds(30))
+        let snap = await engine.snapshot()
+        appState.updateSnapshot(snap)
+        let primaryMaxX = primaryMaxX
+        let drawn = snap.items.filter { concealed.contains($0.id) && $0.frame != nil }
+        let onPrimary = drawn.filter { MenuBarGeometry.isInPrimaryBand($0.frame!, primaryMaxX: primaryMaxX) }
+        PelmetLog.log("pass: revealed at \(ms())ms (\(drawn.count) drawn of \(concealed.count) concealed, \(onPrimary.count) on the primary bar)")
+
+        let frames = onPrimary.compactMap(\.frame)
+        if let minX = frames.map(\.minX).min(), let maxX = frames.map(\.maxX).max(), let band = frames.first {
+            let rect = CGRect(x: minX - 8, y: band.minY, width: maxX - minX + 16, height: band.height)
+            let strip = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
+            PelmetLog.log("pass: strip captured at \(ms())ms (\(strip.count) display(s))")
+            let cut = ConcealGhostOverlay.iconsOnly(strip, background: empty)
+            Self.dumpPass(strip, name: "_strip")
+            Self.dumpPass(empty, name: "_empty")
+            var pictured = 0
+            for item in onPrimary {
+                guard let f = item.frame else { continue }
+                let one = ConcealGhostOverlay.cropped(cut ?? strip, toPrimaryX: f.minX...f.maxX)
+                if Self.dumpPass(one, name: item.id.rawValue) { pictured += 1 }
+            }
+            PelmetLog.log("pass: \(pictured) of \(onPrimary.count) pictures (\(cut == nil ? "plain strip, cut-out failed" : "cut out")) at \(ms())ms")
+        }
+
+        await engine.conceal()
+        appState.updateSnapshot(await engine.snapshot())
+        PelmetLog.log("pass: concealed at \(ms())ms")
+        if let cover {
+            endBarCover(cover, label: "pass") { [weak self] in
+                self?.pressEnded()
+                PelmetLog.log("pass: cover lifted at \(ms())ms")
+            }
+        } else {
+            pressEnded()
+        }
+    }
+
+    @discardableResult
+    private static func dumpPass(_ snaps: [ConcealGhostOverlay.BarSnapshot], name: String) -> Bool {
+        guard let image = snaps.first?.image else { return false }
+        let dir = URL(fileURLWithPath: NSString(string: "~/Library/Logs/Pelmet/pass").expandingTildeInPath)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        // Re-rendered: a stream-backed image does not serialize.
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: image.width, pixelsHigh: image.height, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+              let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return false }
+        ctx.cgContext.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        let safe = name.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: ":", with: "_")
+        return (try? rep.representation(using: .png, properties: [:])?.write(to: dir.appendingPathComponent("\(safe).png"))) != nil
+    }
+}

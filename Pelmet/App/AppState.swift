@@ -127,7 +127,25 @@ final class AppState {
         startEngineEventPump()
         bootEngine()
         observeDebugOpenMenu()
+        observeDebugPicturePass()
     }
+
+    /// Panel spike S1: `defaults write app.fif7y.Pelmet pelmet.debug.picturePass
+    /// -bool YES`, relaunch, then post `app.fif7y.Pelmet.debug.picturePass`.
+    private func observeDebugPicturePass() {
+        guard UserDefaults.standard.bool(forKey: "pelmet.debug.picturePass") else { return }
+        debugPicturePassObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("app.fif7y.Pelmet.debug.picturePass"), object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                Task { await self.transitions.debugPicturePass() }
+            }
+        }
+        PelmetLog.log("pass: debug trigger on — app.fif7y.Pelmet.debug.picturePass")
+    }
+
+    @ObservationIgnored private var debugPicturePassObserver: NSObjectProtocol?
 
     private func wireTransitionSettleCallbacks() {
         transitions.onRevealSettled = { [weak self] in

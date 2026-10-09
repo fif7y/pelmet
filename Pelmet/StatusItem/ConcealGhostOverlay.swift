@@ -325,7 +325,10 @@ final class ConcealGhostOverlay {
     static var menuClosedAt: Date?
     static let menuFadeHold: TimeInterval = 0.5
 
-    static func snapshotSet(of rect: CGRect?) async -> [BarSnapshot] {
+    /// `excludingOwnWindows`: leave Pelmet's own windows out, so a picture
+    /// taken under a cover shows the real bar beneath it (the panel's
+    /// picture pass).
+    static func snapshotSet(of rect: CGRect?, excludingOwnWindows: Bool = false) async -> [BarSnapshot] {
         guard let rect, rect.width > 8 else { return [] }
         if let closed = menuClosedAt {
             let remaining = menuFadeHold - Date().timeIntervalSince(closed)
@@ -384,12 +387,17 @@ final class ConcealGhostOverlay {
                 bandHeight: bandHeight, in: windowList
             )
             var excluded: [SCWindow] = []
-            if !foreign.isEmpty {
+            if !foreign.isEmpty || excludingOwnWindows {
                 let ids = Set(foreign.map(\.id))
+                let me = ProcessInfo.processInfo.processIdentifier
                 if let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true) {
-                    excluded = content.windows.filter { ids.contains($0.windowID) }
+                    excluded = content.windows.filter {
+                        ids.contains($0.windowID) || (excludingOwnWindows && $0.owningApplication?.processID == me)
+                    }
                 }
-                PelmetLog.log("ghost: capture leaves out \(foreign.map(\.owner).joined(separator: ", ")) (\(excluded.count) window(s))")
+                if !foreign.isEmpty {
+                    PelmetLog.log("ghost: capture leaves out \(foreign.map(\.owner).joined(separator: ", ")) (\(excluded.count) window(s))")
+                }
             }
             let filter = SCContentFilter(display: display, excludingWindows: excluded)
             let config = SCStreamConfiguration()
