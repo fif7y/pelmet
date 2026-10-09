@@ -82,6 +82,9 @@ enum AppTiming {
     /// How long a transition waits for the previous one's pictures to lift
     /// (#61): a lift lands 560–680ms after its click, measured 2026-09-24.
     static let previousLiftWait: TimeInterval = 0.8
+    /// How long a reveal or a press waits for a picture pass to put the bar
+    /// back: 11 icons took ~1.0s, measured 2026-10-09.
+    static let picturePassWait: TimeInterval = 2.5
     /// Backdrop check delay after an animated window move (tiling key,
     /// activation, Space switch): a Space switch animates ~0.5s. A mouse-up
     /// is checked at once — the window is already where the drag left it.

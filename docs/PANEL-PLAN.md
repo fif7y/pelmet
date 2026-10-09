@@ -1,6 +1,6 @@
 # Panel plan: hidden icons in a panel, plus Search in Settings
 
-Status: plan, 2026-10-09. Decisions D1–D4 made (section 9), Phase 0 started.
+Status: 2026-10-09. Decisions D1–D5 (section 9). Phases 0–2 done, Phase 3 v1 live on `panel` (results under Phase 3).
 Issue #26. The design is the mock in
 `~/Projects/pelmet-site/marketing/panel-mock/` (`index.html` = the panel,
 `settings.html` = the Settings Panel and Search tabs, private) and decisions
@@ -244,6 +244,61 @@ on them. See section 8.
 - `ItemPress` routed through the presenter so the rehide machine sees it.
 - Picture pass (per decision D2).
 - Row = same window, `PanelGrid` layout `.row`.
+
+*Phase 3 v1 results (2026-10-09, dev build of `panel`, live on Gab's Mac).*
+Files: `Pelmet/Panel/PanelPresenter.swift` (window, anchoring, content,
+pass trigger), `PanelView.swift`, `ItemPictures.swift`; `GlassPanel` takes a
+corner radius (the panel's is 20). Dev switch: `defaults write
+app.fif7y.Pelmet pelmet.debug.panel -string panel` (or `row`) overrides
+`hiddenIconsIn` live (`AppState.revealTarget`); set at launch it also arms
+two notifications, `app.fif7y.Pelmet.debug.toggle` (object `hover`,
+`hotkey`, else a click) and `app.fif7y.Pelmet.debug.panelShot` (writes the
+open panel to `~/Library/Logs/Pelmet/pass/panel.png`).
+
+- Wiring: `presenter(for:)` returns `PanelPresenter`; a reveal while the bar
+  is out stays on the bar, a bar-only reason while the panel is up dismisses
+  it. `currentRevealedSections` is what is out *on the bar*: [] while the
+  panel draws the reveal, the pass's sections during a pass
+  (`picturePassSections`). `panelDidSettle()` posts `transitionSettled`.
+- Holding: click/hotkey opens make the panel key and hold like a menu (rehide
+  defer `panel=true`); hover opens never take keys and hold only while the
+  pointer is on the panel. Esc (local monitor), the chevron, an empty-bar
+  click and a click elsewhere (the band monitor's existing path) close it.
+- Measured live: hover open 130ms after the zone entry, close 0.7s after the
+  pointer leaves; tile click → Sound's menu shown 268ms (cover from the idle
+  picture); pass ~1.0s for Hidden + Always Hidden (11 icons).
+- Item list = `editorItems(in:)` (the walk's `concealed` misses system items
+  such as Sound). Didn't fit = `overflowTrappedItems` (the notice's list).
+- Picture pass: real now (`TransitionCoordinator.picturePass`). Fixes found
+  live: wait until the hidden icons have frames (two walks from before they
+  arrive agree too); film the strip until two frames agree (AX reports where
+  icons land before they are drawn there); Pelmet's own extras follow the
+  pass's sections (told "concealed" mid-pass they hid again and the bar
+  bounced); crop exactly to each AX frame (`cropped(toPrimaryX:)` pads, so
+  neighbours' capsules rode along); trim to ink, drop see-through or narrow
+  edge runs; tint only flat one-colour glyphs (a glyph on a capsule is two
+  brightnesses and filled in).
+- Review fixes (live-checked): a bar-only reveal (`.itemInBar`, Apply)
+  while the panel is up closes the panel first and queues behind it, so a
+  request for the panel's own sections still reaches the bar (bar out in
+  107ms); a click in the hover grace makes the panel deliberate
+  (`makeDeliberate`, key=true); a reveal or a press during a pass waits for
+  it until its cover lifts (`awaitPicturePass`, bounded 2.5s); the pass
+  picks icons by section, not the walk's `concealed`; a pass that saw no
+  icons marks nothing unpicturable, and one that did re-runs for anything a
+  widen or unfold asked for meanwhile; own extras the bar would not draw
+  (media controls with nothing playing) get no tile
+  (`ExtrasManager.wouldShow`). Own extras in a hidden section still wait for
+  a bar reveal to be placed. Dev toggle object `bar` fires an `.itemInBar`
+  reveal.
+- Not done yet: picture refresh after a relay, pictures for icons that don't
+  fit beside the notch in one go (batches), keyboard (Phase 4), light-mode
+  check, Settings UI. Capsule apps (Velja, Herd, OpenClip) keep the bar's
+  capsule, clipped to the frame.
+- Testing note: keys for a non-activating panel must be posted to Pelmet's
+  pid (`CGEvent.postToPid`); HID-posted keys never reach it. An idle Mac's
+  bar reads empty (`agent tree has 2 window(s), no items`) even with
+  `caffeinate -d`; `caffeinate -u` brings it back.
 
 **Phase 4 — Interactions (3 sessions)**
 

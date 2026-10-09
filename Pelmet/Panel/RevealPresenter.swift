@@ -7,7 +7,10 @@ import PelmetCore
 
 @MainActor
 protocol RevealPresenter: AnyObject {
-    func reveal(_ sections: Set<PelmetCore.Section>, trace: PerfTrace)
+    /// `reason` is what opened it (nil when the machine had none): the
+    /// panel holds a deliberate open like a menu, a hover one only while
+    /// the pointer is on it.
+    func reveal(_ sections: Set<PelmetCore.Section>, reason: RevealReason?, trace: PerfTrace)
     func conceal(trace: PerfTrace)
 }
 
@@ -21,7 +24,7 @@ final class BarPresenter: RevealPresenter {
         self.transitions = transitions
     }
 
-    func reveal(_ sections: Set<PelmetCore.Section>, trace: PerfTrace) {
+    func reveal(_ sections: Set<PelmetCore.Section>, reason: RevealReason?, trace: PerfTrace) {
         transitions.performReveal(sections, trace: trace)
     }
 

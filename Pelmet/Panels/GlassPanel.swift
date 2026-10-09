@@ -24,12 +24,12 @@ class GlassPanel: NSPanel {
     static let edgeMargin: CGFloat = 8
 
     /// `content` fills the glass; it is the caller's to size and lay out.
-    init(content: NSView) {
+    init(content: NSView, cornerRadius: CGFloat = GlassPanel.cornerRadius) {
         content.translatesAutoresizingMaskIntoConstraints = false
         let host: NSView
         if #available(macOS 26.0, *) {
             let glass = NSGlassEffectView()
-            glass.cornerRadius = Self.cornerRadius
+            glass.cornerRadius = cornerRadius
             glass.contentView = content
             host = glass
         } else {
@@ -38,7 +38,7 @@ class GlassPanel: NSPanel {
             effect.blendingMode = .behindWindow
             effect.state = .active
             effect.wantsLayer = true
-            effect.layer?.cornerRadius = Self.cornerRadius
+            effect.layer?.cornerRadius = cornerRadius
             effect.layer?.masksToBounds = true
             effect.addSubview(content)
             host = effect

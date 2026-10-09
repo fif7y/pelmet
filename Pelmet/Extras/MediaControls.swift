@@ -145,6 +145,24 @@ final class ExtrasManager {
         specs.contains { lastVisible[$0.key] == true && Self.itemID(for: $0.value) == id }
     }
 
+    /// Whether this extra would be in the bar with its section out: the
+    /// gated kinds only while live, as `apply` decides. The panel asks, since
+    /// it draws a section without putting it on the bar. True for a key
+    /// that is no extra.
+    func wouldShow(_ id: ItemID) -> Bool {
+        guard let spec = specs.values.first(where: { Self.itemID(for: $0).sectionKey == id.sectionKey }) else { return true }
+        switch spec.kind {
+        case .cameraMicIndicator:
+            return lastCameraIndicatorVisible
+        case .mediaControls:
+            return spec.resolvedShowRule != .whenActive || (cameraMicMonitor?.mediaRelevant ?? true)
+        case .appLauncher:
+            return spec.resolvedShowRule != .whenActive || Self.isRunning(spec)
+        default:
+            return true
+        }
+    }
+
     func sync(with newSpecs: [ExtraItemSpec]) {
         Self.iconCache.removeAll(keepingCapacity: true)
         let wanted = Set(newSpecs.map(\.id))

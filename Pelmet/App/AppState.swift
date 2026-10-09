@@ -76,9 +76,14 @@ final class AppState {
 
     @ObservationIgnored lazy var transitions = TransitionCoordinator(appState: self, engine: engine)
     @ObservationIgnored private lazy var barPresenter = BarPresenter(transitions: transitions)
+    /// The hidden icons as tiles under the chevron (docs/PANEL-PLAN.md §5).
+    @ObservationIgnored lazy var panelPresenter = PanelPresenter(appState: self)
     /// Who drew the reveal that is up, so the conceal goes to the same one.
     /// nil at rest.
     @ObservationIgnored private var revealPresenter: (any RevealPresenter)?
+    /// The panel is drawing the reveal: the machine says revealed, the bar
+    /// itself stays concealed.
+    var panelShowsReveal: Bool { revealPresenter === panelPresenter }
     /// Per revealed section, its items left to right as the last reveal
     /// settle read them off the bar. Memory only: the panel's tile order
     /// (`PanelModel.build(drawnOrder:)`), since the bar's order is read and
@@ -137,7 +142,46 @@ final class AppState {
         bootEngine()
         observeDebugOpenMenu()
         observeDebugPicturePass()
+        observeDebugToggle()
     }
+
+    /// Panel dev trigger: with `pelmet.debug.panel` set at launch, the
+    /// distributed notification `app.fif7y.Pelmet.debug.toggle` toggles the
+    /// reveal as if its object (`hover`, `hotkey`, else a click) asked;
+    /// `bar` reveals Hidden on the real bar, as ⌘↩ in Search does.
+    private func observeDebugToggle() {
+        guard UserDefaults.standard.string(forKey: "pelmet.debug.panel") != nil else { return }
+        debugToggleObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("app.fif7y.Pelmet.debug.toggle"), object: nil, queue: .main
+        ) { [weak self] note in
+            let object = note.object as? String
+            let reason: RevealReason = switch object {
+            case "hover": .hover
+            case "hotkey": .hotkey
+            case "bar": .itemInBar
+            default: .click
+            }
+            MainActor.assumeIsolated {
+                if reason == .itemInBar {
+                    self?.reveal([.hidden], reason: reason)
+                } else {
+                    self?.toggle(reason: reason)
+                }
+            }
+        }
+        debugPanelShotObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("app.fif7y.Pelmet.debug.panelShot"), object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                Task { await self.panelPresenter.debugShot() }
+            }
+        }
+        PelmetLog.log("panel: debug toggle on — app.fif7y.Pelmet.debug.toggle, .panelShot")
+    }
+
+    @ObservationIgnored private var debugToggleObserver: NSObjectProtocol?
+    @ObservationIgnored private var debugPanelShotObserver: NSObjectProtocol?
 
     /// Panel spike S1: `defaults write app.fif7y.Pelmet pelmet.debug.picturePass
     /// -bool YES`, relaunch, then post `app.fif7y.Pelmet.debug.picturePass`.
@@ -673,6 +717,8 @@ final class AppState {
            Date().timeIntervalSince(started) < AppTiming.hoverRevealClickGrace {
             PelmetLog.log("toggle(\(reason)) \(Int(Date().timeIntervalSince(started) * 1000))ms into a hover reveal — taken as the same reveal")
             dispatch(rehide.handle(.revealRequested(hoverSections, reason)))
+            // The panel the hover opened is the click's now: keys and all.
+            if panelShowsReveal { panelPresenter.makeDeliberate() }
             return
         }
         let effects = rehide.handle(.toggleRequested(sections, reason))
@@ -689,7 +735,15 @@ final class AppState {
 
     func reveal(_ sections: Set<PelmetCore.Section>, reason: RevealReason) {
         PerfTrace.markTrigger("\(reason)")
+        // The panel is up and this needs the real bar (⌘↩ in Search, an
+        // Apply): the panel closes first and the reveal queues behind it. A
+        // request for the panel's own sections would otherwise change
+        // nothing, and the bar would never come out.
+        if panelShowsReveal, case .revealed = rehide.state, presenter(for: reason) !== panelPresenter {
+            dispatch(rehide.handle(.concealRequested))
+        }
         dispatch(rehide.handle(.revealRequested(sections, reason)))
+        if panelShowsReveal, reason != .hover { panelPresenter.makeDeliberate() }
     }
 
     /// The Always Hidden shortcut (#67): everything out, or everything back
@@ -727,6 +781,15 @@ final class AppState {
             openNotificationCenter()
             return
         }
+        // A picture pass has the bar revealed under its cover: the press
+        // waits for it, or both would reveal and conceal at once.
+        if transitions.passInFlight {
+            Task {
+                await transitions.awaitPicturePass()
+                press.open(id, button: button)
+            }
+            return
+        }
         press.open(id, button: button)
     }
 
@@ -759,6 +822,10 @@ final class AppState {
     }
 
     func isOwnExtraShowing(_ key: ItemID) -> Bool { extras?.isShowing(key) ?? false }
+
+    /// False for one of Pelmet's own extras its section would not bring out
+    /// (media controls with nothing playing); true for anything else.
+    func ownExtraWouldShow(_ key: ItemID) -> Bool { extras?.wouldShow(key) ?? true }
 
     /// Runs the extra's own action, the one its button runs on a click.
     @discardableResult
@@ -2345,7 +2412,17 @@ final class AppState {
         }
     }
 
+    /// Sections a picture pass has out on the bar under its cover. Pelmet's
+    /// own items follow them like any reveal: told "concealed" mid-pass,
+    /// the extras the engine had just shown hid again and the bar bounced
+    /// under the capture (2026-10-09).
+    @ObservationIgnored var picturePassSections: Set<PelmetCore.Section>?
+
+    /// What is revealed ON THE BAR. A reveal the panel draws leaves the bar
+    /// concealed, so Pelmet's own items, covers and pictures stay put.
     var currentRevealedSections: Set<PelmetCore.Section> {
+        if let picturePassSections { return picturePassSections }
+        guard !panelShowsReveal else { return [] }
         switch rehide.state {
         case .revealed(let sections, _):
             return sections
@@ -2374,9 +2451,18 @@ final class AppState {
                 if case .transitioning(target: .reveal(_, let r), _) = rehide.state { reason = r }
                 if reason == .hover { hoverRevealStartedAt = .now }
                 let trace = PerfTrace(kind: "reveal", reason: reason)
-                let presenter = presenter(for: reason)
+                var presenter = presenter(for: reason)
+                if revealPresenter === barPresenter {
+                    // The bar is out already: a wider reveal widens it there.
+                    presenter = barPresenter
+                } else if panelShowsReveal, presenter !== panelPresenter {
+                    // Something that needs the real bar (⌘↩ in Search, an
+                    // Apply) while the panel is up: the panel goes, the
+                    // bar takes the reveal.
+                    panelPresenter.dismiss()
+                }
                 revealPresenter = presenter
-                presenter.reveal(sections, trace: trace)
+                presenter.reveal(sections, reason: reason, trace: trace)
             case .conceal:
                 let trace = PerfTrace(kind: "conceal", reason: nil)
                 // The presenter that showed the reveal takes it down; with
@@ -2399,13 +2485,32 @@ final class AppState {
     /// the bar, as every reveal did before the setting existed.
     private func presenter(for reason: RevealReason?) -> any RevealPresenter {
         guard let reason else { return barPresenter }
-        switch RevealRouting.destination(for: reason, target: settings.hiddenIconsIn) {
+        switch RevealRouting.destination(for: reason, target: revealTarget) {
         case .bar:
             return barPresenter
         case .panel:
-            // Phase 3 adds PanelPresenter here. Until then the setting is
-            // stored but the bar still shows the icons.
-            return barPresenter
+            return panelPresenter
+        }
+    }
+
+    /// "Show hidden icons in". While the panel is built, a dev override
+    /// wins: `defaults write app.fif7y.Pelmet pelmet.debug.panel -string
+    /// panel` (or `row`; delete the key to go back to the setting).
+    var revealTarget: RevealTarget {
+        UserDefaults.standard.string(forKey: "pelmet.debug.panel").flatMap(RevealTarget.init(rawValue:))
+            ?? settings.hiddenIconsIn
+    }
+
+    /// The panel finished opening or closing: the machine's transition is
+    /// over, as when the bar's reveal or conceal settles.
+    func panelDidSettle() {
+        dispatch(rehide.handle(.transitionSettled))
+        settleCatchUp()
+        // Visible-section extras go at any reveal; hidden ones wait for the
+        // bar (the panel never draws their section on it).
+        placeOwnItemsAwaitingReveal()
+        if case .concealed = rehide.state {
+            bandMonitor?.rearmHoverAfterConceal()
         }
     }
 
@@ -2422,13 +2527,18 @@ final class AppState {
                 guard let self else { return }
                 // An Apply pass needs the frames it measured to stay put.
                 let bandReason = self.bandMonitor?.rehideDeferReason()
+                // An open panel holds like a menu: until Esc, a click
+                // elsewhere or a tile; hover-opened only while the pointer
+                // is on it.
+                let panelHolds = self.panelShowsReveal && self.panelPresenter.holdsReveal
                 if self.editorHoldsBar
                     || self.pointerDisplayBehavior == .alwaysShowAll
                     || self.applying
+                    || panelHolds
                     || bandReason != nil {
                     if !self.rehideDeferLogged {
                         self.rehideDeferLogged = true
-                        PelmetLog.log("rehide: deferred — editor=\(self.editorHoldsBar) policy=\(self.pointerDisplayBehavior) apply=\(self.applying) band=\(bandReason?.rawValue ?? "none")")
+                        PelmetLog.log("rehide: deferred — editor=\(self.editorHoldsBar) policy=\(self.pointerDisplayBehavior) apply=\(self.applying) panel=\(panelHolds) band=\(bandReason?.rawValue ?? "none")")
                     }
                     self.scheduleRehideTimer(at: Date().addingTimeInterval(AppTiming.rehideDeferRearm))
                 } else {
@@ -2641,6 +2751,9 @@ final class AppState {
     /// snapshot (`PlacementGeometry.overflowTrappedCount`). Information for
     /// the editor's note only: Apply reports them as skipped.
     private(set) var overflowTrappedCount = 0
+    /// Which icons those are, for the panel's "Didn't fit" (plan S4: the
+    /// notice's list, not `ApplyPass.trapped`).
+    @ObservationIgnored private(set) var overflowTrappedItems: [ItemID] = []
     private var lastOverflowRead = 0
     /// The editor's full-bar hint: `overflowTrappedCount` once it has held
     /// `AppTiming.overflowNoticeDelay`. Shown at once, the note flashed in
@@ -2667,6 +2780,7 @@ final class AppState {
                 : "overflow: cleared")
         }
         overflowTrappedCount = trapped
+        overflowTrappedItems = trappedItems
         if trapped == 0 {
             overflowNoticeTask?.cancel()
             overflowNoticeTask = nil

@@ -41,6 +41,12 @@ public struct PanelSection: Equatable, Sendable {
     /// the row can say how many are behind it.
     public var isFolded: Bool
 
+    public init(kind: Kind, tiles: [PanelTile], isFolded: Bool) {
+        self.kind = kind
+        self.tiles = tiles
+        self.isFolded = isFolded
+    }
+
     /// Tiles you can click; breaks are not counted.
     public var count: Int { tiles.filter { $0 != .rowBreak }.count }
 }
