@@ -291,9 +291,16 @@ open panel to `~/Library/Logs/Pelmet/pass/panel.png`).
   (`ExtrasManager.wouldShow`). Own extras in a hidden section still wait for
   a bar reveal to be placed. Dev toggle object `bar` fires an `.itemInBar`
   reveal.
+- Pictures are un-blended, not keyed: the cut-out's soft key keeps each
+  antialiased edge whole in the bar's colour (a dark fringe on light glass,
+  70–83% of a glyph's solid pixels light, measured). For a glyph whose
+  changed pixels are all lighter than the bar (or all darker) with barely
+  any colour, alpha = its luma distance from the empty bar over the core's
+  (90th percentile), white, tinted by the tile. Edges come out partial, a
+  grey capsule (Velja, Herd, OpenClip) a faint fill. Light mode checked
+  with `pelmet.debug.panelAppearance` (`light`/`dark`, read at each open).
 - Not done yet: picture refresh after a relay, pictures for icons that don't
-  fit beside the notch in one go (batches), keyboard (Phase 4), light-mode
-  check, Settings UI. Capsule apps (Velja, Herd, OpenClip) keep the bar's
+  fit beside the notch in one go (batches), keyboard (Phase 4), Settings UI. Capsule apps (Velja, Herd, OpenClip) keep the bar's
   capsule, clipped to the frame.
 - Testing note: keys for a non-activating panel must be posted to Pelmet's
   pid (`CGEvent.postToPid`); HID-posted keys never reach it. An idle Mac's

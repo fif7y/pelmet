@@ -1287,7 +1287,12 @@ extension TransitionCoordinator {
                     Self.dumpPass(empty, name: "_empty")
                 }
                 let primary = NSScreen.screens.first?.frame
-                if let base = cut.first(where: { snap in primary.map { $0.minX <= snap.windowFrame.midX && snap.windowFrame.midX <= $0.maxX } ?? true }) {
+                if let index = cut.firstIndex(where: { snap in primary.map { $0.minX <= snap.windowFrame.midX && snap.windowFrame.midX <= $0.maxX } ?? true }) {
+                    let base = cut[index]
+                    // The strip as filmed and the empty bar under it: a
+                    // one-colour glyph is un-blended from the two.
+                    let raw = strip[index]
+                    let under = empty.first { abs($0.windowFrame.minY - raw.windowFrame.minY) < 1 && $0.windowFrame.intersects(raw.windowFrame) }
                     let scale = CGFloat(base.image.width) / base.windowFrame.width
                     for item in onPrimary {
                         // Exactly the item's frame, less a point a side:
@@ -1303,7 +1308,12 @@ extension TransitionCoordinator {
                             image: image,
                             windowFrame: NSRect(x: f.minX + 1, y: base.windowFrame.minY, width: rect.width / scale, height: base.windowFrame.height),
                             takenAt: base.takenAt)
-                        guard let picture = ItemPictures.picture(from: column) else { continue }
+                        let bgRect = under.map { rect.offsetBy(dx: ((base.windowFrame.minX - $0.windowFrame.minX) * scale).rounded(), dy: 0) }
+                        guard let picture = ItemPictures.picture(
+                            from: column,
+                            raw: raw.image.cropping(to: rect),
+                            background: bgRect.flatMap { under?.image.cropping(to: $0) })
+                        else { continue }
                         pictures?[item.id.sectionKey] = picture
                         if dump { Self.dumpPass([column], name: item.id.rawValue) }
                     }

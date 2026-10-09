@@ -112,6 +112,13 @@ final class PanelPresenter: RevealPresenter {
     private func show(takeKey: Bool, fadeIn: Bool) {
         guard let window else { return }
         window.ignoresMouseEvents = false
+        // Dev: `pelmet.debug.panelAppearance` light or dark checks the other
+        // mode without changing the Mac's. Read at each open.
+        window.appearance = switch UserDefaults.standard.string(forKey: "pelmet.debug.panelAppearance") {
+        case "light": NSAppearance(named: .aqua)
+        case "dark": NSAppearance(named: .darkAqua)
+        default: nil
+        }
         if fadeIn {
             window.alphaValue = 0
             window.orderFrontRegardless()
