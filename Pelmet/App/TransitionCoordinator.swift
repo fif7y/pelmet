@@ -1307,11 +1307,16 @@ extension TransitionCoordinator {
     /// cover. Cut against the idle empty-bar picture; nil when there is
     /// none fresh, and the next pass retakes it then.
     func pictureItem(_ key: ItemID, frame: CGRect) async -> ItemPictures.Picture? {
-        guard appState?.screenRecordingGranted == true,
-              MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX)
-        else { return nil }
+        guard appState?.screenRecordingGranted == true else { return nil }
+        guard MenuBarGeometry.isInPrimaryBand(frame, primaryMaxX: primaryMaxX) else {
+            PelmetLog.log("pass: \(key.rawValue) not on the primary bar, no picture")
+            return nil
+        }
         let empty = freshEmptyBarSnapshots(cropped: false)
-        guard !empty.isEmpty else { return nil }
+        guard !empty.isEmpty else {
+            PelmetLog.log("pass: no fresh empty-bar picture for \(key.rawValue)")
+            return nil
+        }
         let rect = CGRect(x: frame.minX - 8, y: frame.minY, width: frame.width + 16, height: frame.height)
         let strip = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
         return Self.pictures(of: [(key, frame)], strip: strip, empty: empty, dump: false)[key]

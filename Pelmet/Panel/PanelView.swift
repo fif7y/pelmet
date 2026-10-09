@@ -20,6 +20,8 @@ struct PanelTileArt {
 
     let image: Image
     let name: String
+    /// A launcher: the app isn't running, a click opens it.
+    var dimmed = false
 }
 
 /// One stacked block of the panel.
@@ -43,7 +45,12 @@ struct PanelContent {
     /// The widest grid, at least the mock's 150: headers and the fold row
     /// span it.
     var width: CGFloat = 150
-    /// Nothing is hidden: the panel says so instead of showing nothing.
+    /// What the keyboard typed: the search row shows while it isn't empty.
+    var query = ""
+    /// The tile Return opens and the arrows move.
+    var selected: PanelTile?
+    /// Nothing is hidden, or nothing matches: the panel says so instead of
+    /// showing nothing.
     var isEmpty: Bool { blocks.allSatisfy { $0.count == 0 } }
 }
 
@@ -59,9 +66,12 @@ struct PanelView: View {
     }
 
     var body: some View {
-        Group {
+        VStack(alignment: .trailing, spacing: 0) {
+            if !content.query.isEmpty {
+                searchRow
+            }
             if content.isEmpty {
-                empty
+                if content.query.isEmpty { empty } else { noMatch }
             } else if content.layout == .row {
                 HStack(spacing: 0) {
                     ForEach(content.blocks) { block in
@@ -144,6 +154,38 @@ struct PanelView: View {
         .padding(.top, first ? 0 : 8)
     }
 
+    /// The mock's search field, drawn: the panel's own key monitor types
+    /// into it.
+    private var searchRow: some View {
+        let row = content.layout == .row
+        return HStack(spacing: 7) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(ink.tertiary)
+            HStack(spacing: 0) {
+                Text(content.query)
+                    .foregroundStyle(ink.primary)
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                Caret()
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: 13))
+        .padding(.horizontal, 10)
+        .frame(width: content.width, height: row ? 28 : 30)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(ink.well))
+        .padding(.bottom, row ? 5 : 10)
+    }
+
+    private var noMatch: some View {
+        Text("No results")
+            .font(.system(size: 12))
+            .foregroundStyle(ink.secondary)
+            .padding(EdgeInsets(top: 6, leading: 6, bottom: 4, trailing: 6))
+            .frame(width: content.width, alignment: .leading)
+    }
+
     private var empty: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text("Nothing hidden")
@@ -164,11 +206,11 @@ struct PanelView: View {
                     Button { onPress(placement.tile) } label: {
                         PanelTileLabel(art: art, grid: grid, ink: ink)
                     }
-                    .buttonStyle(PanelTileStyle(grid: grid, ink: ink))
-                    // The arrow keys get their own selection (Phase 4); the
-                    // system's blue ring is not it.
+                    .buttonStyle(PanelTileStyle(grid: grid, ink: ink, selected: content.selected == placement.tile))
+                    // The arrow keys have their own selection; the system's
+                    // blue ring is not it.
                     .focusEffectDisabled()
-                    .help(art.name)
+                    .help(art.dimmed ? "\(art.name)\n\(String(localized: "Not running"))" : art.name)
                     .accessibilityLabel(art.name)
                     .offset(x: placement.frame.minX, y: placement.frame.minY)
                 }
@@ -232,8 +274,12 @@ private struct PanelTileLabel: View {
         .contentShape(Rectangle())
     }
 
-    @ViewBuilder
     private var glyph: some View {
+        image.opacity(art.dimmed ? 0.35 : 1)
+    }
+
+    @ViewBuilder
+    private var image: some View {
         let room = CGSize(width: grid.metrics.wellSize.width - 6, height: grid.metrics.wellSize.height - 6)
         switch art.image {
         case .picture(let image, let size, let monochrome):
@@ -267,9 +313,10 @@ private struct PanelTileLabel: View {
 private struct PanelTileStyle: ButtonStyle {
     let grid: PanelGrid
     let ink: PanelInk
+    let selected: Bool
 
     func makeBody(configuration: Configuration) -> some View {
-        Well(configuration: configuration, grid: grid, ink: ink)
+        Well(configuration: configuration, grid: grid, ink: ink, selected: selected)
     }
 
     /// A view of its own so the hover can be state.
@@ -277,6 +324,7 @@ private struct PanelTileStyle: ButtonStyle {
         let configuration: Configuration
         let grid: PanelGrid
         let ink: PanelInk
+        let selected: Bool
         @State private var hovering = false
 
         var body: some View {
@@ -285,7 +333,7 @@ private struct PanelTileStyle: ButtonStyle {
             configuration.label
                 .background(alignment: .top) {
                     RoundedRectangle(cornerRadius: row ? 8 : 13, style: .continuous)
-                        .fill(configuration.isPressed ? ink.wellPress : hovering ? ink.wellHover : row ? .clear : ink.well)
+                        .fill(configuration.isPressed ? ink.wellPress : hovering || selected ? ink.wellHover : row ? .clear : ink.well)
                         .frame(width: metrics.wellSize.width, height: metrics.wellSize.height)
                         .scaleEffect(configuration.isPressed ? 0.94 : 1)
                 }
@@ -316,5 +364,23 @@ private struct FoldRowStyle: ButtonStyle {
                 .onHover { hovering = $0 }
                 .animation(.easeOut(duration: 0.12), value: hovering)
         }
+    }
+}
+
+/// The search row's insertion point, blinking as the mock's does.
+private struct Caret: View {
+    @State private var on = true
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.accentColor)
+            .frame(width: 1.5, height: 15)
+            .opacity(on ? 1 : 0)
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    on.toggle()
+                }
+            }
     }
 }

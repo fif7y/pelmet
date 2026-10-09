@@ -1013,7 +1013,7 @@ final class CommandBarController {
 
     // MARK: - History
 
-    private static func loadHistory() -> SearchHistory {
+    static func loadHistory() -> SearchHistory {
         guard let data = UserDefaults.standard.data(forKey: historyKey),
               let history = try? JSONDecoder().decode(SearchHistory.self, from: data)
         else { return SearchHistory() }
