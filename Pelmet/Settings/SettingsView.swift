@@ -29,6 +29,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "General"
     case menuBar = "Menu Bar"
     case behavior = "Behavior"
+    case search = "Search"
     case displays = "Displays"
     case thanks = "Thanks"
     case about = "About"
@@ -41,6 +42,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "General"
         case .behavior: "Behavior"
         case .menuBar: "Menu Bar"
+        case .search: "Search"
         case .displays: "Displays"
         case .thanks: "Thanks"
         case .about: "About"
@@ -52,6 +54,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "gearshape"
         case .behavior: "cursorarrow.motionlines"
         case .menuBar: "menubar.rectangle"
+        case .search: "magnifyingglass"
         case .displays: "display.2"
         case .thanks: "heart"
         case .about: "shippingbox"
@@ -129,6 +132,7 @@ struct SettingsView: View {
                             case .general: GeneralPane()
                             case .behavior: BehaviorPane()
                             case .menuBar: MenuBarTab()
+                            case .search: SearchPane()
                             case .displays: DisplaysPane()
                             case .thanks: ThanksPane()
                             case .about: AboutPane()
@@ -215,7 +219,7 @@ extension EnvironmentValues {
 extension View {
     /// Marks a row the command bar can jump to (`SettingsIndex` ids): found
     /// by id for the scroll, and tinted softly while it is the one jumped to.
-    fileprivate func settingAnchor(_ id: String) -> some View {
+    func settingAnchor(_ id: String) -> some View {
         modifier(SettingAnchor(id: id))
     }
 }
@@ -709,13 +713,6 @@ private struct GeneralPane: View {
     @Environment(AppState.self) private var appState
     @State private var language = AppLanguage.current
 
-    /// Picks the command bar remembers; the revision makes this re-read when
-    /// it saves or resets.
-    private var searchPicks: Int {
-        _ = appState.searchHistoryRevision
-        return appState.commandBar.historyPickCount
-    }
-
     var body: some View {
         SettingsCard {
             SettingToggleRow(
@@ -754,24 +751,15 @@ private struct GeneralPane: View {
             ) {
                 ShortcutRecorder(shortcut: binding(\.alwaysHiddenHotkey), fallback: .alwaysHiddenDefault)
             }
+            // Its shortcut moved with the rest of Search; this row says where
+            // for anyone who still looks here.
             SettingRow(
                 title: "Search the menu bar",
-                caption: hotkeyCaption(appState.settings.searchHotkey, conflict: appState.searchHotkeyConflict,
-                                       otherwise: "Type a few letters, press Return, and you're in that icon's menu.")
+                caption: "Its shortcut, aliases and history moved to Search."
             ) {
-                ShortcutRecorder(shortcut: binding(\.searchHotkey), fallback: .searchDefault)
-            }
-            .settingAnchor("searchHotkey")
-            SettingRow(
-                title: "Reset Search History",
-                caption: searchPicks == 0
-                    ? "Nothing to reset yet. Pelmet learns from the icons you open with Search."
-                    : "Forgets which icons you open and what you typed to find them. Shortcuts and aliases stay."
-            ) {
-                Button("Reset") { appState.commandBar.resetHistory() }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .disabled(searchPicks == 0)
+                Button("Show Search") { appState.settingsTab = .search }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tint)
             }
             SettingRow(
                 title: "Open Settings",

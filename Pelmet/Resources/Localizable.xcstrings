@@ -2031,6 +2031,64 @@
         }
       }
     },
+    "Add an icon…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbol hinzufügen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir icono…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter une icône…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi icona…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンを追加…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘 추가…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar ícone…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить значок…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加图标…"
+          }
+        }
+      }
+    },
     "Add any app to your menu bar": {
       "localizations": {
         "de": {
@@ -2259,6 +2317,122 @@
           "stringUnit": {
             "state": "translated",
             "value": "一键打开隔空投送。"
+          }
+        }
+      }
+    },
+    "Alias": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alias"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alias"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alias"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alias"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別名"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "별칭"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apelido"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Псевдоним"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "别名"
+          }
+        }
+      }
+    },
+    "Aliases and shortcuts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aliasse und Kürzel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alias y atajos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alias et raccourcis"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alias e scorciatoie"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別名とショートカット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "별칭과 단축키"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apelidos e atalhos"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Псевдонимы и сочетания"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "别名和快捷键"
           }
         }
       }
@@ -2669,6 +2843,122 @@
         }
       }
     },
+    "An alias finds an icon by any word you like.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit einem Alias findest du ein Symbol über jedes beliebige Wort."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un alias encuentra un icono con la palabra que quieras."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un alias retrouve une icône avec le mot de votre choix."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un alias trova un’icona con la parola che preferisci."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別名を付ければ、好きな言葉でアイコンを探せます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "별칭을 지정하면 원하는 단어로 아이콘을 찾을 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um apelido encontra um ícone pela palavra que você quiser."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Псевдоним находит значок по любому слову, какое вам нравится."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "别名可让你用任意词找到图标。"
+          }
+        }
+      }
+    },
+    "An alias finds an icon by any word you like. A shortcut opens its menu from any app. ⌘K on a search result adds them too.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Alias findet ein Symbol über jedes beliebige Wort. Ein Kürzel öffnet sein Menü aus jeder App. ⌘K auf einem Suchergebnis fügt beides ebenfalls hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un alias encuentra un icono con la palabra que quieras. Un atajo abre su menú desde cualquier app. ⌘K sobre un resultado de búsqueda también los añade."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un alias retrouve une icône avec le mot de votre choix. Un raccourci ouvre son menu depuis n’importe quelle app. ⌘K sur un résultat de recherche permet aussi d’en ajouter."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un alias trova un’icona con la parola che preferisci. Una scorciatoia ne apre il menu da qualsiasi app. ⌘K su un risultato di ricerca li aggiunge a sua volta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別名を付ければ、好きな言葉でアイコンを探せます。ショートカットを設定すれば、どのアプリからでもそのメニューを開けます。検索結果で ⌘K を押しても追加できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "별칭을 지정하면 원하는 단어로 아이콘을 찾을 수 있습니다. 단축키를 지정하면 어떤 앱에서든 해당 메뉴를 열 수 있습니다. 검색 결과에서 ⌘K를 눌러도 추가할 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um apelido encontra um ícone pela palavra que você quiser. Um atalho abre o menu dele de qualquer app. ⌘K em um resultado de busca também os adiciona."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Псевдоним находит значок по любому слову, какое вам нравится. Сочетание открывает его меню из любого приложения. ⌘K на результате поиска тоже их добавляет."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "别名可让你用任意词找到图标。快捷键可在任何 App 中打开其菜单。在搜索结果上按 ⌘K 也可添加。"
+          }
+        }
+      }
+    },
     "An app launcher fixes that: a Pelmet icon that opens %@ and works like any other menu bar item.": {
       "localizations": {
         "de": {
@@ -2897,6 +3187,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "另一个 App 已使用 %@。请按其他组合。"
+          }
+        }
+      }
+    },
+    "Any setting": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Einstellung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cualquier ajuste"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout réglage"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualsiasi impostazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あらゆる設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 설정"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualquer ajuste"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Любая настройка"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任何设置"
           }
         }
       }
@@ -3245,6 +3593,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在应用…"
+          }
+        }
+      }
+    },
+    "Apps that aren't running": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apps, die nicht geöffnet sind"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apps que no están abiertas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les apps qui ne sont pas ouvertes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App non in esecuzione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起動していないアプリ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행 중이 아닌 앱"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apps que não estão abertos"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не запущенные приложения"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未运行的 App"
           }
         }
       }
@@ -6033,6 +6439,64 @@
         }
       }
     },
+    "Every icon, wherever it lives": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Symbol, egal wo es sitzt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los iconos, estén donde estén"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les icônes, où qu’elles soient"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni icona, ovunque si trovi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのアイコン、どこにあっても"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 아이콘, 어디에 있든"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos os ícones, onde quer que estejam"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Любой значок, где бы он ни был"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个图标，无论在哪里"
+          }
+        }
+      }
+    },
     "Everything at once, press again to hide it all.": {
       "localizations": {
         "de": {
@@ -6319,6 +6783,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "筛选操作"
+          }
+        }
+      }
+    },
+    "Finish the name it suggests": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den vorgeschlagenen Namen vervollständigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completar el nombre sugerido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compléter le nom suggéré"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completa il nome suggerito"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補の名前を補完"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제안된 이름 완성"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completar o nome sugerido"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дополнить предложенное название"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "补全建议的名称"
           }
         }
       }
@@ -7077,6 +7599,64 @@
         }
       }
     },
+    "Go back a step, then close": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Schritt zurück, dann schließen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retroceder un paso y luego cerrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revenir d’un cran, puis fermer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torna indietro di un passo, poi chiudi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1つ戻り、次で閉じる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 단계 뒤로, 그다음 닫기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voltar um passo e depois fechar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Шаг назад, затем закрыть"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回一步，再按则关闭"
+          }
+        }
+      }
+    },
     "Gone for good, unless you double-click or ⌥-click the chevron": {
       "localizations": {
         "de": {
@@ -7599,6 +8179,64 @@
         }
       }
     },
+    "History": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlauf"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historial"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historique"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cronologia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "履歴"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Histórico"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "История"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "历史记录"
+          }
+        }
+      }
+    },
     "Hold ⌘, ⌥ or ⌃ with the key, so it doesn't type into other apps.": {
       "localizations": {
         "de": {
@@ -8001,6 +8639,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "同一应用的图标会一起隐藏"
+          }
+        }
+      }
+    },
+    "Icons you pick move up, and a search you repeat goes straight to your last answer. It stays on this Mac.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole, die du auswählst, rücken nach oben, und eine wiederholte Suche führt direkt zu deiner letzten Antwort. Alles bleibt auf diesem Mac."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los iconos que eliges suben, y una búsqueda que repites va directa a tu última respuesta. Todo se queda en este Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les icônes que vous choisissez remontent, et une recherche répétée mène directement à votre dernière réponse. Tout reste sur ce Mac."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le icone che scegli salgono in alto, e una ricerca ripetuta porta dritta all’ultima risposta. Resta su questo Mac."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選んだアイコンは上に表示され、同じ検索を繰り返すと前回の答えがすぐに出ます。データはこのMacの中だけに保存されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고른 아이콘은 위로 올라가고, 반복한 검색은 마지막 답으로 바로 이동합니다. 데이터는 이 Mac에만 저장됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os ícones que você escolhe sobem, e uma busca repetida vai direto para a sua última resposta. Tudo fica neste Mac."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбранные значки поднимаются выше, а повторный запрос сразу ведёт к последнему ответу. Всё остаётся на этом Mac."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你选择的图标会排到前面，重复的搜索会直接给出上次的答案。数据只保存在这台 Mac 上。"
           }
         }
       }
@@ -8411,6 +9107,64 @@
         }
       }
     },
+    "Its shortcut, aliases and history moved to Search.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Kürzel, die Aliasse und der Verlauf findest du jetzt unter „Suche“."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su atajo, sus alias y su historial ahora están en Búsqueda."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Son raccourci, ses alias et son historique sont passés dans Recherche."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La scorciatoia, gli alias e la cronologia ora sono in Ricerca."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ショートカット、別名、履歴は「検索」に移動しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키, 별칭, 기록은 ‘검색’으로 옮겨졌습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O atalho, os apelidos e o histórico agora ficam em Busca."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сочетание, псевдонимы и история теперь в разделе «Поиск»."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快捷键、别名和历史记录已移至“搜索”。"
+          }
+        }
+      }
+    },
     "Keyboard shortcut": {
       "localizations": {
         "de": {
@@ -8465,6 +9219,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "键盘快捷键"
+          }
+        }
+      }
+    },
+    "Keys": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teclas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touches"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "키"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teclas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Клавиши"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按键"
           }
         }
       }
@@ -9455,6 +10267,64 @@
         }
       }
     },
+    "More for the selected icon: move it, give it an alias or a shortcut, quit its app": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr für das gewählte Symbol: verschieben, Alias oder Kürzel vergeben, die App beenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más para el icono seleccionado: moverlo, darle un alias o un atajo, salir de su app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus d’actions pour l’icône sélectionnée : la déplacer, lui donner un alias ou un raccourci, quitter son app"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altro per l’icona selezionata: spostarla, darle un alias o una scorciatoia, uscire dalla sua app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択中のアイコンの操作：移動、別名やショートカットの設定、アプリの終了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택한 아이콘의 추가 동작: 이동, 별칭이나 단축키 지정, 앱 종료"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais para o ícone selecionado: movê-lo, dar um apelido ou um atalho, encerrar o app"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ещё для выбранного значка: переместить, задать псевдоним или сочетание, завершить его приложение"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所选图标的更多操作：移动、设置别名或快捷键、退出其 App"
+          }
+        }
+      }
+    },
     "Move the bar to match the editor: your order, and every icon on its section's side of the chevron. Each icon is dragged once with the cursor hidden; nothing moves until you press this.": {
       "localizations": {
         "de": {
@@ -9509,6 +10379,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "让菜单栏与编辑器一致：按你的顺序，并把每个图标放到尖角符号上其分区所在的一侧。每个图标在隐藏光标的情况下只拖动一次；按下之前不会移动任何内容。"
+          }
+        }
+      }
+    },
+    "Move through the results": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durch die Ergebnisse gehen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moverse por los resultados"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcourir les résultats"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorri i risultati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結果を移動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결과 사이 이동"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Percorrer os resultados"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перемещаться по результатам"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在结果中移动"
           }
         }
       }
@@ -9683,6 +10611,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "移到“可见”"
+          }
+        }
+      }
+    },
+    "Names you give": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Namen, die du vergibst"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombres que tú pones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les noms que vous donnez"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nomi che assegni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分でつけた名前"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 붙인 이름"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nomes que você dá"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваши названия"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你起的名字"
           }
         }
       }
@@ -10151,6 +11137,64 @@
         }
       }
     },
+    "None yet. Give an icon a word of your own, or a shortcut that opens it from any app.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nichts. Gib einem Symbol ein eigenes Wort oder ein Kürzel, das es aus jeder App öffnet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay ninguno. Dale a un icono una palabra propia, o un atajo que lo abra desde cualquier app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien pour l’instant. Donnez à une icône un mot à vous, ou un raccourci qui l’ouvre depuis n’importe quelle app."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessuno. Dai a un’icona una parola tutta tua, o una scorciatoia che la apre da qualsiasi app."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだありません。アイコンに自分の言葉を付けるか、どのアプリからでも開けるショートカットを設定しましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 없습니다. 아이콘에 나만의 단어를 지정하거나, 어떤 앱에서든 열 수 있는 단축키를 지정하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum ainda. Dê a um ícone uma palavra sua, ou um atalho que o abra de qualquer app."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пока пусто. Задайте значку своё слово или сочетание, которое открывает его из любого приложения."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无。为图标设置专属词语，或设置可在任何 App 中打开它的快捷键。"
+          }
+        }
+      }
+    },
     "Not in place yet — it hides with this section, but sits on the other side of the chevron until Apply moves it": {
       "localizations": {
         "de": {
@@ -10205,6 +11249,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未就位——它随此分区隐藏，但在应用之前仍位于尖角符号另一侧"
+          }
+        }
+      }
+    },
+    "Not in the menu bar right now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerade nicht in der Menüleiste"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ahora mismo no está en la barra de menús"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas dans la barre des menus pour l’instant"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al momento non è nella barra dei menu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在メニューバーにありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 메뉴 막대에 없음"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não está na barra de menus agora"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас нет в строке меню"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前不在菜单栏中"
           }
         }
       }
@@ -11253,6 +12355,64 @@
         }
       }
     },
+    "Open the icon's menu": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menü des Symbols öffnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir el menú del icono"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir le menu de l’icône"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri il menu dell’icona"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンのメニューを開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘 메뉴 열기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir o menu do ícone"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть меню значка"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开该图标的菜单"
+          }
+        }
+      }
+    },
     "Opens Notification Center while the icons are hidden, which the macOS shortcut can't.": {
       "localizations": {
         "de": {
@@ -12293,6 +13453,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "在菜单栏任意空白处打开 Pelmet 菜单。图标隐藏时也能借此回到这里。"
+          }
+        }
+      }
+    },
+    "Pelmet's own commands": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmets eigene Befehle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los comandos de Pelmet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les commandes de Pelmet"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I comandi di Pelmet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet自体のコマンド"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet 자체 명령"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os comandos do Pelmet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Команды самого Pelmet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelmet 自身的命令"
           }
         }
       }
@@ -13457,6 +14675,64 @@
         }
       }
     },
+    "Remove alias and shortcut": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alias und Kürzel entfernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar alias y atajo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer l’alias et le raccourci"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi alias e scorciatoia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別名とショートカットを削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "별칭과 단축키 제거"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover apelido e atalho"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить псевдоним и сочетание"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除别名和快捷键"
+          }
+        }
+      }
+    },
     "Remove separator": {
       "localizations": {
         "de": {
@@ -13917,6 +15193,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "重试"
+          }
+        }
+      }
+    },
+    "Return takes you straight to it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return bringt dich direkt hin."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retorno te lleva directo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retour vous y emmène directement."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invio ti porta subito lì."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Returnで直接その設定へ移動します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return을 누르면 바로 이동합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return leva você direto até lá."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return сразу переносит вас к ней."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按回车即可直达。"
           }
         }
       }
@@ -14385,6 +15719,64 @@
         }
       }
     },
+    "Search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búsqueda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricerca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Busca"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поиск"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索"
+          }
+        }
+      }
+    },
     "Search from %@ icons": {
       "localizations": {
         "de": {
@@ -14439,6 +15831,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "从 %@ 个图标中搜索"
+          }
+        }
+      }
+    },
+    "Search learns what you open": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Suche lernt, was du öffnest"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La búsqueda aprende lo que abres"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La recherche apprend ce que vous ouvrez"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La ricerca impara cosa apri"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索は開いたものを学習します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색이 연 항목을 학습합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A busca aprende o que você abre"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поиск учится на том, что вы открываете"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索会学习你打开的内容"
           }
         }
       }
@@ -15197,6 +16647,64 @@
         }
       }
     },
+    "Show Search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche zeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar búsqueda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher la recherche"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra ricerca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索を表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색 보기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar busca"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать поиск"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示搜索"
+          }
+        }
+      }
+    },
     "Show in Menu Bar": {
       "localizations": {
         "de": {
@@ -15309,6 +16817,122 @@
           "stringUnit": {
             "state": "translated",
             "value": "无需伸手拿鼠标即可显示或隐藏图标。"
+          }
+        }
+      }
+    },
+    "Show or hide your icons, edit the layout, switch the animation, check for updates.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole ein- oder ausblenden, Anordnung bearbeiten, Animation wechseln, nach Updates suchen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar u ocultar tus iconos, editar la disposición, cambiar la animación, buscar actualizaciones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher ou masquer vos icônes, modifier la disposition, changer l’animation, rechercher des mises à jour."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra o nascondi le tue icone, modifica la disposizione, cambia l’animazione, cerca aggiornamenti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンの表示/非表示、配置の編集、アニメーションの切り替え、アップデートの確認。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘 표시/숨김, 배치 편집, 애니메이션 전환, 업데이트 확인."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar ou ocultar seus ícones, editar a disposição, trocar a animação, buscar atualizações."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать или скрыть значки, изменить раскладку, переключить анимацию, проверить обновления."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示或隐藏图标、编辑布局、切换动画、检查更新。"
+          }
+        }
+      }
+    },
+    "Show the icon in the menu bar instead": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stattdessen das Symbol in der Menüleiste zeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar el icono en la barra de menús en su lugar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher plutôt l’icône dans la barre des menus"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra invece l’icona nella barra dei menu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代わりにアイコンをメニューバーに表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대신 메뉴 막대에 아이콘 표시"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em vez disso, mostrar o ícone na barra de menus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вместо этого показать значок в строке меню"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改为在菜单栏中显示该图标"
           }
         }
       }
@@ -17227,6 +18851,64 @@
         }
       }
     },
+    "Their icon isn't in the bar yet. Return opens the app.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Symbol ist noch nicht in der Leiste. Return öffnet die App."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su icono aún no está en la barra. Retorno abre la app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leur icône n’est pas encore dans la barre. Retour ouvre l’app."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La loro icona non è ancora nella barra. Invio apre l’app."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコンはまだバーにありません。Returnでアプリを開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 막대에 아이콘이 없습니다. Return을 누르면 앱이 열립니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O ícone ainda não está na barra. Return abre o app."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Их значка ещё нет в строке меню. Return открывает приложение."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "它们的图标尚未出现在菜单栏中。按回车即可打开该 App。"
+          }
+        }
+      }
+    },
     "Then turn the original off in %@'s settings.": {
       "localizations": {
         "de": {
@@ -17803,6 +19485,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "计时器结束"
+          }
+        }
+      }
+    },
+    "Try “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ausprobieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probar «%@»"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essayer « %@ »"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova «%@»"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を試す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 입력해 보기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimente “%@”"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Попробовать «%@»"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试试“%@”"
           }
         }
       }
@@ -18793,6 +20533,64 @@
         }
       }
     },
+    "Visible, Hidden or Always Hidden. A tag says which.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sichtbar, Ausgeblendet oder Immer ausgeblendet. Ein Label verrät, was gilt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visibles, Ocultos o Siempre ocultos. Una etiqueta indica cuál."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visibles, Masqués ou Toujours masqués. Une étiquette indique lequel."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visibili, Nascosti o Sempre nascosti. Un’etichetta indica quale."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「表示」「非表示」「常に非表示」のどれでも。タグで区別できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표시, 숨김 또는 항상 숨김. 태그가 어느 쪽인지 알려 줍니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visíveis, Ocultos ou Sempre ocultos. Uma etiqueta mostra qual."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Видимые, Скрытые или Всегда скрытые. Метка показывает, какой именно."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可见、隐藏或始终隐藏。标签会标明是哪一种。"
+          }
+        }
+      }
+    },
     "Waiting to Complete First Backup": {
       "localizations": {
         "de": {
@@ -18905,6 +20703,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "网站"
+          }
+        }
+      }
+    },
+    "What it finds": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was die Suche findet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué encuentra"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que la recherche trouve"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cosa trova"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索できるもの"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색 대상"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O que a busca encontra"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Что можно найти"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "能搜到什么"
           }
         }
       }

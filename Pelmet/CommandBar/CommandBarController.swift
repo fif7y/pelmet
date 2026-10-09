@@ -72,7 +72,8 @@ final class CommandBarController {
         _ = ensurePanel()
     }
 
-    func open(source: String) {
+    /// `query`: typed in for the person (Settings › Search's Try links).
+    func open(source: String, query: String? = nil) {
         guard !isOpen, let appState,
               let screen = NSScreen.underPointer ?? NSScreen.main ?? NSScreen.screens.first
         else { return }
@@ -118,6 +119,10 @@ final class CommandBarController {
         entries = Dictionary(built.map { ($0.candidate.id, $0) }, uniquingKeysWith: { first, _ in first })
         let corpusMs = elapsed() - keyMs
         showRest()
+        if let query, !query.isEmpty {
+            model.field?.setText(query)
+            queryChanged(query)
+        }
         animateIn(panel)
         PelmetLog.log(String(
             format: "search: opened (%@) — key in %.1fms, %d candidates in %.1fms, %d rest row(s), ready at %.1fms",
@@ -831,8 +836,9 @@ final class CommandBarController {
         return true
     }
 
-    /// Why a combination was refused and what to do about it.
-    private static func message(for refusal: AppState.ItemHotkeyRefusal, spec: HotkeySpec) -> String {
+    /// Why a combination was refused and what to do about it. Settings ›
+    /// Search says the same.
+    static func message(for refusal: AppState.ItemHotkeyRefusal, spec: HotkeySpec) -> String {
         switch refusal {
         case .pelmet(let what):
             String(localized: "\(spec.display) is already Pelmet's shortcut for “\(what)”. Press a different combination.")

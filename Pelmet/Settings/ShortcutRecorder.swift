@@ -10,8 +10,13 @@ import SwiftUI
 
 struct ShortcutRecorder: View {
     @Binding var shortcut: HotkeySpec?
-    /// What the restore button brings back.
-    let fallback: HotkeySpec
+    /// What the restore button brings back. Nil: there is no default (an
+    /// icon's own shortcut), so ⌫ and × remove it instead of turning it off.
+    let fallback: HotkeySpec?
+    /// Takes the recorded shortcut itself and says whether it was kept; a
+    /// refusal beeps and keeps listening (the caller shows why). Without
+    /// it, the shortcut goes straight into the binding.
+    var accept: ((HotkeySpec?) -> Bool)? = nil
     @State private var recording = false
     @State private var hovering = false
     @State private var monitor: Any?
@@ -28,7 +33,7 @@ struct ShortcutRecorder: View {
             // A custom or turned-off shortcut gets a way back to the default
             // without knowing about ⌫ — only while there is something to undo.
             .overlay(alignment: .leading) {
-                if !recording, let shortcut, shortcut != fallback {
+                if !recording, let fallback, let shortcut, shortcut != fallback {
                     glyph("arrow.counterclockwise.circle.fill", help: "Restore \(fallback.display)") {
                         commit(fallback)
                     }
@@ -39,7 +44,7 @@ struct ShortcutRecorder: View {
             // another app's shortcut is rare (#79) and earns no switch.
             .overlay(alignment: .trailing) {
                 if hovering, !recording, let shortcut, !shortcut.isOff {
-                    glyph("xmark.circle.fill", help: "Turn Off") { commit(.off) }
+                    glyph("xmark.circle.fill", help: fallback == nil ? "Remove Shortcut" : "Turn Off") { commit(cleared) }
                         .padding(.trailing, 6)
                         .transition(.opacity)
                 }
@@ -132,7 +137,7 @@ struct ShortcutRecorder: View {
             stopRecording()
             return true
         case kVK_Delete:
-            commit(.off)
+            commit(cleared)
             return true
         default:
             break
@@ -151,8 +156,19 @@ struct ShortcutRecorder: View {
         return true
     }
 
-    private func commit(_ new: HotkeySpec) {
-        shortcut = new
+    /// What ⌫ and × leave: off for a shortcut with a default, nothing for one
+    /// without.
+    private var cleared: HotkeySpec? { fallback == nil ? nil : .off }
+
+    private func commit(_ new: HotkeySpec?) {
+        if let accept {
+            guard accept(new) else {
+                NSSound.beep()
+                return
+            }
+        } else {
+            shortcut = new
+        }
         stopRecording()
     }
 

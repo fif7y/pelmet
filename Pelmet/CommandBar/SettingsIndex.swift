@@ -23,6 +23,9 @@ enum SettingsIndex {
         func behavior(_ id: String, _ title: String, _ keywords: [String]) -> SettingsIndexEntry {
             SettingsIndexEntry(id: id, title: title, tab: .behavior, keywords: keywords)
         }
+        func search(_ id: String, _ title: String, _ keywords: [String]) -> SettingsIndexEntry {
+            SettingsIndexEntry(id: id, title: title, tab: .search, keywords: keywords)
+        }
         return [
             general("launchAtLogin", String(localized: "Launch at login"),
                     ["startup", "login items", "open at login", "boot"]),
@@ -30,8 +33,6 @@ enum SettingsIndex {
                     ["chevron", "icon", "iconless", "hide icon"]),
             general("hotkey", String(localized: "Keyboard shortcut"),
                     ["hotkey", "shortcut", "toggle", "show hide", "key"]),
-            general("searchHotkey", String(localized: "Search the menu bar"),
-                    ["command bar", "find", "shortcut", "hotkey"]),
             general("settingsHotkey", String(localized: "Open Settings"),
                     ["hotkey", "shortcut"]),
             general("rightClickMenu", String(localized: "Right-click menu"),
@@ -63,6 +64,13 @@ enum SettingsIndex {
                      ["now playing", "camera", "airdrop", "focus", "timer", "collateral"]),
             behavior("clockClick", String(localized: "Clicking the clock opens Notification Center"),
                      ["notification center", "clock", "calendar", "shortcut"]),
+
+            search("searchHotkey", String(localized: "Search the menu bar"),
+                   ["command bar", "find", "shortcut", "hotkey"]),
+            search("itemShortcuts", String(localized: "Aliases and shortcuts"),
+                   ["alias", "nickname", "shortcut", "hotkey", "icon shortcut"]),
+            search("searchHistory", String(localized: "Reset Search History"),
+                   ["history", "forget", "learning", "frecency", "clear"]),
         ]
     }
 
@@ -72,6 +80,7 @@ enum SettingsIndex {
         case .general: String(localized: "General")
         case .behavior: String(localized: "Behavior")
         case .menuBar: String(localized: "Menu Bar")
+        case .search: String(localized: "Search")
         default: tab.rawValue
         }
     }

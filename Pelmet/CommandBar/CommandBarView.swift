@@ -310,21 +310,8 @@ private struct CommandBarRowView: View {
         .accessibilityAction(.default, choose)
     }
 
-    @ViewBuilder
     private var glyph: some View {
-        switch row.glyph {
-        case .image(let image):
-            Image(nsImage: RowGlyphCache.bitmap(for: image))
-                .renderingMode(image.isTemplate ? .template : .original)
-                .resizable()
-                .interpolation(.high)
-                .aspectRatio(contentMode: .fit)
-                .foregroundStyle(.secondary)
-        case .symbol(let name):
-            Image(systemName: name)
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-        }
+        RowGlyph(glyph: row.glyph)
     }
 
     /// The title with what the query matched in semibold.
@@ -344,6 +331,28 @@ private struct CommandBarRowView: View {
 /// representations that SwiftUI picks from and resamples on each render; a
 /// bitmap at the glyph's size is a plain blit. Made when a row first draws
 /// and kept, for the images that outlive an open (the item icons).
+/// A row's glyph as the command bar draws it. Settings › Search lists the
+/// same icons with it.
+struct RowGlyph: View {
+    let glyph: CommandBarRow.Glyph
+
+    var body: some View {
+        switch glyph {
+        case .image(let image):
+            Image(nsImage: RowGlyphCache.bitmap(for: image))
+                .renderingMode(image.isTemplate ? .template : .original)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(.secondary)
+        case .symbol(let name):
+            Image(systemName: name)
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
 @MainActor
 enum RowGlyphCache {
     static let side: CGFloat = 18
