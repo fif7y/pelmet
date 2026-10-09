@@ -303,7 +303,9 @@ final class PanelPresenter: RevealPresenter {
         let view = PanelView(
             content: content,
             onPress: { [weak self] tile in self?.press(tile) },
-            onFold: { [weak self] in self?.toggleFold() })
+            onFold: { [weak self] in self?.toggleFold() },
+            tileMenu: { [weak self] tile in self?.menu(for: tile) ?? [] },
+            panelMenu: { [weak self] in self?.panelMenu() ?? [] })
         hosting.rootView = view
         // The hosting view sizes nothing (`sizingOptions = []`), so its
         // fitting size is zero: the view measures itself here.
@@ -444,8 +446,107 @@ final class PanelPresenter: RevealPresenter {
         }
     }
 
+    // MARK: - Right-click
+
+    /// The mock's tile menu: the presses, the moves between sections, the
+    /// app. The command bar's ⌘K list has the same rows.
+    private func menu(for tile: PanelTile) -> [PanelMenuRow] {
+        guard let appState else { return [] }
+        switch tile {
+        case .item(let key):
+            var rows: [PanelMenuRow] = [
+                .action(String(localized: "Open Menu")) { [weak self] in self?.press(tile) },
+                .action(String(localized: "Open Right-Click Menu")) { [weak appState] in
+                    PelmetLog.log("panel: right-click \(key.rawValue)")
+                    appState?.concealNow()
+                    appState?.openItemMenu(key, button: .secondary)
+                },
+                .action(String(localized: "Show in Menu Bar")) { [weak appState] in
+                    PelmetLog.log("panel: show \(key.rawValue) in the bar")
+                    appState?.showItemInBar(key)
+                },
+            ]
+            // The clock and Control Center stay where macOS pins them.
+            if !appState.isImmovable(key) {
+                rows.append(.divider)
+                let current = appState.settings.sectionModel.section(of: key)
+                for (section, title) in [
+                    (PelmetCore.Section.visible, String(localized: "Move to Visible")),
+                    (.hidden, String(localized: "Move to Hidden")),
+                    (.alwaysHidden, String(localized: "Move to Always Hidden")),
+                ] where section != current {
+                    rows.append(.action(title) { [weak appState] in
+                        PelmetLog.log("panel: move \(key.rawValue) to \(section.rawValue)")
+                        appState?.concealNow()
+                        appState?.moveItemNow(key, to: section)
+                    })
+                }
+            }
+            let app = corpus.first { if case .item(let id) = $0.action { id == key } else { false } }?.app
+            if let app, !NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID).isEmpty {
+                rows.append(.divider)
+                rows.append(.action(String(localized: "Quit \(app.name)")) { [weak appState] in
+                    PelmetLog.log("panel: quit \(app.bundleID)")
+                    appState?.concealNow()
+                    for running in NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID) { running.terminate() }
+                })
+            }
+            return rows
+        case .launcher(let bundle):
+            let name = ItemNaming.appName(forBundle: bundle) ?? bundle
+            return [.action(String(localized: "Open \(name)")) { [weak self] in self?.press(tile) }]
+        case .rowBreak:
+            return []
+        }
+    }
+
+    /// The mock's panel menu: the layout, names, Always Hidden, Settings.
+    private func panelMenu() -> [PanelMenuRow] {
+        guard let appState else { return [] }
+        let layout = appState.revealTarget.panelLayout ?? .panel
+        let alwaysShown = lastContent?.blocks.contains { $0.kind == .alwaysHidden && !$0.isFolded } ?? false
+        let hasAlways = lastContent?.blocks.contains { $0.kind == .alwaysHidden } ?? false
+        return [
+            .header(String(localized: "Layout")),
+            .check(String(localized: "Panel"), layout == .panel) { [weak self] in self?.setTarget(.panel) },
+            .check(String(localized: "Row"), layout == .row) { [weak self] in self?.setTarget(.row) },
+            .divider,
+            .check(String(localized: "Show Names"), appState.settings.panel.showsNames, enabled: layout == .panel) { [weak self] in
+                guard let self, let appState = self.appState else { return }
+                appState.settings.panel.showsNames.toggle()
+                appState.settingsChanged()
+                self.refresh()
+            },
+            .check(String(localized: "Always Hidden"), alwaysShown, enabled: hasAlways) { [weak self] in self?.toggleFold() },
+            .divider,
+            .action(String(localized: "Pelmet Settings…")) { [weak appState] in
+                appState?.concealNow()
+                appState?.openSettings(tab: .menuBar)
+            },
+        ]
+    }
+
+    /// The layout picked from the panel's menu is the setting from then on:
+    /// the dev override gives way to it.
+    private func setTarget(_ target: RevealTarget) {
+        guard let appState else { return }
+        UserDefaults.standard.removeObject(forKey: "pelmet.debug.panel")
+        appState.settings.hiddenIconsIn = target
+        appState.settingsChanged()
+        PelmetLog.log("panel: layout \(target.rawValue)")
+        refresh()
+    }
+
     private func toggleFold() {
-        foldOpen.toggle()
+        if let appState, appState.settings.panel.alwaysHidden == .asLeft {
+            // Left as it was: the next open finds it the same way.
+            let shown = lastContent?.blocks.contains { $0.kind == .alwaysHidden && !$0.isFolded } ?? false
+            appState.settings.panel.alwaysHiddenOpen = !shown
+            appState.settingsChanged()
+            foldOpen = false
+        } else {
+            foldOpen.toggle()
+        }
         let shown = refresh()
         picturePassIfNeeded(shown.missing)
     }
@@ -460,7 +561,9 @@ final class PanelPresenter: RevealPresenter {
             PelmetLog.log("panel: shot skipped — not open")
             return
         }
-        let frame = window.frame.insetBy(dx: -40, dy: -40)
+        // Room below for a right-click menu.
+        var frame = window.frame.insetBy(dx: -40, dy: -40)
+        frame = frame.union(frame.offsetBy(dx: 0, dy: -260))
         let rect = CGRect(x: frame.minX, y: primary.frame.maxY - frame.maxY, width: frame.width, height: frame.height)
         // The completion form: the async one traps when the capture hands
         // back neither an image nor an error (crashed Pelmet, 2026-10-09).

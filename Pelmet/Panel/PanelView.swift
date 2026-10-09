@@ -54,10 +54,20 @@ struct PanelContent {
     var isEmpty: Bool { blocks.allSatisfy { $0.count == 0 } }
 }
 
+/// A right-click menu row, built by the presenter.
+enum PanelMenuRow {
+    case action(String, () -> Void)
+    case check(String, Bool, enabled: Bool = true, () -> Void)
+    case header(String)
+    case divider
+}
+
 struct PanelView: View {
     let content: PanelContent
     let onPress: (PanelTile) -> Void
     let onFold: () -> Void
+    var tileMenu: (PanelTile) -> [PanelMenuRow] = { _ in [] }
+    var panelMenu: () -> [PanelMenuRow] = { [] }
 
     @Environment(\.colorScheme) private var scheme
 
@@ -88,6 +98,25 @@ struct PanelView: View {
         }
         .padding(padding)
         .fixedSize()
+        .contentShape(Rectangle())
+        .contextMenu { menu(panelMenu()) }
+    }
+
+    @ViewBuilder
+    private func menu(_ rows: [PanelMenuRow]) -> some View {
+        ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+            switch row {
+            case .action(let title, let run):
+                Button(title, action: run)
+            case .check(let title, let on, let enabled, let run):
+                Toggle(title, isOn: Binding(get: { on }, set: { _ in run() }))
+                    .disabled(!enabled)
+            case .header(let title):
+                Text(title)
+            case .divider:
+                Divider()
+            }
+        }
     }
 
     @ViewBuilder
@@ -211,6 +240,7 @@ struct PanelView: View {
                     // blue ring is not it.
                     .focusEffectDisabled()
                     .help(art.dimmed ? "\(art.name)\n\(String(localized: "Not running"))" : art.name)
+                    .contextMenu { menu(tileMenu(placement.tile)) }
                     .accessibilityLabel(art.name)
                     .offset(x: placement.frame.minX, y: placement.frame.minY)
                 }
