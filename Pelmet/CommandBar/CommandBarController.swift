@@ -70,6 +70,10 @@ final class CommandBarController {
         self.appState = appState
         self.embedded = embedded
         history = Self.loadHistory()
+        model.hidesSelectionUnfocused = embedded
+        // The demo can be up before the bar was first read (Settings opened
+        // at launch): it re-reads when someone comes to type.
+        if embedded { model.onFieldFocus = { [weak self] in self?.refresh() } }
     }
 
     // MARK: - Open / close

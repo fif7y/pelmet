@@ -11,7 +11,7 @@ import SwiftUI
 final class CommandBarFieldView: NSView {
     let font: NSFont
 
-    let field = NSTextField()
+    let field = FocusTextField()
     /// The completion's remainder, drawn after the caret in tertiary ink.
     /// Configured like the field so its text sits on the same baseline.
     private let ghost = NSTextField(labelWithString: "")
@@ -19,6 +19,8 @@ final class CommandBarFieldView: NSView {
     /// Take focus the moment the view is in a window: the alias row comes
     /// and goes with an action, and asking for focus before it exists loses.
     var focusOnAttach = false
+    /// Told when the field gains or loses keyboard focus.
+    var onFocusChange: ((Bool) -> Void)?
 
     init(font: NSFont = .systemFont(ofSize: 15), placeholder: String = "") {
         self.font = font
@@ -35,6 +37,7 @@ final class CommandBarFieldView: NSView {
         field.isEditable = true
         field.cell?.isScrollable = true
         setPlaceholder(placeholder)
+        field.onFocus = { [weak self] in self?.onFocusChange?(true) }
         ghost.textColor = .tertiaryLabelColor
         ghost.isHidden = true
         // A caption for VoiceOver would double the field's own label.
@@ -120,6 +123,10 @@ struct CommandBarSearchField: NSViewRepresentable {
     func makeNSView(context: Context) -> CommandBarFieldView {
         let view = CommandBarFieldView(placeholder: model.placeholder)
         view.field.delegate = context.coordinator
+        view.onFocusChange = { [weak model] focused in
+            if model?.fieldFocused != focused { model?.fieldFocused = focused }
+            if focused { model?.onFieldFocus?() }
+        }
         model.field = view
         return view
     }
@@ -145,6 +152,22 @@ struct CommandBarSearchField: NSViewRepresentable {
             guard let field = notification.object as? NSTextField else { return }
             onChange(field.stringValue)
         }
+
+        /// Focus left the field (a click elsewhere, ⇥ on, the demo's ⎋).
+        func controlTextDidEndEditing(_ notification: Notification) {
+            ((notification.object as? NSView)?.superview as? CommandBarFieldView)?.onFocusChange?(false)
+        }
+    }
+}
+
+/// Says when it takes focus: a click, ⇥ or the controller's own.
+final class FocusTextField: NSTextField {
+    var onFocus: (() -> Void)?
+
+    override func becomeFirstResponder() -> Bool {
+        let took = super.becomeFirstResponder()
+        if took { onFocus?() }
+        return took
     }
 }
 

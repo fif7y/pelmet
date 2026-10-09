@@ -101,6 +101,12 @@ final class CommandBarModel {
     var inputMessage: String?
     /// What the alias field starts with: the alias as it is now.
     var aliasDraft = ""
+    /// The search field has keyboard focus. Settings › Search's demo shows
+    /// no selected row without it: nothing there takes ↩ yet.
+    var fieldFocused = false
+    var hidesSelectionUnfocused = false
+    /// Run when the search field takes focus.
+    @ObservationIgnored var onFieldFocus: (() -> Void)?
 
     @ObservationIgnored weak var field: CommandBarFieldView?
     @ObservationIgnored weak var aliasField: CommandBarFieldView?
@@ -207,7 +213,8 @@ struct CommandBarView: View {
                 // a third of what a keystroke cost to draw (2026-10-04).
                 LazyVStack(spacing: 0) {
                     ForEach(Array(model.rows.enumerated()), id: \.offset) { index, row in
-                        CommandBarRowView(row: row, selected: index == model.selected) {
+                        CommandBarRowView(row: row, selected: index == model.selected
+                                          && (model.fieldFocused || !model.hidesSelectionUnfocused)) {
                             onChoose(index, NSEvent.modifierFlags)
                         }
                         .id(index)
