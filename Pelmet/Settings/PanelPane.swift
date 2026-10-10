@@ -17,17 +17,13 @@ struct PanelPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             SettingsCard {
-                // The caption runs under both: a SettingRow would move the
-                // segments under it for the longer captions, away from the
-                // pointer that just picked one.
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack {
-                        Text("Show hidden icons in")
-                        Spacer(minLength: 16)
-                        PelmetSegments(selection: targetBinding, options: [
-                            (.menuBar, "Menu bar"), (.panel, "Panel"), (.row, "Row"),
-                        ], compact: true)
-                    }
+                // The tab's one big choice, drawn as what each option looks
+                // like. The caption sits under the cards so a longer one
+                // never moves them from under the pointer that picked one.
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Show hidden icons in")
+                        .font(.system(size: 13, weight: .semibold))
+                    RevealTargetPicker(selection: targetBinding)
                     Text(caption)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -426,5 +422,115 @@ private struct PanelPreviewStage: View {
               !missing.isEmpty
         else { return }
         presenter.picturePassIfNeeded(missing) { revision += 1 }
+    }
+}
+
+/// Menu bar, Panel or Row as three cards, each a sketch of where the hidden
+/// icons go: the tab's main choice, so it reads first.
+private struct RevealTargetPicker: View {
+    @Binding var selection: RevealTarget
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach([(RevealTarget.menuBar, LocalizedStringKey("Menu bar")), (.panel, "Panel"), (.row, "Row")], id: \.0) { target, label in
+                RevealTargetCard(target: target, label: label, selected: selection == target) {
+                    selection = target
+                }
+            }
+        }
+        .animation(.spring(duration: 0.22), value: selection)
+    }
+}
+
+private struct RevealTargetCard: View {
+    let target: RevealTarget
+    let label: LocalizedStringKey
+    let selected: Bool
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 7) {
+                RevealTargetSketch(target: target, ink: selected ? PelmetAccent.accent : .secondary)
+                Text(label)
+                    .font(.system(size: 12, weight: selected ? .semibold : .medium))
+                    .foregroundStyle(selected ? PelmetAccent.accent : .primary)
+            }
+            .padding(6)
+            .padding(.bottom, 2)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(selected ? PelmetAccent.accent.opacity(0.14) : Color.primary.opacity(hovered ? 0.08 : 0.04))
+                    .shadow(color: .black.opacity(selected ? 0.2 : 0), radius: 4, y: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(PelmetAccent.accent, lineWidth: 1.5)
+                    .opacity(selected ? 1 : 0)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+        .onHover { hovered = $0 }
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// A menu bar strip with the chevron and three shown icons, and the hidden
+/// ones in `ink`: beside the chevron, in a grid under it, or in a row.
+private struct RevealTargetSketch: View {
+    let target: RevealTarget
+    let ink: Color
+
+    private static let icon: CGFloat = 7
+    private static let gap: CGFloat = 3
+    private static let edge: CGFloat = 8
+
+    private func icons(_ count: Int, _ color: Color) -> some View {
+        HStack(spacing: Self.gap) {
+            ForEach(0..<count, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 2).fill(color).frame(width: Self.icon, height: Self.icon)
+            }
+        }
+    }
+
+    private func well<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .padding(4)
+            .background(RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.12)))
+    }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            HStack(spacing: 5) {
+                if target == .menuBar { icons(3, ink) }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 7, weight: .heavy))
+                    .foregroundStyle(target == .menuBar ? ink : .secondary)
+                icons(3, Color.primary.opacity(0.35))
+            }
+            .padding(.horizontal, Self.edge)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .frame(height: 14)
+            .background(Color.primary.opacity(0.08))
+            switch target {
+            case .menuBar:
+                EmptyView()
+            case .panel:
+                well { VStack(spacing: Self.gap) { icons(3, ink); icons(3, ink) } }
+                    // Under the chevron, as the panel opens.
+                    .padding(.trailing, Self.edge + 3 * Self.icon + 2 * Self.gap)
+            case .row:
+                well { icons(6, ink) }
+                    .padding(.trailing, Self.edge)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .frame(height: 50, alignment: .top)
+        .background(Color.primary.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }
