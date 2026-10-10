@@ -260,9 +260,12 @@ open panel to `~/Library/Logs/Pelmet/pass/panel.png`).
   it. `currentRevealedSections` is what is out *on the bar*: [] while the
   panel draws the reveal, the pass's sections during a pass
   (`picturePassSections`). `panelDidSettle()` posts `transitionSettled`.
-- Holding: click/hotkey opens make the panel key and hold like a menu (rehide
-  defer `panel=true`); hover opens never take keys and hold only while the
-  pointer is on the panel. Esc (local monitor), the chevron, an empty-bar
+- Holding: click/hotkey opens make the panel key; hover opens never take
+  keys. Every open holds (rehide defer `panel=true`) only while the pointer
+  is on the panel or the column above it, and leaving the panel arms the
+  countdown at the rehide delay, as leaving the bar does (Gab, 2026-10-09: a
+  click-opened panel held like a menu and read as stuck). A hotkey open holds
+  until the pointer has been on it. Esc (local monitor), the chevron, an empty-bar
   click and a click elsewhere (the band monitor's existing path) close it.
 - Measured live: hover open 130ms after the zone entry, close 0.7s after the
   pointer leaves; tile click → Sound's menu shown 268ms (cover from the idle

@@ -2527,9 +2527,9 @@ final class AppState {
                 guard let self else { return }
                 // An Apply pass needs the frames it measured to stay put.
                 let bandReason = self.bandMonitor?.rehideDeferReason()
-                // An open panel holds like a menu: until Esc, a click
-                // elsewhere or a tile; hover-opened only while the pointer
-                // is on it.
+                // An open panel holds while the pointer is on it or on
+                // its way there from the bar; a shortcut's until the
+                // pointer has been on it.
                 let panelHolds = self.panelShowsReveal && self.panelPresenter.holdsReveal
                 if self.editorHoldsBar
                     || self.pointerDisplayBehavior == .alwaysShowAll

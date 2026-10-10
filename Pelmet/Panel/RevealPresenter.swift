@@ -7,9 +7,9 @@ import PelmetCore
 
 @MainActor
 protocol RevealPresenter: AnyObject {
-    /// `reason` is what opened it (nil when the machine had none): the
-    /// panel holds a deliberate open like a menu, a hover one only while
-    /// the pointer is on it.
+    /// `reason` is what opened it (nil when the machine had none): a hover
+    /// opens the panel without taking keys, a shortcut holds it until the
+    /// pointer has been on it.
     func reveal(_ sections: Set<PelmetCore.Section>, reason: RevealReason?, trace: PerfTrace)
     func conceal(trace: PerfTrace)
 }

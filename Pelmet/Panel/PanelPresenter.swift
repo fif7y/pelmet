@@ -28,9 +28,14 @@ final class PanelPresenter: RevealPresenter {
     private var window: KeyableGlassPanel?
     private var hosting: NSHostingView<PanelHost>?
     /// The tracking area's owner, which it does not keep.
-    private var exitWatch: PointerExitWatch?
+    private var pointerWatch: PointerWatch?
     private(set) var isOpen = false
     private var openedByHover = false
+    /// Opened from the keyboard, with the pointer not yet on it: held like
+    /// a menu until it is.
+    private var awaitsPointer = false
+    /// When `place` last changed the window's frame.
+    private var resizedAt: CFTimeInterval = 0
     private var sections: Set<PelmetCore.Section> = []
     /// Always Hidden's fold, for this open.
     private var foldOpen = false
@@ -73,24 +78,28 @@ final class PanelPresenter: RevealPresenter {
         self.appState = appState
     }
 
-    /// Whether an armed rehide should wait: a panel opened on purpose holds
-    /// like a menu, a hover one while the pointer is on it or between it
-    /// and the bar. The gap under the bar is crossed on the way in, and
-    /// with no rehide delay the countdown ran out right there: the panel
-    /// closed before the pointer reached it (2026-10-09).
+    /// Whether an armed rehide should wait. The panel closes as the bar
+    /// does, once the pointer leaves (Gab, 2026-10-09: a clicked one held
+    /// like a menu and read as stuck), so it holds while the pointer is on
+    /// it or between it and the bar: the gap under the bar is crossed on
+    /// the way in, and with no rehide delay the countdown ran out right
+    /// there. A shortcut's panel holds until the pointer has been on it,
+    /// as the bar does for a shortcut's reveal.
     var holdsReveal: Bool {
         guard isOpen, let window else { return false }
-        guard openedByHover else { return true }
+        if awaitsPointer { return true }
         var reach = window.frame
         if let screen = window.screen { reach.size.height = screen.frame.maxY - reach.minY }
         return reach.contains(NSEvent.mouseLocation)
     }
 
-    /// Off a hover-opened panel is off the bar: the countdown starts at the
-    /// hover's delay, not at the next re-arm a second and a half on.
+    /// Off the panel is off the bar: the countdown starts at the rehide
+    /// delay, not at the next re-arm a second and a half on. Not when the
+    /// panel shrank out from under a pointer that stayed put: a filter
+    /// typed with the pointer resting on it would close it mid-word.
     private func pointerLeftPanel() {
-        guard isOpen, openedByHover else { return }
-        PelmetLog.log("panel: pointer left a hover-opened panel")
+        guard isOpen, !awaitsPointer, CACurrentMediaTime() - resizedAt > 0.1 else { return }
+        PelmetLog.log("panel: pointer left")
         appState?.pointerLeftBand()
     }
 
@@ -103,6 +112,7 @@ final class PanelPresenter: RevealPresenter {
         openedByHover = reason == .hover && (!wasOpen || openedByHover)
         self.sections = sections
         if !wasOpen {
+            awaitsPointer = reason == .hotkey
             foldOpen = false
             query = ""
             selected = nil
@@ -140,7 +150,7 @@ final class PanelPresenter: RevealPresenter {
 
     /// A click or a key on a panel a hover opened, asking for what is
     /// already out: the machine has nothing to reveal, but the panel is the
-    /// click's now, held like a menu and taking keys.
+    /// click's now, taking keys.
     func makeDeliberate() {
         guard isOpen, openedByHover else { return }
         openedByHover = false
@@ -158,10 +168,12 @@ final class PanelPresenter: RevealPresenter {
         hosting.sizingOptions = []
         let window = KeyableGlassPanel(content: hosting, cornerRadius: Self.cornerRadius)
         window.alphaValue = 0
-        let watch = PointerExitWatch { [weak self] in self?.pointerLeftPanel() }
+        let watch = PointerWatch(
+            entered: { [weak self] in self?.awaitsPointer = false },
+            exited: { [weak self] in self?.pointerLeftPanel() })
         window.contentView?.addTrackingArea(NSTrackingArea(
             rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: watch, userInfo: nil))
-        exitWatch = watch
+        pointerWatch = watch
         self.window = window
         self.hosting = hosting
         return (window, hosting)
@@ -265,6 +277,7 @@ final class PanelPresenter: RevealPresenter {
                 let t = min((CACurrentMediaTime() - start) / duration, 1)
                 guard t < 1 else {
                     self.stopGlass()
+                    self.resizedAt = CACurrentMediaTime()
                     self.placed = frame
                     window.place(frame)
                     window.setGlassHeight(to)
@@ -399,6 +412,7 @@ final class PanelPresenter: RevealPresenter {
             x: max(right - width, target.frame.minX + margin).rounded(),
             y: (top - size.height).rounded(),
             width: width.rounded(), height: size.height.rounded())
+        if frame.size != placed?.size { resizedAt = CACurrentMediaTime() }
         if let style = foldMotion {
             foldMotion = nil
             resizeGlass(to: frame, style: style)
@@ -876,16 +890,19 @@ struct PanelHost: View {
     }
 }
 
-/// A tracking area's owner: the panel needs only the pointer's exit.
-private final class PointerExitWatch: NSResponder {
+/// A tracking area's owner: the pointer onto the panel and off it.
+private final class PointerWatch: NSResponder {
+    private let entered: () -> Void
     private let exited: () -> Void
 
-    init(_ exited: @escaping () -> Void) {
+    init(entered: @escaping () -> Void, exited: @escaping () -> Void) {
+        self.entered = entered
         self.exited = exited
         super.init()
     }
 
     required init?(coder: NSCoder) { nil }
 
+    override func mouseEntered(with event: NSEvent) { entered() }
     override func mouseExited(with event: NSEvent) { exited() }
 }
