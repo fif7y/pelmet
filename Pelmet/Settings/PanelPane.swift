@@ -65,7 +65,7 @@ struct PanelPane: View {
         return SettingsCard(title: "Icons") {
             if target == .panel {
                 SettingRow(title: "Columns",
-                           caption: "Auto picks a width that fits your icons. You can also drag the panel's edge.") {
+                           caption: "Auto fits your icons. Or drag the panel's edge.") {
                     PelmetMenuPicker(selection: binding(\.columns), options: columnChoices(options.columns))
                 }
                 .settingAnchor("panelColumns")

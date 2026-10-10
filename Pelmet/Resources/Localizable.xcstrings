@@ -4003,60 +4003,60 @@
         }
       }
     },
-    "Auto picks a width that fits your icons. You can also drag the panel's edge.": {
+    "Auto fits your icons. Or drag the panel's edge.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatisch wählt eine Breite, die zu deinen Symbolen passt. Du kannst auch am Rand des Panels ziehen."
+            "value": "Automatisch passt sich deinen Symbolen an. Oder zieh am Rand des Panels."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automático elige un ancho que se ajusta a tus iconos. También puedes arrastrar el borde del panel."
+            "value": "Automático se ajusta a tus iconos. O arrastra el borde del panel."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auto choisit une largeur adaptée à vos icônes. Vous pouvez aussi faire glisser le bord du panneau."
+            "value": "Auto s’adapte à vos icônes. Ou faites glisser le bord du panneau."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auto sceglie una larghezza adatta alle tue icone. Puoi anche trascinare il bordo del pannello."
+            "value": "Auto si adatta alle tue icone. Oppure trascina il bordo del pannello."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動にすると、アイコンに合った幅を選びます。パネルの端をドラッグして変えることもできます。"
+            "value": "自動ではアイコンに合わせます。パネルの端をドラッグすることもできます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "자동은 아이콘에 맞는 너비를 고릅니다. 패널 가장자리를 드래그할 수도 있습니다."
+            "value": "자동은 아이콘에 맞춥니다. 패널 가장자리를 드래그해도 됩니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automático escolhe uma largura que cabe seus ícones. Você também pode arrastar a borda do painel."
+            "value": "Automático se ajusta aos seus ícones. Ou arraste a borda do painel."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "«Авто» подбирает ширину под ваши значки. Можно также потянуть край панели."
+            "value": "«Авто» подстраивается под значки. Или потяните край панели."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“自动”会选择适合你图标的宽度。你也可以拖移面板边缘。"
+            "value": "“自动”会适应你的图标。也可以拖移面板边缘。"
           }
         }
       }
