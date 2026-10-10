@@ -1,6 +1,6 @@
 # Panel plan: hidden icons in a panel, plus Search in Settings
 
-Status: 2026-10-09. Decisions D1–D5 (section 9). Phases 0–3 done, Phase 4 done but drag, on `panel` (results under each phase). Next: Phase 5.
+Status: 2026-10-09. Decisions D1–D5 (section 9). Phases 0–3 and 5 done, Phase 4 done but drag, on `panel` (results under each phase). Next: Phase 6, then drag.
 Issue #26. The design is the mock in
 `~/Projects/pelmet-site/marketing/panel-mock/` (`index.html` = the panel,
 `settings.html` = the Settings Panel and Search tabs, private) and decisions
@@ -355,6 +355,25 @@ command bar's history (two writers would lose updates).
 - Status menu: a "Show hidden icons in" submenu from the Animation submenu
   template (`PelmetStatusItem.swift:225`).
 - SettingsIndex entries for every new row.
+
+*Phase 5 results (2026-10-09, live on Gab's Mac).* Settings › Panel after
+Menu Bar with an accent "New" chip (gone while selected). "Show hidden icons
+in" segments over a preview stage: the drawn desktop (`DemoBackdrop`, shared
+with Search), a drawn bar end, and the real `PanelView` under its chevron,
+built by `PanelPresenter.previewContent` from the same settings with its own
+filter, selection and fold. It works for real: click and type, arrows, ↩
+and tile clicks press the icon, right-click menus, edge drag (pointer
+travel from the drag's start, the right edge stays put) and double-click
+Auto, chevron shows/hides it. Opening the tab runs the picture pass for
+tiles without one. Menu bar mode: drawn icons slide out with the Animation
+style, once on switching. Icons card per mode (Names and Columns Panel
+only). The segments sit beside the title with the caption under both, so
+they don't move when a longer caption comes in. Row has no fold: its
+right-click "Always Hidden" now shows them in the row (`hasAlwaysHidden` /
+`showsAlwaysHidden` computed before the row merge), and its captions say so.
+Status menu: "Show hidden icons in" submenu. Skipped "N of M fit beside the
+notch" (no source for it). Keys and selection are shared code
+(`PanelKeys.swift`); `buildContent` is pure.
 
 **Phase 6 — Polish and beta (2 sessions)**
 

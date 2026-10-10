@@ -28,6 +28,7 @@ enum PelmetAccent {
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "General"
     case menuBar = "Menu Bar"
+    case panel = "Panel"
     case behavior = "Behavior"
     case search = "Search"
     case displays = "Displays"
@@ -42,6 +43,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "General"
         case .behavior: "Behavior"
         case .menuBar: "Menu Bar"
+        case .panel: "Panel"
         case .search: "Search"
         case .displays: "Displays"
         case .thanks: "Thanks"
@@ -54,6 +56,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "gearshape"
         case .behavior: "cursorarrow.motionlines"
         case .menuBar: "menubar.rectangle"
+        case .panel: "square.grid.2x2"
         case .search: "magnifyingglass"
         case .displays: "display.2"
         case .thanks: "heart"
@@ -132,6 +135,7 @@ struct SettingsView: View {
                             case .general: GeneralPane()
                             case .behavior: BehaviorPane()
                             case .menuBar: MenuBarTab()
+                            case .panel: PanelPane()
                             case .search: SearchPane()
                             case .displays: DisplaysPane()
                             case .thanks: ThanksPane()
@@ -296,7 +300,8 @@ private struct SettingsSidebar: View {
                     // An available update puts a green chip on the About row
                     // — a trail for someone who just opened Settings.
                     badge: item == .about && SparkleController.shared.availableVersion != nil
-                        ? "Update" : nil
+                        ? "Update" : item == .panel && tab != item ? "New" : nil,
+                    badgeTint: item == .panel ? PelmetAccent.accent : .green
                 ) { tab = item }
             }
             Spacer()
@@ -315,6 +320,7 @@ private struct SidebarRow: View {
     let selected: Bool
     var attention = false
     var badge: LocalizedStringKey? = nil
+    var badgeTint: Color = .green
     let action: () -> Void
     @State private var hovered = false
 
@@ -384,10 +390,10 @@ private struct SidebarRow: View {
         if let badge {
             Text(badge)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.green)
+                .foregroundStyle(badgeTint)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
-                .background(.green.opacity(0.13), in: Capsule())
+                .background(badgeTint.opacity(0.13), in: Capsule())
         }
     }
 }
@@ -1643,7 +1649,7 @@ private struct AnimationStyleCard: View {
 /// A menu bar in miniature: three hidden squircles left of the chevron,
 /// two visible ones right of it. The hidden group moves the way the real
 /// style does, with the same durations (AppTiming).
-private struct MockBar: View {
+struct MockBar: View {
     let style: RevealAnimation
     let revealed: Bool
 
@@ -1659,7 +1665,7 @@ private struct MockBar: View {
             }
             .offset(x: hiddenOffset)
             .opacity(revealed ? 1 : 0)
-            .animation(hiddenAnimation, value: revealed)
+            .animation(Self.animation(style, revealed: revealed), value: revealed)
             .frame(width: 3 * dot + 2 * gap, alignment: .trailing)
             .clipped()
 
@@ -1690,7 +1696,8 @@ private struct MockBar: View {
         return 3 * dot + 2 * gap  // parked behind the chevron
     }
 
-    private var hiddenAnimation: Animation? {
+    /// The style's motion, revealing or concealing, at the real durations.
+    static func animation(_ style: RevealAnimation, revealed: Bool) -> Animation? {
         switch style {
         case .instant:
             nil

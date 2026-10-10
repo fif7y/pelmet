@@ -1161,6 +1161,64 @@
         }
       }
     },
+    "A grid under the chevron, in your menu bar order. Nothing hides behind the notch.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Raster unter dem Pfeil, in der Reihenfolge deiner Menüleiste. Nichts verschwindet hinter der Notch."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una cuadrícula bajo el chevrón, en el orden de tu barra de menús. Nada se esconde tras la muesca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une grille sous le chevron, dans l’ordre de votre barre des menus. Rien ne se cache derrière l’encoche."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una griglia sotto la freccia, nell’ordine della tua barra dei menu. Niente si nasconde dietro il notch."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェブロンの下にグリッドで、メニューバーと同じ順に並びます。ノッチの裏に隠れるものはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화살표 아래에 메뉴 막대 순서대로 격자로 표시됩니다. 노치 뒤에 가려지는 것이 없습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma grade sob a seta, na ordem da sua barra de menus. Nada se esconde atrás do notch."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сетка под стрелкой, в порядке вашей строки меню. Ничего не прячется за вырезом."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在箭头下方以网格显示，顺序与菜单栏一致。不会有图标藏在刘海后面。"
+          }
+        }
+      }
+    },
     "A star helps more people find Pelmet.": {
       "localizations": {
         "de": {
@@ -3713,6 +3771,64 @@
         }
       }
     },
+    "As you left it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie du es verlassen hast"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Como lo dejaste"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comme vous l’avez laissé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come l’hai lasciata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回のまま"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 상태 그대로"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Como você deixou"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Как вы оставили"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持上次状态"
+          }
+        }
+      }
+    },
     "Auto": {
       "localizations": {
         "de": {
@@ -3767,6 +3883,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "自动"
+          }
+        }
+      }
+    },
+    "Auto picks a width that fits your icons. You can also drag the panel's edge.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch wählt eine Breite, die zu deinen Symbolen passt. Du kannst auch am Rand des Panels ziehen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automático elige un ancho que se ajusta a tus iconos. También puedes arrastrar el borde del panel."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto choisit une largeur adaptée à vos icônes. Vous pouvez aussi faire glisser le bord du panneau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto sceglie una larghezza adatta alle tue icone. Puoi anche trascinare il bordo del pannello."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動にすると、アイコンに合った幅を選びます。パネルの端をドラッグして変えることもできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동은 아이콘에 맞는 너비를 고릅니다. 패널 가장자리를 드래그할 수도 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automático escolhe uma largura que cabe seus ícones. Você também pode arrastar a borda do painel."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«Авто» подбирает ширину под ваши значки. Можно также потянуть край панели."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“自动”会选择适合你图标的宽度。你也可以拖移面板边缘。"
           }
         }
       }
@@ -5395,6 +5569,64 @@
         }
       }
     },
+    "Columns": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Columnas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colonnes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colonne"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "列数"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colunas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Столбцы"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "列数"
+          }
+        }
+      }
+    },
     "Continue": {
       "localizations": {
         "de": {
@@ -6029,6 +6261,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "显示器"
+          }
+        }
+      }
+    },
+    "Don't show": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht zeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No mostrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne pas afficher"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non mostrare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示しない"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표시 안 함"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não mostrar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не показывать"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不显示"
           }
         }
       }
@@ -7189,6 +7479,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "专注模式设置…"
+          }
+        }
+      }
+    },
+    "Folded each time": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Mal eingeklappt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plegado cada vez"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replié à chaque fois"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiusa ogni volta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "毎回折りたたむ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "매번 접기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recolhido toda vez"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Каждый раз свёрнут"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每次都折叠"
           }
         }
       }
@@ -8759,6 +9107,64 @@
         }
       }
     },
+    "Icons": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iconos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icônes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아이콘"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ícones"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Значки"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图标"
+          }
+        }
+      }
+    },
     "Icons from the same app hide together": {
       "localizations": {
         "de": {
@@ -9335,6 +9741,122 @@
           "stringUnit": {
             "state": "translated",
             "value": "快捷键、别名和历史记录已移至“搜索”。"
+          }
+        }
+      }
+    },
+    "Keeps the groups you made in the menu bar apart.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hält die Gruppen, die du in der Menüleiste gebildet hast, getrennt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantiene separados los grupos que hiciste en la barra de menús."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garde séparés les groupes que vous avez faits dans la barre des menus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiene separati i gruppi che hai creato nella barra dei menu."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーで作ったグループを分けて表示します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대에서 만든 그룹을 서로 떨어뜨려 둡니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantém separados os grupos que você criou na barra de menus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Держит раздельно группы, которые вы сделали в строке меню."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让你在菜单栏中建立的分组彼此分开。"
+          }
+        }
+      }
+    },
+    "Keeps the groups you made in the menu bar together, one row each.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hält die Gruppen, die du in der Menüleiste gebildet hast, zusammen, je eine Zeile."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantiene juntos los grupos que hiciste en la barra de menús, una fila cada uno."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garde ensemble les groupes que vous avez faits dans la barre des menus, une rangée chacun."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiene insieme i gruppi che hai creato nella barra dei menu, una riga ciascuno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーで作ったグループをまとめ、1グループ1行で表示します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대에서 만든 그룹을 한 줄에 하나씩 모아 둡니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantém juntos os grupos que você criou na barra de menus, uma linha cada."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Держит вместе группы, которые вы сделали в строке меню, по ряду на каждую."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让你在菜单栏中建立的分组各自成行。"
           }
         }
       }
@@ -10383,6 +10905,64 @@
         }
       }
     },
+    "Menu bar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menüleiste"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra de menús"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre des menus"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra dei menu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra de menus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В строке меню"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单栏"
+          }
+        }
+      }
+    },
     "Menu bar icon": {
       "localizations": {
         "de": {
@@ -10847,6 +11427,64 @@
         }
       }
     },
+    "Names under each icon. Off fits more in a row.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Namen unter jedem Symbol. Aus passen mehr in eine Zeile."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombres bajo cada icono. Desactivado, caben más por fila."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le nom sous chaque icône. Désactivé, une rangée en contient plus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il nome sotto ogni icona. Disattivato, ne entrano di più in una riga."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各アイコンの下に名前を表示。オフにすると1行により多く並びます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각 아이콘 아래에 이름을 표시합니다. 끄면 한 줄에 더 많이 들어갑니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nomes sob cada ícone. Desativado, cabem mais por linha."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Название под каждым значком. Без них в ряд помещается больше."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在每个图标下显示名称。关闭后每行可放下更多图标。"
+          }
+        }
+      }
+    },
     "Names you give": {
       "localizations": {
         "de": {
@@ -10901,6 +11539,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "你起的名字"
+          }
+        }
+      }
+    },
+    "New": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuevo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveau"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Novità"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로움"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Novo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новое"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新"
           }
         }
       }
@@ -12181,6 +12877,64 @@
         }
       }
     },
+    "One row under the menu bar, at menu bar size. Nothing hides behind the notch.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Zeile unter der Menüleiste, in Menüleistengröße. Nichts verschwindet hinter der Notch."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una fila bajo la barra de menús, a su tamaño. Nada se esconde tras la muesca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une rangée sous la barre des menus, à sa taille. Rien ne se cache derrière l’encoche."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una riga sotto la barra dei menu, alla sua dimensione. Niente si nasconde dietro il notch."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーの下に、メニューバーと同じサイズで1列に並びます。ノッチの裏に隠れるものはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대 아래에 같은 크기로 한 줄로 표시됩니다. 노치 뒤에 가려지는 것이 없습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma linha sob a barra de menus, no tamanho dela. Nada se esconde atrás do notch."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Один ряд под строкой меню, в её размер. Ничего не прячется за вырезом."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在菜单栏下方排成一行，大小与菜单栏一致。不会有图标藏在刘海后面。"
+          }
+        }
+      }
+    },
     "Only while app is running": {
       "localizations": {
         "de": {
@@ -12931,6 +13685,180 @@
           "stringUnit": {
             "state": "translated",
             "value": "可选。没有它，图标会按 macOS 的方式显示和隐藏。"
+          }
+        }
+      }
+    },
+    "Out of the panel. ⌥-click the chevron or search to reach them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht im Panel. ⌥-Klick auf den Pfeil oder die Suche bringt dich hin."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuera del panel. ⌥-clic en el chevrón o la búsqueda para llegar a ellos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hors du panneau. ⌥-clic sur le chevron ou la recherche pour les atteindre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuori dal pannello. ⌥-clic sulla freccia o la ricerca per raggiungerle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パネルには表示しません。シェブロンを⌥-クリックするか、検索で表示できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "패널에 표시하지 않습니다. 화살표를 ⌥-클릭하거나 검색해서 찾을 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fora do painel. ⌥-clique na seta ou use a busca para chegar a eles."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не в панели. ⌥-щелчок по стрелке или поиск открывают их."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在面板中显示。按住 ⌥ 点按箭头或使用搜索即可找到。"
+          }
+        }
+      }
+    },
+    "Out of the row until you turn them on in its right-click menu.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht in der Zeile, bis du sie in ihrem Kontextmenü einschaltest."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuera de la fila hasta que los actives en su menú contextual."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hors de la rangée jusqu’à ce que vous les activiez dans son menu contextuel."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuori dalla riga finché non le attivi dal suo menu contestuale."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "横一列の右クリックメニューでオンにするまで表示しません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 줄의 오른쪽 클릭 메뉴에서 켜기 전까지 표시하지 않습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fora da linha até você ativá-los no menu de contexto dela."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не в ряду, пока вы не включите их в его контекстном меню."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在单行的右键菜单中打开前不会显示。"
+          }
+        }
+      }
+    },
+    "Out of the row. ⌥-click the chevron or search to reach them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht in der Zeile. ⌥-Klick auf den Pfeil oder die Suche bringt dich hin."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuera de la fila. ⌥-clic en el chevrón o la búsqueda para llegar a ellos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hors de la rangée. ⌥-clic sur le chevron ou la recherche pour les atteindre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuori dalla riga. ⌥-clic sulla freccia o la ricerca per raggiungerle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "横一列には表示しません。シェブロンを⌥-クリックするか、検索で表示できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 줄에 표시하지 않습니다. 화살표를 ⌥-클릭하거나 검색해서 찾을 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fora da linha. ⌥-clique na seta ou use a busca para chegar a eles."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не в ряду. ⌥-щелчок по стрелке или поиск открывают их."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在单行中显示。按住 ⌥ 点按箭头或使用搜索即可找到。"
           }
         }
       }
@@ -14033,6 +14961,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "按分区实际重排菜单栏，位置不当的图标每次显示时都会推挤相邻图标。"
+          }
+        }
+      }
+    },
+    "Pick Panel or Row to set names, columns and groups.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle Panel oder Zeile, um Namen, Spalten und Gruppen einzustellen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige Panel o Fila para ajustar nombres, columnas y grupos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez Panneau ou Rangée pour régler les noms, les colonnes et les groupes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli Pannello o Riga per impostare nomi, colonne e gruppi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前、列数、グループを設定するには、パネルか横一列を選びます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름, 열, 그룹을 설정하려면 패널이나 한 줄을 고르세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha Painel ou Linha para ajustar nomes, colunas e grupos."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите «Панель» или «Ряд», чтобы настроить названия, столбцы и группы."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择“面板”或“单行”即可设置名称、列数和分组。"
           }
         }
       }
@@ -16705,6 +17691,64 @@
         }
       }
     },
+    "Separators start a new row": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trennlinien beginnen eine neue Zeile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los separadores empiezan una fila nueva"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les séparateurs commencent une nouvelle rangée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I separatori iniziano una nuova riga"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "区切りで改行する"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구분자에서 새 줄 시작"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Separadores começam uma nova linha"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разделители начинают новый ряд"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分隔符另起一行"
+          }
+        }
+      }
+    },
     "Set Shortcut…": {
       "localizations": {
         "de": {
@@ -17227,6 +18271,64 @@
         }
       }
     },
+    "Show hidden icons in": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgeblendete Symbole zeigen in"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar los iconos ocultos en"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les icônes masquées dans"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra le icone nascoste in"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非表示アイコンの表示場所"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "숨긴 아이콘 표시 위치"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar ícones ocultos em"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать скрытые значки"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏图标显示于"
+          }
+        }
+      }
+    },
     "Show in Menu Bar": {
       "localizations": {
         "de": {
@@ -17281,6 +18383,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "在菜单栏中显示"
+          }
+        }
+      }
+    },
+    "Show names": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Namen zeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar nombres"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les noms"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra nomi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前を表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름 표시"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar nomes"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать названия"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示名称"
           }
         }
       }
@@ -19315,6 +20475,64 @@
         }
       }
     },
+    "The fold at the end of the panel.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Klappbereich am Ende des Panels."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El plegable al final del panel."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le volet au bas du panneau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La sezione pieghevole in fondo al pannello."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パネル末尾の折りたたみ部分です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "패널 끝에 접혀 있는 부분입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A dobra no fim do painel."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Свёрнутый блок в конце панели."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "面板末尾的折叠区。"
+          }
+        }
+      }
+    },
     "The new language applies the next time Pelmet opens. Your menu bar layout is kept.": {
       "localizations": {
         "de": {
@@ -19485,6 +20703,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "然后在 %@ 的设置中关闭原图标。"
+          }
+        }
+      }
+    },
+    "They slide out beside the chevron.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie gleiten neben dem Pfeil heraus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se deslizan junto al chevrón."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elles sortent à côté du chevron."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorrono fuori accanto alla freccia."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェブロンの横にスライドして現れます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화살표 옆으로 밀려 나옵니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elas deslizam para fora ao lado da seta."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Они выезжают рядом со стрелкой."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "它们会在箭头旁滑出。"
           }
         }
       }
@@ -20007,6 +21283,180 @@
           "stringUnit": {
             "state": "translated",
             "value": "计时器结束"
+          }
+        }
+      }
+    },
+    "Try it: click the chevron.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probier es aus: Klick auf den Pfeil."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pruébalo: haz clic en el chevrón."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essayez : cliquez sur le chevron."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova: fai clic sulla freccia."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試してみましょう：シェブロンをクリック。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해 보기: 화살표를 클릭하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimente: clique na seta."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Попробуйте: нажмите на стрелку."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试一试：点按箭头。"
+          }
+        }
+      }
+    },
+    "Try it: drag the panel's left edge, right-click it, or click it and type.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probier es aus: Zieh am linken Rand des Panels, klick es mit rechts an oder klick hinein und tippe."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pruébalo: arrastra el borde izquierdo del panel, haz clic derecho en él, o haz clic y escribe."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essayez : faites glisser le bord gauche du panneau, faites un clic droit dessus, ou cliquez dedans et tapez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova: trascina il bordo sinistro del pannello, fai clic destro, oppure fai clic e digita."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試してみましょう：パネルの左端をドラッグ、右クリック、またはクリックして入力。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해 보기: 패널 왼쪽 가장자리를 드래그하거나, 오른쪽 클릭하거나, 클릭한 뒤 입력하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimente: arraste a borda esquerda do painel, clique com o botão direito nele, ou clique e digite."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Попробуйте: потяните левый край панели, нажмите на неё правой кнопкой или щёлкните и печатайте."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试一试：拖移面板左边缘、右键点按它，或点按后输入。"
+          }
+        }
+      }
+    },
+    "Try it: right-click it, or click it and type.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probier es aus: Klick es mit rechts an oder klick hinein und tippe."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pruébalo: haz clic derecho en ella, o haz clic y escribe."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essayez : faites un clic droit dessus, ou cliquez dedans et tapez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova: fai clic destro, oppure fai clic e digita."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試してみましょう：右クリック、またはクリックして入力。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해 보기: 오른쪽 클릭하거나, 클릭한 뒤 입력하세요."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimente: clique com o botão direito nela, ou clique e digite."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Попробуйте: нажмите правой кнопкой или щёлкните и печатайте."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试一试：右键点按它，或点按后输入。"
           }
         }
       }

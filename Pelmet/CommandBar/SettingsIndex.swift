@@ -23,6 +23,9 @@ enum SettingsIndex {
         func behavior(_ id: String, _ title: String, _ keywords: [String]) -> SettingsIndexEntry {
             SettingsIndexEntry(id: id, title: title, tab: .behavior, keywords: keywords)
         }
+        func panel(_ id: String, _ title: String, _ keywords: [String]) -> SettingsIndexEntry {
+            SettingsIndexEntry(id: id, title: title, tab: .panel, keywords: keywords)
+        }
         func search(_ id: String, _ title: String, _ keywords: [String]) -> SettingsIndexEntry {
             SettingsIndexEntry(id: id, title: title, tab: .search, keywords: keywords)
         }
@@ -65,6 +68,17 @@ enum SettingsIndex {
             behavior("clockClick", String(localized: "Clicking the clock opens Notification Center"),
                      ["notification center", "clock", "calendar", "shortcut"]),
 
+            panel("hiddenIconsIn", String(localized: "Show hidden icons in"),
+                  ["panel", "grid", "row", "notch", "overflow", "dropdown", "tray", "layout"]),
+            panel("panelNames", String(localized: "Show names"),
+                  ["labels", "names", "titles", "panel"]),
+            panel("panelColumns", String(localized: "Columns"),
+                  ["width", "per row", "grid", "panel"]),
+            panel("panelGroups", String(localized: "Separators start a new row"),
+                  ["groups", "separator", "dividers", "panel"]),
+            panel("panelAlwaysHidden", String(localized: "Always Hidden"),
+                  ["fold", "always hidden", "panel"]),
+
             search("searchHotkey", String(localized: "Search the menu bar"),
                    ["command bar", "find", "shortcut", "hotkey"]),
             search("itemShortcuts", String(localized: "Aliases and shortcuts"),
@@ -80,6 +94,7 @@ enum SettingsIndex {
         case .general: String(localized: "General")
         case .behavior: String(localized: "Behavior")
         case .menuBar: String(localized: "Menu Bar")
+        case .panel: String(localized: "Panel")
         case .search: String(localized: "Search")
         default: tab.rawValue
         }

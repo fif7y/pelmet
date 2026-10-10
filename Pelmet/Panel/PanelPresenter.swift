@@ -197,25 +197,26 @@ final class PanelPresenter: RevealPresenter {
     /// The mock's keys: type to filter, arrows and Return, Esc clears the
     /// filter and then closes. True when the key was the panel's.
     private func handleKey(_ event: NSEvent) -> Bool {
-        let mods = event.modifierFlags.intersection([.command, .control])
-        switch event.keyCode {
-        case 53:  // Esc
+        guard let key = PanelKey(event) else { return false }
+        switch key {
+        case .escape:
             if query.isEmpty { appState?.concealNow() } else { setQuery("") }
-        case 36, 76:  // Return, Enter
+        case .enter:
             if let tile = selected ?? lastModel?.bestMatch { press(tile) }
-        case 123: moveSelection(.left)
-        case 124: moveSelection(.right)
-        case 125: moveSelection(.down)
-        case 126: moveSelection(.up)
-        case 51:  // Delete
+        case .move(let direction):
+            guard let content = lastContent else { break }
+            switch content.step(from: selected, toward: direction) {
+            case .select(let tile):
+                selected = tile
+                refresh()
+            case .unfold: toggleFold()
+            case .stay: break
+            }
+        case .delete:
             if !query.isEmpty { setQuery(String(query.dropLast())) }
-        default:
-            guard mods.isEmpty, let typed = event.characters, !typed.isEmpty,
-                  // Function keys type private-use characters.
-                  typed.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) && !(0xF700...0xF8FF).contains($0.value) }),
-                  !(query.isEmpty && typed == " ")
-            else { return false }
-            setQuery(query + typed)
+        case .type(let typed):
+            guard let new = PanelKey.query(query, typing: typed) else { return false }
+            setQuery(new)
         }
         return true
     }
@@ -224,40 +225,6 @@ final class PanelPresenter: RevealPresenter {
         query = new
         selectBest = true
         refresh()
-    }
-
-    /// Along the section's grid; off its edge into the next section, and
-    /// down past the last one opens a folded Always Hidden.
-    private func moveSelection(_ direction: PanelGrid.Direction) {
-        guard let content = lastContent else { return }
-        let grids = content.blocks.filter { !$0.isFolded }.map(\.grid)
-        func select(_ tile: PanelTile?) {
-            guard let tile else { return }
-            selected = tile
-            refresh()
-        }
-        guard let current = selected, let g = grids.firstIndex(where: { $0.placement(of: current) != nil }),
-              let here = grids[g].placement(of: current)
-        else {
-            select(grids.lazy.compactMap(\.firstTile).first)
-            return
-        }
-        if let next = grids[g].neighbour(of: current, toward: direction) {
-            select(next)
-            return
-        }
-        func atColumn(_ row: [PanelGrid.Placement]?) -> PanelTile? {
-            guard let row, !row.isEmpty else { return nil }
-            return row[min(here.column, row.count - 1)].tile
-        }
-        switch direction {
-        case .right where g + 1 < grids.count: select(grids[g + 1].firstTile)
-        case .left where g > 0: select(grids[g - 1].rows.last?.last?.tile)
-        case .down where g + 1 < grids.count: select(atColumn(grids[g + 1].rows.first))
-        case .up where g > 0: select(atColumn(grids[g - 1].rows.last))
-        case .down where content.blocks.contains(where: \.isFolded): toggleFold()
-        default: break
-        }
     }
 
     private func removeKeyMonitor() {
@@ -302,13 +269,27 @@ final class PanelPresenter: RevealPresenter {
     private func refresh() -> (tiles: Int, missing: [ItemID]) {
         guard let appState else { return (0, []) }
         let (_, hosting) = ensureWindow()
-        let (content, missing) = buildContent(appState)
+        var (content, missing, model) = buildContent(
+            appState, layout: appState.revealTarget.panelLayout ?? .panel, query: query, selected: selected,
+            foldOpen: foldOpen, alwaysRequested: sections.contains(.alwaysHidden))
+        lastModel = model
+        if selectBest {
+            selectBest = false
+            selected = query.isEmpty ? nil : model.bestMatch
+            content.selected = selected.flatMap { content.art[$0] == nil ? nil : $0 }
+        }
+        // A filter or a fold can take the selected tile away.
+        selected = content.selected
+        content.columnsTip = columnsTip
+        lastContent = content
         let view = PanelView(
             content: content,
             onPress: { [weak self] tile in self?.press(tile) },
             onFold: { [weak self] in self?.toggleFold() },
             tileMenu: { [weak self] tile in self?.menu(for: tile) ?? [] },
-            panelMenu: { [weak self] in self?.panelMenu() ?? [] },
+            panelMenu: { [weak self] in
+                self?.panelMenu(shown: self?.lastContent) { [weak self] in self?.toggleFold() } ?? []
+            },
             onColumnsDrag: { [weak self] ended in self?.dragColumns(ended: ended) },
             onColumnsReset: { [weak self] in self?.resetColumns() })
         hosting.rootView = view
@@ -318,9 +299,33 @@ final class PanelPresenter: RevealPresenter {
         return (content.art.count, missing)
     }
 
-    private func buildContent(_ appState: AppState) -> (PanelContent, missing: [ItemID]) {
+    /// The command bar's candidates afresh, as an open reads them: the
+    /// Settings preview shows the apps that are running now.
+    func readCorpus() {
+        guard let appState, !isOpen else { return }
+        corpus = CommandBarCorpus.build(appState: appState)
+        history = CommandBarController.loadHistory()
+    }
+
+    /// The panel as it would open now, for the Settings preview: its own
+    /// filter, selection and fold.
+    func previewContent(layout: PanelGrid.Layout, query: String, selected: PanelTile?, foldOpen: Bool)
+        -> (content: PanelContent, missing: [ItemID], model: PanelModel)?
+    {
+        guard let appState else { return nil }
+        if corpus.isEmpty { corpus = CommandBarCorpus.build(appState: appState) }
+        let built = buildContent(appState, layout: layout, query: query, selected: selected,
+                                 foldOpen: foldOpen, alwaysRequested: false)
+        return (built.content, built.missing, built.model)
+    }
+
+    /// What `refresh` and the preview draw: no state of the presenter's
+    /// changes. A selection the filter or fold took away comes back nil.
+    private func buildContent(_ appState: AppState, layout: PanelGrid.Layout, query: String, selected: PanelTile?,
+                              foldOpen: Bool, alwaysRequested: Bool)
+        -> (content: PanelContent, missing: [ItemID], model: PanelModel)
+    {
         let options = appState.settings.panel
-        let layout = appState.revealTarget.panelLayout ?? .panel
         // The editor's board, as Search reads it: live items, the concealed
         // ones that left the AX tree (the walk's `concealed` alone misses
         // system items such as Sound) and Pelmet's own extras, less those
@@ -338,15 +343,10 @@ final class PanelPresenter: RevealPresenter {
             didntFit: appState.overflowTrappedItems,
             launchers: launchers,
             options: options,
-            alwaysHiddenRequested: sections.contains(.alwaysHidden),
+            alwaysHiddenRequested: alwaysRequested,
             query: query,
             candidates: corpus.map(\.candidate),
             history: history)
-        lastModel = model
-        if selectBest {
-            selected = query.isEmpty ? nil : model.bestMatch
-            selectBest = false
-        }
 
         // What is on screen, in stacking order. A folded Always Hidden draws
         // its fold row only; the row layout has no fold, so it leaves it out.
@@ -357,6 +357,7 @@ final class PanelPresenter: RevealPresenter {
             if layout == .row && folded { return nil }
             return Shown(section: section, folded: folded)
         }
+        let alwaysShown = shown.contains { $0.section.kind == .alwaysHidden && !$0.folded }
         if layout == .row {
             // One row, as the bar draws it: Always Hidden left of Hidden, a
             // divider between groups.
@@ -374,7 +375,8 @@ final class PanelPresenter: RevealPresenter {
             .map { PanelGrid.neededColumns(of: $0.section.tiles, maximum: columns) }.max() ?? 1
         let didntFitShown = shown.contains { $0.section.kind == .didntFit }
         var content = PanelContent(layout: layout, query: query)
-        content.columnsTip = columnsTip
+        content.hasAlwaysHidden = model.sections.contains { $0.kind == .alwaysHidden && $0.count > 0 }
+        content.showsAlwaysHidden = alwaysShown
         content.blocks = shown.map { entry in
             PanelBlock(
                 kind: entry.section.kind,
@@ -414,11 +416,8 @@ final class PanelPresenter: RevealPresenter {
                 }
             }
         }
-        // A filter or a fold can take the selected tile away.
-        if let selected, content.art[selected] == nil { self.selected = nil }
-        content.selected = self.selected
-        lastContent = content
-        return (content, missing)
+        content.selected = selected.flatMap { content.art[$0] == nil ? nil : $0 }
+        return (content, missing, model)
     }
 
     private static func standIn(for id: ItemID) -> NSImage {
@@ -433,7 +432,7 @@ final class PanelPresenter: RevealPresenter {
 
     // MARK: - Actions
 
-    private func press(_ tile: PanelTile) {
+    func press(_ tile: PanelTile) {
         guard let appState else { return }
         switch tile {
         case .item(let key):
@@ -454,31 +453,43 @@ final class PanelPresenter: RevealPresenter {
 
     // MARK: - Columns
 
-    /// Columns from where the pointer is: the panel's right edge stays put,
-    /// so each tile's width left of it is one more column. Two at least, no
-    /// more than the widest section can fill, ten at most. Stored for the
-    /// current names mode.
-    private func dragColumns(ended: Bool) {
-        guard let appState, let window else { return }
+    /// Columns from the pointer, `distance` left of the panel's right edge:
+    /// that edge stays put, so each tile's width left of it is one more
+    /// column. Two at least, no more than the widest section of `model` can
+    /// fill, ten at most. Stored for the current names mode; returned for
+    /// the tip.
+    @discardableResult
+    func setColumns(distance: CGFloat, model: PanelModel?) -> Int {
+        guard let appState else { return 0 }
         let options = appState.settings.panel
         let metrics = PanelMetrics.standard(layout: .panel, showsNames: options.showsNames)
         let pitch = metrics.tileSize.width + metrics.columnGap
-        let want = Int(((window.frame.maxX - metrics.padding - NSEvent.mouseLocation.x + metrics.columnGap) / pitch).rounded())
-        let most = max(2, lastModel?.sections.map { PanelGrid.neededColumns(of: $0.tiles, maximum: 10) }.max() ?? 2)
+        let want = Int(((distance - metrics.padding + metrics.columnGap) / pitch).rounded())
+        let most = max(2, model?.sections.map { PanelGrid.neededColumns(of: $0.tiles, maximum: 10) }.max() ?? 2)
         let columns = min(max(want, 2), most)
         if options.columns != columns {
             appState.settings.panel.columns = columns
             appState.settingsChanged()
             PelmetLog.log("panel: \(columns) column(s)")
         }
-        showTip(String(localized: "\(columns) per row"), for: ended ? 0.5 : nil)
+        return columns
     }
 
-    private func resetColumns() {
+    func setAutoColumns() {
         guard let appState else { return }
         appState.settings.panel.columns = nil
         appState.settingsChanged()
         PelmetLog.log("panel: columns Auto")
+    }
+
+    private func dragColumns(ended: Bool) {
+        guard let window else { return }
+        let columns = setColumns(distance: window.frame.maxX - NSEvent.mouseLocation.x, model: lastModel)
+        showTip(String(localized: "\(columns) per row"), for: ended ? 0.5 : nil)
+    }
+
+    private func resetColumns() {
+        setAutoColumns()
         showTip(String(localized: "Auto"), for: 0.8)
     }
 
@@ -500,7 +511,7 @@ final class PanelPresenter: RevealPresenter {
 
     /// The mock's tile menu: the presses, the moves between sections, the
     /// app. The command bar's ⌘K list has the same rows.
-    private func menu(for tile: PanelTile) -> [PanelMenuRow] {
+    func menu(for tile: PanelTile) -> [PanelMenuRow] {
         guard let appState else { return [] }
         switch tile {
         case .item(let key):
@@ -551,11 +562,12 @@ final class PanelPresenter: RevealPresenter {
     }
 
     /// The mock's panel menu: the layout, names, Always Hidden, Settings.
-    private func panelMenu() -> [PanelMenuRow] {
+    /// `shown` is what the panel it opens on draws, `toggleFold` its fold.
+    func panelMenu(shown: PanelContent?, toggleFold: @escaping () -> Void) -> [PanelMenuRow] {
         guard let appState else { return [] }
         let layout = appState.revealTarget.panelLayout ?? .panel
-        let alwaysShown = lastContent?.blocks.contains { $0.kind == .alwaysHidden && !$0.isFolded } ?? false
-        let hasAlways = lastContent?.blocks.contains { $0.kind == .alwaysHidden } ?? false
+        let alwaysShown = shown?.showsAlwaysHidden ?? false
+        let hasAlways = shown?.hasAlwaysHidden ?? false
         return [
             .header(String(localized: "Layout")),
             .check(String(localized: "Panel"), layout == .panel) { [weak self] in self?.setTarget(.panel) },
@@ -565,38 +577,40 @@ final class PanelPresenter: RevealPresenter {
                 guard let self, let appState = self.appState else { return }
                 appState.settings.panel.showsNames.toggle()
                 appState.settingsChanged()
-                self.refresh()
+                if self.isOpen { self.refresh() }
             },
-            .check(String(localized: "Always Hidden"), alwaysShown, enabled: hasAlways) { [weak self] in self?.toggleFold() },
+            .check(String(localized: "Always Hidden"), alwaysShown, enabled: hasAlways, toggleFold),
             .divider,
             .action(String(localized: "Pelmet Settings…")) { [weak appState] in
                 appState?.concealNow()
-                appState?.openSettings(tab: .menuBar)
+                appState?.openSettings(tab: .panel)
             },
         ]
     }
 
     /// The layout picked from the panel's menu is the setting from then on:
     /// the dev override gives way to it.
-    private func setTarget(_ target: RevealTarget) {
+    func setTarget(_ target: RevealTarget) {
         guard let appState else { return }
         UserDefaults.standard.removeObject(forKey: "pelmet.debug.panel")
         appState.settings.hiddenIconsIn = target
         appState.settingsChanged()
         PelmetLog.log("panel: layout \(target.rawValue)")
-        refresh()
+        if isOpen { refresh() }
+    }
+
+    /// Always Hidden's fold flipped on a panel that shows it (`shown`) or
+    /// not; returns that panel's own fold. As you left it: the setting
+    /// carries the fold to the next open, and the panel's own stays shut.
+    func flipFold(shown: Bool, foldOpen: Bool) -> Bool {
+        guard let appState, appState.settings.panel.alwaysHidden == .asLeft else { return !foldOpen }
+        appState.settings.panel.alwaysHiddenOpen = !shown
+        appState.settingsChanged()
+        return false
     }
 
     private func toggleFold() {
-        if let appState, appState.settings.panel.alwaysHidden == .asLeft {
-            // Left as it was: the next open finds it the same way.
-            let shown = lastContent?.blocks.contains { $0.kind == .alwaysHidden && !$0.isFolded } ?? false
-            appState.settings.panel.alwaysHiddenOpen = !shown
-            appState.settingsChanged()
-            foldOpen = false
-        } else {
-            foldOpen.toggle()
-        }
+        foldOpen = flipFold(shown: lastContent?.showsAlwaysHidden ?? false, foldOpen: foldOpen)
         let shown = refresh()
         picturePassIfNeeded(shown.missing)
     }
@@ -645,8 +659,9 @@ final class PanelPresenter: RevealPresenter {
         if isOpen { refresh() }
     }
 
-    /// The pass, once, when the open panel shows tiles with no picture.
-    private func picturePassIfNeeded(_ missing: [ItemID]) {
+    /// The pass, once, when the open panel (or the Settings preview) shows
+    /// tiles with no picture. `done` runs once pictures were stored.
+    func picturePassIfNeeded(_ missing: [ItemID], done: (@MainActor () -> Void)? = nil) {
         guard passTask == nil, let appState, appState.screenRecordingGranted else { return }
         let wanted = missing.filter { key in
             unpicturable[key].map { -$0.timeIntervalSinceNow >= ItemPictures.maxAge } ?? true
@@ -667,6 +682,7 @@ final class PanelPresenter: RevealPresenter {
                 return
             }
             self.pictures.store(found)
+            done?()
             let now = Date()
             for key in wanted where found[key] == nil { self.unpicturable[key] = now }
             let lost = wanted.filter { found[$0] == nil }.map(\.rawValue)

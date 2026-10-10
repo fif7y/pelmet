@@ -232,7 +232,6 @@ struct SearchPane: View {
 /// folder it lives in (iCloud Drive, Documents), 2026-10-09.
 private struct SearchDemoStage: View {
     @Environment(AppState.self) private var appState
-    @Environment(\.colorScheme) private var colorScheme
 
     /// Room for the bar at its tallest, under a strip of desktop.
     private static let top: CGFloat = 22
@@ -242,7 +241,7 @@ private struct SearchDemoStage: View {
         let demo = appState.searchDemo
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .top) {
-                backdrop
+                DemoBackdrop()
                     .contentShape(Rectangle())
                     .onTapGesture { demo.focus() }
                     .accessibilityHidden(true)
@@ -262,8 +261,14 @@ private struct SearchDemoStage: View {
         }
     }
 
-    /// Two soft blooms on a plain ground, enough for the glass to show.
-    private var backdrop: some View {
+}
+
+/// Two soft blooms on a plain ground, enough for the glass to show: the
+/// Search and Panel demos' desktop.
+struct DemoBackdrop: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
         let dark = colorScheme == .dark
         return ZStack {
             Color(white: dark ? 0.1 : 0.93)

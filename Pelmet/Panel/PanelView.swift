@@ -51,6 +51,12 @@ struct PanelContent {
     var selected: PanelTile?
     /// While the left edge is dragged: "4 per row", "Auto".
     var columnsTip: String?
+    /// Always Hidden has icons this panel can show, drawn or not: the row
+    /// draws no fold, its right-click menu opens it.
+    var hasAlwaysHidden = false
+    /// Always Hidden's tiles are on screen: unfolded in the panel, part of
+    /// the row.
+    var showsAlwaysHidden = false
     /// Nothing is hidden, or nothing matches: the panel says so instead of
     /// showing nothing.
     var isEmpty: Bool { blocks.allSatisfy { $0.count == 0 } }

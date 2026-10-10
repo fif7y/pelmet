@@ -236,7 +236,22 @@ final class PelmetStatusItem {
             styles.addItem(option)
         }
         animation.submenu = styles
-        var items: [NSMenuItem] = [toggle, showAll, .separator(), animation, search, settings, .separator(), quit]
+        // Where the hidden icons show, as Settings › Panel picks it.
+        let shownIn = NSMenuItem(title: String(localized: "Show hidden icons in"), action: nil, keyEquivalent: "")
+        let targets = NSMenu()
+        for (option, title) in [
+            (RevealTarget.menuBar, String(localized: "Menu bar")),
+            (.panel, String(localized: "Panel")),
+            (.row, String(localized: "Row")),
+        ] {
+            let item = NSMenuItem(title: title, action: #selector(AppMenuTarget.setRevealTarget(_:)), keyEquivalent: "")
+            item.representedObject = option.rawValue
+            item.state = appState.revealTarget == option ? .on : .off
+            item.target = target
+            targets.addItem(item)
+        }
+        shownIn.submenu = targets
+        var items: [NSMenuItem] = [toggle, showAll, .separator(), animation, shownIn, search, settings, .separator(), quit]
         // Same line in every right-click (chevron, separators, empty bar),
         // right under Settings: the About chip is the only other trace once
         // the banner is gone.
@@ -301,6 +316,11 @@ final class AppMenuTarget: NSObject {
               let style = RevealAnimation(rawValue: raw) else { return }
         appState.settings.revealAnimation = style
         appState.settingsChanged()
+    }
+    @objc func setRevealTarget(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let option = RevealTarget(rawValue: raw) else { return }
+        appState?.panelPresenter.setTarget(option)
     }
     @objc func grantAccessibility() { AccessibilityAccess.request() }
     /// The About pane is the update hub (chip, notes, toggles) — land there
