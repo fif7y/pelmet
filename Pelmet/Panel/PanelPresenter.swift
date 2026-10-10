@@ -27,6 +27,8 @@ final class PanelPresenter: RevealPresenter {
     let pictures = ItemPictures()
     private var window: KeyableGlassPanel?
     private var hosting: NSHostingView<PanelHost>?
+    /// The tracking area's owner, which it does not keep.
+    private var exitWatch: PointerExitWatch?
     private(set) var isOpen = false
     private var openedByHover = false
     private var sections: Set<PelmetCore.Section> = []
@@ -72,10 +74,24 @@ final class PanelPresenter: RevealPresenter {
     }
 
     /// Whether an armed rehide should wait: a panel opened on purpose holds
-    /// like a menu, a hover one only while the pointer is on it.
+    /// like a menu, a hover one while the pointer is on it or between it
+    /// and the bar. The gap under the bar is crossed on the way in, and
+    /// with no rehide delay the countdown ran out right there: the panel
+    /// closed before the pointer reached it (2026-10-09).
     var holdsReveal: Bool {
         guard isOpen, let window else { return false }
-        return !openedByHover || window.frame.contains(NSEvent.mouseLocation)
+        guard openedByHover else { return true }
+        var reach = window.frame
+        if let screen = window.screen { reach.size.height = screen.frame.maxY - reach.minY }
+        return reach.contains(NSEvent.mouseLocation)
+    }
+
+    /// Off a hover-opened panel is off the bar: the countdown starts at the
+    /// hover's delay, not at the next re-arm a second and a half on.
+    private func pointerLeftPanel() {
+        guard isOpen, openedByHover else { return }
+        PelmetLog.log("panel: pointer left a hover-opened panel")
+        appState?.pointerLeftBand()
     }
 
     // MARK: - RevealPresenter
@@ -142,6 +158,10 @@ final class PanelPresenter: RevealPresenter {
         hosting.sizingOptions = []
         let window = KeyableGlassPanel(content: hosting, cornerRadius: Self.cornerRadius)
         window.alphaValue = 0
+        let watch = PointerExitWatch { [weak self] in self?.pointerLeftPanel() }
+        window.contentView?.addTrackingArea(NSTrackingArea(
+            rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: watch, userInfo: nil))
+        exitWatch = watch
         self.window = window
         self.hosting = hosting
         return (window, hosting)
@@ -854,4 +874,18 @@ struct PanelHost: View {
     var body: some View {
         panel.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topTrailing)
     }
+}
+
+/// A tracking area's owner: the panel needs only the pointer's exit.
+private final class PointerExitWatch: NSResponder {
+    private let exited: () -> Void
+
+    init(_ exited: @escaping () -> Void) {
+        self.exited = exited
+        super.init()
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func mouseExited(with event: NSEvent) { exited() }
 }
