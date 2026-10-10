@@ -741,8 +741,10 @@ private struct FoldTileLabel: View {
             .animation(.easeOut(duration: 0.15), value: open)
             .frame(width: metrics.wellSize.width, height: metrics.wellSize.height)
             if grid.showsNames {
+                // A size under the names: "Always Hidden" is 77pt at 11,
+                // and the tile is 68 (Gab, 2026-10-10).
                 Text(title)
-                    .font(.system(size: 11))
+                    .font(.system(size: 9.5))
                     .foregroundStyle(ink.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
