@@ -32,14 +32,9 @@ final class ItemPictures {
         return picture
     }
 
-    /// Keys with no fresh picture, in the order given.
-    func missing(among keys: [ItemID]) -> [ItemID] { keys.filter { picture(for: $0) == nil } }
-
     func store(_ new: [ItemID: Picture]) {
         pictures.merge(new) { _, latest in latest }
     }
-
-    func forgetAll() { pictures = [:] }
 
     /// `snap` is one item's column of a keyed-out strip, trimmed to the
     /// glyph's own pixels: an AX frame is not centred on what its item draws

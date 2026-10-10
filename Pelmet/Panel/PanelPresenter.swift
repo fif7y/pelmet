@@ -681,9 +681,7 @@ final class PanelPresenter: RevealPresenter {
             panelMenu: { [weak self] in
                 self?.panelMenu(shown: self?.lastContent) { [weak self] in self?.toggleFold() } ?? []
             },
-            // The window moves as it widens: the pointer is read on screen.
-            onColumnsDrag: { [weak self] _, ended in self?.dragColumns(ended: ended) },
-            onColumnsReset: { [weak self] in self?.resetColumns() },
+            // The grip is the window's own (`updateGrip`), not the view's.
             drawsGrip: false,
             onTileDrag: { [weak self] tile, phase in self?.tileDragged(tile, phase) },
             drag: dragState,
@@ -1200,6 +1198,7 @@ final class PanelPresenter: RevealPresenter {
         guard let window else { return }
         draggingColumns = !ended
         if ended { awaitsPointer = true }
+        // The window moves as it widens: the pointer is read on screen.
         let columns = setColumns(distance: window.frame.maxX - NSEvent.mouseLocation.x, model: lastModel)
         showTip(String(localized: "\(columns) per row"), for: ended ? 0.5 : nil)
     }
