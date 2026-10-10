@@ -88,8 +88,13 @@ enum AppTiming {
     /// What one follow-up batch of the picture pass is given (swaps, settle
     /// walks, strip): the cover is held up that long, plus the lift reserve,
     /// when one starts, and a waiting reveal or press waits that much longer
-    /// at most. Not measured yet: the `pass: batch` log lines are.
+    /// at most. Measured 2026-10-10 with six icons and a menu bar too full
+    /// for three: a batch took 1.1 to 1.5s, most of it the wait for what was
+    /// put away to leave the AX tree.
     static let picturePassBatch: TimeInterval = 2.0
+    /// Longest a follow-up waits for the items it just put away to leave the
+    /// AX tree before reading the ones that took their place.
+    static let picturePassLeave: TimeInterval = 1.0
     /// Backdrop check delay after an animated window move (tiling key,
     /// activation, Space switch): a Space switch animates ~0.5s. A mouse-up
     /// is checked at once — the window is already where the drag left it.

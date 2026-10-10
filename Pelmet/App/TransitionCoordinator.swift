@@ -1265,14 +1265,37 @@ extension TransitionCoordinator {
         // A walk that shows the icons `watch` names and agrees with the one
         // before it: read while they still slid in, S1's crops were off by
         // up to an icon, and two walks from before they came agree too.
-        func settledWalk(watching watch: (ItemID) -> Bool) async -> EngineSnapshot {
-            await appState.waitUntilQuiesced(interval: 0.2, deadline: 2, poll: .milliseconds(30))
+        func settledWalk(
+            watching watch: (ItemID) -> Bool, quiet: TimeInterval = 0.2,
+            leaving: ((EngineSnapshot) -> Bool)? = nil, label: String? = nil
+        ) async -> EngineSnapshot {
+            await appState.waitUntilQuiesced(interval: quiet, deadline: 2, poll: .milliseconds(30))
+            // What was just put away leaves the agent's tree a moment later
+            // (system items such as Sound after the rest), and its frame
+            // overlaps the ones that took its place: a read with it still
+            // there takes those for phantoms, and films its pixels.
+            if let leaving {
+                let by = Date().addingTimeInterval(AppTiming.picturePassLeave)
+                var last = await engine.freshSnapshot()
+                while Date() < by, leaving(last) {
+                    try? await Task.sleep(for: .milliseconds(60))
+                    last = await engine.freshSnapshot()
+                }
+                if let label {
+                    let there = leaving(last) ? " (gave up, still there: \(last.items.filter { $0.frame != nil && !watch($0.id) && wanted($0.id) }.map { "\($0.id.rawValue) \($0.frame.map { "\(Int($0.minX))…\(Int($0.maxX))" } ?? "")" }))" : ""
+                    PelmetLog.log("pass: \(label) put away, gone at \(ms())ms\(there)")
+                }
+            }
             var snap = await engine.snapshot()
-            for _ in 0..<12 {
+            for k in 0..<12 {
                 try? await Task.sleep(for: .milliseconds(50))
                 let next = await engine.snapshot()
                 let arrived = next.items.contains { watch($0.id) && $0.frame != nil }
                 let settled = arrived && next.items.map(\.frame) == snap.items.map(\.frame)
+                if let label, settled || k == 11 {
+                    let mine = next.items.filter { watch($0.id) }.map { $0.frame.map { "\(Int($0.minX))…\(Int($0.maxX))" } ?? "none" }
+                    PelmetLog.log("pass: \(label) read at \(ms())ms after \(k + 1) walk(s) \(mine)\(settled ? "" : ", still moving")")
+                }
                 snap = next
                 if settled { break }
             }
@@ -1351,7 +1374,10 @@ extension TransitionCoordinator {
                 let back = itemsOut.subtracting(asked)
                 if !back.isEmpty { await engine.conceal(items: back) }
                 itemsOut = asked
-                let walk = await settledWalk { asked.contains($0.sectionKey) }
+                let walk = await settledWalk(
+                    watching: { asked.contains($0.sectionKey) },
+                    leaving: { snap in snap.items.contains { wanted($0.id) && !asked.contains($0.id.sectionKey) && $0.frame != nil } },
+                    label: "batch \(followUps)")
                 let bar = walk.items.compactMap { item in
                     item.frame.flatMap { MenuBarGeometry.isInPrimaryBand($0, primaryMaxX: primaryMaxX) ? (key: item.id.sectionKey, frame: $0) : nil }
                 }
