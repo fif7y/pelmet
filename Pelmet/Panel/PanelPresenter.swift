@@ -527,8 +527,8 @@ final class PanelPresenter: RevealPresenter {
     private func select(_ tile: PanelTile, in drawn: PanelContent) {
         selected = tile
         // A tile the panel doesn't show has no place to be selected: the
-        // refresh clears it.
-        guard let hosting, drawn.art[tile] != nil || tile == .fold else {
+        // refresh clears it. A fold under way ends in the refresh's place.
+        guard glassTimer == nil, let hosting, drawn.art[tile] != nil || tile == .fold else {
             refresh()
             return
         }
