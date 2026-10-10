@@ -1161,60 +1161,118 @@
         }
       }
     },
-    "A grid under the chevron, in your menu bar order. Nothing hides behind the notch.": {
+    "A grid under the chevron, in your menu bar order.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein Raster unter dem Pfeil, in der Reihenfolge deiner Menüleiste. Nichts verschwindet hinter der Notch."
+            "value": "Ein Raster unter dem Pfeil, in der Reihenfolge deiner Menüleiste."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una cuadrícula bajo el chevrón, en el orden de tu barra de menús. Nada se esconde tras la muesca."
+            "value": "Una cuadrícula bajo el chevrón, en el orden de tu barra de menús."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Une grille sous le chevron, dans l’ordre de votre barre des menus. Rien ne se cache derrière l’encoche."
+            "value": "Une grille sous le chevron, dans l’ordre de votre barre des menus."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una griglia sotto la freccia, nell’ordine della tua barra dei menu. Niente si nasconde dietro il notch."
+            "value": "Una griglia sotto la freccia, nell’ordine della tua barra dei menu."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "シェブロンの下にグリッドで、メニューバーと同じ順に並びます。ノッチの裏に隠れるものはありません。"
+            "value": "シェブロンの下にグリッドで、メニューバーと同じ順に並びます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "화살표 아래에 메뉴 막대 순서대로 격자로 표시됩니다. 노치 뒤에 가려지는 것이 없습니다."
+            "value": "화살표 아래에 메뉴 막대 순서대로 격자로 표시됩니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uma grade sob a seta, na ordem da sua barra de menus. Nada se esconde atrás do notch."
+            "value": "Uma grade sob a seta, na ordem da sua barra de menus."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сетка под стрелкой, в порядке вашей строки меню. Ничего не прячется за вырезом."
+            "value": "Сетка под стрелкой, в порядке вашей строки меню."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在箭头下方以网格显示，顺序与菜单栏一致。不会有图标藏在刘海后面。"
+            "value": "在箭头下方以网格显示，顺序与菜单栏一致。"
+          }
+        }
+      }
+    },
+    "A grid under the menu bar, in your menu bar order.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Raster unter der Menüleiste, in der Reihenfolge deiner Menüleiste."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una cuadrícula bajo la barra de menús, en el orden de tu barra de menús."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une grille sous la barre des menus, dans l’ordre de votre barre des menus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una griglia sotto la barra dei menu, nell’ordine della tua barra dei menu."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーの下にグリッドで、メニューバーと同じ順に並びます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴 막대 아래에 메뉴 막대 순서대로 격자로 표시됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma grade sob a barra de menus, na ordem da sua barra de menus."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сетка под строкой меню, в порядке вашей строки меню."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在菜单栏下方以网格显示，顺序与菜单栏一致。"
           }
         }
       }
@@ -12703,6 +12761,64 @@
         }
       }
     },
+    "Nothing hides behind the notch.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts verschwindet hinter der Notch."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada se esconde tras la muesca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien ne se cache derrière l’encoche."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niente si nasconde dietro il notch."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ノッチの裏に隠れるものはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노치 뒤에 가려지는 것이 없습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada se esconde atrás do notch."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ничего не прячется за вырезом."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不会有图标藏在刘海后面。"
+          }
+        }
+      }
+    },
     "Nothing to reset yet. Pelmet learns from the icons you open with Search.": {
       "localizations": {
         "de": {
@@ -13167,60 +13283,60 @@
         }
       }
     },
-    "One row under the menu bar, at menu bar size. Nothing hides behind the notch.": {
+    "One row under the menu bar, at menu bar size.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eine Zeile unter der Menüleiste, in Menüleistengröße. Nichts verschwindet hinter der Notch."
+            "value": "Eine Zeile unter der Menüleiste, in Menüleistengröße."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una fila bajo la barra de menús, a su tamaño. Nada se esconde tras la muesca."
+            "value": "Una fila bajo la barra de menús, a su tamaño."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Une rangée sous la barre des menus, à sa taille. Rien ne se cache derrière l’encoche."
+            "value": "Une rangée sous la barre des menus, à sa taille."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una riga sotto la barra dei menu, alla sua dimensione. Niente si nasconde dietro il notch."
+            "value": "Una riga sotto la barra dei menu, alla sua dimensione."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メニューバーの下に、メニューバーと同じサイズで1列に並びます。ノッチの裏に隠れるものはありません。"
+            "value": "メニューバーの下に、メニューバーと同じサイズで1列に並びます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "메뉴 막대 아래에 같은 크기로 한 줄로 표시됩니다. 노치 뒤에 가려지는 것이 없습니다."
+            "value": "메뉴 막대 아래에 같은 크기로 한 줄로 표시됩니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uma linha sob a barra de menus, no tamanho dela. Nada se esconde atrás do notch."
+            "value": "Uma linha sob a barra de menus, no tamanho dela."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Один ряд под строкой меню, в её размер. Ничего не прячется за вырезом."
+            "value": "Один ряд под строкой меню, в её размер."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在菜单栏下方排成一行，大小与菜单栏一致。不会有图标藏在刘海后面。"
+            "value": "在菜单栏下方排成一行，大小与菜单栏一致。"
           }
         }
       }

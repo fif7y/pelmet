@@ -37,6 +37,12 @@ final class PanelPresenter: RevealPresenter {
     private var draggingColumns = false
     private(set) var isOpen = false
     private var openedByHover = false
+    /// Opened from the bar under the pointer (hover, a click on the bar):
+    /// the pointer's display, not the chevron's.
+    private var opensUnderPointer = false
+    /// The display it opened on, kept until it closes: a refresh (a key, a
+    /// fold, a picture pass) never moves it to another one.
+    private var openScreen: CGDirectDisplayID?
     /// Held like a menu until the pointer is on the panel: opened from the
     /// keyboard, or reshaped by its column grip (a drag let go past the
     /// edge, or a reset that shrinks the panel from under the pointer,
@@ -106,10 +112,12 @@ final class PanelPresenter: RevealPresenter {
         if let screen = window.screen ?? NSScreen.main {
             reach.size.height = screen.frame.maxY - reach.minY
             let bar = GlassPanel.barHeight(of: screen)
-            if NSRect(x: screen.frame.minX, y: screen.frame.maxY - bar, width: screen.frame.width, height: bar)
-                .contains(pointer) { return true }
+            // NSMouseInRect: a pointer pushed to the top row sits at maxY,
+            // which `contains` leaves out.
+            if NSMouseInRect(pointer, NSRect(x: screen.frame.minX, y: screen.frame.maxY - bar,
+                                             width: screen.frame.width, height: bar), false) { return true }
         }
-        if reach.contains(pointer) { return true }
+        if NSMouseInRect(pointer, reach, false) { return true }
         PelmetLog.log("panel: let go — pointer at \(Int(pointer.x)),\(Int(pointer.y)), panel \(Int(reach.minX))…\(Int(reach.maxX))")
         return false
     }
@@ -143,6 +151,8 @@ final class PanelPresenter: RevealPresenter {
         self.sections = sections
         if !wasOpen {
             awaitsPointer = reason == .hotkey
+            opensUnderPointer = reason == .hover || reason == .click || reason == .doubleClick
+            openScreen = nil
             foldOpen = false
             query = ""
             selected = nil
@@ -198,6 +208,17 @@ final class PanelPresenter: RevealPresenter {
         hosting.sizingOptions = []
         let window = KeyableGlassPanel(content: hosting, cornerRadius: Self.cornerRadius)
         window.alphaValue = 0
+        // A display unplugged, the lid closed, a scale changed: place it
+        // again (on another display if its own is gone).
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.isOpen else { return }
+                PelmetLog.log("panel: screens changed, placing again")
+                self.refresh()
+            }
+        }
         // The column grip sits half past the glass's left edge, in a clear
         // margin of the window (`show` sets the window to take clicks on
         // its clear parts too).
@@ -447,12 +468,15 @@ final class PanelPresenter: RevealPresenter {
     private func place(_ size: CGSize) {
         guard let window, let appState else { return }
         let screens = NSScreen.screens
-        func screen(at point: NSPoint) -> NSScreen? { screens.first { $0.frame.contains(point) } }
+        func screen(at point: NSPoint) -> NSScreen? { screens.first { NSMouseInRect(point, $0.frame, false) } }
         let chevron = appState.chevronWindowFrame
         let chevronScreen = chevron.flatMap { screen(at: NSPoint(x: $0.midX, y: $0.midY)) }
         let pointerScreen = screen(at: NSEvent.mouseLocation)
-        guard let target = (openedByHover ? pointerScreen : nil) ?? chevronScreen ?? pointerScreen ?? NSScreen.main ?? screens.first
+        let kept = openScreen.flatMap { id in screens.first { $0.displayID == id } }
+        guard let target = kept ?? (opensUnderPointer ? pointerScreen : nil) ?? chevronScreen ?? pointerScreen
+            ?? NSScreen.main ?? screens.first
         else { return }
+        openScreen = target.displayID
         let margin = GlassPanel.edgeMargin
         var right = target.frame.maxX - margin
         if let chevron, let chevronScreen {
@@ -997,4 +1021,10 @@ private final class PointerWatch: NSResponder {
 
     override func mouseEntered(with event: NSEvent) { entered() }
     override func mouseExited(with event: NSEvent) { exited() }
+}
+
+private extension NSScreen {
+    var displayID: CGDirectDisplayID? {
+        deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+    }
 }

@@ -24,7 +24,7 @@ struct PanelPane: View {
                     Text("Show hidden icons in")
                         .font(.system(size: 13, weight: .semibold))
                     RevealTargetPicker(selection: targetBinding)
-                    Text(caption)
+                    Text(verbatim: caption)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -52,12 +52,19 @@ struct PanelPane: View {
         "panelGroups": [.panel, .row], "panelAlwaysHidden": [.panel, .row], "panelFold": [.panel],
     ]
 
-    private var caption: LocalizedStringKey {
-        switch target {
-        case .menuBar: "They slide out beside the chevron."
-        case .panel: "A grid under the chevron, in your menu bar order. Nothing hides behind the notch."
-        case .row: "One row under the menu bar, at menu bar size. Nothing hides behind the notch."
+    /// The notch line only where a display has one; "under the menu bar"
+    /// with the icon off, where the panel sits at the display's right edge.
+    private var caption: String {
+        let base = switch target {
+        case .menuBar: String(localized: "They slide out beside the chevron.")
+        case .panel: appState.settings.showStatusItem
+            ? String(localized: "A grid under the chevron, in your menu bar order.")
+            : String(localized: "A grid under the menu bar, in your menu bar order.")
+        case .row: String(localized: "One row under the menu bar, at menu bar size.")
         }
+        guard target != .menuBar, NSScreen.screens.contains(where: { $0.auxiliaryTopLeftArea != nil }) else { return base }
+        // Japanese and Chinese sentences run on without a space.
+        return base + (base.hasSuffix("。") ? "" : " ") + String(localized: "Nothing hides behind the notch.")
     }
 
     private var icons: some View {

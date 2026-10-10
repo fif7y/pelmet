@@ -411,9 +411,20 @@ The animator version's travel measured live (window y 37 → 45, 45 → 41);
 the hand-stepped one is built, not yet run live.
 VoiceOver: tiles say "Not running" for launchers and carry the selected
 trait. `perf reveal(…)`: built, shown; `perf conceal(…)`: closed. Release
-notes for the beta: credit #26's reporter, @elijah7x. Left: multi-display,
-Macs without a notch, long German / Russian strings, light mode of the
-Settings tab, live check of a key typed during the entrance.
+notes for the beta: credit #26's reporter, @elijah7x.
+Later the same night: German and Russian Settings checked in light mode
+(forced Aqua, `-AppleLanguages`), all rows fit after a shorter Columns
+caption. A key typed 40 ms into a hotkey entrance lands in the search and
+the panel settles at its place. Multi-display / no-notch review (code
+only, one display here): pointer-on-screen tests use `NSMouseInRect` (the
+top row sits at `maxY`), the panel keeps the display it opened on until
+it closes, hover and bar clicks open on the pointer's display, a screen
+change places it again, and the notch sentence shows only where a display
+has one ("under the menu bar" with the icon off). Left from that review:
+height has no cap (a tall Names grid on a short display runs off the
+bottom) and Row never wraps; a chevron frame parked off the bar isn't
+band-checked; the picture pass films only the main display's bar. Not run
+live: a second display, a Mac without a notch, real light mode.
 
 Rough total: 13–16 sessions.
 
