@@ -386,6 +386,19 @@ notch" (no source for it). Keys and selection are shared code
 - Release notes credit #26's reporter (`gh issue view 26 --json author`).
 - Beta build only on Gab's "cut".
 
+*Phase 6 progress (2026-10-09).* Motion from the mock in `AppTiming`
+(`panelEntrance` 180 ms with an 8 pt drop, `panelExit` 140 ms rising 6 pt),
+stepped by hand over where `place` last put the window so a refresh
+mid-entrance (a key typed right after the hotkey) moves the target instead
+of fighting an animator frame animation; Reduce Motion keeps the fades only.
+The animator version's travel measured live (window y 37 → 45, 45 → 41);
+the hand-stepped one is built, not yet run live.
+VoiceOver: tiles say "Not running" for launchers and carry the selected
+trait. `perf reveal(…)`: built, shown; `perf conceal(…)`: closed. Release
+notes for the beta: credit #26's reporter, @elijah7x. Left: multi-display,
+Macs without a notch, long German / Russian strings, light mode of the
+Settings tab, live check of a key typed during the entrance.
+
 Rough total: 13–16 sessions.
 
 ## 6. Risks

@@ -48,6 +48,13 @@ final class PanelPresenter: RevealPresenter {
     private var columnsTip: String?
     private var tipTask: Task<Void, Never>?
     private var keyMonitor: Any?
+    private var launcherIcons: [String: NSImage] = [:]
+    /// Waiting on the pass under way, the preview's redraw among them.
+    private var passWaiters: [@MainActor () -> Void] = []
+    private var motion: Motion?
+    private var motionTimer: Timer?
+    /// Where `place` last put the window, before any motion.
+    private var placed: NSRect?
     private var passTask: Task<Void, Never>?
     /// Keys a pass looked for and could not picture (an item that draws
     /// nothing, one the notch hides): not asked for again until a picture
@@ -88,7 +95,11 @@ final class PanelPresenter: RevealPresenter {
         isOpen = true
         generation += 1
         let shown = refresh()
+        trace.mark("built", detail: "\(shown.tiles) tiles")
         show(takeKey: !openedByHover, fadeIn: !wasOpen)
+        // On screen from the next pass of the run loop: the `perf` line's
+        // open → first frame.
+        DispatchQueue.main.async { trace.finish("shown") }
         PelmetLog.log("panel: \(wasOpen ? "widened" : "open") (\(reason.map { "\($0)" } ?? "no reason")) — \(shown.tiles) tile(s), \(shown.missing.count) without a picture, key=\(window?.isKeyWindow == true)")
         // Settled on the next turn, as the bar's reveal settles after its
         // effect returns: the machine is still in this dispatch.
@@ -98,6 +109,7 @@ final class PanelPresenter: RevealPresenter {
 
     func conceal(trace: PerfTrace) {
         close()
+        trace.finish("closed")
         DispatchQueue.main.async { [weak self] in self?.appState?.panelDidSettle() }
     }
 
@@ -144,9 +156,11 @@ final class PanelPresenter: RevealPresenter {
         }
         if fadeIn {
             window.alphaValue = 0
+            move(Self.reduceMotion ? nil : Motion(
+                duration: AppTiming.panelEntrance, from: AppTiming.panelEntranceDrop, to: 0, curve: Self.enterCurve))
             window.orderFrontRegardless()
             NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.18
+                context.duration = AppTiming.panelEntrance
                 context.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
                 window.animator().alphaValue = 1
             }
@@ -173,8 +187,10 @@ final class PanelPresenter: RevealPresenter {
         // Up for the length of its fade: a click on it must not land, and a
         // click beneath it must.
         window.ignoresMouseEvents = true
+        move(Self.reduceMotion ? nil : Motion(
+            duration: AppTiming.panelExit, from: 0, to: AppTiming.panelExitRise, curve: Self.exitCurve))
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.14
+            context.duration = AppTiming.panelExit
             context.timingFunction = CAMediaTimingFunction(controlPoints: 0.55, 0, 0.8, 0.4)
             window.animator().alphaValue = 0
         }, completionHandler: { [weak self] in
@@ -184,6 +200,54 @@ final class PanelPresenter: RevealPresenter {
                 self.window?.orderOut(nil)
             }
         })
+    }
+
+    // MARK: - Motion
+
+    /// The mock's entrance drop or exit rise, stepped by hand over where
+    /// `place` last put the window: a refresh mid-motion (a key typed right
+    /// after the hotkey) moves that spot, and the motion follows it. An
+    /// animator frame animation would put back the frame it started with.
+    private struct Motion {
+        let start = CACurrentMediaTime()
+        let duration: TimeInterval
+        let from: CGFloat
+        let to: CGFloat
+        let curve: UnitCurve
+
+        func offset(at now: CFTimeInterval) -> CGFloat {
+            let t = min(max((now - start) / duration, 0), 1)
+            return from + (to - from) * curve.value(at: t)
+        }
+    }
+
+    private static let enterCurve = UnitCurve.bezier(startControlPoint: UnitPoint(x: 0.16, y: 1), endControlPoint: UnitPoint(x: 0.3, y: 1))
+    private static let exitCurve = UnitCurve.bezier(startControlPoint: UnitPoint(x: 0.55, y: 0), endControlPoint: UnitPoint(x: 0.8, y: 0.4))
+    /// Reduce Motion keeps the fades and drops the travel.
+    private static var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+
+    private func move(_ motion: Motion?) {
+        motionTimer?.invalidate()
+        motionTimer = nil
+        self.motion = motion
+        stepMotion()
+        guard motion != nil else { return }
+        let timer = Timer(timeInterval: 1.0 / 120, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stepMotion() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        motionTimer = timer
+    }
+
+    private func stepMotion() {
+        guard let window, let placed else { return }
+        let now = CACurrentMediaTime()
+        window.setFrameOrigin(NSPoint(x: placed.minX, y: placed.minY + (motion?.offset(at: now) ?? 0)))
+        if let motion, now - motion.start >= motion.duration {
+            motionTimer?.invalidate()
+            motionTimer = nil
+            self.motion = nil
+        }
     }
 
     private func installKeyMonitor() {
@@ -257,7 +321,8 @@ final class PanelPresenter: RevealPresenter {
             x: max(right - width, target.frame.minX + margin).rounded(),
             y: (top - size.height).rounded(),
             width: width.rounded(), height: size.height.rounded())
-        window.place(frame)
+        placed = frame
+        window.place(frame.offsetBy(dx: 0, dy: motion?.offset(at: CACurrentMediaTime()) ?? 0))
         window.setGlassHeight(frame.height)
     }
 
@@ -269,9 +334,10 @@ final class PanelPresenter: RevealPresenter {
     private func refresh() -> (tiles: Int, missing: [ItemID]) {
         guard let appState else { return (0, []) }
         let (_, hosting) = ensureWindow()
-        var (content, missing, model) = buildContent(
+        let (built, missing, model) = buildContent(
             appState, layout: appState.revealTarget.panelLayout ?? .panel, query: query, selected: selected,
             foldOpen: foldOpen, alwaysRequested: sections.contains(.alwaysHidden))
+        var content = built
         lastModel = model
         if selectBest {
             selectBest = false
@@ -290,7 +356,8 @@ final class PanelPresenter: RevealPresenter {
             panelMenu: { [weak self] in
                 self?.panelMenu(shown: self?.lastContent) { [weak self] in self?.toggleFold() } ?? []
             },
-            onColumnsDrag: { [weak self] ended in self?.dragColumns(ended: ended) },
+            // The window moves as it widens: the pointer is read on screen.
+            onColumnsDrag: { [weak self] _, ended in self?.dragColumns(ended: ended) },
             onColumnsReset: { [weak self] in self?.resetColumns() })
         hosting.rootView = view
         // The hosting view sizes nothing (`sizingOptions = []`), so its
@@ -407,8 +474,7 @@ final class PanelPresenter: RevealPresenter {
                         if block.kind != .didntFit { missing.append(key) }
                     }
                 case .launcher(let bundle):
-                    let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle)
-                        .map { NSWorkspace.shared.icon(forFile: $0.path) } ?? Self.placeholder
+                    let icon = launcherIcon(bundle)
                     content.art[tile] = PanelTileArt(
                         image: .icon(icon), name: ItemNaming.appName(forBundle: bundle) ?? bundle, dimmed: true)
                 case .rowBreak:
@@ -418,6 +484,15 @@ final class PanelPresenter: RevealPresenter {
         }
         content.selected = selected.flatMap { content.art[$0] == nil ? nil : $0 }
         return (content, missing, model)
+    }
+
+    /// Read once: the preview rebuilds on every bar read and drag step.
+    private func launcherIcon(_ bundle: String) -> NSImage {
+        if let icon = launcherIcons[bundle] { return icon }
+        let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle)
+            .map { NSWorkspace.shared.icon(forFile: $0.path) } ?? Self.placeholder
+        launcherIcons[bundle] = icon
+        return icon
     }
 
     private static func standIn(for id: ItemID) -> NSImage {
@@ -662,11 +737,16 @@ final class PanelPresenter: RevealPresenter {
     /// The pass, once, when the open panel (or the Settings preview) shows
     /// tiles with no picture. `done` runs once pictures were stored.
     func picturePassIfNeeded(_ missing: [ItemID], done: (@MainActor () -> Void)? = nil) {
-        guard passTask == nil, let appState, appState.screenRecordingGranted else { return }
+        guard let appState, appState.screenRecordingGranted else { return }
+        if passTask != nil {
+            if let done { passWaiters.append(done) }
+            return
+        }
         let wanted = missing.filter { key in
             unpicturable[key].map { -$0.timeIntervalSinceNow >= ItemPictures.maxAge } ?? true
         }
         guard !wanted.isEmpty else { return }
+        if let done { passWaiters.append(done) }
         let roster = appState.settings.sectionModel.roster
         let needsAlways = wanted.contains { roster.section(of: $0) == .alwaysHidden }
         let reveal: Set<PelmetCore.Section> = needsAlways ? [.hidden, .alwaysHidden] : [.hidden]
@@ -675,6 +755,9 @@ final class PanelPresenter: RevealPresenter {
             let found = await appState.transitions.picturePass(reveal)
             guard let self else { return }
             self.passTask = nil
+            let waiters = self.passWaiters
+            self.passWaiters = []
+            defer { for waiter in waiters { waiter() } }
             // A pass that never saw the icons (the bar out, an idle Mac's
             // empty walk) says nothing about them: the next open tries again.
             guard let found else {
@@ -682,7 +765,6 @@ final class PanelPresenter: RevealPresenter {
                 return
             }
             self.pictures.store(found)
-            done?()
             let now = Date()
             for key in wanted where found[key] == nil { self.unpicturable[key] = now }
             let lost = wanted.filter { found[$0] == nil }.map(\.rawValue)

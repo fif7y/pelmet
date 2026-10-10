@@ -42,7 +42,19 @@ struct PanelPane: View {
                 icons
             }
         }
+        .onChange(of: appState.settingsFocusRow, initial: true) { _, row in
+            // Search found a row this mode doesn't draw: land on the picker
+            // that brings it.
+            guard let row, Self.modeRows[row].map({ !$0.contains(target) }) == true else { return }
+            appState.settingsFocusRow = "hiddenIconsIn"
+        }
     }
+
+    /// The Icons rows and the modes that draw them.
+    private static let modeRows: [String: Set<RevealTarget>] = [
+        "panelNames": [.panel], "panelColumns": [.panel],
+        "panelGroups": [.panel, .row], "panelAlwaysHidden": [.panel, .row],
+    ]
 
     private var caption: LocalizedStringKey {
         switch target {
@@ -126,9 +138,10 @@ private struct PanelPreviewStage: View {
     @State private var foldOpen = false
     @State private var panelShown = true
     @State private var barRevealed = false
-    /// The edge drag's start: the pointer, and the panel's width then.
-    @State private var dragStart: (mouse: CGFloat, width: CGFloat)?
-    @State private var panelWidth: CGFloat = 0
+    @State private var revealTask: Task<Void, Never>?
+    /// The panel's right edge in the window: it stays put while the left
+    /// edge is dragged, as on screen.
+    @State private var panelMaxX: CGFloat = 0
     @State private var tip: String?
     @State private var tipTask: Task<Void, Never>?
     @State private var height = Self.minHeight
@@ -253,7 +266,9 @@ private struct PanelPreviewStage: View {
         if target == .menuBar {
             barRevealed.toggle()
         } else {
-            withAnimation(panelShown ? .timingCurve(0.55, 0, 0.8, 0.4, duration: 0.14) : .timingCurve(0.16, 1, 0.3, 1, duration: 0.18)) {
+            withAnimation(panelShown
+                ? .timingCurve(0.55, 0, 0.8, 0.4, duration: AppTiming.panelExit)
+                : .timingCurve(0.16, 1, 0.3, 1, duration: AppTiming.panelEntrance)) {
                 panelShown.toggle()
             }
             if !panelShown { focused = false }
@@ -268,20 +283,25 @@ private struct PanelPreviewStage: View {
         let drawn = shown
         return PanelView(
             content: drawn,
-            onPress: { tile in presenter.press(tile) },
+            // A first click selects, so a click before typing stays here;
+            // the selected tile, or Return, opens for real.
+            onPress: { tile in
+                focused = true
+                if drawn.selected == tile { presenter.press(tile) } else { selected = tile }
+            },
             onFold: { flipFold(drawn) },
             tileMenu: { presenter.menu(for: $0) },
             panelMenu: { presenter.panelMenu(shown: drawn) { flipFold(drawn) } },
-            onColumnsDrag: { ended in dragColumns(ended: ended, model: model) },
+            onColumnsDrag: { x, ended in dragColumns(x: x, ended: ended, model: model) },
             onColumnsReset: {
                 presenter.setAutoColumns()
                 showTip(String(localized: "Auto"), for: 0.8)
             })
             .glassEffect(.regular, in: .rect(cornerRadius: PanelPresenter.cornerRadius))
             .simultaneousGesture(TapGesture().onEnded { focused = true })
-            .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
-                panelWidth = size.width
-                fit(Self.barHeight + PanelPresenter.gapBelowBar + size.height + 20)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                panelMaxX = frame.maxX
+                fit(Self.barHeight + PanelPresenter.gapBelowBar + frame.height + 20)
             }
     }
 
@@ -302,6 +322,7 @@ private struct PanelPreviewStage: View {
     }
 
     private func switched(to target: RevealTarget) {
+        revealTask?.cancel()
         query = ""
         selected = nil
         foldOpen = false
@@ -311,9 +332,9 @@ private struct PanelPreviewStage: View {
         guard target == .menuBar else { return }
         withAnimation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)) { height = Self.minHeight }
         // Once, so the style shows without a click.
-        Task {
+        revealTask = Task {
             try? await Task.sleep(for: .milliseconds(350))
-            if self.target == .menuBar { barRevealed = true }
+            if !Task.isCancelled { barRevealed = true }
         }
     }
 
@@ -321,14 +342,8 @@ private struct PanelPreviewStage: View {
         foldOpen = presenter.flipFold(shown: shown.showsAlwaysHidden, foldOpen: foldOpen)
     }
 
-    /// The panel's right edge stays put while the left one is dragged, here
-    /// as on screen: the pointer's travel from where the drag began is the
-    /// width it adds or takes.
-    private func dragColumns(ended: Bool, model: PanelModel) {
-        let mouse = NSEvent.mouseLocation.x
-        let start = dragStart ?? (mouse, panelWidth)
-        dragStart = ended ? nil : start
-        let columns = presenter.setColumns(distance: start.width - (mouse - start.mouse), model: model)
+    private func dragColumns(x: CGFloat, ended: Bool, model: PanelModel) {
+        let columns = presenter.setColumns(distance: panelMaxX - x, model: model)
         showTip(String(localized: "\(columns) per row"), for: ended ? 0.5 : nil)
     }
 

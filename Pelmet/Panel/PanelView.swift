@@ -76,9 +76,9 @@ struct PanelView: View {
     let onFold: () -> Void
     var tileMenu: (PanelTile) -> [PanelMenuRow] = { _ in [] }
     var panelMenu: () -> [PanelMenuRow] = { [] }
-    /// The left edge sets the columns: dragged (true when let go), and
-    /// double-clicked for Auto.
-    var onColumnsDrag: (Bool) -> Void = { _ in }
+    /// The left edge sets the columns: dragged (the pointer's x in the
+    /// window, true when let go), and double-clicked for Auto.
+    var onColumnsDrag: (_ x: CGFloat, _ ended: Bool) -> Void = { _, _ in }
     var onColumnsReset: () -> Void = {}
 
     @State private var hovering = false
@@ -262,7 +262,10 @@ struct PanelView: View {
                     .focusEffectDisabled()
                     .help(art.dimmed ? "\(art.name)\n\(String(localized: "Not running"))" : art.name)
                     .contextMenu { menu(tileMenu(placement.tile)) }
+                    // Names even with names off; a launcher says it isn't running.
                     .accessibilityLabel(art.name)
+                    .accessibilityValue(art.dimmed ? String(localized: "Not running") : "")
+                    .accessibilityAddTraits(content.selected == placement.tile ? .isSelected : [])
                     .offset(x: placement.frame.minX, y: placement.frame.minY)
                 }
             }
@@ -442,7 +445,7 @@ private struct ColumnGrip: View {
     let ink: PanelInk
     let panelHovered: Bool
     let tip: String?
-    let onDrag: (Bool) -> Void
+    let onDrag: (_ x: CGFloat, _ ended: Bool) -> Void
     let onReset: () -> Void
     @State private var hovering = false
     @State private var dragging = false
@@ -463,14 +466,14 @@ private struct ColumnGrip: View {
                 .onHover { hovering = $0 }
                 .pointerStyle(.columnResize)
                 .gesture(
-                    DragGesture(minimumDistance: 1)
-                        .onChanged { _ in
+                    DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                        .onChanged { value in
                             dragging = true
-                            onDrag(false)
+                            onDrag(value.location.x, false)
                         }
-                        .onEnded { _ in
+                        .onEnded { value in
                             dragging = false
-                            onDrag(true)
+                            onDrag(value.location.x, true)
                         })
                 .simultaneousGesture(TapGesture(count: 2).onEnded(onReset))
             if let tip {

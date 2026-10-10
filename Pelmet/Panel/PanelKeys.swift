@@ -32,7 +32,7 @@ enum PanelKey {
     init?(_ press: KeyPress) {
         switch press.key {
         case .escape: self = .escape
-        case .return: self = .enter
+        case .return, KeyEquivalent("\u{3}"): self = .enter  // Return, Enter
         case .delete: self = .delete
         case .leftArrow: self = .move(.left)
         case .rightArrow: self = .move(.right)

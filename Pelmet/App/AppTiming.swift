@@ -219,6 +219,13 @@ enum AppTiming {
     /// cover up through the menu (the final conceal raises its own).
     static let pressCoverLiftsAfterClick = true
 
+    /// The hidden-icons panel, from the mock: in with an 8pt drop as it
+    /// fades, out rising 6pt. Reduce Motion keeps the fades alone.
+    static let panelEntrance: TimeInterval = 0.18
+    static let panelExit: TimeInterval = 0.14
+    static let panelEntranceDrop: CGFloat = 8
+    static let panelExitRise: CGFloat = 6
+
     /// Command bar panel: entrance (fade + a 4pt drop) and exit (fade). The
     /// exit is never longer than the entrance, so a Return never waits on it.
     static let searchEntrance: TimeInterval = 0.18
