@@ -79,9 +79,26 @@ class GlassPanel: NSPanel {
 
     var glassHeight: CGFloat { glass.frame.height }
 
+    /// Clear room left of the glass, for `edgeAccessory` to reach past its
+    /// edge. The window is this much wider than the glass.
+    var leadingMargin: CGFloat = 0 {
+        didSet { setGlassHeight(glass.frame.height) }
+    }
+
+    /// Laid over the glass's left edge, half in `leadingMargin`, as tall as
+    /// the glass: the panel's column grip. Set once.
+    var edgeAccessory: NSView? {
+        didSet {
+            oldValue?.removeFromSuperview()
+            if let edgeAccessory { contentView?.addSubview(edgeAccessory) }
+            layoutAccessory()
+        }
+    }
+
     /// Where the glass is on screen; below it the window is clear.
     var glassScreenFrame: NSRect {
-        NSRect(x: frame.minX, y: frame.maxY - glass.frame.height, width: frame.width, height: glass.frame.height)
+        NSRect(x: frame.minX + leadingMargin, y: frame.maxY - glass.frame.height,
+               width: frame.width - leadingMargin, height: glass.frame.height)
     }
 
     /// Move or resize the window, then re-derive the shadow from what is on
@@ -89,6 +106,7 @@ class GlassPanel: NSPanel {
     func place(_ frame: NSRect, display: Bool = true) {
         setFrame(frame, display: display)
         glass.frame.size.height = min(glass.frame.height, frame.height)
+        layoutAccessory()
         invalidateShadow()
     }
 
@@ -97,8 +115,15 @@ class GlassPanel: NSPanel {
     func setGlassHeight(_ height: CGFloat) {
         let bounds = contentView?.bounds ?? .zero
         let height = min(height, bounds.height)
-        glass.frame = NSRect(x: 0, y: bounds.height - height, width: bounds.width, height: height)
+        glass.frame = NSRect(x: leadingMargin, y: bounds.height - height,
+                             width: max(bounds.width - leadingMargin, 0), height: height)
+        layoutAccessory()
         invalidateShadow()
+    }
+
+    private func layoutAccessory() {
+        guard let edgeAccessory else { return }
+        edgeAccessory.frame = NSRect(x: 0, y: glass.frame.minY, width: 2 * leadingMargin, height: glass.frame.height)
     }
 
     /// The bar's own height on `screen`: the visibleFrame band, falling

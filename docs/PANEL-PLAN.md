@@ -352,7 +352,10 @@ menu (Layout Panel/Row as the setting, Show Names, Always Hidden, Pelmet
 Settings…); "as left" fold stored. `AXShowMenu` on a tile opens the panel's
 menu, not the tile's: test tile menus with a real right-click. Columns
 (`642188e`): the left-edge grip, 2…10 by the widest section, double-click
-Auto, "N per row" tip. Not done: drag between sections and onto the bar
+Auto, "N per row" tip. The grip straddles the glass edge 50-50 in a 20pt
+zone (the window carries a 10pt clear margin), drawn outside the glass so
+the clip can't eat it. A drag holds the panel open, and a release past the
+edge holds it until the pointer comes back. Not done: drag between sections and onto the bar
 (after Phase 5: "Move to…" covers membership), panel picks don't feed the
 command bar's history (two writers would lose updates).
 

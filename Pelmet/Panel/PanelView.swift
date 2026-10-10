@@ -85,6 +85,9 @@ struct PanelView: View {
     /// window, true when let go), and double-clicked for Auto.
     var onColumnsDrag: (_ x: CGFloat, _ ended: Bool) -> Void = { _, _ in }
     var onColumnsReset: () -> Void = {}
+    /// The column grip, half past the left edge. The open panel draws its
+    /// own outside the glass, which clips this view (`PanelEdgeGrip`).
+    var drawsGrip = true
 
     @State private var hovering = false
 
@@ -119,8 +122,16 @@ struct PanelView: View {
         .fixedSize()
         .overlay(alignment: .leading) {
             if content.layout == .panel, !content.isEmpty {
-                ColumnGrip(ink: ink, panelHovered: hovering, tip: content.columnsTip,
-                           onDrag: onColumnsDrag, onReset: onColumnsReset)
+                ZStack(alignment: .leading) {
+                    if drawsGrip {
+                        ColumnGrip(ink: ink, panelHovered: hovering, onDrag: onColumnsDrag, onReset: onColumnsReset)
+                            .offset(x: -ColumnGrip.reach / 2)
+                    }
+                    if let tip = content.columnsTip {
+                        ColumnTip(text: tip, ink: ink)
+                            .padding(.leading, 16)
+                    }
+                }
             }
         }
         .contentShape(Rectangle())
@@ -580,52 +591,77 @@ private struct Caret: View {
 }
 
 /// The panel's left edge: drag it for more or fewer columns, double-click
-/// it for Auto (the mock's grip).
-private struct ColumnGrip: View {
+/// it for Auto. A grabber on the edge, half in and half out, with room
+/// around it to land on (Gab, 2026-10-09: a 12pt strip inside the glass was
+/// often impossible to catch).
+struct ColumnGrip: View {
+    /// The grip's width, centred on the edge.
+    static let reach: CGFloat = 20
+
     let ink: PanelInk
     let panelHovered: Bool
-    let tip: String?
     let onDrag: (_ x: CGFloat, _ ended: Bool) -> Void
     let onReset: () -> Void
     @State private var hovering = false
     @State private var dragging = false
 
     var body: some View {
-        ZStack(alignment: .leading) {
-            Color.clear
-                .frame(width: 12)
-                .contentShape(Rectangle())
-                .overlay(alignment: .leading) {
-                    Capsule()
-                        .fill(hovering || dragging ? ink.secondary : ink.tertiary)
-                        .frame(width: 4, height: 26)
-                        .padding(.leading, 4)
-                        .opacity(hovering || dragging ? 1 : panelHovered ? 0.55 : 0)
-                        .animation(.easeOut(duration: 0.15), value: hovering || dragging || panelHovered)
-                }
-                .onHover { hovering = $0 }
-                .pointerStyle(.columnResize)
-                .gesture(
-                    DragGesture(minimumDistance: 1, coordinateSpace: .global)
-                        .onChanged { value in
-                            dragging = true
-                            onDrag(value.location.x, false)
-                        }
-                        .onEnded { value in
-                            dragging = false
-                            onDrag(value.location.x, true)
-                        })
-                .simultaneousGesture(TapGesture(count: 2).onEnded(onReset))
-            if let tip {
-                Text(tip)
-                    .font(.system(size: 11))
-                    .foregroundStyle(ink.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                    .padding(.leading, 16)
-                    .allowsHitTesting(false)
+        Color.clear
+            .frame(width: Self.reach)
+            .contentShape(Rectangle())
+            .overlay {
+                Capsule()
+                    .fill(hovering || dragging ? ink.secondary : ink.tertiary)
+                    .frame(width: 4, height: 26)
+                    .opacity(hovering || dragging ? 1 : panelHovered ? 0.55 : 0)
+                    .animation(.easeOut(duration: 0.15), value: hovering || dragging || panelHovered)
             }
+            .onHover { hovering = $0 }
+            .pointerStyle(.columnResize)
+            .gesture(
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                    .onChanged { value in
+                        dragging = true
+                        onDrag(value.location.x, false)
+                    }
+                    .onEnded { value in
+                        dragging = false
+                        onDrag(value.location.x, true)
+                    })
+            .simultaneousGesture(TapGesture(count: 2).onEnded(onReset))
+    }
+}
+
+/// "4 per row" while the edge is dragged.
+private struct ColumnTip: View {
+    let text: String
+    let ink: PanelInk
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundStyle(ink.primary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .allowsHitTesting(false)
+    }
+}
+
+/// The open panel's grip, in a view of its own laid over the glass's edge
+/// (`GlassPanel.edgeAccessory`).
+struct PanelEdgeGrip: View {
+    var shows = false
+    var panelHovered = false
+    var onDrag: (_ x: CGFloat, _ ended: Bool) -> Void = { _, _ in }
+    var onReset: () -> Void = {}
+
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        if shows {
+            ColumnGrip(ink: PanelInk(scheme: scheme), panelHovered: panelHovered, onDrag: onDrag, onReset: onReset)
+                .frame(maxHeight: .infinity)
         }
     }
 }

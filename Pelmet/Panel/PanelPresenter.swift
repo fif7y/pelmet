@@ -29,10 +29,17 @@ final class PanelPresenter: RevealPresenter {
     private var hosting: NSHostingView<PanelHost>?
     /// The tracking area's owner, which it does not keep.
     private var pointerWatch: PointerWatch?
+    private var gripHost: NSHostingView<PanelEdgeGrip>?
+    /// The grip shows faintly while the pointer is on the panel.
+    private var pointerOnPanel = false
+    /// The columns are being dragged: the pointer runs ahead of the edge,
+    /// off the panel, and that must not close it.
+    private var draggingColumns = false
     private(set) var isOpen = false
     private var openedByHover = false
-    /// Opened from the keyboard, with the pointer not yet on it: held like
-    /// a menu until it is.
+    /// Held like a menu until the pointer is on the panel: opened from the
+    /// keyboard, or a column drag let go past the edge (closing then read
+    /// as the drag throwing the panel away).
     private var awaitsPointer = false
     /// When `place` last changed the window's frame.
     private var resizedAt: CFTimeInterval = 0
@@ -92,7 +99,7 @@ final class PanelPresenter: RevealPresenter {
     /// (2026-10-09).
     var holdsReveal: Bool {
         guard isOpen, let window else { return false }
-        if awaitsPointer { return true }
+        if awaitsPointer || draggingColumns { return true }
         let pointer = NSEvent.mouseLocation
         var reach = window.frame
         if let screen = window.screen ?? NSScreen.main {
@@ -106,12 +113,21 @@ final class PanelPresenter: RevealPresenter {
         return false
     }
 
+    private var showsGrip = false
+
+    private func updateGrip() {
+        gripHost?.rootView = PanelEdgeGrip(
+            shows: showsGrip, panelHovered: pointerOnPanel,
+            onDrag: { [weak self] _, ended in self?.dragColumns(ended: ended) },
+            onReset: { [weak self] in self?.resetColumns() })
+    }
+
     /// Off the panel is off the bar: the countdown starts at the rehide
     /// delay, not at the next re-arm a second and a half on. Not when the
     /// panel shrank out from under a pointer that stayed put: a filter
     /// typed with the pointer resting on it would close it mid-word.
     private func pointerLeftPanel() {
-        guard isOpen, !awaitsPointer, CACurrentMediaTime() - resizedAt > 0.1 else { return }
+        guard isOpen, !awaitsPointer, !draggingColumns, CACurrentMediaTime() - resizedAt > 0.1 else { return }
         PelmetLog.log("panel: pointer left")
         appState?.pointerLeftBand()
     }
@@ -181,9 +197,25 @@ final class PanelPresenter: RevealPresenter {
         hosting.sizingOptions = []
         let window = KeyableGlassPanel(content: hosting, cornerRadius: Self.cornerRadius)
         window.alphaValue = 0
+        // The column grip sits half past the glass's left edge, in a clear
+        // margin of the window (`show` sets the window to take clicks on
+        // its clear parts too).
+        window.leadingMargin = ColumnGrip.reach / 2
+        let grip = NSHostingView(rootView: PanelEdgeGrip())
+        grip.sizingOptions = []
+        window.edgeAccessory = grip
+        gripHost = grip
         let watch = PointerWatch(
-            entered: { [weak self] in self?.awaitsPointer = false },
-            exited: { [weak self] in self?.pointerLeftPanel() })
+            entered: { [weak self] in
+                self?.awaitsPointer = false
+                self?.pointerOnPanel = true
+                self?.updateGrip()
+            },
+            exited: { [weak self] in
+                self?.pointerOnPanel = false
+                self?.updateGrip()
+                self?.pointerLeftPanel()
+            })
         window.contentView?.addTrackingArea(NSTrackingArea(
             rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: watch, userInfo: nil))
         pointerWatch = watch
@@ -227,6 +259,8 @@ final class PanelPresenter: RevealPresenter {
     private func close() {
         guard isOpen else { return }
         isOpen = false
+        pointerOnPanel = false
+        draggingColumns = false
         generation += 1
         let mine = generation
         removeKeyMonitor()
@@ -421,10 +455,12 @@ final class PanelPresenter: RevealPresenter {
         }
         let width = min(size.width, target.frame.width - 2 * margin)
         let top = target.frame.maxY - GlassPanel.barHeight(of: target) - Self.gapBelowBar
+        // The glass's frame, then the window's: wider by the grip's margin.
+        let glassX = max(right - width, target.frame.minX + margin).rounded()
         let frame = NSRect(
-            x: max(right - width, target.frame.minX + margin).rounded(),
+            x: glassX - window.leadingMargin,
             y: (top - size.height).rounded(),
-            width: width.rounded(), height: size.height.rounded())
+            width: width.rounded() + window.leadingMargin, height: size.height.rounded())
         if frame.size != placed?.size { resizedAt = CACurrentMediaTime() }
         if let style = foldMotion {
             foldMotion = nil
@@ -469,8 +505,11 @@ final class PanelPresenter: RevealPresenter {
             },
             // The window moves as it widens: the pointer is read on screen.
             onColumnsDrag: { [weak self] _, ended in self?.dragColumns(ended: ended) },
-            onColumnsReset: { [weak self] in self?.resetColumns() })
+            onColumnsReset: { [weak self] in self?.resetColumns() },
+            drawsGrip: false)
         hosting.rootView = PanelHost(panel: view)
+        showsGrip = content.layout == .panel && !content.isEmpty
+        updateGrip()
         // The hosting view sizes nothing (`sizingOptions = []`), so its
         // fitting size is zero: the view measures itself here.
         place(NSHostingController(rootView: view).sizeThatFits(in: NSSize(width: 4000, height: 4000)))
@@ -691,6 +730,8 @@ final class PanelPresenter: RevealPresenter {
 
     private func dragColumns(ended: Bool) {
         guard let window else { return }
+        draggingColumns = !ended
+        if ended, !window.frame.contains(NSEvent.mouseLocation) { awaitsPointer = true }
         let columns = setColumns(distance: window.frame.maxX - NSEvent.mouseLocation.x, model: lastModel)
         showTip(String(localized: "\(columns) per row"), for: ended ? 0.5 : nil)
     }
