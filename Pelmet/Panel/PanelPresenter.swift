@@ -1191,11 +1191,15 @@ final class PanelPresenter: RevealPresenter {
         showTip(String(localized: "Auto"), for: 0.8)
     }
 
-    /// Up until `seconds` pass, or until the next call when nil.
+    /// Up until `seconds` pass, or until the next call when nil. The text
+    /// follows the column count, so a new one is a new layout; the same one
+    /// (every move of a drag within a column) leaves the panel alone.
     private func showTip(_ text: String, for seconds: Double?) {
         tipTask?.cancel()
-        columnsTip = text
-        refresh()
+        if columnsTip != text {
+            columnsTip = text
+            refresh()
+        }
         guard let seconds else { return }
         tipTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(seconds))
