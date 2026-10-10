@@ -388,14 +388,12 @@ final class PanelPresenter: RevealPresenter {
         }
         guard duration > 0, from != to else {
             placed = frame
-            window.place(frame)
-            window.setGlassHeight(to)
+            window.place(frame, glassHeight: to)
             return
         }
         let tall = NSRect(x: frame.minX, y: frame.maxY - max(from, to), width: frame.width, height: max(from, to))
         placed = tall
-        window.place(tall)
-        window.setGlassHeight(from)
+        window.place(tall, glassHeight: from)
         let curve = growing ? Self.enterCurve : Self.exitCurve
         let start = CACurrentMediaTime()
         let timer = Timer(timeInterval: 1.0 / 120, repeats: true) { [weak self] _ in
@@ -406,8 +404,7 @@ final class PanelPresenter: RevealPresenter {
                     self.stopGlass()
                     self.resizedAt = CACurrentMediaTime()
                     self.placed = frame
-                    window.place(frame)
-                    window.setGlassHeight(to)
+                    window.place(frame, glassHeight: to)
                     return
                 }
                 if style == .smooth { window.setGlassHeight(from + (to - from) * curve.value(at: t)) }
@@ -566,8 +563,7 @@ final class PanelPresenter: RevealPresenter {
         }
         stopGlass()
         placed = frame
-        window.place(frame.offsetBy(dx: 0, dy: motion?.offset(at: CACurrentMediaTime()) ?? 0))
-        window.setGlassHeight(frame.height)
+        window.place(frame.offsetBy(dx: 0, dy: motion?.offset(at: CACurrentMediaTime()) ?? 0), glassHeight: frame.height)
     }
 
     /// The display the panel opens on, and keeps until it closes.

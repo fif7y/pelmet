@@ -110,15 +110,30 @@ class GlassPanel: NSPanel {
         invalidateShadow()
     }
 
+    /// `place` and `setGlassHeight` together, the shadow derived once. A
+    /// window already there with its glass at that height is left alone,
+    /// unless it is hidden: the first placement of a show derives the shadow
+    /// again.
+    func place(_ frame: NSRect, glassHeight height: CGFloat, display: Bool = true) {
+        guard !isVisible || self.frame != frame || glass.frame.height != min(height, frame.height) else { return }
+        setFrame(frame, display: display)
+        layoutGlass(height: height)
+        invalidateShadow()
+    }
+
     /// Change the glass's height inside the window, its top edge staying
     /// put; the window is not resized. Below the glass the window is clear.
     func setGlassHeight(_ height: CGFloat) {
+        layoutGlass(height: height)
+        invalidateShadow()
+    }
+
+    private func layoutGlass(height: CGFloat) {
         let bounds = contentView?.bounds ?? .zero
         let height = min(height, bounds.height)
         glass.frame = NSRect(x: leadingMargin, y: bounds.height - height,
                              width: max(bounds.width - leadingMargin, 0), height: height)
         layoutAccessory()
-        invalidateShadow()
     }
 
     private func layoutAccessory() {
