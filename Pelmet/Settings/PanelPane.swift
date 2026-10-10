@@ -166,6 +166,8 @@ private struct PanelPreviewStage: View {
     @State private var shrinkTask: Task<Void, Never>?
     /// Bumped when the presenter has pictures or apps this hasn't drawn.
     @State private var revision = 0
+    /// The panel the last body drew, for a key to act on.
+    @State private var drawn = Drawn()
     @FocusState private var focused: Bool
 
     private static let minHeight: CGFloat = 110
@@ -181,11 +183,41 @@ private struct PanelPreviewStage: View {
 
     private var presenter: PanelPresenter { appState.panelPresenter }
 
+    /// What a preview is built from.
+    private struct Inputs: Equatable {
+        let layout: PanelGrid.Layout
+        let query: String
+        let selected: PanelTile?
+        let foldOpen: Bool
+    }
+
+    /// The last body's panel and what it was built from. A class, so that
+    /// writing it while drawing changes nothing the view watches.
+    private final class Drawn {
+        private var inputs: Inputs?
+        private var built: PanelPresenter.Preview?
+
+        func keep(_ built: PanelPresenter.Preview?, from inputs: Inputs?) {
+            self.built = built
+            self.inputs = inputs
+        }
+
+        func panel(for inputs: Inputs) -> PanelPresenter.Preview? {
+            self.inputs == inputs ? built : nil
+        }
+    }
+
+    private var inputs: Inputs? {
+        target.panelLayout.map { Inputs(layout: $0, query: query, selected: selected, foldOpen: foldOpen) }
+    }
+
     var body: some View {
         let _ = revision
-        let built = target.panelLayout.flatMap {
-            presenter.previewContent(layout: $0, query: query, selected: selected, foldOpen: foldOpen)
+        let inputs = inputs
+        let built = inputs.flatMap {
+            presenter.previewContent(layout: $0.layout, query: $0.query, selected: $0.selected, foldOpen: $0.foldOpen)
         }
+        let _ = drawn.keep(built, from: inputs)
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .topTrailing) {
                 DemoBackdrop()
@@ -386,12 +418,13 @@ private struct PanelPreviewStage: View {
     // MARK: - Keys
 
     private func key(_ press: KeyPress) -> KeyPress.Result {
-        guard let layout = target.panelLayout, let key = PanelKey(press),
-              let built = presenter.previewContent(layout: layout, query: query, selected: selected, foldOpen: foldOpen)
+        guard let current = inputs, let key = PanelKey(press),
+              let built = drawn.panel(for: current) ?? presenter.previewContent(
+                  layout: current.layout, query: query, selected: selected, foldOpen: foldOpen)
         else { return .ignored }
         switch key {
         case .escape:
-            if query.isEmpty { focused = false } else { setQuery("", layout: layout) }
+            if query.isEmpty { focused = false } else { setQuery("") }
         case .enter:
             if let tile = built.content.selected ?? built.model.bestMatch {
                 if tile == .fold { flipFold(built.content) } else { presenter.press(tile) }
@@ -403,18 +436,17 @@ private struct PanelPreviewStage: View {
             case .stay: break
             }
         case .delete:
-            if !query.isEmpty { setQuery(String(query.dropLast()), layout: layout) }
+            if !query.isEmpty { setQuery(String(query.dropLast())) }
         case .type(let typed):
             guard let new = PanelKey.query(query, typing: typed) else { return .ignored }
-            setQuery(new, layout: layout)
+            setQuery(new)
         }
         return .handled
     }
 
-    private func setQuery(_ new: String, layout: PanelGrid.Layout) {
+    private func setQuery(_ new: String) {
         query = new
-        selected = new.isEmpty ? nil
-            : presenter.previewContent(layout: layout, query: new, selected: nil, foldOpen: foldOpen)?.model.bestMatch
+        selected = new.isEmpty ? nil : presenter.previewBestMatch(query: new)
     }
 
     // MARK: - Pictures

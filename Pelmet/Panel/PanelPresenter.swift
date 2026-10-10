@@ -728,26 +728,36 @@ final class PanelPresenter: RevealPresenter {
         history = CommandBarController.loadHistory()
     }
 
+    typealias Preview = (content: PanelContent, missing: [ItemID], model: PanelModel)
+
     /// The panel as it would open now, for the Settings preview: its own
     /// filter, selection and fold.
-    func previewContent(layout: PanelGrid.Layout, query: String, selected: PanelTile?, foldOpen: Bool)
-        -> (content: PanelContent, missing: [ItemID], model: PanelModel)?
-    {
+    func previewContent(layout: PanelGrid.Layout, query: String, selected: PanelTile?, foldOpen: Bool) -> Preview? {
         guard let appState else { return nil }
-        if !corpusRead {
-            corpus = CommandBarCorpus.buildForPanel(appState: appState)
-            corpusRead = true
-        }
+        readCorpusOnce(appState)
         let built = buildContent(appState, layout: layout, query: query, selected: selected,
                                  foldOpen: foldOpen, alwaysRequested: false)
         return (built.content, built.missing, built.model)
     }
 
-    /// What `refresh` and the preview draw: no state of the presenter's
-    /// changes. A selection the filter or fold took away comes back nil.
-    private func buildContent(_ appState: AppState, layout: PanelGrid.Layout, query: String, selected: PanelTile?,
-                              foldOpen: Bool, alwaysRequested: Bool, maxRowWidth: CGFloat? = nil)
-        -> (content: PanelContent, missing: [ItemID], model: PanelModel)
+    /// What the preview's selection becomes when `query` is typed: the model
+    /// ranks it, and no tile is laid out for the answer.
+    func previewBestMatch(query: String) -> PanelTile? {
+        guard let appState else { return nil }
+        readCorpusOnce(appState)
+        return buildModel(appState, query: query, alwaysRequested: false).model.bestMatch
+    }
+
+    private func readCorpusOnce(_ appState: AppState) {
+        guard !corpusRead else { return }
+        corpus = CommandBarCorpus.buildForPanel(appState: appState)
+        corpusRead = true
+    }
+
+    /// Who is in the panel and in which section, for `query`; `items` are the
+    /// bar's items it was made from.
+    private func buildModel(_ appState: AppState, query: String, alwaysRequested: Bool)
+        -> (model: PanelModel, items: [ObservedItem])
     {
         let options = appState.settings.panel
         // The editor's board, as Search reads it: live items, the concealed
@@ -772,6 +782,17 @@ final class PanelPresenter: RevealPresenter {
             query: query,
             candidates: corpus.map(\.candidate),
             history: history)
+        return (model, items)
+    }
+
+    /// What `refresh` and the preview draw: no state of the presenter's
+    /// changes. A selection the filter or fold took away comes back nil.
+    private func buildContent(_ appState: AppState, layout: PanelGrid.Layout, query: String, selected: PanelTile?,
+                              foldOpen: Bool, alwaysRequested: Bool, maxRowWidth: CGFloat? = nil)
+        -> (content: PanelContent, missing: [ItemID], model: PanelModel)
+    {
+        let options = appState.settings.panel
+        let (model, items) = buildModel(appState, query: query, alwaysRequested: alwaysRequested)
 
         // What is on screen, in stacking order. A folded Always Hidden draws
         // its fold only; the row layout has no fold, so it leaves it out.
