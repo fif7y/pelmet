@@ -29,7 +29,7 @@ final class PanelPresenter: RevealPresenter {
     private var hosting: NSHostingView<PanelHost>?
     /// The tracking area's owner, which it does not keep.
     private var pointerWatch: PointerWatch?
-    private var gripHost: NSHostingView<PanelEdgeGrip>?
+    private var gripHost: GripHostingView?
     /// The grip shows faintly while the pointer is on the panel.
     private var pointerOnPanel = false
     /// The columns are being dragged: the pointer runs ahead of the edge,
@@ -38,8 +38,9 @@ final class PanelPresenter: RevealPresenter {
     private(set) var isOpen = false
     private var openedByHover = false
     /// Held like a menu until the pointer is on the panel: opened from the
-    /// keyboard, or a column drag let go past the edge (closing then read
-    /// as the drag throwing the panel away).
+    /// keyboard, or reshaped by its column grip (a drag let go past the
+    /// edge, or a reset that shrinks the panel from under the pointer,
+    /// would otherwise close it).
     private var awaitsPointer = false
     /// When `place` last changed the window's frame.
     private var resizedAt: CFTimeInterval = 0
@@ -201,7 +202,7 @@ final class PanelPresenter: RevealPresenter {
         // margin of the window (`show` sets the window to take clicks on
         // its clear parts too).
         window.leadingMargin = ColumnGrip.reach / 2
-        let grip = NSHostingView(rootView: PanelEdgeGrip())
+        let grip = GripHostingView(rootView: PanelEdgeGrip())
         grip.sizingOptions = []
         window.edgeAccessory = grip
         gripHost = grip
@@ -212,9 +213,13 @@ final class PanelPresenter: RevealPresenter {
                 self?.updateGrip()
             },
             exited: { [weak self] in
-                self?.pointerOnPanel = false
-                self?.updateGrip()
-                self?.pointerLeftPanel()
+                guard let self else { return }
+                // Leaving counts as having been on it, unless the panel
+                // just reshaped away from the pointer.
+                if CACurrentMediaTime() - self.resizedAt > 0.1 { self.awaitsPointer = false }
+                self.pointerOnPanel = false
+                self.updateGrip()
+                self.pointerLeftPanel()
             })
         window.contentView?.addTrackingArea(NSTrackingArea(
             rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: watch, userInfo: nil))
@@ -731,12 +736,13 @@ final class PanelPresenter: RevealPresenter {
     private func dragColumns(ended: Bool) {
         guard let window else { return }
         draggingColumns = !ended
-        if ended, !window.frame.contains(NSEvent.mouseLocation) { awaitsPointer = true }
+        if ended { awaitsPointer = true }
         let columns = setColumns(distance: window.frame.maxX - NSEvent.mouseLocation.x, model: lastModel)
         showTip(String(localized: "\(columns) per row"), for: ended ? 0.5 : nil)
     }
 
     private func resetColumns() {
+        awaitsPointer = true
         setAutoColumns()
         showTip(String(localized: "Auto"), for: 0.8)
     }
@@ -968,6 +974,12 @@ struct PanelHost: View {
     var body: some View {
         panel.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topTrailing)
     }
+}
+
+/// The column grip's host. It takes the first click: a hover-opened panel
+/// isn't key, and the press that would make it key never reached the drag.
+private final class GripHostingView: NSHostingView<PanelEdgeGrip> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 /// A tracking area's owner: the pointer onto the panel and off it.
