@@ -86,9 +86,12 @@ final class PanelPresenter: RevealPresenter {
     private var selected: PanelTile?
     /// Set when the query changed: the best match becomes the selection.
     private var selectBest = false
-    /// The command bar's candidates, read once per open: the filter ranks
-    /// with them (aliases, synonyms), and they name the launchers.
+    /// The command bar's candidates for the items and launchers, read once
+    /// per open: the filter ranks with them (aliases, synonyms), and they
+    /// name the launchers.
     private var corpus: [CommandBarEntry] = []
+    /// Whether `corpus` was read at all, for the preview to read it once.
+    private var corpusRead = false
     private var history = SearchHistory()
     /// What the last refresh drew, for Return and the arrows.
     private var lastModel: PanelModel?
@@ -195,7 +198,8 @@ final class PanelPresenter: RevealPresenter {
             selected = nil
             opens += 1
             if let appState {
-                corpus = CommandBarCorpus.build(appState: appState)
+                corpus = CommandBarCorpus.buildForPanel(appState: appState)
+                corpusRead = true
                 history = CommandBarController.loadHistory()
             }
         }
@@ -707,7 +711,8 @@ final class PanelPresenter: RevealPresenter {
     /// Settings preview shows the apps that are running now.
     func readCorpus() {
         guard let appState, !isOpen else { return }
-        corpus = CommandBarCorpus.build(appState: appState)
+        corpus = CommandBarCorpus.buildForPanel(appState: appState)
+        corpusRead = true
         history = CommandBarController.loadHistory()
     }
 
@@ -717,7 +722,10 @@ final class PanelPresenter: RevealPresenter {
         -> (content: PanelContent, missing: [ItemID], model: PanelModel)?
     {
         guard let appState else { return nil }
-        if corpus.isEmpty { corpus = CommandBarCorpus.build(appState: appState) }
+        if !corpusRead {
+            corpus = CommandBarCorpus.buildForPanel(appState: appState)
+            corpusRead = true
+        }
         let built = buildContent(appState, layout: layout, query: query, selected: selected,
                                  foldOpen: foldOpen, alwaysRequested: false)
         return (built.content, built.missing, built.model)

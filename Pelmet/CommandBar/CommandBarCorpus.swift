@@ -67,6 +67,18 @@ enum CommandBarCorpus {
         return items + launcherEntries(appState, representedBy: items) + commandEntries(appState) + settingEntries()
     }
 
+    /// What the panel reads of it: the items and the launchers, to rank its
+    /// tiles and name them. The panel draws its own pictures and has no use
+    /// for commands or settings, so the glyphs (an icon looked up per app)
+    /// and those rows are left out.
+    static func buildForPanel(appState: AppState) -> [CommandBarEntry] {
+        let items = itemEntries(appState, drawsGlyphs: false)
+        return items + launcherEntries(appState, representedBy: items, drawsGlyphs: false)
+    }
+
+    /// The glyph of an entry built without them, which nothing draws.
+    private static let noGlyph = CommandBarRow.Glyph.symbol("app.dashed")
+
     // MARK: - Items
 
     /// Hidden first, then Always Hidden, then visible: with no history the
@@ -74,7 +86,7 @@ enum CommandBarCorpus {
     /// editor's board is the source (live items, the concealed ones that
     /// left the AX tree, own extras), so a name is never one the editor
     /// doesn't use.
-    private static func itemEntries(_ appState: AppState) -> [CommandBarEntry] {
+    private static func itemEntries(_ appState: AppState, drawsGlyphs: Bool = true) -> [CommandBarEntry] {
         var out: [CommandBarEntry] = []
         for section in [PelmetCore.Section.hidden, .alwaysHidden, .visible] {
             for item in appState.editorItems(in: section) {
@@ -92,7 +104,7 @@ enum CommandBarCorpus {
                     alias: appState.settings.itemAliases[key.rawValue],
                     section: section
                 )
-                var entry = CommandBarEntry(candidate: candidate, action: .item(key), glyph: glyph(for: item))
+                var entry = CommandBarEntry(candidate: candidate, action: .item(key), glyph: drawsGlyphs ? glyph(for: item) : noGlyph)
                 if let bundle = item.id.bundleID, isThirdParty(bundle) {
                     entry.app = (bundle, app ?? title)
                 }
@@ -146,7 +158,9 @@ enum CommandBarCorpus {
 
     /// Apps that were once in a section and have no icon in the bar now
     /// because they are not running: opening one brings the icon back.
-    private static func launcherEntries(_ appState: AppState, representedBy items: [CommandBarEntry]) -> [CommandBarEntry] {
+    private static func launcherEntries(
+        _ appState: AppState, representedBy items: [CommandBarEntry], drawsGlyphs: Bool = true
+    ) -> [CommandBarEntry] {
         let represented = Set(items.compactMap { entry -> String? in
             if case .item(let id) = entry.action { return id.bundleID }
             return nil
@@ -172,7 +186,7 @@ enum CommandBarCorpus {
             out.append(CommandBarEntry(
                 candidate: candidate,
                 action: .launcher(bundleID: bundle),
-                glyph: .image(NSWorkspace.shared.icon(forFile: url.path))
+                glyph: drawsGlyphs ? .image(NSWorkspace.shared.icon(forFile: url.path)) : noGlyph
             ))
         }
         return out.sorted { $0.candidate.title.localizedCaseInsensitiveCompare($1.candidate.title) == .orderedAscending }
