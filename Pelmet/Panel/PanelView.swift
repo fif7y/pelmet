@@ -412,10 +412,12 @@ private struct PanelTileStyle: ButtonStyle {
                         .fill(configuration.isPressed ? ink.wellPress : hovering || selected ? ink.wellHover : row ? .clear : ink.well)
                         .frame(width: metrics.wellSize.width, height: metrics.wellSize.height)
                         .scaleEffect(configuration.isPressed ? 0.94 : 1)
+                        // On the well alone: on the whole tile, a hover that
+                        // changed with a re-layout slid the tile (2026-10-09).
+                        .animation(.easeOut(duration: 0.12), value: hovering)
+                        .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
                 }
                 .onHover { hovering = $0 }
-                .animation(.easeOut(duration: 0.12), value: hovering)
-                .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
         }
     }
 }
@@ -436,9 +438,11 @@ private struct FoldRowStyle: ButtonStyle {
             configuration.label
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(configuration.isPressed ? ink.wellHover : hovering ? ink.well : .clear))
+                        .fill(configuration.isPressed ? ink.wellHover : hovering ? ink.well : .clear)
+                        // The fill only: on the row, the hover the click
+                        // changed animated the fold's re-layout as a slide.
+                        .animation(.easeOut(duration: 0.12), value: hovering))
                 .onHover { hovering = $0 }
-                .animation(.easeOut(duration: 0.12), value: hovering)
         }
     }
 }

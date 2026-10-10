@@ -846,11 +846,12 @@ final class PanelPresenter: RevealPresenter {
 /// The panel pinned to the window's top right, where the window is
 /// anchored: the content changes a moment before the window takes its new
 /// size, and centred it jumped by half the difference (the fold row and the
-/// row above it, 2026-10-09).
+/// row above it, 2026-10-09). The zero minimums matter: without them the
+/// frame grows to a taller panel and centres it all the same.
 struct PanelHost: View {
     let panel: PanelView
 
     var body: some View {
-        panel.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        panel.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topTrailing)
     }
 }
