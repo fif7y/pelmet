@@ -40,6 +40,9 @@ final class PanelPresenter: RevealPresenter {
     private var tileDrag: TileDrag?
     private var dragTimer: Timer?
     private var springTask: Task<Void, Never>?
+    /// Esc during a drag: global (a panel a hover opened isn't key and hears
+    /// no keys) and local, so a quick tap is not missed between two polls.
+    private var escMonitors: [Any] = []
     /// What the drag shows, shared with the view.
     private let dragState = PanelDragState()
     /// Where SwiftUI laid out the sections, grids and fold, in the hosting
@@ -836,6 +839,7 @@ final class PanelPresenter: RevealPresenter {
         let home: CGPoint
         /// What a drop here would do; `.none` for nothing and for `origin`.
         var hit: PanelDropZones.Hit = .none
+        let started = CACurrentMediaTime()
 
         init(tile: PanelTile, key: ItemID, origin: PelmetCore.Section, ghost: PanelDragGhost, grab: CGSize, home: CGPoint) {
             self.tile = tile
@@ -891,14 +895,29 @@ final class PanelPresenter: RevealPresenter {
         }
         RunLoop.main.add(timer, forMode: .common)
         dragTimer = timer
+        let escape: (NSEvent) -> Void = { [weak self] event in
+            guard event.keyCode == 0x35 else { return }
+            MainActor.assumeIsolated { self?.cancelDrag() }
+        }
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: escape) { escMonitors.append(global) }
+        if let local = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { event in
+            escape(event)
+            return event.keyCode == 0x35 ? nil : event
+        }) { escMonitors.append(local) }
     }
 
     /// The ghost under the pointer, and the target it is over.
     private func tickDrag() {
         guard let drag = tileDrag else { return }
-        // Esc is polled: a panel a hover opened is not key and hears no keys.
+        // Polled too, for a key held down when the monitors' events came late.
         if CGEventSource.keyState(.combinedSessionState, key: 0x35) {
             cancelDrag()
+            return
+        }
+        // A release the gesture never reported: the drag ends where the
+        // button came up, not when the pointer next is clicked.
+        if NSEvent.pressedMouseButtons & 1 == 0, CACurrentMediaTime() - drag.started > 0.15 {
+            finishDrag(cancel: false)
             return
         }
         let pointer = NSEvent.mouseLocation
@@ -961,6 +980,8 @@ final class PanelPresenter: RevealPresenter {
         tileDrag = nil
         dragTimer?.invalidate()
         dragTimer = nil
+        for monitor in escMonitors { NSEvent.removeMonitor(monitor) }
+        escMonitors = []
         springTask?.cancel()
         springTask = nil
         withAnimation(.easeOut(duration: 0.15)) {
@@ -1006,10 +1027,15 @@ final class PanelPresenter: RevealPresenter {
             return zones
         }
         if content.blocks.contains(where: { $0.kind == .didntFit }) { zones.didntFit = onScreen(.section(.didntFit)) }
-        // The fold is a tile of Hidden's grid, or its own count or handle.
-        let hasFold = content.blocks.contains { $0.grid.frame(of: .fold) != nil }
-            || (content.query.isEmpty && content.fold != .tile && content.blocks.contains { $0.foldable })
-        if hasFold { zones.fold = onScreen(.fold) }
+        // The fold is a tile of Hidden's grid, placed from the grid's corner
+        // (an offset is not a layout frame: SwiftUI reports where the tile was
+        // laid out, not where it is drawn), or its own count or handle.
+        if let block = content.blocks.first(where: { $0.grid.frame(of: .fold) != nil }),
+           let cell = block.grid.frame(of: .fold), let grid = onScreen(.grid(block.kind)) {
+            zones.fold = CGRect(x: grid.minX + cell.minX, y: grid.maxY - cell.maxY, width: cell.width, height: cell.height)
+        } else if content.query.isEmpty, content.fold != .tile, content.blocks.contains(where: { $0.foldable }) {
+            zones.fold = onScreen(.fold)
+        }
         if content.blocks.contains(where: { $0.kind == .alwaysHidden && !$0.isFolded }) {
             zones.alwaysHidden = onScreen(.grid(.alwaysHidden))
         }

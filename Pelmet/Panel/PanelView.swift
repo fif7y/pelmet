@@ -55,7 +55,8 @@ enum PanelFrameKey: Hashable {
     case section(PanelSection.Kind)
     /// A section's tiles.
     case grid(PanelSection.Kind)
-    /// The Always Hidden fold, whichever of the three it is drawn as.
+    /// The Always Hidden fold as a count chip or a handle (the tile is a cell
+    /// of a grid, placed by an offset a frame does not see).
     case fold
 }
 
@@ -393,7 +394,6 @@ struct PanelView: View {
         .accessibilityValue(Text(count, format: .number))
         .accessibilityAddTraits(content.selected == .fold ? .isSelected : [])
         .offset(x: placement.frame.minX, y: placement.frame.minY)
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PanelHost.space)) } action: { onFrame(.fold, $0) }
     }
 
     /// The mock's search field, drawn: the panel's own key monitor types
