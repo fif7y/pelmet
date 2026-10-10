@@ -1440,7 +1440,7 @@ final class PanelPresenter: RevealPresenter {
         let reveal: Set<PelmetCore.Section> = needsAlways ? [.hidden, .alwaysHidden] : [.hidden]
         passTask = Task { @MainActor [weak self, weak appState] in
             guard let appState else { return }
-            let found = await appState.transitions.picturePass(reveal)
+            let found = await appState.transitions.picturePass(reveal, wanting: Set(wanted))
             guard let self else { return }
             self.passTask = nil
             let waiters = self.passWaiters

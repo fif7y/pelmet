@@ -197,11 +197,13 @@ final class TransitionCoordinator {
 
     /// A reveal or a press starting during a picture pass would reveal and
     /// conceal over it, and the pass's conceal would take the user's bar
-    /// back in. Wait it out, bounded: a pass takes about a second.
+    /// back in. Wait it out, bounded: a pass takes about a second, plus a
+    /// batch for each item the first round could not picture.
     func awaitPicturePass() async {
         guard passInFlight else { return }
         let started = Date()
-        while passInFlight, Date().timeIntervalSince(started) < AppTiming.picturePassWait {
+        let limit = AppTiming.picturePassWait + Double(PicturePassBatches.maxFollowUps) * AppTiming.picturePassBatch
+        while passInFlight, Date().timeIntervalSince(started) < limit {
             try? await Task.sleep(for: .milliseconds(15))
         }
         PelmetLog.log("transition: waited \(Int(-started.timeIntervalSinceNow * 1000))ms for the picture pass\(passInFlight ? " — still running, going on" : "")")
@@ -1199,7 +1201,16 @@ extension TransitionCoordinator {
     /// key; nil when the pass never saw the icons (the bar revealed, no
     /// Screen Recording, none drawn), so nothing counts as unpicturable.
     /// `dump` writes them to ~/Library/Logs/Pelmet/pass/.
-    func picturePass(_ sections: Set<PelmetCore.Section>, dump: Bool = false) async -> [ItemID: ItemPictures.Picture]? {
+    ///
+    /// A section wider than the room right of the notch draws only some of
+    /// its icons; the rest get no frame or a phantom one. Of the `wanting`
+    /// items still without a picture after that round, up to
+    /// `PicturePassBatches.maxFollowUps` more rounds reveal just those,
+    /// under the same cover, and stop as soon as one pictures nothing new.
+    /// With none left, nothing extra runs. Empty `wanting`: no follow-ups.
+    func picturePass(
+        _ sections: Set<PelmetCore.Section>, wanting: Set<ItemID> = [], dump: Bool = false
+    ) async -> [ItemID: ItemPictures.Picture]? {
         guard let appState else { return nil }
         let dump = dump || UserDefaults.standard.bool(forKey: "pelmet.debug.dumpPass")
         let start = Date()
@@ -1230,58 +1241,102 @@ extension TransitionCoordinator {
         }
         PelmetLog.log("pass: empty bar \(emptySource) at \(ms())ms (\(empty.count) display(s))")
 
+        // A walk that shows the icons `watch` names and agrees with the one
+        // before it: read while they still slid in, S1's crops were off by
+        // up to an icon, and two walks from before they came agree too.
+        func settledWalk(watching watch: (ItemID) -> Bool) async -> EngineSnapshot {
+            await appState.waitUntilQuiesced(interval: 0.2, deadline: 2, poll: .milliseconds(30))
+            var snap = await engine.snapshot()
+            for _ in 0..<12 {
+                try? await Task.sleep(for: .milliseconds(50))
+                let next = await engine.snapshot()
+                let arrived = next.items.contains { watch($0.id) && $0.frame != nil }
+                let settled = arrived && next.items.map(\.frame) == snap.items.map(\.frame)
+                snap = next
+                if settled { break }
+            }
+            return snap
+        }
+        let primaryMaxX = primaryMaxX
+        // Every primary-band frame in a walk, wanted or not: a phantom is
+        // told by what it overlaps.
+        func barFrames(_ snap: EngineSnapshot) -> [(key: ItemID, frame: CGRect)] {
+            snap.items.compactMap { item in
+                guard let f = item.frame, MenuBarGeometry.isInPrimaryBand(f, primaryMaxX: primaryMaxX) else { return nil }
+                return (item.id.sectionKey, f)
+            }
+        }
+
+        // Only what a revealed section holds: the rest is not this pass's.
+        let asking = Set(wanting.filter(wanted))
         pressBegan()
-        let cover = await beginBarCover(label: "pass")
+        // Room under the cover for the follow-up rounds, should they run.
+        let safety = AppTiming.transitionCoverSafety
+            + (asking.isEmpty ? 0 : Double(PicturePassBatches.maxFollowUps) * AppTiming.picturePassBatch)
+        let coverStart = Date()
+        let cover = await beginBarCover(label: "pass", safety: safety)
         PelmetLog.log("pass: cover \(cover == nil ? "none" : "up") at \(ms())ms")
         appState.picturePassSections = sections
         await engine.reveal(sections)
-        await appState.waitUntilQuiesced(interval: 0.2, deadline: 2, poll: .milliseconds(30))
-        // Frames from a walk that shows the icons and agrees with the one
-        // before it: read while they still slid in, S1's crops were off by
-        // up to an icon, and two walks from before they came agree too.
-        var snap = await engine.snapshot()
-        for _ in 0..<12 {
-            try? await Task.sleep(for: .milliseconds(50))
-            let next = await engine.snapshot()
-            let arrived = next.items.contains { wanted($0.id) && $0.frame != nil }
-            let settled = arrived && next.items.map(\.frame) == snap.items.map(\.frame)
-            snap = next
-            if settled { break }
-        }
+        let snap = await settledWalk { wanted($0) }
         appState.updateSnapshot(snap)
         // The panel orders its tiles the way the bar just drew them.
         appState.recordDrawnOrder(snap, revealed: sections)
-        let primaryMaxX = primaryMaxX
         let drawn = snap.items.filter { wanted($0.id) && $0.frame != nil }
         let onPrimary = drawn.filter { MenuBarGeometry.isInPrimaryBand($0.frame!, primaryMaxX: primaryMaxX) }
-        PelmetLog.log("pass: revealed at \(ms())ms (\(drawn.count) drawn, \(onPrimary.count) on the primary bar)")
+        // Frames of items the « holds overlap their neighbours: not on
+        // the bar, so never cropped.
+        let bar = barFrames(snap)
+        let seen = PicturePassBatches.drawn(wanted: Set(onPrimary.map { $0.id.sectionKey }), frames: bar)
+        let behind = seen.phantoms.isEmpty ? "" : ", \(seen.phantoms.count) behind the «"
+        PelmetLog.log("pass: revealed at \(ms())ms (\(drawn.count) drawn, \(onPrimary.count) on the primary bar\(behind))")
 
         var pictures: [ItemID: ItemPictures.Picture]? = drawn.isEmpty ? nil : [:]
-        let frames = onPrimary.compactMap(\.frame)
-        if let minX = frames.map(\.minX).min(), let maxX = frames.map(\.maxX).max(), let band = frames.first {
-            let rect = CGRect(x: minX - 8, y: band.minY, width: maxX - minX + 16, height: band.height)
-            // AX reports where the icons land before the bar has drawn them
-            // there: crops of a strip filmed mid-slide took halves of their
-            // neighbours (Always Hidden, 2026-10-09). Film until two frames
-            // agree.
-            var strip = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
-            var frames = 1
-            var lastApart: Double = 1
-            for _ in 0..<4 {
-                try? await Task.sleep(for: .milliseconds(80))
-                let next = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
-                frames += 1
-                if dump { Self.dumpPass(next, name: "_strip\(frames)") }
-                let apart = next.count == strip.count ? zip(strip, next).map { Self.pixelsApart($0.image, $1.image) }.max() ?? 1 : 1
-                strip = next
-                lastApart = apart
-                if apart < 0.005 { break }
-            }
-            PelmetLog.log("pass: strip captured at \(ms())ms (\(strip.count) display(s), \(frames) frame(s), last \(String(format: "%.2f", lastApart * 100))% apart) x \(strip.map { "\(Int($0.windowFrame.minX))…\(Int($0.windowFrame.maxX))" }) items \(onPrimary.compactMap(\.frame).map { "\(Int($0.minX))…\(Int($0.maxX))" })")
-            for (key, picture) in Self.pictures(of: onPrimary.compactMap { item in item.frame.map { (item.id.sectionKey, $0) } }, strip: strip, empty: empty, dump: dump) {
+        let solid = bar.filter { seen.solid[$0.key] == $0.frame }
+        if !solid.isEmpty {
+            for (key, picture) in await filmAndCut(solid, empty: empty, dump: dump, ms: ms) {
                 pictures?[key] = picture
             }
-            PelmetLog.log("pass: \(pictures?.count ?? 0) of \(onPrimary.count) pictures at \(ms())ms")
+            PelmetLog.log("pass: \(pictures?.count ?? 0) of \(solid.count) pictures at \(ms())ms")
+        }
+
+        // What is still without a picture gets the room to itself: the
+        // sections go back, then each round reveals only its leftovers
+        // (their bundles; siblings come along). `revealedItems` is not
+        // cleared by `conceal()`, so every round puts its own back.
+        if let have = pictures, !asking.isEmpty {
+            var leftovers = PicturePassBatches.leftovers(wanted: asking, pictured: Set(have.keys))
+            var sectionsOut = true
+            var itemsOut = Set<ItemID>()
+            var followUps = 0
+            var lastPictured = 0
+            while PicturePassBatches.wantsAnotherRound(followUpsDone: followUps, leftovers: leftovers, lastRoundPictured: lastPictured) {
+                guard -coverStart.timeIntervalSinceNow + AppTiming.picturePassBatch <= safety else {
+                    PelmetLog.log("pass: batch \(followUps + 1) skipped, \(Int(safety + coverStart.timeIntervalSinceNow))s of cover left, \(leftovers.count) item(s) left")
+                    break
+                }
+                followUps += 1
+                if sectionsOut {
+                    await engine.conceal()
+                    sectionsOut = false
+                }
+                if !itemsOut.isEmpty { await engine.conceal(items: itemsOut) }
+                let asked = leftovers
+                itemsOut = asked
+                await engine.reveal(items: asked)
+                let walk = await settledWalk { asked.contains($0.sectionKey) }
+                let now = PicturePassBatches.drawn(wanted: asked, frames: barFrames(walk))
+                if !now.phantoms.isEmpty {
+                    PelmetLog.log("pass: batch \(followUps) has \(now.phantoms.count) behind the «, not cropped")
+                }
+                let cut = barFrames(walk).filter { now.solid[$0.key] == $0.frame }
+                let got = cut.isEmpty ? [:] : await filmAndCut(cut, empty: empty, dump: false, ms: ms)
+                for (key, picture) in got { pictures?[key] = picture }
+                lastPictured = got.count
+                leftovers = PicturePassBatches.leftovers(wanted: asking, pictured: Set((pictures ?? [:]).keys))
+                PelmetLog.log("pass: batch \(followUps) revealed \(asked.count), pictured \(got.count), left \(leftovers.count) at \(ms())ms")
+            }
+            if !itemsOut.isEmpty { await engine.conceal(items: itemsOut) }
         }
 
         appState.picturePassSections = nil
@@ -1299,6 +1354,36 @@ extension TransitionCoordinator {
             passInFlight = false
         }
         return pictures
+    }
+
+    /// A strip filmed over `items` as the bar draws them, each one cut out
+    /// of it against `empty`. Nothing for an empty list.
+    private func filmAndCut(
+        _ items: [(key: ItemID, frame: CGRect)],
+        empty: [ConcealGhostOverlay.BarSnapshot], dump: Bool, ms: () -> Int
+    ) async -> [ItemID: ItemPictures.Picture] {
+        let frames = items.map(\.frame)
+        guard let minX = frames.map(\.minX).min(), let maxX = frames.map(\.maxX).max(), let band = frames.first else { return [:] }
+        let rect = CGRect(x: minX - 8, y: band.minY, width: maxX - minX + 16, height: band.height)
+        // AX reports where the icons land before the bar has drawn them
+        // there: crops of a strip filmed mid-slide took halves of their
+        // neighbours (Always Hidden, 2026-10-09). Film until two frames
+        // agree.
+        var strip = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
+        var filmed = 1
+        var lastApart: Double = 1
+        for _ in 0..<4 {
+            try? await Task.sleep(for: .milliseconds(80))
+            let next = await ConcealGhostOverlay.snapshotSet(of: rect, excludingOwnWindows: true)
+            filmed += 1
+            if dump { Self.dumpPass(next, name: "_strip\(filmed)") }
+            let apart = next.count == strip.count ? zip(strip, next).map { Self.pixelsApart($0.image, $1.image) }.max() ?? 1 : 1
+            strip = next
+            lastApart = apart
+            if apart < 0.005 { break }
+        }
+        PelmetLog.log("pass: strip captured at \(ms())ms (\(strip.count) display(s), \(filmed) frame(s), last \(String(format: "%.2f", lastApart * 100))% apart) x \(strip.map { "\(Int($0.windowFrame.minX))…\(Int($0.windowFrame.maxX))" }) items \(frames.map { "\(Int($0.minX))…\(Int($0.maxX))" })")
+        return Self.pictures(of: items, strip: strip, empty: empty, dump: dump)
     }
 
     /// Debug trigger (`pelmet.debug.picturePass`): Hidden, dumped to disk.
