@@ -493,9 +493,7 @@ final class PanelPresenter: RevealPresenter {
         case .move(let direction):
             guard let content = lastContent else { break }
             switch content.step(from: selected, toward: direction) {
-            case .select(let tile):
-                selected = tile
-                refresh()
+            case .select(let tile): select(tile, in: content)
             case .unfold: toggleFold()
             case .stay: break
             }
@@ -506,6 +504,23 @@ final class PanelPresenter: RevealPresenter {
             setQuery(new)
         }
         return true
+    }
+
+    /// An arrow moved the selection. The tiles, the size and the window are
+    /// as the last refresh left them, so only the highlight is drawn again.
+    /// The view scrolls to the new selection on its own.
+    private func select(_ tile: PanelTile, in drawn: PanelContent) {
+        selected = tile
+        // A tile the panel doesn't show has no place to be selected: the
+        // refresh clears it.
+        guard let hosting, drawn.art[tile] != nil || tile == .fold else {
+            refresh()
+            return
+        }
+        var content = drawn
+        content.selected = tile
+        lastContent = content
+        hosting.rootView = PanelHost(panel: view(content))
     }
 
     private func setQuery(_ new: String) {
