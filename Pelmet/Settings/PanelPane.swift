@@ -80,7 +80,7 @@ struct PanelPane: View {
                 // pull the Always Hidden picker up from under the pointer.
                 SettingRow(title: "Fold", caption: "What you click to open Always Hidden.") {
                     PelmetSegments(selection: binding(\.alwaysHiddenFold), options: [
-                        (.tile, "Tile"), (.count, "Count"), (.handle, "Handle"),
+                        (.tile, "Tile"), (.count, "Chip"), (.handle, "Handle"),
                     ], compact: true)
                 }
                 .disabled(options.alwaysHidden == .hidden)

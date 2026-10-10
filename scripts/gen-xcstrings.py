@@ -257,7 +257,7 @@ T = {
     "Fold": dict(de="Klappbereich", fr="Volet", es="Plegable", it="Sezione pieghevole", pt="Dobra", ja="折りたたみ", zh="折叠区", ko="접힌 부분", ru="Свёрнутый блок"),
     "What you click to open Always Hidden.": dict(de="Darauf klickst du, um „Immer ausgeblendet“ zu öffnen.", fr="Ce sur quoi vous cliquez pour ouvrir « Toujours masqués ».", es="Lo que pulsas para abrir Siempre ocultos.", it="Ciò su cui fai clic per aprire Sempre nascosti.", pt="O que você clica para abrir Sempre ocultos.", ja="「常に非表示」を開くときにクリックするものです。", zh="点按它即可打开“始终隐藏”。", ko="‘항상 숨김’을 열 때 클릭하는 곳입니다.", ru="То, на что нажать, чтобы открыть «Всегда скрытые»."),
     "Tile": dict(de="Kachel", fr="Tuile", es="Mosaico", it="Riquadro", pt="Bloco", ja="タイル", zh="图块", ko="타일", ru="Плитка"),
-    "Count": dict(de="Anzahl", fr="Nombre", es="Número", it="Numero", pt="Número", ja="数", zh="数量", ko="개수", ru="Число"),
+    "Chip": dict(de="Chip", fr="Pastille", es="Chip", it="Chip", pt="Chip", ja="チップ", zh="胶囊", ko="칩", ru="Плашка"),
     "Handle": dict(de="Griff", fr="Poignée", es="Asa", it="Maniglia", pt="Alça", ja="ハンドル", zh="把手", ko="손잡이", ru="Ручка"),
     "Always Hidden fold": dict(de="Klappbereich „Immer ausgeblendet“", fr="Volet « Toujours masqués »", es="Plegable de Siempre ocultos", it="Sezione pieghevole Sempre nascosti", pt="Dobra de Sempre ocultos", ja="「常に非表示」の折りたたみ", zh="“始终隐藏”折叠区", ko="‘항상 숨김’ 접힌 부분", ru="Свёрнутый блок «Всегда скрытые»"),
     "Folded each time": dict(de="Jedes Mal eingeklappt", fr="Replié à chaque fois", es="Plegado cada vez", it="Chiusa ogni volta", pt="Recolhido toda vez", ja="毎回折りたたむ", zh="每次都折叠", ko="매번 접기", ru="Каждый раз свёрнут"),
