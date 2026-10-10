@@ -236,7 +236,7 @@ final class PanelPresenter: RevealPresenter {
 
     private func ensureWindow() -> (KeyableGlassPanel, PanelHostingView) {
         if let window, let hosting { return (window, hosting) }
-        let hosting = PanelHostingView(rootView: PanelHost(panel: PanelView(content: PanelContent(), onPress: { _ in }, onFold: {})))
+        let hosting = PanelHostingView(rootView: Self.blank())
         // The window's frame is ours; the content must not resize it.
         hosting.sizingOptions = []
         let window = KeyableGlassPanel(content: hosting, cornerRadius: Self.cornerRadius)
@@ -340,8 +340,18 @@ final class PanelPresenter: RevealPresenter {
             Task { @MainActor in
                 guard let self, self.generation == mine, !self.isOpen else { return }
                 self.window?.orderOut(nil)
+                // Hidden, not gone: a search row left in the window would
+                // keep its caret blinking on a timer of its own.
+                self.query = ""
+                self.hosting?.rootView = Self.blank()
             }
         })
+    }
+
+    /// A panel with nothing in it: what the window holds before the first
+    /// open and after each close.
+    private static func blank() -> PanelHost {
+        PanelHost(panel: PanelView(content: PanelContent(), onPress: { _ in }, onFold: {}))
     }
 
     // MARK: - Motion
