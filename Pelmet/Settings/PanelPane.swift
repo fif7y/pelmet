@@ -64,14 +64,32 @@ struct PanelPane: View {
         let options = appState.settings.panel
         return SettingsCard(title: "Icons") {
             if target == .panel {
-                SettingToggleRow(title: "Show names", caption: "Names under each icon. Off fits more in a row.",
-                                 isOn: binding(\.showsNames))
-                    .settingAnchor("panelNames")
                 SettingRow(title: "Columns",
                            caption: "Auto picks a width that fits your icons. You can also drag the panel's edge.") {
                     PelmetMenuPicker(selection: binding(\.columns), options: columnChoices(options.columns))
                 }
                 .settingAnchor("panelColumns")
+                // Dimmed, not removed, with Always Hidden off: gone, it would
+                // pull the Always Hidden picker up from under the pointer.
+                SettingRow(title: "Fold", caption: "What you click to open Always Hidden.") {
+                    PelmetSegments(selection: binding(\.alwaysHiddenFold), options: [
+                        (.tile, "Tile"), (.count, "Count"), (.handle, "Handle"),
+                    ], compact: true)
+                }
+                .disabled(options.alwaysHidden == .hidden)
+                .opacity(options.alwaysHidden == .hidden ? 0.45 : 1)
+                .settingAnchor("panelFold")
+            }
+            SettingRow(title: "Always Hidden", caption: alwaysHiddenCaption(options.alwaysHidden)) {
+                PelmetMenuPicker(selection: binding(\.alwaysHidden), options: [
+                    (.folded, "Folded each time"), (.asLeft, "As you left it"), (.hidden, "Don't show"),
+                ])
+            }
+            .settingAnchor("panelAlwaysHidden")
+            if target == .panel {
+                SettingToggleRow(title: "Show names", caption: "Names under each icon. Off fits more in a row.",
+                                 isOn: binding(\.showsNames))
+                    .settingAnchor("panelNames")
             }
             SettingToggleRow(title: "Show closed apps", caption: "Apps that aren't running, dimmed. A click opens one.",
                              isOn: binding(\.showsClosedApps))
@@ -83,20 +101,6 @@ struct PanelPane: View {
                     : "Keeps the groups you made in the menu bar together, one row each.",
                 isOn: binding(\.separatorsBreakRows))
                 .settingAnchor("panelGroups")
-            SettingRow(title: "Always Hidden", caption: alwaysHiddenCaption(options.alwaysHidden)) {
-                PelmetMenuPicker(selection: binding(\.alwaysHidden), options: [
-                    (.folded, "Folded each time"), (.asLeft, "As you left it"), (.hidden, "Don't show"),
-                ])
-            }
-            .settingAnchor("panelAlwaysHidden")
-            if target == .panel, options.alwaysHidden != .hidden {
-                SettingRow(title: "Fold", caption: "What you click to open Always Hidden.") {
-                    PelmetSegments(selection: binding(\.alwaysHiddenFold), options: [
-                        (.tile, "Tile"), (.count, "Count"), (.handle, "Handle"),
-                    ], compact: true)
-                }
-                .settingAnchor("panelFold")
-            }
         }
     }
 
