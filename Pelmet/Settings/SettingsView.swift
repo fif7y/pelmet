@@ -278,8 +278,13 @@ private struct UpdateStrip: View {
 private struct SettingsSidebar: View {
     @Environment(AppState.self) private var appState
     @Binding var tab: SettingsTab
-    /// The Panel tab's "New" chip goes once the tab has been opened.
+    /// The Panel and Search tabs' "New" chips go once the tab has been opened.
     @AppStorage("pelmet.seen.panelTab") private var panelTabSeen = false
+    @AppStorage("pelmet.seen.searchTab") private var searchTabSeen = false
+
+    private func isNew(_ item: SettingsTab) -> Bool {
+        (item == .panel && !panelTabSeen) || (item == .search && !searchTabSeen)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -302,8 +307,8 @@ private struct SettingsSidebar: View {
                     // An available update puts a green chip on the About row
                     // — a trail for someone who just opened Settings.
                     badge: item == .about && SparkleController.shared.availableVersion != nil
-                        ? "Update" : item == .panel && !panelTabSeen ? "New" : nil,
-                    badgeTint: item == .panel ? PelmetAccent.accent : .green
+                        ? "Update" : isNew(item) ? "New" : nil,
+                    badgeTint: item == .about ? .green : PelmetAccent.accent
                 ) { tab = item }
             }
             Spacer()
@@ -316,6 +321,7 @@ private struct SettingsSidebar: View {
         .background(.quaternary.opacity(0.35))
         .onChange(of: tab, initial: true) { _, now in
             if now == .panel { panelTabSeen = true }
+            if now == .search { searchTabSeen = true }
         }
     }
 }
