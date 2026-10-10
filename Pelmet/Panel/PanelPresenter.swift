@@ -151,11 +151,9 @@ final class PanelPresenter: RevealPresenter {
         var reach = window.frame
         if let screen = window.screen ?? NSScreen.main {
             reach.size.height = screen.frame.maxY - reach.minY
-            let bar = GlassPanel.barHeight(of: screen)
             // NSMouseInRect: a pointer pushed to the top row sits at maxY,
             // which `contains` leaves out.
-            if NSMouseInRect(pointer, NSRect(x: screen.frame.minX, y: screen.frame.maxY - bar,
-                                             width: screen.frame.width, height: bar), false) { return true }
+            if NSMouseInRect(pointer, Self.barBand(of: screen), false) { return true }
         }
         if NSMouseInRect(pointer, reach, false) { return true }
         PelmetLog.log("panel: let go — pointer at \(Int(pointer.x)),\(Int(pointer.y)), panel \(Int(reach.minX))…\(Int(reach.maxX))")
@@ -584,9 +582,13 @@ final class PanelPresenter: RevealPresenter {
         guard let frame = appState?.chevronWindowFrame else { return nil }
         let mid = NSPoint(x: frame.midX, y: frame.midY)
         guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mid, $0.frame, false) }) else { return nil }
+        return Self.barBand(of: screen).intersects(frame) ? (frame, screen) : nil
+    }
+
+    /// The menu bar across `screen`.
+    private static func barBand(of screen: NSScreen) -> NSRect {
         let bar = GlassPanel.barHeight(of: screen)
-        let band = NSRect(x: screen.frame.minX, y: screen.frame.maxY - bar, width: screen.frame.width, height: bar)
-        return band.intersects(frame) ? (frame, screen) : nil
+        return NSRect(x: screen.frame.minX, y: screen.frame.maxY - bar, width: screen.frame.width, height: bar)
     }
 
     private static func top(on screen: NSScreen) -> CGFloat {
@@ -1129,10 +1131,7 @@ final class PanelPresenter: RevealPresenter {
     /// band, and the parts SwiftUI laid out.
     private func dropZones() -> PanelDropZones? {
         guard let window, let hosting, let content = lastContent, let screen = window.screen ?? NSScreen.main else { return nil }
-        let bar = GlassPanel.barHeight(of: screen)
-        var zones = PanelDropZones(
-            bar: NSRect(x: screen.frame.minX, y: screen.frame.maxY - bar, width: screen.frame.width, height: bar),
-            panel: window.glassScreenFrame)
+        var zones = PanelDropZones(bar: Self.barBand(of: screen), panel: window.glassScreenFrame)
         func onScreen(_ key: PanelFrameKey) -> CGRect? {
             frames[key].map { window.convertToScreen(hosting.convert($0, to: nil)) }
         }
