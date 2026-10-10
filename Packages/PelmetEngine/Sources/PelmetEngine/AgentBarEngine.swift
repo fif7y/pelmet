@@ -208,6 +208,10 @@ public actor AgentBarEngine: MenuBarEngine {
         companionMuted = false
     }
 
+    /// The items revealed on their own right now: a press's, or a picture
+    /// pass's follow-up round.
+    public func itemsRevealedOnTheirOwn() -> Set<ItemID> { revealedItems }
+
     public func conceal() async {
         // Nothing revealed but items: no section changes, the extras stay.
         companionMuted = revealedSections.isEmpty && !revealedItems.isEmpty

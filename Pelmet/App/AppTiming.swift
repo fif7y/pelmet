@@ -85,9 +85,10 @@ enum AppTiming {
     /// How long a reveal or a press waits for a picture pass to put the bar
     /// back: 11 icons took ~1.0s, measured 2026-10-09.
     static let picturePassWait: TimeInterval = 2.5
-    /// What one follow-up batch of the picture pass is given, and the cover
-    /// and the wait above grow by (conceal, reveal, settle walks, strip, the
-    /// lift after it). Not measured yet: the `pass: batch` log lines are.
+    /// What one follow-up batch of the picture pass is given (swaps, settle
+    /// walks, strip): the cover is held up that long, plus the lift reserve,
+    /// when one starts, and a waiting reveal or press waits that much longer
+    /// at most. Not measured yet: the `pass: batch` log lines are.
     static let picturePassBatch: TimeInterval = 2.0
     /// Backdrop check delay after an animated window move (tiling key,
     /// activation, Space switch): a Space switch animates ~0.5s. A mouse-up

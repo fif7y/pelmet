@@ -73,6 +73,10 @@ final class TransitionCoordinator {
     /// A picture pass has the bar revealed under its cover. See
     /// `awaitPicturePass`.
     private(set) var passInFlight = false
+    /// A reveal or a press arrived while the pass ran and is waiting for it
+    /// (`passWaiterArrived`). The follow-up rounds check it before each
+    /// round and stop: the user's bar comes first.
+    private var passHasWaiter = false
     /// The dropped cover, kept with the signature it was taken under. Most
     /// changes are one window in and out of the zone (#49's log: 9→8→9;
     /// Notification Center opening and closing under the clock): when the
@@ -161,6 +165,8 @@ final class TransitionCoordinator {
     private var pressHolds = 0
     private var pressEpoch = 0
     private var pressHoldsBar: Bool { pressHolds > 0 }
+    /// A press other than the picture pass's own hold, which counts one.
+    private var otherPressHoldsBar: Bool { pressHolds > (passInFlight ? 1 : 0) }
 
     func pressBegan() {
         pressHolds += 1
@@ -195,14 +201,21 @@ final class TransitionCoordinator {
         PelmetLog.log("transition: waited \(Int(-started.timeIntervalSinceNow * 1000))ms for the last lift\(liftsInFlight > 0 ? " — still up, going on" : "")")
     }
 
+    /// Tells a running pass that someone is waiting for the bar. Called as
+    /// soon as the reveal or the press is asked for, before it starts to wait.
+    func passWaiterArrived() {
+        if passInFlight { passHasWaiter = true }
+    }
+
     /// A reveal or a press starting during a picture pass would reveal and
     /// conceal over it, and the pass's conceal would take the user's bar
-    /// back in. Wait it out, bounded: a pass takes about a second, plus a
-    /// batch for each item the first round could not picture.
+    /// back in. Wait it out, bounded: a pass takes about a second, plus at
+    /// most the one follow-up round it finishes once it hears of the waiter.
     func awaitPicturePass() async {
         guard passInFlight else { return }
+        passWaiterArrived()
         let started = Date()
-        let limit = AppTiming.picturePassWait + Double(PicturePassBatches.maxFollowUps) * AppTiming.picturePassBatch
+        let limit = AppTiming.picturePassWait + AppTiming.picturePassBatch
         while passInFlight, Date().timeIntervalSince(started) < limit {
             try? await Task.sleep(for: .milliseconds(15))
         }
@@ -321,6 +334,7 @@ final class TransitionCoordinator {
     }
 
     func performReveal(_ sections: Set<PelmetCore.Section>, trace: PerfTrace) {
+        passWaiterArrived()
         Task {
             guard let appState else { return }
             await awaitPicturePass()
@@ -630,6 +644,11 @@ final class TransitionCoordinator {
         }
         /// Every cover this blink raised, for the log.
         var ids: String { (beneath + [current]).map(\.ids).joined(separator: " ") }
+        /// Keeps the covers' safety fade at least `seconds` from now.
+        func keepUp(for seconds: TimeInterval) {
+            current.keepUp(for: seconds)
+            for cover in beneath { cover.keepUp(for: seconds) }
+        }
         func dismiss() {
             dismissed = true
             current.dismiss()
@@ -1204,10 +1223,11 @@ extension TransitionCoordinator {
     ///
     /// A section wider than the room right of the notch draws only some of
     /// its icons; the rest get no frame or a phantom one. Of the `wanting`
-    /// items still without a picture after that round, up to
+    /// items the first round saw that way on the primary bar, up to
     /// `PicturePassBatches.maxFollowUps` more rounds reveal just those,
-    /// under the same cover, and stop as soon as one pictures nothing new.
-    /// With none left, nothing extra runs. Empty `wanting`: no follow-ups.
+    /// under the same cover, and stop as soon as one pictures nothing new,
+    /// or a reveal or a press wants the bar. The first round is the same
+    /// with or without them, and with none to follow up nothing extra runs.
     func picturePass(
         _ sections: Set<PelmetCore.Section>, wanting: Set<ItemID> = [], dump: Bool = false
     ) async -> [ItemID: ItemPictures.Picture]? {
@@ -1230,6 +1250,7 @@ extension TransitionCoordinator {
         // Until the cover is off the bar: a reveal starting under it would
         // film the cover as the bar.
         passInFlight = true
+        passHasWaiter = false
         // By section, not the walk's `concealed`: that misses system items
         // such as Sound, which leave the AX tree when hidden.
         let model = appState.settings.sectionModel
@@ -1258,23 +1279,10 @@ extension TransitionCoordinator {
             return snap
         }
         let primaryMaxX = primaryMaxX
-        // Every primary-band frame in a walk, wanted or not: a phantom is
-        // told by what it overlaps.
-        func barFrames(_ snap: EngineSnapshot) -> [(key: ItemID, frame: CGRect)] {
-            snap.items.compactMap { item in
-                guard let f = item.frame, MenuBarGeometry.isInPrimaryBand(f, primaryMaxX: primaryMaxX) else { return nil }
-                return (item.id.sectionKey, f)
-            }
-        }
 
-        // Only what a revealed section holds: the rest is not this pass's.
-        let asking = Set(wanting.filter(wanted))
         pressBegan()
-        // Room under the cover for the follow-up rounds, should they run.
-        let safety = AppTiming.transitionCoverSafety
-            + (asking.isEmpty ? 0 : Double(PicturePassBatches.maxFollowUps) * AppTiming.picturePassBatch)
         let coverStart = Date()
-        let cover = await beginBarCover(label: "pass", safety: safety)
+        let cover = await beginBarCover(label: "pass")
         PelmetLog.log("pass: cover \(cover == nil ? "none" : "up") at \(ms())ms")
         appState.picturePassSections = sections
         await engine.reveal(sections)
@@ -1284,56 +1292,78 @@ extension TransitionCoordinator {
         appState.recordDrawnOrder(snap, revealed: sections)
         let drawn = snap.items.filter { wanted($0.id) && $0.frame != nil }
         let onPrimary = drawn.filter { MenuBarGeometry.isInPrimaryBand($0.frame!, primaryMaxX: primaryMaxX) }
-        // Frames of items the « holds overlap their neighbours: not on
-        // the bar, so never cropped.
-        let bar = barFrames(snap)
-        let seen = PicturePassBatches.drawn(wanted: Set(onPrimary.map { $0.id.sectionKey }), frames: bar)
-        let behind = seen.phantoms.isEmpty ? "" : ", \(seen.phantoms.count) behind the «"
-        PelmetLog.log("pass: revealed at \(ms())ms (\(drawn.count) drawn, \(onPrimary.count) on the primary bar\(behind))")
+        PelmetLog.log("pass: revealed at \(ms())ms (\(drawn.count) drawn, \(onPrimary.count) on the primary bar)")
 
         var pictures: [ItemID: ItemPictures.Picture]? = drawn.isEmpty ? nil : [:]
-        let solid = bar.filter { seen.solid[$0.key] == $0.frame }
-        if !solid.isEmpty {
-            for (key, picture) in await filmAndCut(solid, empty: empty, dump: dump, ms: ms) {
+        let shown = onPrimary.compactMap { item in item.frame.map { (key: item.id.sectionKey, frame: $0) } }
+        if !shown.isEmpty {
+            for (key, picture) in await filmAndCut(shown, empty: empty, dump: dump, ms: ms) {
                 pictures?[key] = picture
             }
-            PelmetLog.log("pass: \(pictures?.count ?? 0) of \(solid.count) pictures at \(ms())ms")
+            PelmetLog.log("pass: \(pictures?.count ?? 0) of \(onPrimary.count) pictures at \(ms())ms")
         }
 
-        // What is still without a picture gets the room to itself: the
-        // sections go back, then each round reveals only its leftovers
-        // (their bundles; siblings come along). `revealedItems` is not
-        // cleared by `conceal()`, so every round puts its own back.
-        if let have = pictures, !asking.isEmpty {
-            var leftovers = PicturePassBatches.leftovers(wanted: asking, pictured: Set(have.keys))
+        // The narrow fallback: what the walk saw frameless or behind the «
+        // on the primary bar gets the room to itself, a round at a time.
+        // Everything else (every wanted item clear, a blank cut, a side
+        // display) is as it always was, and nothing below runs.
+        var leftovers = Set<ItemID>()
+        if pictures != nil, !wanting.isEmpty {
+            let asking = Set(wanting.filter(wanted))
+            leftovers = PicturePassBatches.leftovers(
+                wanted: asking, items: snap.items.map { (key: $0.id.sectionKey, frame: $0.frame) }, primaryMaxX: primaryMaxX)
+        }
+        if !leftovers.isEmpty {
+            // Another press's ids stay out of the rounds: putting them back
+            // would pull an icon from under the menu it opened.
+            let theirs = await engine.itemsRevealedOnTheirOwn()
+            leftovers.subtract(theirs)
+            let ceiling = AppTiming.transitionCoverSafety + Double(PicturePassBatches.maxFollowUps) * AppTiming.picturePassBatch
             var sectionsOut = true
             var itemsOut = Set<ItemID>()
             var followUps = 0
             var lastPictured = 0
             while PicturePassBatches.wantsAnotherRound(followUpsDone: followUps, leftovers: leftovers, lastRoundPictured: lastPictured) {
-                guard -coverStart.timeIntervalSinceNow + AppTiming.picturePassBatch <= safety else {
-                    PelmetLog.log("pass: batch \(followUps + 1) skipped, \(Int(safety + coverStart.timeIntervalSinceNow))s of cover left, \(leftovers.count) item(s) left")
+                let elapsed = -coverStart.timeIntervalSinceNow
+                if let blocker = PicturePassBatches.blocker(
+                    .init(hasCover: cover != nil, hasEmptyBarPicture: !empty.isEmpty,
+                          otherPressHoldsBar: otherPressHoldsBar, waiterPending: passHasWaiter),
+                    elapsed: elapsed, batch: AppTiming.picturePassBatch, ceiling: ceiling
+                ) {
+                    PelmetLog.log("pass: batch skipped — \(blocker.reason) (batch \(followUps + 1), \(leftovers.count) left)")
                     break
                 }
                 followUps += 1
+                // The cover is held up for this round only, once it starts.
+                cover?.keepUp(for: AppTiming.picturePassBatch + PicturePassBatches.liftReserve)
+                // One swap a round: the items come out before the sections go
+                // back, and later rounds only put away what got its picture.
+                let asked = leftovers
+                let out = asked.subtracting(itemsOut)
+                if !out.isEmpty { await engine.reveal(items: out) }
                 if sectionsOut {
+                    // The engine is about to say "concealed": Pelmet's own
+                    // items follow it, or they would flip under the capture.
+                    appState.picturePassSections = []
                     await engine.conceal()
                     sectionsOut = false
                 }
-                if !itemsOut.isEmpty { await engine.conceal(items: itemsOut) }
-                let asked = leftovers
+                let back = itemsOut.subtracting(asked)
+                if !back.isEmpty { await engine.conceal(items: back) }
                 itemsOut = asked
-                await engine.reveal(items: asked)
                 let walk = await settledWalk { asked.contains($0.sectionKey) }
-                let now = PicturePassBatches.drawn(wanted: asked, frames: barFrames(walk))
+                let bar = walk.items.compactMap { item in
+                    item.frame.flatMap { MenuBarGeometry.isInPrimaryBand($0, primaryMaxX: primaryMaxX) ? (key: item.id.sectionKey, frame: $0) : nil }
+                }
+                let now = PicturePassBatches.drawn(wanted: asked, frames: bar)
                 if !now.phantoms.isEmpty {
                     PelmetLog.log("pass: batch \(followUps) has \(now.phantoms.count) behind the «, not cropped")
                 }
-                let cut = barFrames(walk).filter { now.solid[$0.key] == $0.frame }
+                let cut = bar.filter { now.solid[$0.key] == $0.frame }
                 let got = cut.isEmpty ? [:] : await filmAndCut(cut, empty: empty, dump: false, ms: ms)
                 for (key, picture) in got { pictures?[key] = picture }
                 lastPictured = got.count
-                leftovers = PicturePassBatches.leftovers(wanted: asking, pictured: Set((pictures ?? [:]).keys))
+                leftovers = PicturePassBatches.remaining(asked, pictured: Set(got.keys))
                 PelmetLog.log("pass: batch \(followUps) revealed \(asked.count), pictured \(got.count), left \(leftovers.count) at \(ms())ms")
             }
             if !itemsOut.isEmpty { await engine.conceal(items: itemsOut) }

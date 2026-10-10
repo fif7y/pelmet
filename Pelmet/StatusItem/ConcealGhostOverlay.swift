@@ -67,6 +67,8 @@ final class ConcealGhostOverlay {
         /// The covers' ids as they read in the `ghost:` lines, "#3 #4".
         var ids: String { overlays.map { "#\($0.id)" }.joined(separator: " ") }
         func dismiss() { for overlay in overlays { overlay.dismiss() } }
+        /// Keeps the safety fade at least `seconds` from now.
+        func keepUp(for seconds: TimeInterval) { for overlay in overlays { overlay.keepUp(for: seconds) } }
         func fadeOut(duration: CFTimeInterval = ConcealGhostOverlay.dismissDuration, slide: Bool = false) {
             for overlay in overlays { overlay.fadeOut(duration: duration, slide: slide) }
         }
@@ -278,6 +280,9 @@ final class ConcealGhostOverlay {
     private let imageView: NSImageView
     private var finished = false
     private var stoodDown = false
+    /// When the safety fade is due. Fixed at `begin` unless a caller that
+    /// knows better (a picture pass running follow-up rounds) pushes it out.
+    private var safetyEnd = Date()
     /// One per cover, in the `ghost:` log lines, so a cover that outlived
     /// its blink can be matched to the line that raised it (#52).
     private static var nextID = 0
@@ -769,11 +774,26 @@ final class ConcealGhostOverlay {
         // freed with its window still ordered in, and a weak timer had
         // nothing left to fade. The window is what stays on screen, so
         // the timer must be what keeps the cover alive until it lifts.
-        DispatchQueue.main.asyncAfter(deadline: .now() + safety) { [self] in
+        safetyEnd = Date().addingTimeInterval(safety)
+        armSafety(after: safety)
+    }
+
+    private func armSafety(after delay: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [self] in
             guard !finished else { return }
+            let left = safetyEnd.timeIntervalSinceNow
+            if left > 0.01 {
+                armSafety(after: left)
+                return
+            }
             PelmetLog.log("ghost: strip #\(id) safety fade")
             fadeOut()
         }
+    }
+
+    func keepUp(for seconds: TimeInterval) {
+        let end = Date().addingTimeInterval(seconds)
+        if end > safetyEnd { safetyEnd = end }
     }
 
     /// One decrement per overlay, however it ends.

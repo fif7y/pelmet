@@ -784,6 +784,7 @@ final class AppState {
         // A picture pass has the bar revealed under its cover: the press
         // waits for it, or both would reveal and conceal at once.
         if transitions.passInFlight {
+            transitions.passWaiterArrived()
             Task {
                 await transitions.awaitPicturePass()
                 press.open(id, button: button)
