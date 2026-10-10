@@ -156,6 +156,42 @@ import Testing
         #expect(grid([t(0), .rowBreak, t(1)]).dividers.isEmpty)
     }
 
+    private func row(_ tiles: [PanelTile], maxWidth: CGFloat) -> PanelGrid {
+        PanelGrid(tiles: tiles, columns: nil, layout: .row, showsNames: false, maxWidth: maxWidth)
+    }
+
+    // A row that fits stays one row, whatever the room.
+    @Test func aRowThatFitsNeverWraps() {
+        let g = row(tiles(8), maxWidth: 1000)
+        #expect(counts(g) == [8])
+        #expect(g.contentSize == CGSize(width: 272, height: 28))
+    }
+
+    // Too wide for the display: two even rows, not a full one over a stub.
+    @Test func aRowTooWideWrapsIntoEvenRows() {
+        let g = row(tiles(10), maxWidth: 200)
+        #expect(counts(g) == [5, 5])
+        #expect(g.columnCount == 5)
+        #expect(g.rows[1][0].frame == CGRect(x: 0, y: 30, width: 34, height: 28))
+        #expect(g.contentSize == CGSize(width: 170, height: 58))
+        #expect(g.neighbour(of: t(1), toward: .down) == t(6))
+        #expect(g.neighbour(of: t(4), toward: .right) == t(5))
+        // Three fit at 110: the spare tiles go to the first rows.
+        #expect(counts(row(tiles(7), maxWidth: 110)) == [3, 2, 2])
+        #expect(counts(row(tiles(10), maxWidth: 120)) == [3, 3, 2, 2])
+    }
+
+    // A divider stays inside a row; at a wrap the new row is the separation.
+    @Test func aWrapDropsTheDividerItLandsOn() {
+        let kept = row([t(0), .rowBreak, t(1), t(2), t(3)], maxWidth: 100)
+        #expect(counts(kept) == [2, 2])
+        #expect(kept.dividers == [CGRect(x: 34, y: 0, width: 13, height: 28)])
+        #expect(kept.contentSize.width == 81)
+        let dropped = row([t(0), t(1), t(2), .rowBreak, t(3), t(4), t(5)], maxWidth: 150)
+        #expect(counts(dropped) == [3, 3])
+        #expect(dropped.dividers.isEmpty)
+    }
+
     // MARK: - Arrow keys
 
     @Test func rightAndLeftWalkTheRowsAndStopAtTheEnds() {

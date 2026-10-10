@@ -54,7 +54,8 @@ public struct PanelGrid: Equatable, Sendable {
     public enum Layout: Sendable {
         /// Rows of tiles under the chevron.
         case panel
-        /// The same tiles in one row, no names.
+        /// The same tiles in one row, no names; more rows only when one
+        /// would be wider than the display.
         case row
     }
 
@@ -91,12 +92,15 @@ public struct PanelGrid: Equatable, Sendable {
     ///     layout ignores it.
     ///   - minimumColumns: for sections stacked in one panel, which share a
     ///     width: the widest of their `neededColumns`.
+    ///   - maxWidth: the row layout wraps past it, into rows of about the
+    ///     same length; the panel layout ignores it.
     public init(
         tiles: [PanelTile],
         columns: Int?,
         layout: Layout,
         showsNames: Bool,
         minimumColumns: Int = 1,
+        maxWidth: CGFloat? = nil,
         metrics: PanelMetrics? = nil
     ) {
         let names = layout == .panel && showsNames
@@ -134,30 +138,50 @@ public struct PanelGrid: Equatable, Sendable {
             size = rows.isEmpty ? .zero : CGSize(
                 width: width, height: y + metrics.tileSize.height)
         case .row:
+            // Too wide for `maxWidth`: as many rows as it takes, the tiles
+            // shared out evenly (the first rows one longer), never a full
+            // row over a stub.
+            let icons = tiles.filter { $0 != .rowBreak }.count
+            let pitch = metrics.tileSize.width + metrics.columnGap
+            let fit = maxWidth.map { max(1, Int(($0 + metrics.columnGap) / pitch)) } ?? max(icons, 1)
+            let lines = max(1, (icons + fit - 1) / fit)
+            func length(of row: Int) -> Int { icons / lines + (row < icons % lines ? 1 : 0) }
             var x: CGFloat = 0
-            var placed: [Placement] = []
+            var y: CGFloat = 0
+            var width: CGFloat = 0
+            var line: [Placement] = []
             var pendingBreak = false
             for tile in tiles {
                 if tile == .rowBreak {
                     // Leading and doubled dividers go; a trailing one is
                     // never reached because it waits for a tile after it.
-                    pendingBreak = !placed.isEmpty
+                    pendingBreak = !line.isEmpty
                     continue
                 }
+                let divider = pendingBreak ? metrics.dividerWidth : 0
+                if !line.isEmpty, line.count >= length(of: rows.count)
+                    || maxWidth.map({ x + divider + metrics.tileSize.width > $0 }) == true {
+                    // A new row starts the group: its divider goes.
+                    rows.append(line)
+                    line = []
+                    x = 0
+                    y += metrics.tileSize.height + metrics.rowGap
+                    pendingBreak = false
+                }
                 if pendingBreak {
-                    dividers.append(CGRect(x: x, y: 0, width: metrics.dividerWidth, height: metrics.tileSize.height))
+                    dividers.append(CGRect(x: x, y: y, width: metrics.dividerWidth, height: metrics.tileSize.height))
                     x += metrics.dividerWidth
                     pendingBreak = false
                 }
-                placed.append(Placement(
-                    tile: tile, row: 0, column: placed.count,
-                    frame: CGRect(x: x, y: 0, width: metrics.tileSize.width, height: metrics.tileSize.height)))
-                x += metrics.tileSize.width + metrics.columnGap
+                line.append(Placement(
+                    tile: tile, row: rows.count, column: line.count,
+                    frame: CGRect(x: x, y: y, width: metrics.tileSize.width, height: metrics.tileSize.height)))
+                x += pitch
+                width = max(width, x - metrics.columnGap)
             }
-            if !placed.isEmpty { rows = [placed] }
-            self.columnCount = placed.count
-            size = placed.isEmpty ? .zero : CGSize(
-                width: max(x - metrics.columnGap, 0), height: metrics.tileSize.height)
+            if !line.isEmpty { rows.append(line) }
+            self.columnCount = rows.map(\.count).max() ?? 0
+            size = rows.isEmpty ? .zero : CGSize(width: width, height: y + metrics.tileSize.height)
         }
         self.rows = rows
         self.dividers = dividers

@@ -65,6 +65,10 @@ final class PanelPresenter: RevealPresenter {
     /// What the last refresh drew, for Return and the arrows.
     private var lastModel: PanelModel?
     private var lastContent: PanelContent?
+    /// Whether the panel last scrolled or wrapped, as logged.
+    private var loggedFit: String?
+    /// Each open from closed: a scrolled panel opens at the top again.
+    private var opens = 0
     /// The grip's tip, and the wait before it goes.
     private var columnsTip: String?
     private var tipTask: Task<Void, Never>?
@@ -156,6 +160,7 @@ final class PanelPresenter: RevealPresenter {
             foldOpen = false
             query = ""
             selected = nil
+            opens += 1
             if let appState {
                 corpus = CommandBarCorpus.build(appState: appState)
                 history = CommandBarController.loadHistory()
@@ -466,24 +471,19 @@ final class PanelPresenter: RevealPresenter {
     /// from its display's right edge carries over, as the bar lays out the
     /// same on every display.
     private func place(_ size: CGSize) {
-        guard let window, let appState else { return }
+        guard let window, let appState, let target = targetScreen() else { return }
         let screens = NSScreen.screens
-        func screen(at point: NSPoint) -> NSScreen? { screens.first { NSMouseInRect(point, $0.frame, false) } }
         let chevron = appState.chevronWindowFrame
-        let chevronScreen = chevron.flatMap { screen(at: NSPoint(x: $0.midX, y: $0.midY)) }
-        let pointerScreen = screen(at: NSEvent.mouseLocation)
-        let kept = openScreen.flatMap { id in screens.first { $0.displayID == id } }
-        guard let target = kept ?? (opensUnderPointer ? pointerScreen : nil) ?? chevronScreen ?? pointerScreen
-            ?? NSScreen.main ?? screens.first
-        else { return }
-        openScreen = target.displayID
+        let chevronScreen = chevron.flatMap { frame in
+            screens.first { NSMouseInRect(NSPoint(x: frame.midX, y: frame.midY), $0.frame, false) }
+        }
         let margin = GlassPanel.edgeMargin
         var right = target.frame.maxX - margin
         if let chevron, let chevronScreen {
             right = min(right, target.frame.maxX - (chevronScreen.frame.maxX - chevron.maxX) + Self.pastChevron)
         }
         let width = min(size.width, target.frame.width - 2 * margin)
-        let top = target.frame.maxY - GlassPanel.barHeight(of: target) - Self.gapBelowBar
+        let top = Self.top(on: target)
         // The glass's frame, then the window's: wider by the grip's margin.
         let glassX = max(right - width, target.frame.minX + margin).rounded()
         let frame = NSRect(
@@ -502,6 +502,37 @@ final class PanelPresenter: RevealPresenter {
         window.setGlassHeight(frame.height)
     }
 
+    /// The display the panel opens on, and keeps until it closes.
+    private func targetScreen() -> NSScreen? {
+        guard let appState else { return nil }
+        let screens = NSScreen.screens
+        func screen(at point: NSPoint) -> NSScreen? { screens.first { NSMouseInRect(point, $0.frame, false) } }
+        let chevronScreen = appState.chevronWindowFrame.flatMap { screen(at: NSPoint(x: $0.midX, y: $0.midY)) }
+        let pointerScreen = screen(at: NSEvent.mouseLocation)
+        let kept = openScreen.flatMap { id in screens.first { $0.displayID == id } }
+        let target = kept ?? (opensUnderPointer ? pointerScreen : nil) ?? chevronScreen ?? pointerScreen
+            ?? NSScreen.main ?? screens.first
+        openScreen = target?.displayID
+        return target
+    }
+
+    private static func top(on screen: NSScreen) -> CGFloat {
+        screen.frame.maxY - GlassPanel.barHeight(of: screen) - gapBelowBar
+    }
+
+    /// As tall as the panel can be on `screen`: down to the Dock, or the
+    /// display's bottom, less the edge margin.
+    private static func heightCap(on screen: NSScreen) -> CGFloat {
+        min(top(on: screen) - screen.visibleFrame.minY - GlassPanel.edgeMargin, debugCap)
+    }
+
+    /// Debug: `open -a Pelmet --args -pelmet.debug.panelCap 300` caps the
+    /// height and the row's width as a short, narrow display would.
+    private static var debugCap: CGFloat {
+        let cap = UserDefaults.standard.double(forKey: "pelmet.debug.panelCap")
+        return cap > 0 ? cap : .greatestFiniteMagnitude
+    }
+
     // MARK: - Content
 
     /// Rebuilds the tiles and fits the window to them. Returns how many
@@ -510,9 +541,15 @@ final class PanelPresenter: RevealPresenter {
     private func refresh() -> (tiles: Int, missing: [ItemID]) {
         guard let appState else { return (0, []) }
         let (_, hosting) = ensureWindow()
+        let screen = targetScreen()
+        // The row wraps where `place` would cut it: the display less its
+        // margins and the row's padding.
+        let rowWidth = screen.map {
+            min($0.frame.width - 2 * GlassPanel.edgeMargin, Self.debugCap) - 2 * PanelMetrics.row.padding
+        }
         let (built, missing, model) = buildContent(
             appState, layout: appState.revealTarget.panelLayout ?? .panel, query: query, selected: selected,
-            foldOpen: foldOpen, alwaysRequested: sections.contains(.alwaysHidden))
+            foldOpen: foldOpen, alwaysRequested: sections.contains(.alwaysHidden), maxRowWidth: rowWidth)
         var content = built
         lastModel = model
         if selectBest {
@@ -523,8 +560,33 @@ final class PanelPresenter: RevealPresenter {
         // A filter or a fold can take the selected tile away.
         selected = content.selected
         content.columnsTip = columnsTip
+        content.scrollID = opens
+        // The hosting view sizes nothing (`sizingOptions = []`), so its
+        // fitting size is zero: the view measures itself here. Taller than
+        // the display, the tiles scroll in what the search row leaves.
+        var size = measure(content)
+        if let screen, size.height > Self.heightCap(on: screen) {
+            content.scrollHeight = 0
+            content.scrollHeight = max(Self.heightCap(on: screen) - measure(content).height, 0)
+            size = measure(content)
+        }
+        // The oracle for a short or narrow display: logged when it changes.
+        let lines = content.layout == .row ? content.blocks.first?.grid.rows.count ?? 0 : 0
+        let fit = "scrolls \(content.scrollHeight.map { "in \(Int($0))" } ?? "no")\(lines > 1 ? ", row wraps to \(lines)" : "")"
+        if fit != loggedFit {
+            loggedFit = fit
+            PelmetLog.log("panel: \(Int(size.width))×\(Int(size.height)), \(fit)")
+        }
         lastContent = content
-        let view = PanelView(
+        hosting.rootView = PanelHost(panel: view(content))
+        showsGrip = content.layout == .panel && !content.isEmpty
+        updateGrip()
+        place(size)
+        return (content.art.count, missing)
+    }
+
+    private func view(_ content: PanelContent) -> PanelView {
+        PanelView(
             content: content,
             onPress: { [weak self] tile in self?.press(tile) },
             onFold: { [weak self] in self?.toggleFold() },
@@ -536,13 +598,10 @@ final class PanelPresenter: RevealPresenter {
             onColumnsDrag: { [weak self] _, ended in self?.dragColumns(ended: ended) },
             onColumnsReset: { [weak self] in self?.resetColumns() },
             drawsGrip: false)
-        hosting.rootView = PanelHost(panel: view)
-        showsGrip = content.layout == .panel && !content.isEmpty
-        updateGrip()
-        // The hosting view sizes nothing (`sizingOptions = []`), so its
-        // fitting size is zero: the view measures itself here.
-        place(NSHostingController(rootView: view).sizeThatFits(in: NSSize(width: 4000, height: 4000)))
-        return (content.art.count, missing)
+    }
+
+    private func measure(_ content: PanelContent) -> CGSize {
+        NSHostingController(rootView: view(content)).sizeThatFits(in: NSSize(width: 4000, height: 4000))
     }
 
     /// The command bar's candidates afresh, as an open reads them: the
@@ -568,7 +627,7 @@ final class PanelPresenter: RevealPresenter {
     /// What `refresh` and the preview draw: no state of the presenter's
     /// changes. A selection the filter or fold took away comes back nil.
     private func buildContent(_ appState: AppState, layout: PanelGrid.Layout, query: String, selected: PanelTile?,
-                              foldOpen: Bool, alwaysRequested: Bool)
+                              foldOpen: Bool, alwaysRequested: Bool, maxRowWidth: CGFloat? = nil)
         -> (content: PanelContent, missing: [ItemID], model: PanelModel)
     {
         let options = appState.settings.panel
@@ -644,7 +703,7 @@ final class PanelPresenter: RevealPresenter {
             PanelBlock(
                 kind: entry.section.kind,
                 grid: PanelGrid(tiles: entry.section.tiles, columns: columns, layout: layout,
-                                showsNames: options.showsNames, minimumColumns: minimum),
+                                showsNames: options.showsNames, minimumColumns: minimum, maxWidth: maxRowWidth),
                 count: entry.section.count,
                 showsHeader: layout == .panel && (entry.section.kind == .didntFit || (entry.section.kind == .hidden && didntFitShown)),
                 foldable: layout == .panel && entry.section.kind == .alwaysHidden,

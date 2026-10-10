@@ -421,10 +421,23 @@ top row sits at `maxY`), the panel keeps the display it opened on until
 it closes, hover and bar clicks open on the pointer's display, a screen
 change places it again, and the notch sentence shows only where a display
 has one ("under the menu bar" with the icon off). Left from that review:
-height has no cap (a tall Names grid on a short display runs off the
-bottom) and Row never wraps; a chevron frame parked off the bar isn't
-band-checked; the picture pass films only the main display's bar. Not run
-live: a second display, a Mac without a notch, real light mode.
+a chevron frame parked off the bar isn't band-checked; the picture pass
+films only the main display's bar. Not run live: a second display, a Mac
+without a notch, real light mode.
+Height and width caps (same night): the panel stops at the display's
+visible bottom (the Dock's top) less the edge margin, and the tiles scroll
+under a pinned search row, padding included, so they run to the glass's
+edge; the arrow keys bring the selection into view with no animation, as a
+list does. The tiles always sit in the scroll view (disabled uncapped), so
+a fold that crosses the cap keeps its motion; no scroll bar (a legacy one
+would cover the column by the chevron, the cut row says there is more); a
+fresh open starts at the top. Row wraps only past the display's width,
+into rows of even length, the first ones one longer, a divider on the wrap
+dropped (`PanelGrid` `maxWidth`). Checked live with the launch-arg cap
+`-pelmet.debug.panelCap 200` and `100` (Always Hidden open scrolls, arrows
+unfold and scroll, a hover-opened panel's first click lands, a reopen is
+at the top) and `120` with `-pelmet.debug.panel row` (5 tiles wrap 3 + 2).
+Oracle: `panel: W×H, scrolls in N, row wraps to N`.
 
 Rough total: 13–16 sessions.
 

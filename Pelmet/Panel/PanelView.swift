@@ -62,6 +62,11 @@ struct PanelContent {
     /// What opens Always Hidden. The tile is a cell of the grid above it
     /// (`PanelTile.fold`); the count and the handle are the section's own.
     var fold: PanelOptions.AlwaysHiddenFold = .tile
+    /// Taller than its display: the tiles scroll in this height, under the
+    /// search row, which stays.
+    var scrollHeight: CGFloat?
+    /// A new one starts the scroll at the top: the presenter's count of opens.
+    var scrollID = 0
     /// Nothing is hidden, or nothing matches: the panel says so instead of
     /// showing nothing.
     var isEmpty: Bool { blocks.allSatisfy { $0.count == 0 } }
@@ -101,24 +106,12 @@ struct PanelView: View {
         VStack(alignment: .trailing, spacing: 0) {
             if !content.query.isEmpty {
                 searchRow
+                    .padding([.top, .horizontal], padding)
             }
-            if content.isEmpty {
-                if content.query.isEmpty { empty } else { noMatch }
-            } else if content.layout == .row {
-                HStack(spacing: 0) {
-                    ForEach(content.blocks) { block in
-                        grid(block.grid)
-                    }
-                }
-            } else {
-                VStack(alignment: .trailing, spacing: 0) {
-                    ForEach(Array(content.blocks.enumerated()), id: \.element.id) { index, block in
-                        section(block, first: index == 0)
-                    }
-                }
-            }
+            // The padding scrolls with the tiles: they run to the glass's
+            // edge, not to a line inside it.
+            scrolling(tiles.padding(content.query.isEmpty ? .all : [.horizontal, .bottom], padding))
         }
-        .padding(padding)
         .fixedSize()
         .overlay(alignment: .leading) {
             if content.layout == .panel, !content.isEmpty {
@@ -138,6 +131,47 @@ struct PanelView: View {
         .onHover { hovering = $0 }
         .contextMenu { menu(panelMenu()) }
     }
+
+    @ViewBuilder
+    private var tiles: some View {
+        if content.isEmpty {
+            if content.query.isEmpty { empty } else { noMatch }
+        } else if content.layout == .row {
+            HStack(spacing: 0) {
+                ForEach(content.blocks) { block in
+                    grid(block.grid)
+                }
+            }
+        } else {
+            VStack(alignment: .trailing, spacing: 0) {
+                ForEach(Array(content.blocks.enumerated()), id: \.element.id) { index, block in
+                    section(block, first: index == 0)
+                }
+            }
+        }
+    }
+
+    /// The tiles scroll when the panel is capped; the arrow keys bring the
+    /// selected tile into view, as a list does, with no animation. Always in
+    /// the scroll view, so a fold that crosses the cap keeps its tiles and
+    /// their motion. No scroll bar: a legacy one would cover the column by
+    /// the chevron, and the row cut at the glass's edge says there is more.
+    private func scrolling(_ tiles: some View) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView(.vertical) { tiles }
+                .frame(height: content.scrollHeight)
+                .scrollDisabled(content.scrollHeight == nil)
+                .scrollIndicators(.never)
+                .id(content.scrollID)
+                .onChange(of: content.selected, initial: true) { _, selected in
+                    if selected != nil, content.scrollHeight != nil { proxy.scrollTo(Self.selectionMark) }
+                }
+        }
+    }
+
+    /// Where the selected tile is, with the panel's padding above and below
+    /// so it never lands flush with the glass's edge.
+    private static let selectionMark = "panel.selection"
 
     @ViewBuilder
     private func menu(_ rows: [PanelMenuRow]) -> some View {
@@ -358,6 +392,17 @@ struct PanelView: View {
                     .frame(width: 1, height: divider.height * 0.5)
                     .frame(width: divider.width, height: divider.height)
                     .offset(x: divider.minX, y: divider.minY)
+            }
+            if content.scrollHeight != nil, let selected = content.selected, let frame = grid.frame(of: selected) {
+                // Laid out where the tile is drawn (padding moves it, an
+                // offset would not), for the scroll view to find.
+                let mark = frame.insetBy(dx: 0, dy: -padding)
+                Color.clear
+                    .frame(width: mark.width, height: mark.height)
+                    .id(Self.selectionMark)
+                    .padding(.leading, mark.minX)
+                    .padding(.top, mark.minY)
+                    .allowsHitTesting(false)
             }
         }
         .frame(width: grid.contentSize.width, height: grid.contentSize.height, alignment: .topLeading)
