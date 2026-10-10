@@ -175,6 +175,9 @@ struct PanelView: View {
                     .transition(content.motion == .smooth ? .move(edge: .top) : .opacity)
             }
         }
+        // As wide folded as open: the slide's clip grows down only, never in
+        // from the trailing edge.
+        .frame(width: content.width, alignment: .trailing)
         // Clipped for the slide only: a fade-out keeps its tiles in place
         // while the space under them closes.
         if content.motion == .smooth { tiles.clipped() } else { tiles }
