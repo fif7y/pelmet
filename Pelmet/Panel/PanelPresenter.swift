@@ -26,7 +26,7 @@ final class PanelPresenter: RevealPresenter {
     private weak var appState: AppState?
     let pictures = ItemPictures()
     private var window: KeyableGlassPanel?
-    private var hosting: NSHostingView<PanelView>?
+    private var hosting: NSHostingView<PanelHost>?
     private(set) var isOpen = false
     private var openedByHover = false
     private var sections: Set<PelmetCore.Section> = []
@@ -53,6 +53,9 @@ final class PanelPresenter: RevealPresenter {
     private var passWaiters: [@MainActor () -> Void] = []
     private var motion: Motion?
     private var motionTimer: Timer?
+    /// Set by a fold: the next `place` moves the glass in this style.
+    private var foldMotion: RevealAnimation?
+    private var glassTimer: Timer?
     /// Where `place` last put the window, before any motion.
     private var placed: NSRect?
     private var passTask: Task<Void, Never>?
@@ -132,9 +135,9 @@ final class PanelPresenter: RevealPresenter {
 
     // MARK: - Window
 
-    private func ensureWindow() -> (KeyableGlassPanel, NSHostingView<PanelView>) {
+    private func ensureWindow() -> (KeyableGlassPanel, NSHostingView<PanelHost>) {
         if let window, let hosting { return (window, hosting) }
-        let hosting = NSHostingView(rootView: PanelView(content: PanelContent(), onPress: { _ in }, onFold: {}))
+        let hosting = NSHostingView(rootView: PanelHost(panel: PanelView(content: PanelContent(), onPress: { _ in }, onFold: {})))
         // The window's frame is ours; the content must not resize it.
         hosting.sizingOptions = []
         let window = KeyableGlassPanel(content: hosting, cornerRadius: Self.cornerRadius)
@@ -203,6 +206,61 @@ final class PanelPresenter: RevealPresenter {
     }
 
     // MARK: - Motion
+
+    /// Reduce Motion: Smooth's slide becomes a fade.
+    private static func foldStyle(_ style: RevealAnimation) -> RevealAnimation {
+        style == .smooth && reduceMotion ? .fade : style
+    }
+
+    /// Always Hidden's fold, in the Animation style: the window takes the
+    /// taller height for the length of it, its top where it is, and the
+    /// glass inside grows or shrinks with the tiles (Smooth), or holds while
+    /// they fade out (Fade). A fade in has the glass at its height at once.
+    private func resizeGlass(to frame: NSRect, style: RevealAnimation) {
+        guard let window else { return }
+        stopGlass()
+        let from = window.glassHeight
+        let to = frame.height
+        let growing = to >= from
+        let duration: TimeInterval = switch style {
+        case .instant: 0
+        case .smooth: growing ? AppTiming.smoothRevealDuration : AppTiming.smoothExitDuration
+        case .fade: growing ? 0 : AppTiming.fadeExitDuration
+        }
+        guard duration > 0, from != to else {
+            placed = frame
+            window.place(frame)
+            window.setGlassHeight(to)
+            return
+        }
+        let tall = NSRect(x: frame.minX, y: frame.maxY - max(from, to), width: frame.width, height: max(from, to))
+        placed = tall
+        window.place(tall)
+        window.setGlassHeight(from)
+        let curve = growing ? Self.enterCurve : Self.exitCurve
+        let start = CACurrentMediaTime()
+        let timer = Timer(timeInterval: 1.0 / 120, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let window = self.window else { return }
+                let t = min((CACurrentMediaTime() - start) / duration, 1)
+                guard t < 1 else {
+                    self.stopGlass()
+                    self.placed = frame
+                    window.place(frame)
+                    window.setGlassHeight(to)
+                    return
+                }
+                if style == .smooth { window.setGlassHeight(from + (to - from) * curve.value(at: t)) }
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        glassTimer = timer
+    }
+
+    private func stopGlass() {
+        glassTimer?.invalidate()
+        glassTimer = nil
+    }
 
     /// The mock's entrance drop or exit rise, stepped by hand over where
     /// `place` last put the window: a refresh mid-motion (a key typed right
@@ -321,6 +379,12 @@ final class PanelPresenter: RevealPresenter {
             x: max(right - width, target.frame.minX + margin).rounded(),
             y: (top - size.height).rounded(),
             width: width.rounded(), height: size.height.rounded())
+        if let style = foldMotion {
+            foldMotion = nil
+            resizeGlass(to: frame, style: style)
+            return
+        }
+        stopGlass()
         placed = frame
         window.place(frame.offsetBy(dx: 0, dy: motion?.offset(at: CACurrentMediaTime()) ?? 0))
         window.setGlassHeight(frame.height)
@@ -359,7 +423,7 @@ final class PanelPresenter: RevealPresenter {
             // The window moves as it widens: the pointer is read on screen.
             onColumnsDrag: { [weak self] _, ended in self?.dragColumns(ended: ended) },
             onColumnsReset: { [weak self] in self?.resetColumns() })
-        hosting.rootView = view
+        hosting.rootView = PanelHost(panel: view)
         // The hosting view sizes nothing (`sizingOptions = []`), so its
         // fitting size is zero: the view measures itself here.
         place(NSHostingController(rootView: view).sizeThatFits(in: NSSize(width: 4000, height: 4000)))
@@ -444,6 +508,7 @@ final class PanelPresenter: RevealPresenter {
         var content = PanelContent(layout: layout, query: query)
         content.hasAlwaysHidden = model.sections.contains { $0.kind == .alwaysHidden && $0.count > 0 }
         content.showsAlwaysHidden = alwaysShown
+        content.motion = Self.foldStyle(appState.settings.revealAnimation)
         content.blocks = shown.map { entry in
             PanelBlock(
                 kind: entry.section.kind,
@@ -686,6 +751,7 @@ final class PanelPresenter: RevealPresenter {
 
     private func toggleFold() {
         foldOpen = flipFold(shown: lastContent?.showsAlwaysHidden ?? false, foldOpen: foldOpen)
+        if let appState { foldMotion = Self.foldStyle(appState.settings.revealAnimation) }
         let shown = refresh()
         picturePassIfNeeded(shown.missing)
     }
@@ -774,5 +840,17 @@ final class PanelPresenter: RevealPresenter {
             let shown = self.refresh()
             self.picturePassIfNeeded(shown.missing)
         }
+    }
+}
+
+/// The panel pinned to the window's top right, where the window is
+/// anchored: the content changes a moment before the window takes its new
+/// size, and centred it jumped by half the difference (the fold row and the
+/// row above it, 2026-10-09).
+struct PanelHost: View {
+    let panel: PanelView
+
+    var body: some View {
+        panel.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
     }
 }

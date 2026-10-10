@@ -57,6 +57,9 @@ struct PanelContent {
     /// Always Hidden's tiles are on screen: unfolded in the panel, part of
     /// the row.
     var showsAlwaysHidden = false
+    /// The Animation setting, which Always Hidden's fold follows (Reduce
+    /// Motion turns Smooth into Fade).
+    var motion: RevealAnimation = .instant
     /// Nothing is hidden, or nothing matches: the panel says so instead of
     /// showing nothing.
     var isEmpty: Bool { blocks.allSatisfy { $0.count == 0 } }
@@ -143,10 +146,13 @@ struct PanelView: View {
     @ViewBuilder
     private func section(_ block: PanelBlock, first: Bool) -> some View {
         if block.foldable {
-            foldRow(block, first: first)
-            if !block.isFolded {
-                grid(block.grid).padding(.top, 8)
+            VStack(alignment: .trailing, spacing: 0) {
+                foldRow(block, first: first)
+                foldedTiles(block)
             }
+            // The bar's own motion for the style: Smooth slides the tiles
+            // out from under the fold row, Fade fades them in place.
+            .animation(MockBar.animation(content.motion, revealed: !block.isFolded), value: block.isFolded)
         } else {
             VStack(alignment: .trailing, spacing: 0) {
                 if block.showsHeader {
@@ -158,6 +164,20 @@ struct PanelView: View {
             // which brings its own.
             .padding(.bottom, block.kind == .didntFit ? 10 : 0)
         }
+    }
+
+    @ViewBuilder
+    private func foldedTiles(_ block: PanelBlock) -> some View {
+        let tiles = VStack(spacing: 0) {
+            if !block.isFolded {
+                grid(block.grid)
+                    .padding(.top, 8)
+                    .transition(content.motion == .smooth ? .move(edge: .top) : .opacity)
+            }
+        }
+        // Clipped for the slide only: a fade-out keeps its tiles in place
+        // while the space under them closes.
+        if content.motion == .smooth { tiles.clipped() } else { tiles }
     }
 
     private func header(_ block: PanelBlock) -> some View {
@@ -193,6 +213,8 @@ struct PanelView: View {
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(ink.tertiary)
                     .rotationEffect(.degrees(block.isFolded ? 0 : 90))
+                    // Turns in every style, a disclosure's own cue.
+                    .animation(.easeOut(duration: 0.2), value: block.isFolded)
             }
             .padding(.leading, 10)
             .padding(.trailing, 9)
