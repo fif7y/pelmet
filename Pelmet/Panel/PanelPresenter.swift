@@ -471,16 +471,11 @@ final class PanelPresenter: RevealPresenter {
     /// from its display's right edge carries over, as the bar lays out the
     /// same on every display.
     private func place(_ size: CGSize) {
-        guard let window, let appState, let target = targetScreen() else { return }
-        let screens = NSScreen.screens
-        let chevron = appState.chevronWindowFrame
-        let chevronScreen = chevron.flatMap { frame in
-            screens.first { NSMouseInRect(NSPoint(x: frame.midX, y: frame.midY), $0.frame, false) }
-        }
+        guard let window, let target = targetScreen() else { return }
         let margin = GlassPanel.edgeMargin
         var right = target.frame.maxX - margin
-        if let chevron, let chevronScreen {
-            right = min(right, target.frame.maxX - (chevronScreen.frame.maxX - chevron.maxX) + Self.pastChevron)
+        if let chevron = drawnChevron() {
+            right = min(right, target.frame.maxX - (chevron.screen.frame.maxX - chevron.frame.maxX) + Self.pastChevron)
         }
         let width = min(size.width, target.frame.width - 2 * margin)
         let top = Self.top(on: target)
@@ -504,16 +499,25 @@ final class PanelPresenter: RevealPresenter {
 
     /// The display the panel opens on, and keeps until it closes.
     private func targetScreen() -> NSScreen? {
-        guard let appState else { return nil }
         let screens = NSScreen.screens
-        func screen(at point: NSPoint) -> NSScreen? { screens.first { NSMouseInRect(point, $0.frame, false) } }
-        let chevronScreen = appState.chevronWindowFrame.flatMap { screen(at: NSPoint(x: $0.midX, y: $0.midY)) }
-        let pointerScreen = screen(at: NSEvent.mouseLocation)
+        let pointerScreen = screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
         let kept = openScreen.flatMap { id in screens.first { $0.displayID == id } }
-        let target = kept ?? (opensUnderPointer ? pointerScreen : nil) ?? chevronScreen ?? pointerScreen
+        let target = kept ?? (opensUnderPointer ? pointerScreen : nil) ?? drawnChevron()?.screen ?? pointerScreen
             ?? NSScreen.main ?? screens.first
         openScreen = target?.displayID
         return target
+    }
+
+    /// The chevron and its display, nil when it isn't in a bar's band (icon
+    /// off, behind Apple's «, not placed yet), as the band monitor reads it:
+    /// a parked frame would place the panel by nothing on screen.
+    private func drawnChevron() -> (frame: NSRect, screen: NSScreen)? {
+        guard let frame = appState?.chevronWindowFrame else { return nil }
+        let mid = NSPoint(x: frame.midX, y: frame.midY)
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mid, $0.frame, false) }) else { return nil }
+        let bar = GlassPanel.barHeight(of: screen)
+        let band = NSRect(x: screen.frame.minX, y: screen.frame.maxY - bar, width: screen.frame.width, height: bar)
+        return band.intersects(frame) ? (frame, screen) : nil
     }
 
     private static func top(on screen: NSScreen) -> CGFloat {

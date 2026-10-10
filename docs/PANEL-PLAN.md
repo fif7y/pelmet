@@ -421,8 +421,8 @@ top row sits at `maxY`), the panel keeps the display it opened on until
 it closes, hover and bar clicks open on the pointer's display, a screen
 change places it again, and the notch sentence shows only where a display
 has one ("under the menu bar" with the icon off). Left from that review:
-a chevron frame parked off the bar isn't band-checked; the picture pass
-films only the main display's bar. Not run live: a second display, a Mac
+the picture pass films only the main display's bar. (A chevron frame
+parked off the bar is now band-checked, as the band monitor reads it.) Not run live: a second display, a Mac
 without a notch, real light mode.
 Height and width caps (same night): the panel stops at the display's
 visible bottom (the Dock's top) less the edge margin, and the tiles scroll
