@@ -161,6 +161,10 @@ struct PanelView: View {
             ScrollView(.vertical) { tiles }
                 .frame(height: content.scrollHeight)
                 .scrollDisabled(content.scrollHeight == nil)
+                // It takes its new height at once: clipped there, a fold's
+                // tiles vanished in a frame instead of leaving with their
+                // motion. Uncapped, the glass's edge is the clip.
+                .scrollClipDisabled(content.scrollHeight == nil)
                 .scrollIndicators(.never)
                 .id(content.scrollID)
                 .onChange(of: content.selected, initial: true) { _, selected in
@@ -224,19 +228,24 @@ struct PanelView: View {
 
     @ViewBuilder
     private func foldedTiles(_ block: PanelBlock, gap: CGFloat) -> some View {
-        let tiles = VStack(spacing: 0) {
+        VStack(spacing: 0) {
             if !block.isFolded {
                 grid(block.grid)
                     .padding(.top, gap)
-                    .transition(content.motion == .smooth ? .move(edge: .top) : .opacity)
+                    // Smooth slides them out from under the icons above, and
+                    // closes like a drawer: they fade in place while the
+                    // glass's edge comes up over them. Slid back up, they
+                    // passed behind the icons above (Gab, 2026-10-09).
+                    .transition(content.motion == .smooth
+                        ? .asymmetric(insertion: .move(edge: .top), removal: .opacity) : .opacity)
             }
         }
         // As wide folded as open: the slide's clip grows down only, never in
         // from the trailing edge.
         .frame(width: content.width, alignment: .trailing)
-        // Clipped for the slide only: a fade-out keeps its tiles in place
-        // while the space under them closes.
-        if content.motion == .smooth { tiles.clipped() } else { tiles }
+        // Cut at the top edge alone, where the slide comes out; below, the
+        // glass's own edge is the only one.
+        .mask(alignment: .top) { Rectangle().frame(height: 10_000) }
     }
 
     private func header(_ block: PanelBlock) -> some View {
