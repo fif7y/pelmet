@@ -26,23 +26,21 @@ public struct PanelMetrics: Equatable, Sendable {
     public var groupGap: CGFloat
     /// A separator in the row layout: a thin divider between icons.
     public var dividerWidth: CGFloat
-    /// The panel never gets narrower than this, whatever its columns.
-    public var minimumContentWidth: CGFloat
 
     public static let compact = PanelMetrics(
         tileSize: CGSize(width: 44, height: 44), wellSize: CGSize(width: 44, height: 44),
         columnGap: 6, rowGap: 6, padding: 10, labelGap: 0, labelHeight: 0,
-        groupGap: 4, dividerWidth: 0, minimumContentWidth: 150)
+        groupGap: 4, dividerWidth: 0)
 
     public static let named = PanelMetrics(
         tileSize: CGSize(width: 68, height: 63), wellSize: CGSize(width: 44, height: 44),
         columnGap: 2, rowGap: 8, padding: 10, labelGap: 5, labelHeight: 13,
-        groupGap: 4, dividerWidth: 0, minimumContentWidth: 150)
+        groupGap: 4, dividerWidth: 0)
 
     public static let row = PanelMetrics(
         tileSize: CGSize(width: 34, height: 28), wellSize: CGSize(width: 34, height: 28),
         columnGap: 0, rowGap: 2, padding: 5, labelGap: 0, labelHeight: 0,
-        groupGap: 0, dividerWidth: 13, minimumContentWidth: 0)
+        groupGap: 0, dividerWidth: 13)
 
     public static func standard(layout: PanelGrid.Layout, showsNames: Bool) -> PanelMetrics {
         switch layout {
@@ -134,7 +132,7 @@ public struct PanelGrid: Equatable, Sendable {
             self.columnCount = groups.isEmpty ? 0 : count
             let width = CGFloat(count) * metrics.tileSize.width + CGFloat(count - 1) * metrics.columnGap
             size = rows.isEmpty ? .zero : CGSize(
-                width: max(width, metrics.minimumContentWidth), height: y + metrics.tileSize.height)
+                width: width, height: y + metrics.tileSize.height)
         case .row:
             var x: CGFloat = 0
             var placed: [Placement] = []
@@ -159,7 +157,7 @@ public struct PanelGrid: Equatable, Sendable {
             if !placed.isEmpty { rows = [placed] }
             self.columnCount = placed.count
             size = placed.isEmpty ? .zero : CGSize(
-                width: max(x - metrics.columnGap, metrics.minimumContentWidth), height: metrics.tileSize.height)
+                width: max(x - metrics.columnGap, 0), height: metrics.tileSize.height)
         }
         self.rows = rows
         self.dividers = dividers

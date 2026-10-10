@@ -28,10 +28,10 @@ struct PanelTileArt {
 struct PanelBlock: Identifiable {
     let kind: PanelSection.Kind
     let grid: PanelGrid
-    /// Tiles you can click, for the header and the fold row.
+    /// Icons you can click, for the header and the fold.
     let count: Int
     let showsHeader: Bool
-    /// Always Hidden only: the fold row is drawn, and the grid when open.
+    /// Always Hidden only: its fold is drawn, and the grid when open.
     let foldable: Bool
     let isFolded: Bool
 
@@ -42,9 +42,8 @@ struct PanelContent {
     var blocks: [PanelBlock] = []
     var layout: PanelGrid.Layout = .panel
     var art: [PanelTile: PanelTileArt] = [:]
-    /// The widest grid, at least the mock's 150: headers and the fold row
-    /// span it.
-    var width: CGFloat = 150
+    /// The widest grid: headers, the search field and the fold span it.
+    var width: CGFloat = 44
     /// What the keyboard typed: the search row shows while it isn't empty.
     var query = ""
     /// The tile Return opens and the arrows move.
@@ -60,6 +59,9 @@ struct PanelContent {
     /// The Animation setting, which Always Hidden's fold follows (Reduce
     /// Motion turns Smooth into Fade).
     var motion: RevealAnimation = .instant
+    /// What opens Always Hidden. The tile is a cell of the grid above it
+    /// (`PanelTile.fold`); the count and the handle are the section's own.
+    var fold: PanelOptions.AlwaysHiddenFold = .tile
     /// Nothing is hidden, or nothing matches: the panel says so instead of
     /// showing nothing.
     var isEmpty: Bool { blocks.allSatisfy { $0.count == 0 } }
@@ -146,12 +148,20 @@ struct PanelView: View {
     @ViewBuilder
     private func section(_ block: PanelBlock, first: Bool) -> some View {
         if block.foldable {
+            // A search shows the matches, no fold.
+            let fold: PanelOptions.AlwaysHiddenFold? = content.query.isEmpty ? content.fold : nil
             VStack(alignment: .trailing, spacing: 0) {
-                foldRow(block, first: first)
-                foldedTiles(block)
+                if fold == .count {
+                    countFold(block)
+                        .padding(.top, first ? 0 : 6)
+                }
+                foldedTiles(block, gap: fold == .count ? 6 : first ? 0 : 10)
+                if fold == .handle {
+                    handleFold(block)
+                }
             }
             // The bar's own motion for the style: Smooth slides the tiles
-            // out from under the fold row, Fade fades them in place.
+            // out from under the icons above, Fade fades them in place.
             .animation(MockBar.animation(content.motion, revealed: !block.isFolded), value: block.isFolded)
         } else {
             VStack(alignment: .trailing, spacing: 0) {
@@ -160,18 +170,18 @@ struct PanelView: View {
                 }
                 grid(block.grid)
             }
-            // The mock's gap under Didn't fit; Hidden runs into the fold row,
+            // The mock's gap under Didn't fit; Hidden runs into the fold,
             // which brings its own.
             .padding(.bottom, block.kind == .didntFit ? 10 : 0)
         }
     }
 
     @ViewBuilder
-    private func foldedTiles(_ block: PanelBlock) -> some View {
+    private func foldedTiles(_ block: PanelBlock, gap: CGFloat) -> some View {
         let tiles = VStack(spacing: 0) {
             if !block.isFolded {
                 grid(block.grid)
-                    .padding(.top, 8)
+                    .padding(.top, gap)
                     .transition(content.motion == .smooth ? .move(edge: .top) : .opacity)
             }
         }
@@ -197,36 +207,72 @@ struct PanelView: View {
         .font(.system(size: 12, weight: .medium))
         .padding(.horizontal, 4)
         .padding(.bottom, 6)
-        .frame(width: content.width)
+        // At least the grid's width; a long name in a narrow panel widens it.
+        .frame(minWidth: content.width)
         .help(block.kind == .didntFit ? String(localized: "macOS had no room for these in the menu bar") : "")
     }
 
-    private func foldRow(_ block: PanelBlock, first: Bool) -> some View {
+    /// The count fold: how many are behind it, a chevron that turns.
+    private func countFold(_ block: PanelBlock) -> some View {
         Button(action: onFold) {
-            HStack(spacing: 6) {
-                Text(title(of: .alwaysHidden))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(ink.secondary)
+            HStack(spacing: 3) {
                 Text(block.count, format: .number)
-                    .font(.system(size: 12))
                     .monospacedDigit()
-                    .foregroundStyle(ink.tertiary)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(ink.tertiary)
-                    .rotationEffect(.degrees(block.isFolded ? 0 : 90))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .rotationEffect(.degrees(block.isFolded ? 0 : 180))
                     // Turns in every style, a disclosure's own cue.
                     .animation(.easeOut(duration: 0.2), value: block.isFolded)
             }
-            .padding(.leading, 10)
-            .padding(.trailing, 9)
-            .frame(width: content.width, height: 30)
-            .contentShape(Rectangle())
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(ink.secondary)
+            .padding(.horizontal, 8)
+            .frame(height: 20)
+            .contentShape(Capsule())
         }
-        .buttonStyle(FoldRowStyle(ink: ink))
+        .buttonStyle(FoldFillStyle(ink: ink, shape: Capsule(), resting: ink.well))
         .focusEffectDisabled()
-        .padding(.top, first ? 0 : 8)
+        .help(title(of: .alwaysHidden))
+        .accessibilityLabel(title(of: .alwaysHidden))
+        .accessibilityValue(Text(block.count, format: .number))
+        .frame(width: content.width)
+    }
+
+    /// The handle fold: a grabber along the bottom edge, under the tiles
+    /// when they are out.
+    private func handleFold(_ block: PanelBlock) -> some View {
+        Button(action: onFold) {
+            Capsule()
+                .fill(ink.tertiary)
+                .frame(width: 28, height: 4)
+                .frame(width: content.width, height: 14)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(FoldFillStyle(ink: ink, shape: RoundedRectangle(cornerRadius: 7, style: .continuous), resting: .clear))
+        .focusEffectDisabled()
+        .help(title(of: .alwaysHidden))
+        .accessibilityLabel(title(of: .alwaysHidden))
+        .accessibilityValue(Text(block.count, format: .number))
+        .padding(.top, 4)
+        // Half into the panel's padding: a grabber sits on the edge.
+        .padding(.bottom, -5)
+    }
+
+    /// The tile fold: how many are behind it, a chevron once they are out.
+    private func foldTile(at placement: PanelGrid.Placement, in grid: PanelGrid) -> some View {
+        let always = content.blocks.first { $0.kind == .alwaysHidden }
+        let count = always?.count ?? 0
+        return Button(action: onFold) {
+            FoldTileLabel(count: count, open: always.map { !$0.isFolded } ?? false,
+                          title: title(of: .alwaysHidden), grid: grid, ink: ink)
+        }
+        .buttonStyle(PanelTileStyle(grid: grid, ink: ink, selected: content.selected == .fold))
+        .focusEffectDisabled()
+        .help(title(of: .alwaysHidden))
+        .accessibilityLabel(title(of: .alwaysHidden))
+        .accessibilityValue(Text(count, format: .number))
+        .accessibilityAddTraits(content.selected == .fold ? .isSelected : [])
+        .offset(x: placement.frame.minX, y: placement.frame.minY)
     }
 
     /// The mock's search field, drawn: the panel's own key monitor types
@@ -277,7 +323,9 @@ struct PanelView: View {
     private func grid(_ grid: PanelGrid) -> some View {
         ZStack(alignment: .topLeading) {
             ForEach(Array(grid.rows.joined()), id: \.tile) { placement in
-                if let art = content.art[placement.tile] {
+                if placement.tile == .fold {
+                    foldTile(at: placement, in: grid)
+                } else if let art = content.art[placement.tile] {
                     Button { onPress(placement.tile) } label: {
                         PanelTileLabel(art: art, grid: grid, ink: ink)
                     }
@@ -425,28 +473,74 @@ private struct PanelTileStyle: ButtonStyle {
     }
 }
 
-private struct FoldRowStyle: ButtonStyle {
+/// The count and the handle: a fill that comes up on hover and press.
+private struct FoldFillStyle<S: Shape>: ButtonStyle {
     let ink: PanelInk
+    let shape: S
+    let resting: Color
 
     func makeBody(configuration: Configuration) -> some View {
-        Row(configuration: configuration, ink: ink)
+        Fill(configuration: configuration, ink: ink, shape: shape, resting: resting)
     }
 
-    private struct Row: View {
+    private struct Fill: View {
         let configuration: Configuration
         let ink: PanelInk
+        let shape: S
+        let resting: Color
         @State private var hovering = false
 
         var body: some View {
             configuration.label
                 .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(configuration.isPressed ? ink.wellHover : hovering ? ink.well : .clear)
-                        // The fill only: on the row, the hover the click
+                    shape
+                        .fill(configuration.isPressed ? ink.wellPress : hovering ? ink.wellHover : resting)
+                        // The fill only: on the control, the hover the click
                         // changed animated the fold's re-layout as a slide.
                         .animation(.easeOut(duration: 0.12), value: hovering))
                 .onHover { hovering = $0 }
         }
+    }
+}
+
+/// The tile fold's face: "+10" folded, a chevron to close it once open.
+/// With names on it is named like any tile.
+private struct FoldTileLabel: View {
+    let count: Int
+    let open: Bool
+    let title: String
+    let grid: PanelGrid
+    let ink: PanelInk
+
+    var body: some View {
+        let metrics = grid.metrics
+        VStack(spacing: metrics.labelGap) {
+            ZStack {
+                if open {
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 12, weight: .semibold))
+                        .transition(.opacity)
+                } else {
+                    Text(verbatim: "+\(count)")
+                        .font(.system(size: 13, weight: .medium))
+                        .monospacedDigit()
+                        .transition(.opacity)
+                }
+            }
+            .foregroundStyle(ink.secondary)
+            .animation(.easeOut(duration: 0.15), value: open)
+            .frame(width: metrics.wellSize.width, height: metrics.wellSize.height)
+            if grid.showsNames {
+                Text(title)
+                    .font(.system(size: 11))
+                    .foregroundStyle(ink.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(width: metrics.tileSize.width, height: metrics.labelHeight)
+            }
+        }
+        .frame(width: metrics.tileSize.width, height: metrics.tileSize.height, alignment: .top)
+        .contentShape(Rectangle())
     }
 }
 

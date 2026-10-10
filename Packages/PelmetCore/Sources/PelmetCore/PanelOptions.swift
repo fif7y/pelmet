@@ -19,8 +19,22 @@ public struct PanelOptions: Codable, Equatable, Sendable {
         case hidden
     }
 
+    /// What opens Always Hidden's fold in the panel. None of them is wider
+    /// than the grid, so the panel is as narrow as its icons.
+    public enum AlwaysHiddenFold: String, Codable, CaseIterable, Sendable {
+        /// A "+10" tile after the icons above it.
+        case tile
+        /// A small count under the icons.
+        case count
+        /// A grabber along the bottom edge.
+        case handle
+    }
+
     /// A name under every tile.
     public var showsNames: Bool = false
+    /// Dimmed tiles for apps in a section that aren't running, a click
+    /// opens one. Off, a search in the panel still finds them.
+    public var showsClosedApps: Bool = true
     /// The most columns a row may have, one per names mode: the user sets
     /// them by dragging the panel's edge, and each mode keeps its own width.
     /// Nil is Auto, `autoColumns`.
@@ -31,6 +45,7 @@ public struct PanelOptions: Codable, Equatable, Sendable {
     public var alwaysHidden: AlwaysHiddenMode = .folded
     /// Where the fold was left; read only for `.asLeft`.
     public var alwaysHiddenOpen: Bool = false
+    public var alwaysHiddenFold: AlwaysHiddenFold = .tile
 
     /// What Auto means: the widest a row grows. The grid is never wider than
     /// its icons need, so a panel with three icons is three columns.
@@ -50,6 +65,7 @@ public struct PanelOptions: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case showsNames, columnsWithNames, columnsCompact, separatorsBreakRows, alwaysHidden, alwaysHiddenOpen
+        case alwaysHiddenFold, showsClosedApps
     }
 
     public init(from decoder: Decoder) throws {
@@ -71,5 +87,7 @@ public struct PanelOptions: Codable, Equatable, Sendable {
         separatorsBreakRows = field(Bool.self, .separatorsBreakRows, defaults.separatorsBreakRows)
         alwaysHidden = field(AlwaysHiddenMode.self, .alwaysHidden, defaults.alwaysHidden)
         alwaysHiddenOpen = field(Bool.self, .alwaysHiddenOpen, defaults.alwaysHiddenOpen)
+        alwaysHiddenFold = field(AlwaysHiddenFold.self, .alwaysHiddenFold, defaults.alwaysHiddenFold)
+        showsClosedApps = field(Bool.self, .showsClosedApps, defaults.showsClosedApps)
     }
 }

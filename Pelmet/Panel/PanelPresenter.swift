@@ -85,12 +85,25 @@ final class PanelPresenter: RevealPresenter {
     /// the way in, and with no rehide delay the countdown ran out right
     /// there. A shortcut's panel holds until the pointer has been on it,
     /// as the bar does for a shortcut's reveal.
+    ///
+    /// The menu bar counts by its rectangle, not by what the band monitor
+    /// saw: a picture pass covers the bar with a window of its own, the
+    /// monitor read the pointer as gone and a clicked panel closed 0.3s in
+    /// (2026-10-09).
     var holdsReveal: Bool {
         guard isOpen, let window else { return false }
         if awaitsPointer { return true }
+        let pointer = NSEvent.mouseLocation
         var reach = window.frame
-        if let screen = window.screen { reach.size.height = screen.frame.maxY - reach.minY }
-        return reach.contains(NSEvent.mouseLocation)
+        if let screen = window.screen ?? NSScreen.main {
+            reach.size.height = screen.frame.maxY - reach.minY
+            let bar = GlassPanel.barHeight(of: screen)
+            if NSRect(x: screen.frame.minX, y: screen.frame.maxY - bar, width: screen.frame.width, height: bar)
+                .contains(pointer) { return true }
+        }
+        if reach.contains(pointer) { return true }
+        PelmetLog.log("panel: let go — pointer at \(Int(pointer.x)),\(Int(pointer.y)), panel \(Int(reach.minX))…\(Int(reach.maxX))")
+        return false
     }
 
     /// Off the panel is off the bar: the countdown starts at the rehide
@@ -506,7 +519,8 @@ final class PanelPresenter: RevealPresenter {
             items: items.map(\.id),
             drawnOrder: appState.lastDrawnOrder,
             didntFit: appState.overflowTrappedItems,
-            launchers: launchers,
+            // Closed apps off: out of the panel at rest, a search still finds them.
+            launchers: options.showsClosedApps || !query.isEmpty ? launchers : [],
             options: options,
             alwaysHiddenRequested: alwaysRequested,
             query: query,
@@ -514,7 +528,7 @@ final class PanelPresenter: RevealPresenter {
             history: history)
 
         // What is on screen, in stacking order. A folded Always Hidden draws
-        // its fold row only; the row layout has no fold, so it leaves it out.
+        // its fold only; the row layout has no fold, so it leaves it out.
         struct Shown { let section: PanelSection; let folded: Bool }
         var shown: [Shown] = model.sections.compactMap { section in
             let folded = section.kind == .alwaysHidden && section.isFolded && !foldOpen
@@ -535,6 +549,20 @@ final class PanelPresenter: RevealPresenter {
             shown = tiles.isEmpty ? [] : [Shown(section: PanelSection(kind: .hidden, tiles: tiles, isFolded: false), folded: false)]
         }
 
+        // The tile fold: a "+10" tile after Hidden's icons, in a Hidden of
+        // its own when Hidden has none. A search shows matches, no fold.
+        if layout == .panel, options.alwaysHiddenFold == .tile, query.isEmpty,
+           let always = shown.firstIndex(where: { $0.section.kind == .alwaysHidden }) {
+            if always > 0, shown[always - 1].section.kind == .hidden {
+                var hidden = shown[always - 1].section
+                hidden.tiles.append(.fold)
+                shown[always - 1] = Shown(section: hidden, folded: false)
+            } else {
+                shown.insert(Shown(section: PanelSection(kind: .hidden, tiles: [.fold], isFolded: false), folded: false),
+                             at: always)
+            }
+        }
+
         let columns = options.columns
         let minimum = shown.filter { !$0.folded }
             .map { PanelGrid.neededColumns(of: $0.section.tiles, maximum: columns) }.max() ?? 1
@@ -543,6 +571,7 @@ final class PanelPresenter: RevealPresenter {
         content.hasAlwaysHidden = model.sections.contains { $0.kind == .alwaysHidden && $0.count > 0 }
         content.showsAlwaysHidden = alwaysShown
         content.motion = Self.foldStyle(appState.settings.revealAnimation)
+        content.fold = options.alwaysHiddenFold
         content.blocks = shown.map { entry in
             PanelBlock(
                 kind: entry.section.kind,
@@ -553,8 +582,10 @@ final class PanelPresenter: RevealPresenter {
                 foldable: layout == .panel && entry.section.kind == .alwaysHidden,
                 isFolded: entry.folded)
         }
-        // A folded section draws its fold row only: its grid sets no width.
-        content.width = max(content.blocks.filter { !$0.isFolded }.map(\.grid.contentSize.width).max() ?? 0, 150)
+        // A folded section sets no width. The search field wants room to
+        // type into; otherwise the panel is as wide as its icons.
+        content.width = max(content.blocks.filter { !$0.isFolded }.map(\.grid.contentSize.width).max() ?? 0,
+                            query.isEmpty ? PanelMetrics.compact.wellSize.width : 150)
 
         let byKey = Dictionary(items.map { ($0.id.sectionKey, $0) }, uniquingKeysWith: { first, _ in first })
         var missing: [ItemID] = []
@@ -576,12 +607,12 @@ final class PanelPresenter: RevealPresenter {
                     let icon = launcherIcon(bundle)
                     content.art[tile] = PanelTileArt(
                         image: .icon(icon), name: ItemNaming.appName(forBundle: bundle) ?? bundle, dimmed: true)
-                case .rowBreak:
+                case .rowBreak, .fold:
                     break
                 }
             }
         }
-        content.selected = selected.flatMap { content.art[$0] == nil ? nil : $0 }
+        content.selected = selected.flatMap { content.art[$0] == nil && $0 != .fold ? nil : $0 }
         return (content, missing, model)
     }
 
@@ -620,6 +651,8 @@ final class PanelPresenter: RevealPresenter {
             if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) {
                 NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
             }
+        case .fold:
+            toggleFold()
         case .rowBreak:
             break
         }
@@ -730,7 +763,7 @@ final class PanelPresenter: RevealPresenter {
         case .launcher(let bundle):
             let name = ItemNaming.appName(forBundle: bundle) ?? bundle
             return [.action(String(localized: "Open \(name)")) { [weak self] in self?.press(tile) }]
-        case .rowBreak:
+        case .rowBreak, .fold:
             return []
         }
     }
@@ -750,6 +783,12 @@ final class PanelPresenter: RevealPresenter {
             .check(String(localized: "Show Names"), appState.settings.panel.showsNames, enabled: layout == .panel) { [weak self] in
                 guard let self, let appState = self.appState else { return }
                 appState.settings.panel.showsNames.toggle()
+                appState.settingsChanged()
+                if self.isOpen { self.refresh() }
+            },
+            .check(String(localized: "Show Closed Apps"), appState.settings.panel.showsClosedApps) { [weak self] in
+                guard let self, let appState = self.appState else { return }
+                appState.settings.panel.showsClosedApps.toggle()
                 appState.settingsChanged()
                 if self.isOpen { self.refresh() }
             },

@@ -52,8 +52,8 @@ struct PanelPane: View {
 
     /// The Icons rows and the modes that draw them.
     private static let modeRows: [String: Set<RevealTarget>] = [
-        "panelNames": [.panel], "panelColumns": [.panel],
-        "panelGroups": [.panel, .row], "panelAlwaysHidden": [.panel, .row],
+        "panelNames": [.panel], "panelColumns": [.panel], "panelClosedApps": [.panel, .row],
+        "panelGroups": [.panel, .row], "panelAlwaysHidden": [.panel, .row], "panelFold": [.panel],
     ]
 
     private var caption: LocalizedStringKey {
@@ -77,6 +77,9 @@ struct PanelPane: View {
                 }
                 .settingAnchor("panelColumns")
             }
+            SettingToggleRow(title: "Show closed apps", caption: "Apps that aren't running, dimmed. A click opens one.",
+                             isOn: binding(\.showsClosedApps))
+                .settingAnchor("panelClosedApps")
             SettingToggleRow(
                 title: "Separators start a new row",
                 caption: target == .row
@@ -90,6 +93,14 @@ struct PanelPane: View {
                 ])
             }
             .settingAnchor("panelAlwaysHidden")
+            if target == .panel, options.alwaysHidden != .hidden {
+                SettingRow(title: "Fold", caption: "What you click to open Always Hidden.") {
+                    PelmetSegments(selection: binding(\.alwaysHiddenFold), options: [
+                        (.tile, "Tile"), (.count, "Count"), (.handle, "Handle"),
+                    ], compact: true)
+                }
+                .settingAnchor("panelFold")
+            }
         }
     }
 
@@ -287,7 +298,15 @@ private struct PanelPreviewStage: View {
             // the selected tile, or Return, opens for real.
             onPress: { tile in
                 focused = true
-                if drawn.selected == tile { presenter.press(tile) } else { selected = tile }
+                // The fold tile is a control, not an icon: it opens at once.
+                if tile == .fold {
+                    selected = tile
+                    flipFold(drawn)
+                } else if drawn.selected == tile {
+                    presenter.press(tile)
+                } else {
+                    selected = tile
+                }
             },
             onFold: { flipFold(drawn) },
             tileMenu: { presenter.menu(for: $0) },
@@ -367,7 +386,9 @@ private struct PanelPreviewStage: View {
         case .escape:
             if query.isEmpty { focused = false } else { setQuery("", layout: layout) }
         case .enter:
-            if let tile = built.content.selected ?? built.model.bestMatch { presenter.press(tile) }
+            if let tile = built.content.selected ?? built.model.bestMatch {
+                if tile == .fold { flipFold(built.content) } else { presenter.press(tile) }
+            }
         case .move(let direction):
             switch built.content.step(from: built.content.selected, toward: direction) {
             case .select(let tile): selected = tile

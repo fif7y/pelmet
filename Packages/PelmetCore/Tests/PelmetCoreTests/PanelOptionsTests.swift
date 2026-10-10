@@ -14,6 +14,8 @@ import Testing
         #expect(!options.separatorsBreakRows)
         #expect(options.alwaysHidden == .folded)
         #expect(!options.alwaysHiddenOpen)
+        #expect(options.alwaysHiddenFold == .tile)
+        #expect(options.showsClosedApps)
         #expect(PanelOptions.autoColumns == 5)
         #expect(try decode("{}") == options)
     }
@@ -26,6 +28,8 @@ import Testing
         options.separatorsBreakRows = true
         options.alwaysHidden = .asLeft
         options.alwaysHiddenOpen = true
+        options.alwaysHiddenFold = .handle
+        options.showsClosedApps = false
         let back = try JSONDecoder().decode(PanelOptions.self, from: JSONEncoder().encode(options))
         #expect(back == options)
     }
@@ -34,7 +38,8 @@ import Testing
     @Test func aBadFieldKeepsTheOthers() throws {
         let options = try decode(#"""
         {"showsNames":"yes","columnsWithNames":6,"columnsCompact":"wide",
-         "separatorsBreakRows":true,"alwaysHidden":"tucked","alwaysHiddenOpen":true}
+         "separatorsBreakRows":true,"alwaysHidden":"tucked","alwaysHiddenOpen":true,
+         "alwaysHiddenFold":"drawer"}
         """#)
         #expect(options.showsNames == false)
         #expect(options.columnsWithNames == 6)
@@ -42,6 +47,7 @@ import Testing
         #expect(options.separatorsBreakRows)
         #expect(options.alwaysHidden == .folded)
         #expect(options.alwaysHiddenOpen)
+        #expect(options.alwaysHiddenFold == .tile)
     }
 
     @Test func aMissingFieldKeepsTheOthers() throws {

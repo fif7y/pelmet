@@ -85,9 +85,10 @@ import Testing
         #expect(g.contentSize == CGSize(width: 348, height: 134))
     }
 
-    @Test func aNarrowPanelKeepsItsMinimumWidth() {
+    // The fold's label set a 150pt floor; with it gone the grid is its icons.
+    @Test func aNarrowPanelIsAsWideAsItsIcons() {
         let g = grid(tiles(3))
-        #expect(g.contentSize == CGSize(width: 150, height: 44))
+        #expect(g.contentSize == CGSize(width: 144, height: 44))
         #expect(g.rows[0][2].frame.maxX == 144)
     }
 

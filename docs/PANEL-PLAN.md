@@ -130,8 +130,9 @@ tile click ─▶ AppState.openItemMenu ─▶ ItemPress (covered relay) ─▶ 
 - `PanelModel.build(...)` — input: Roster membership, last drawn order,
   separators, the « notice's list (S4), launchers, filter query. Output: sections
   (Hidden, Always Hidden, Didn't fit) of `PanelTile`s.
-  `PanelTile` = `.item(key)`, `.launcher(id)`, `.rowBreak`. New tile kinds are
-  new cases, nothing else moves.
+  `PanelTile` = `.item(key)`, `.launcher(id)`, `.rowBreak`, `.fold` (the tile
+  fold, placed by the presenter after Hidden's icons, never by the model). New
+  tile kinds are new cases, nothing else moves.
 - `PanelGrid` — tiles + columns (Auto = 5) + layout → rows, frames, panel size,
   arrow-key neighbours. Row is the same grid with one row, no names.
 
@@ -178,6 +179,14 @@ default, round trip.
 | `panel.separatorsBreakRows` | Bool | false |
 | `panel.alwaysHidden` | `.folded` / `.asLeft` / `.hidden` | `.folded` |
 | `panel.alwaysHiddenOpen` | Bool (for `.asLeft`) | false |
+| `panel.alwaysHiddenFold` | `.tile` / `.count` / `.handle` | `.tile` |
+| `panel.showsClosedApps` | Bool (off: a search still finds them) | true |
+
+The fold (Gab, 2026-10-09): the "Always Hidden 10 ›" row set a 150pt floor
+and left a 2-column panel half empty. It is now a "+10" tile in Hidden's last
+cell (default), a count pill under the icons, or a grabber on the bottom edge,
+picked in Settings › Panel › Fold. None is wider than the grid, so the panel
+is as wide as its icons (a search field still gets 150pt to type into).
 
 Dev flag while building: `pelmet.debug.panel` (defaults Bool) shows the Panel
 tab and the target picker. Removed when the beta ships.

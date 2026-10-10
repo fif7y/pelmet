@@ -15,6 +15,10 @@ public enum PanelTile: Hashable, Sendable {
     case launcher(String)
     /// A separator that starts a new row. Not drawn, only a break.
     case rowBreak
+    /// The tile that opens and closes Always Hidden (`AlwaysHiddenFold.tile`).
+    /// The panel places it after the icons above the fold; the model never
+    /// does.
+    case fold
 
     /// The id the search ranker knows this tile by: the command bar's
     /// candidates use the same strings. Nil for a break.
@@ -22,7 +26,7 @@ public enum PanelTile: Hashable, Sendable {
         switch self {
         case .item(let key): key.rawValue
         case .launcher(let bundle): "launcher:\(bundle)"
-        case .rowBreak: nil
+        case .rowBreak, .fold: nil
         }
     }
 }
@@ -47,8 +51,8 @@ public struct PanelSection: Equatable, Sendable {
         self.isFolded = isFolded
     }
 
-    /// Tiles you can click; breaks are not counted.
-    public var count: Int { tiles.filter { $0 != .rowBreak }.count }
+    /// Icons you can click; breaks and the fold tile are not counted.
+    public var count: Int { tiles.filter { $0 != .rowBreak && $0 != .fold }.count }
 }
 
 public struct PanelModel: Equatable, Sendable {
