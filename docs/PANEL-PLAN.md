@@ -1,6 +1,6 @@
 # Panel plan: hidden icons in a panel, plus Search in Settings
 
-Status: 2026-10-09. Decisions D1–D5 (section 9). Phases 0–3 and 5 done, Phase 4 done but drag, on `panel` (results under each phase). Next: Phase 6, then drag.
+Status: 2026-10-10. Decisions D1–D5 (section 9). Phases 0–6 and drag done, plus picture-pass batches and an optimization pass, merged into `roster` at abb2a9b and verified live. Next: cut build 65 (0.3.2-beta.3) on Gab's go. Multi-display checks wait for an external display.
 Issue #26. The design is the mock in
 `~/Projects/pelmet-site/marketing/panel-mock/` (`index.html` = the panel,
 `settings.html` = the Settings Panel and Search tabs, private) and decisions
