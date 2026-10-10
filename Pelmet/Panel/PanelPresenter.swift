@@ -392,24 +392,40 @@ final class PanelPresenter: RevealPresenter {
         let tall = NSRect(x: frame.minX, y: frame.maxY - max(from, to), width: frame.width, height: max(from, to))
         placed = tall
         window.place(tall, glassHeight: from)
-        let curve = growing ? Self.enterCurve : Self.exitCurve
-        let start = CACurrentMediaTime()
-        let timer = Timer(timeInterval: 1.0 / 120, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, let window = self.window else { return }
-                let t = min((CACurrentMediaTime() - start) / duration, 1)
-                guard t < 1 else {
-                    self.stopGlass()
-                    self.resizedAt = CACurrentMediaTime()
-                    self.placed = frame
-                    window.place(frame, glassHeight: to)
-                    return
+        let timer: Timer
+        if style == .fade {
+            // The glass holds while the tiles fade: nothing to step, so one
+            // timer for the end.
+            timer = Timer(timeInterval: duration, repeats: false) { [weak self] _ in
+                MainActor.assumeIsolated { self?.finishGlass(frame: frame, height: to) }
+            }
+        } else {
+            let curve = growing ? Self.enterCurve : Self.exitCurve
+            let start = CACurrentMediaTime()
+            timer = Timer(timeInterval: 1.0 / 120, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, let window = self.window else { return }
+                    let t = min((CACurrentMediaTime() - start) / duration, 1)
+                    guard t < 1 else {
+                        self.finishGlass(frame: frame, height: to)
+                        return
+                    }
+                    window.setGlassHeight(from + (to - from) * curve.value(at: t))
                 }
-                if style == .smooth { window.setGlassHeight(from + (to - from) * curve.value(at: t)) }
             }
         }
         RunLoop.main.add(timer, forMode: .common)
         glassTimer = timer
+    }
+
+    /// The end of a fold: the window at the frame the panel settles on, the
+    /// glass at its height.
+    private func finishGlass(frame: NSRect, height: CGFloat) {
+        guard let window else { return }
+        stopGlass()
+        resizedAt = CACurrentMediaTime()
+        placed = frame
+        window.place(frame, glassHeight: height)
     }
 
     private func stopGlass() {
