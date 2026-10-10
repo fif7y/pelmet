@@ -6,6 +6,7 @@
 // presenter owns the state and the Settings preview can draw the same view.
 
 import AppKit
+import Observation
 import PelmetCore
 import SwiftUI
 
@@ -34,8 +35,46 @@ struct PanelBlock: Identifiable {
     /// Always Hidden only: its fold is drawn, and the grid when open.
     let foldable: Bool
     let isFolded: Bool
+    /// The row layout merges the sections into one grid: which tiles belong to
+    /// which, for a drop's target. Empty in the panel layout.
+    var groups: [PanelGroup] = []
 
     var id: PanelSection.Kind { kind }
+}
+
+/// The tiles one section brought into the row.
+struct PanelGroup {
+    let kind: PanelSection.Kind
+    let tiles: [PanelTile]
+}
+
+/// A part of the panel the drag needs to find on screen (laid out by SwiftUI,
+/// reported in the hosting view's space, `PanelHost.space`).
+enum PanelFrameKey: Hashable {
+    /// A section, header included (Didn't fit and Hidden).
+    case section(PanelSection.Kind)
+    /// A section's tiles.
+    case grid(PanelSection.Kind)
+    /// The Always Hidden fold, whichever of the three it is drawn as.
+    case fold
+}
+
+/// A tile drag, from the tile's own gesture: where the pointer is in the
+/// tile, and where the well's centre is. The presenter reads the screen.
+enum PanelTileDrag {
+    case moved(pointer: CGPoint, wellCenter: CGPoint)
+    case ended
+}
+
+/// What the drag shows: the tile in the air, and the section it would land
+/// in. Its own object, so a target change redraws the highlight and nothing
+/// else (a refresh rebuilds the whole panel).
+@Observable
+final class PanelDragState {
+    var tile: PanelTile?
+    /// The drop as it would go: `.none` for no target and for the tile's own
+    /// section. The bar is Visible, and draws nothing in the panel.
+    var target: PanelDropZones.Hit = .none
 }
 
 struct PanelContent {
@@ -67,6 +106,9 @@ struct PanelContent {
     var scrollHeight: CGFloat?
     /// A new one starts the scroll at the top: the presenter's count of opens.
     var scrollID = 0
+    /// The tiles whose right-click menu offers "Move to…": the ones a drag
+    /// picks up.
+    var draggable: Set<PanelTile> = []
     /// Nothing is hidden, or nothing matches: the panel says so instead of
     /// showing nothing.
     var isEmpty: Bool { blocks.allSatisfy { $0.count == 0 } }
@@ -93,6 +135,11 @@ struct PanelView: View {
     /// The column grip, half past the left edge. The open panel draws its
     /// own outside the glass, which clips this view (`PanelEdgeGrip`).
     var drawsGrip = true
+    /// A tile dragged out: nil where nothing can be (the Settings preview).
+    var onTileDrag: ((PanelTile, PanelTileDrag) -> Void)?
+    var drag = PanelDragState()
+    /// Where the sections, grids and fold land, for the drag to find.
+    var onFrame: (PanelFrameKey, CGRect) -> Void = { _, _ in }
 
     @State private var hovering = false
 
@@ -139,7 +186,7 @@ struct PanelView: View {
         } else if content.layout == .row {
             HStack(spacing: 0) {
                 ForEach(content.blocks) { block in
-                    grid(block.grid)
+                    grid(block)
                 }
             }
         } else {
@@ -209,6 +256,16 @@ struct PanelView: View {
                     handleFold(block)
                 }
                 foldedTiles(block, gap: fold == .count ? 6 : first && fold == nil ? 0 : 10)
+                    // The open grid lit as a drop target. Outside the fold's
+                    // mask, which cuts at the grid's width.
+                    .background(alignment: .bottomTrailing) {
+                        if !block.isFolded, drag.target.section == .alwaysHidden {
+                            dropWell
+                                .frame(width: block.grid.contentSize.width + 2 * Self.dropReach,
+                                       height: block.grid.contentSize.height + 2 * Self.dropReach)
+                                .offset(x: Self.dropReach, y: Self.dropReach)
+                        }
+                    }
             }
             // The bar's own motion for the style: Smooth slides the tiles
             // out from under the icons above, Fade fades them in place.
@@ -218,7 +275,15 @@ struct PanelView: View {
                 if block.showsHeader {
                     header(block)
                 }
-                grid(block.grid)
+                grid(block)
+            }
+            .background {
+                if drag.target.section == .hidden, block.kind == .hidden {
+                    dropWell.padding(-Self.dropReach)
+                }
+            }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PanelHost.space)) } action: {
+                onFrame(.section(block.kind), $0)
             }
             // The mock's gap under Didn't fit; Hidden runs into the fold,
             // which brings its own.
@@ -230,7 +295,7 @@ struct PanelView: View {
     private func foldedTiles(_ block: PanelBlock, gap: CGFloat) -> some View {
         VStack(spacing: 0) {
             if !block.isFolded {
-                grid(block.grid)
+                grid(block)
                     .padding(.top, gap)
                     // Smooth slides them out from under the icons above, and
                     // closes like a drawer: they fade in place while the
@@ -285,12 +350,13 @@ struct PanelView: View {
             .frame(height: 20)
             .contentShape(Capsule())
         }
-        .buttonStyle(FoldFillStyle(ink: ink, shape: Capsule(), resting: ink.well))
+        .buttonStyle(FoldFillStyle(ink: ink, shape: Capsule(), resting: drag.target == .fold ? ink.wellHover : ink.well))
         .focusEffectDisabled()
         .help(title(of: .alwaysHidden))
         .accessibilityLabel(title(of: .alwaysHidden))
         .accessibilityValue(Text(block.count, format: .number))
         .frame(width: content.width)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PanelHost.space)) } action: { onFrame(.fold, $0) }
     }
 
     /// The handle fold: a grabber on the bottom edge while folded. It stays
@@ -298,7 +364,7 @@ struct PanelView: View {
     /// pointer that opened it was left on a tile (Gab, 2026-10-09).
     private func handleFold(_ block: PanelBlock) -> some View {
         Button(action: onFold) {
-            HandleGrip(ink: ink, width: content.width)
+            HandleGrip(ink: ink, width: content.width, lit: drag.target == .fold)
         }
         .buttonStyle(.plain)
         .focusEffectDisabled()
@@ -309,6 +375,7 @@ struct PanelView: View {
         // Half into the panel's padding while folded: a grabber sits on the
         // edge.
         .padding(.bottom, -5)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PanelHost.space)) } action: { onFrame(.fold, $0) }
     }
 
     /// The tile fold: how many are behind it, a chevron once they are out.
@@ -319,13 +386,14 @@ struct PanelView: View {
             FoldTileLabel(count: count, open: always.map { !$0.isFolded } ?? false,
                           title: title(of: .alwaysHidden), grid: grid, ink: ink)
         }
-        .buttonStyle(PanelTileStyle(grid: grid, ink: ink, selected: content.selected == .fold))
+        .buttonStyle(PanelTileStyle(grid: grid, ink: ink, selected: content.selected == .fold || drag.target == .fold))
         .focusEffectDisabled()
         .help(title(of: .alwaysHidden))
         .accessibilityLabel(title(of: .alwaysHidden))
         .accessibilityValue(Text(count, format: .number))
         .accessibilityAddTraits(content.selected == .fold ? .isSelected : [])
         .offset(x: placement.frame.minX, y: placement.frame.minY)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PanelHost.space)) } action: { onFrame(.fold, $0) }
     }
 
     /// The mock's search field, drawn: the panel's own key monitor types
@@ -373,8 +441,31 @@ struct PanelView: View {
         .frame(minWidth: 150, alignment: .leading)
     }
 
-    private func grid(_ grid: PanelGrid) -> some View {
-        ZStack(alignment: .topLeading) {
+    /// How far a lit section reaches past its tiles; the panel's padding is
+    /// the room for it.
+    private static let dropReach: CGFloat = 5
+
+    /// A section lit as a drop target: the tile hover's fill, soft.
+    private var dropWell: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(ink.wellHover)
+            .allowsHitTesting(false)
+            .transition(.opacity)
+    }
+
+    private func grid(_ block: PanelBlock) -> some View {
+        let grid = block.grid
+        return ZStack(alignment: .topLeading) {
+            // The row has no sections to light: the group under the pointer.
+            if grid.layout == .row, let lit = drag.target.section {
+                ForEach(Array(litRects(of: block, section: lit).enumerated()), id: \.offset) { _, rect in
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(ink.wellHover)
+                        .frame(width: rect.width, height: rect.height)
+                        .offset(x: rect.minX, y: rect.minY)
+                        .allowsHitTesting(false)
+                }
+            }
             ForEach(Array(grid.rows.joined()), id: \.tile) { placement in
                 if placement.tile == .fold {
                     foldTile(at: placement, in: grid)
@@ -388,6 +479,13 @@ struct PanelView: View {
                     .focusEffectDisabled()
                     .help(art.dimmed ? "\(art.name)\n\(String(localized: "Not running"))" : art.name)
                     .contextMenu { menu(tileMenu(placement.tile)) }
+                    // Under the gesture, not on it: a click that never travels
+                    // 4pt stays the button's.
+                    .simultaneousGesture(tileDrag(placement.tile, grid: grid),
+                                         including: onTileDrag != nil && content.draggable.contains(placement.tile) ? .all : .none)
+                    // The tile in the air leaves its place dimmed.
+                    .opacity(drag.tile == placement.tile ? 0.35 : 1)
+                    .animation(.easeOut(duration: 0.15), value: drag.tile == placement.tile)
                     // Names even with names off; a launcher says it isn't running.
                     .accessibilityLabel(art.name)
                     .accessibilityValue(art.dimmed ? String(localized: "Not running") : "")
@@ -415,6 +513,29 @@ struct PanelView: View {
             }
         }
         .frame(width: grid.contentSize.width, height: grid.contentSize.height, alignment: .topLeading)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PanelHost.space)) } action: { onFrame(.grid(block.kind), $0) }
+    }
+
+    /// The row's group of `section`, a rounded strip behind its tiles per
+    /// line.
+    private func litRects(of block: PanelBlock, section: PelmetCore.Section) -> [CGRect] {
+        let kind: PanelSection.Kind = section == .alwaysHidden ? .alwaysHidden : .hidden
+        guard section != .visible, let group = block.groups.first(where: { $0.kind == kind }) else { return [] }
+        let wanted = Set(group.tiles)
+        return block.grid.rows.compactMap { line in
+            let frames = line.filter { wanted.contains($0.tile) }.map(\.frame)
+            guard let first = frames.first else { return nil }
+            return frames.dropFirst().reduce(first) { $0.union($1) }.insetBy(dx: -3, dy: -2)
+        }
+    }
+
+    /// The gesture that picks a tile up. The pointer is read on screen by the
+    /// presenter; the tile only says where in itself it was grabbed.
+    private func tileDrag(_ tile: PanelTile, grid: PanelGrid) -> some Gesture {
+        let center = CGPoint(x: grid.metrics.tileSize.width / 2, y: grid.metrics.wellSize.height / 2)
+        return DragGesture(minimumDistance: 4, coordinateSpace: .local)
+            .onChanged { onTileDrag?(tile, .moved(pointer: $0.location, wellCenter: center)) }
+            .onEnded { _ in onTileDrag?(tile, .ended) }
     }
 
     private func title(of kind: PanelSection.Kind) -> String {
@@ -442,17 +563,19 @@ struct PanelInk {
     var wellPress: Color { base.opacity(scheme == .dark ? 0.2 : 0.13) }
 }
 
-private struct PanelTileLabel: View {
+struct PanelTileLabel: View {
     let art: PanelTileArt
     let grid: PanelGrid
     let ink: PanelInk
+    /// The well and what is on it, no name: the tile in the air.
+    var glyphOnly = false
 
     var body: some View {
         let metrics = grid.metrics
         VStack(spacing: metrics.labelGap) {
             glyph
                 .frame(width: metrics.wellSize.width, height: metrics.wellSize.height)
-            if grid.showsNames {
+            if grid.showsNames, !glyphOnly {
                 Text(art.name)
                     .font(.system(size: 11))
                     .foregroundStyle(ink.secondary)
@@ -461,7 +584,8 @@ private struct PanelTileLabel: View {
                     .frame(width: metrics.tileSize.width, height: metrics.labelHeight)
             }
         }
-        .frame(width: metrics.tileSize.width, height: metrics.tileSize.height, alignment: .top)
+        .frame(width: glyphOnly ? metrics.wellSize.width : metrics.tileSize.width,
+               height: glyphOnly ? metrics.wellSize.height : metrics.tileSize.height, alignment: .top)
         .contentShape(Rectangle())
     }
 
@@ -572,13 +696,16 @@ private struct FoldFillStyle<S: Shape>: ButtonStyle {
 private struct HandleGrip: View {
     let ink: PanelInk
     let width: CGFloat
+    /// A tile is dragged over it: as under the pointer.
+    var lit = false
     @State private var hovering = false
 
     var body: some View {
+        let on = hovering || lit
         Capsule()
-            .fill(hovering ? ink.secondary : ink.tertiary)
-            .frame(width: hovering ? 36 : 28, height: 4)
-            .animation(.easeOut(duration: 0.12), value: hovering)
+            .fill(on ? ink.secondary : ink.tertiary)
+            .frame(width: on ? 36 : 28, height: 4)
+            .animation(.easeOut(duration: 0.12), value: on)
             .frame(width: width, height: 14)
             .contentShape(Rectangle())
             .onHover { hovering = $0 }
