@@ -180,12 +180,13 @@ default, round trip.
 | `panel.alwaysHidden` | `.folded` / `.asLeft` / `.hidden` | `.folded` |
 | `panel.alwaysHiddenOpen` | Bool (for `.asLeft`) | false |
 | `panel.alwaysHiddenFold` | `.tile` / `.count` / `.handle` | `.tile` |
-| `panel.showsClosedApps` | Bool (off: a search still finds them) | true |
+| `panel.showsClosedApps` | Bool (off: a search still finds them) | false |
 
 The fold (Gab, 2026-10-09): the "Always Hidden 10 ›" row set a 150pt floor
 and left a 2-column panel half empty. It is now a "+10" tile in Hidden's last
 cell (default), a count pill under the icons, or a grabber on the bottom edge,
-picked in Settings › Panel › Fold. None is wider than the grid, so the panel
+picked in Settings › Panel › Fold. All three stay put as the tiles come out
+under them. None is wider than the grid, so the panel
 is as wide as its icons (a search field still gets 150pt to type into).
 
 Dev flag while building: `pelmet.debug.panel` (defaults Bool) shows the Panel

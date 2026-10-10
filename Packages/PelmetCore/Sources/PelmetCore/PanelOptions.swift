@@ -26,7 +26,8 @@ public struct PanelOptions: Codable, Equatable, Sendable {
         case tile
         /// A small count under the icons.
         case count
-        /// A grabber along the bottom edge.
+        /// A grabber on the bottom edge, staying put as the tiles come out
+        /// under it.
         case handle
     }
 
@@ -34,7 +35,7 @@ public struct PanelOptions: Codable, Equatable, Sendable {
     public var showsNames: Bool = false
     /// Dimmed tiles for apps in a section that aren't running, a click
     /// opens one. Off, a search in the panel still finds them.
-    public var showsClosedApps: Bool = true
+    public var showsClosedApps: Bool = false
     /// The most columns a row may have, one per names mode: the user sets
     /// them by dragging the panel's edge, and each mode keeps its own width.
     /// Nil is Auto, `autoColumns`.

@@ -15,7 +15,7 @@ import Testing
         #expect(options.alwaysHidden == .folded)
         #expect(!options.alwaysHiddenOpen)
         #expect(options.alwaysHiddenFold == .tile)
-        #expect(options.showsClosedApps)
+        #expect(!options.showsClosedApps)
         #expect(PanelOptions.autoColumns == 5)
         #expect(try decode("{}") == options)
     }
@@ -29,7 +29,7 @@ import Testing
         options.alwaysHidden = .asLeft
         options.alwaysHiddenOpen = true
         options.alwaysHiddenFold = .handle
-        options.showsClosedApps = false
+        options.showsClosedApps = true
         let back = try JSONDecoder().decode(PanelOptions.self, from: JSONEncoder().encode(options))
         #expect(back == options)
     }

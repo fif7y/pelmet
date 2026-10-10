@@ -151,14 +151,15 @@ struct PanelView: View {
             // A search shows the matches, no fold.
             let fold: PanelOptions.AlwaysHiddenFold? = content.query.isEmpty ? content.fold : nil
             VStack(alignment: .trailing, spacing: 0) {
+                // Both stay where they are: the tiles come out under them.
                 if fold == .count {
                     countFold(block)
                         .padding(.top, first ? 0 : 6)
                 }
-                foldedTiles(block, gap: fold == .count ? 6 : first ? 0 : 10)
                 if fold == .handle {
                     handleFold(block)
                 }
+                foldedTiles(block, gap: fold == .count ? 6 : first && fold == nil ? 0 : 10)
             }
             // The bar's own motion for the style: Smooth slides the tiles
             // out from under the icons above, Fade fades them in place.
@@ -238,23 +239,21 @@ struct PanelView: View {
         .frame(width: content.width)
     }
 
-    /// The handle fold: a grabber along the bottom edge, under the tiles
-    /// when they are out.
+    /// The handle fold: a grabber on the bottom edge while folded. It stays
+    /// put when the tiles come out under it; at the bottom it moved, and the
+    /// pointer that opened it was left on a tile (Gab, 2026-10-09).
     private func handleFold(_ block: PanelBlock) -> some View {
         Button(action: onFold) {
-            Capsule()
-                .fill(ink.tertiary)
-                .frame(width: 28, height: 4)
-                .frame(width: content.width, height: 14)
-                .contentShape(Rectangle())
+            HandleGrip(ink: ink, width: content.width)
         }
-        .buttonStyle(FoldFillStyle(ink: ink, shape: RoundedRectangle(cornerRadius: 7, style: .continuous), resting: .clear))
+        .buttonStyle(.plain)
         .focusEffectDisabled()
         .help(title(of: .alwaysHidden))
         .accessibilityLabel(title(of: .alwaysHidden))
         .accessibilityValue(Text(block.count, format: .number))
         .padding(.top, 4)
-        // Half into the panel's padding: a grabber sits on the edge.
+        // Half into the panel's padding while folded: a grabber sits on the
+        // edge.
         .padding(.bottom, -5)
     }
 
@@ -473,7 +472,7 @@ private struct PanelTileStyle: ButtonStyle {
     }
 }
 
-/// The count and the handle: a fill that comes up on hover and press.
+/// The count: a fill that comes up on hover and press.
 private struct FoldFillStyle<S: Shape>: ButtonStyle {
     let ink: PanelInk
     let shape: S
@@ -500,6 +499,24 @@ private struct FoldFillStyle<S: Shape>: ButtonStyle {
                         .animation(.easeOut(duration: 0.12), value: hovering))
                 .onHover { hovering = $0 }
         }
+    }
+}
+
+/// The handle's grabber: it brightens and widens under the pointer, never a
+/// band across the panel for a 28pt mark.
+private struct HandleGrip: View {
+    let ink: PanelInk
+    let width: CGFloat
+    @State private var hovering = false
+
+    var body: some View {
+        Capsule()
+            .fill(hovering ? ink.secondary : ink.tertiary)
+            .frame(width: hovering ? 36 : 28, height: 4)
+            .animation(.easeOut(duration: 0.12), value: hovering)
+            .frame(width: width, height: 14)
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
     }
 }
 
