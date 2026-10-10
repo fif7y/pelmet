@@ -119,6 +119,11 @@ final class PanelPresenter: RevealPresenter {
     /// Bumped per open and close, so a fade that ends late leaves alone a
     /// panel that opened again.
     private var generation = 0
+    /// What measures the panel, kept for an open: a refresh gives it a new
+    /// root view instead of building a controller per pass.
+    private var measurer: NSHostingController<PanelView>?
+    /// The measuring pass has no drag to show, and must not watch the live one.
+    private let idleDrag = PanelDragState()
 
     init(appState: AppState) {
         self.appState = appState
@@ -344,6 +349,7 @@ final class PanelPresenter: RevealPresenter {
                 // keep its caret blinking on a timer of its own.
                 self.query = ""
                 self.hosting?.rootView = Self.blank()
+                self.measurer = nil
             }
         })
     }
@@ -618,9 +624,13 @@ final class PanelPresenter: RevealPresenter {
         // the display, the tiles scroll in what the search row leaves.
         var size = measure(content)
         if let screen, size.height > Self.heightCap(on: screen) {
+            let cap = Self.heightCap(on: screen)
+            // With no room for the tiles, what is left is the search row and
+            // its padding; the tiles then take the rest of the cap.
             content.scrollHeight = 0
-            content.scrollHeight = max(Self.heightCap(on: screen) - measure(content).height, 0)
-            size = measure(content)
+            let rest = measure(content)
+            content.scrollHeight = max(cap - rest.height, 0)
+            size = CGSize(width: rest.width, height: max(cap, rest.height))
         }
         // The oracle for a short or narrow display: logged when it changes.
         let lines = content.layout == .row ? content.blocks.first?.grid.rows.count ?? 0 : 0
@@ -637,10 +647,13 @@ final class PanelPresenter: RevealPresenter {
         return (content.art.count, missing)
     }
 
-    /// `live` is the panel on screen; the measuring pass and the preview's
-    /// copy have no drag and report no frames.
+    /// `live` is the panel on screen. The measuring pass has no drag, reports
+    /// no frames and needs no menus, which would be built for every tile.
     private func view(_ content: PanelContent, live: Bool = true) -> PanelView {
-        PanelView(
+        guard live else {
+            return PanelView(content: content, onPress: { _ in }, onFold: {}, drawsGrip: false, drag: idleDrag)
+        }
+        return PanelView(
             content: content,
             onPress: { [weak self] tile in
                 // The mouse-up that ends a drag is not a click.
@@ -657,13 +670,22 @@ final class PanelPresenter: RevealPresenter {
             onColumnsDrag: { [weak self] _, ended in self?.dragColumns(ended: ended) },
             onColumnsReset: { [weak self] in self?.resetColumns() },
             drawsGrip: false,
-            onTileDrag: live ? { [weak self] tile, phase in self?.tileDragged(tile, phase) } : nil,
+            onTileDrag: { [weak self] tile, phase in self?.tileDragged(tile, phase) },
             drag: dragState,
-            onFrame: live ? { [weak self] key, frame in self?.frames[key] = frame } : { _, _ in })
+            onFrame: { [weak self] key, frame in self?.frames[key] = frame })
     }
 
     private func measure(_ content: PanelContent) -> CGSize {
-        NSHostingController(rootView: view(content, live: false)).sizeThatFits(in: NSSize(width: 4000, height: 4000))
+        let measured = view(content, live: false)
+        let controller: NSHostingController<PanelView>
+        if let measurer {
+            measurer.rootView = measured
+            controller = measurer
+        } else {
+            controller = NSHostingController(rootView: measured)
+            measurer = controller
+        }
+        return controller.sizeThatFits(in: NSSize(width: 4000, height: 4000))
     }
 
     /// The command bar's candidates afresh, as an open reads them: the
