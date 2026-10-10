@@ -48,11 +48,21 @@ final class PanelPresenter: RevealPresenter {
     /// Where SwiftUI laid out the sections, grids and fold, in the hosting
     /// view's space; read when the pointer needs a target.
     private var frames: [PanelFrameKey: CGRect] = [:]
-    /// The button under a tile fires on the mouse-up that ends a drag too.
+    /// The button under a tile fires on the mouse-up that ends a drag too:
+    /// no press until this passes (it starts at the release, not at the
+    /// cancel).
     private var pressGuardUntil: CFTimeInterval = 0
-    /// Esc cancelled a drag whose button is still down: its moves are not a
-    /// new drag.
+    /// A drag was cancelled, or refused, with the button still down: the rest
+    /// of that press is neither a drag nor a click. Ends at the release (or
+    /// the next press).
     private var ignoresDragUntilRelease = false
+    /// Mouse down and up, watched from a drag until its button comes up, so a
+    /// release SwiftUI never reports (it drops a gesture on a key press) still
+    /// ends it.
+    private var mouseMonitors: [Any] = []
+    /// The Esc that cancelled a drag, or its repeats, still reaches the
+    /// panel's own key handler; that must not close the panel.
+    private var escSwallowUntil: CFTimeInterval = 0
     private(set) var isOpen = false
     private var openedByHover = false
     /// Opened from the bar under the pointer (hover, a click on the bar):
@@ -307,7 +317,7 @@ final class PanelPresenter: RevealPresenter {
 
     private func close() {
         guard isOpen else { return }
-        if tileDrag != nil { finishDrag(cancel: true) }
+        if tileDrag != nil { finishDrag(cancel: true, closing: true) }
         isOpen = false
         pointerOnPanel = false
         draggingColumns = false
@@ -452,7 +462,16 @@ final class PanelPresenter: RevealPresenter {
         guard let key = PanelKey(event) else { return false }
         switch key {
         case .escape:
-            if tileDrag != nil { cancelDrag() } else if query.isEmpty { appState?.concealNow() } else { setQuery("") }
+            if tileDrag != nil {
+                cancelDrag()
+            } else if CACurrentMediaTime() < escSwallowUntil {
+                // The Esc that just cancelled a drag, or a repeat of it.
+                escSwallowUntil = CACurrentMediaTime() + 0.3
+            } else if query.isEmpty {
+                appState?.concealNow()
+            } else {
+                setQuery("")
+            }
         case .enter:
             if let tile = selected ?? lastModel?.bestMatch { press(tile) }
         case .move(let direction):
@@ -615,7 +634,8 @@ final class PanelPresenter: RevealPresenter {
             content: content,
             onPress: { [weak self] tile in
                 // The mouse-up that ends a drag is not a click.
-                guard let self, self.tileDrag == nil, CACurrentMediaTime() >= self.pressGuardUntil else { return }
+                guard let self, self.tileDrag == nil, !self.ignoresDragUntilRelease,
+                      CACurrentMediaTime() >= self.pressGuardUntil else { return }
                 self.press(tile)
             },
             onFold: { [weak self] in self?.toggleFold() },
@@ -866,9 +886,39 @@ final class PanelPresenter: RevealPresenter {
             }
             tickDrag()
         case .ended:
-            ignoresDragUntilRelease = false
-            if tileDrag != nil { finishDrag(cancel: false) }
+            released()
         }
+    }
+
+    /// The button came up (the gesture's end, a mouse-up seen directly, or a
+    /// button found up by the timer; whichever is first): the drop, and the
+    /// click that ends a drag is not one.
+    private func released() {
+        ignoresDragUntilRelease = false
+        pressGuardUntil = CACurrentMediaTime() + 0.35
+        stopWatchingMouse()
+        if tileDrag != nil { finishDrag(cancel: false) }
+    }
+
+    private func watchMouse() {
+        guard mouseMonitors.isEmpty else { return }
+        let seen: (NSEvent) -> Void = { [weak self] event in
+            MainActor.assumeIsolated {
+                // A new press: whatever was cancelled before it is over.
+                if event.type == .leftMouseUp { self?.released() } else { self?.ignoresDragUntilRelease = false }
+            }
+        }
+        let mask: NSEvent.EventTypeMask = [.leftMouseUp, .leftMouseDown]
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: seen) { mouseMonitors.append(global) }
+        if let local = NSEvent.addLocalMonitorForEvents(matching: mask, handler: { event in
+            seen(event)
+            return event
+        }) { mouseMonitors.append(local) }
+    }
+
+    private func stopWatchingMouse() {
+        for monitor in mouseMonitors { NSEvent.removeMonitor(monitor) }
+        mouseMonitors = []
     }
 
     private func beginDrag(_ tile: PanelTile, pointer: CGPoint, wellCenter: CGPoint) {
@@ -876,6 +926,14 @@ final class PanelPresenter: RevealPresenter {
               content.draggable.contains(tile), let art = content.art[tile],
               let block = content.blocks.first(where: { $0.grid.frame(of: tile) != nil })
         else { return }
+        // An Apply or grouping pass has the bar, and `moveItem` ignores a drop
+        // that lands during one: no drag to begin, and its release is no click.
+        guard !appState.applying else {
+            PelmetLog.log("panel: drag of \(key.rawValue) refused, a pass has the bar")
+            ignoresDragUntilRelease = true
+            watchMouse()
+            return
+        }
         let origin = appState.settings.sectionModel.section(of: key)
         // The tile's well, on screen: where the pointer is, less how far into
         // the tile it was (the tile's y runs down, the screen's up).
@@ -887,6 +945,7 @@ final class PanelPresenter: RevealPresenter {
             grab: CGSize(width: mouse.x - center.x, height: mouse.y - center.y),
             home: CGPoint(x: center.x - window.frame.minX, y: window.frame.maxY - center.y))
         tileDrag = drag
+        watchMouse()
         ghost.show(at: center)
         withAnimation(.easeOut(duration: 0.15)) { dragState.tile = tile }
         PelmetLog.log("panel: drag \(key.rawValue) from \(origin.rawValue)")
@@ -914,10 +973,9 @@ final class PanelPresenter: RevealPresenter {
             cancelDrag()
             return
         }
-        // A release the gesture never reported: the drag ends where the
-        // button came up, not when the pointer next is clicked.
+        // A release nothing reported: the drag ends where the button came up.
         if NSEvent.pressedMouseButtons & 1 == 0, CACurrentMediaTime() - drag.started > 0.15 {
-            finishDrag(cancel: false)
+            released()
             return
         }
         let pointer = NSEvent.mouseLocation
@@ -967,16 +1025,22 @@ final class PanelPresenter: RevealPresenter {
     }
 
     private func cancelDrag() {
-        // The button is still down: the rest of its moves are not a new drag.
-        ignoresDragUntilRelease = NSEvent.pressedMouseButtons & 1 != 0
+        // The key's own event is still on its way to the panel's handler.
+        escSwallowUntil = CACurrentMediaTime() + 0.5
         finishDrag(cancel: true)
     }
 
     /// The drop: a section other than the tile's own takes it; anywhere else
-    /// it goes back to where it was.
-    private func finishDrag(cancel: Bool) {
+    /// it goes back to where it was. `closing`: the panel is going, the ghost
+    /// only fades.
+    private func finishDrag(cancel: Bool, closing: Bool = false) {
         guard let drag = tileDrag else { return }
-        let section = cancel ? nil : target(at: NSEvent.mouseLocation, for: drag).section
+        var section = cancel ? nil : target(at: NSEvent.mouseLocation, for: drag).section
+        // `moveItem` ignores a drop during a pass: it goes back, it doesn't land.
+        if section != nil, appState?.applying == true {
+            PelmetLog.log("panel: drop of \(drag.key.rawValue) refused, a pass has the bar")
+            section = nil
+        }
         tileDrag = nil
         dragTimer?.invalidate()
         dragTimer = nil
@@ -988,7 +1052,15 @@ final class PanelPresenter: RevealPresenter {
             dragState.tile = nil
             dragState.target = .none
         }
-        pressGuardUntil = CACurrentMediaTime() + 0.35
+        // Cancelled with the button still down: the rest of that press is not a
+        // click. The release ends it (`released`).
+        if NSEvent.pressedMouseButtons & 1 != 0 {
+            ignoresDragUntilRelease = true
+        } else {
+            ignoresDragUntilRelease = false
+            pressGuardUntil = CACurrentMediaTime() + 0.35
+            stopWatchingMouse()
+        }
         // Let go past the edge, it holds until the pointer comes back (the
         // column grip does the same).
         awaitsPointer = true
@@ -999,7 +1071,7 @@ final class PanelPresenter: RevealPresenter {
             if isOpen { refresh() }
         } else {
             PelmetLog.log("panel: drag cancelled")
-            let home = isOpen ? window.map { CGPoint(x: $0.frame.minX + drag.home.x, y: $0.frame.maxY - drag.home.y) } : nil
+            let home = closing ? nil : window.map { CGPoint(x: $0.frame.minX + drag.home.x, y: $0.frame.maxY - drag.home.y) }
             drag.ghost.slideBack(toCenter: home, reduceMotion: Self.reduceMotion)
         }
     }

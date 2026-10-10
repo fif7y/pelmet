@@ -479,10 +479,11 @@ struct PanelView: View {
                     .focusEffectDisabled()
                     .help(art.dimmed ? "\(art.name)\n\(String(localized: "Not running"))" : art.name)
                     .contextMenu { menu(tileMenu(placement.tile)) }
-                    // Under the gesture, not on it: a click that never travels
-                    // 4pt stays the button's.
+                    // A tile that can't be dragged keeps every other gesture
+                    // (`.subviews`: `.none` took the button's press too).
+                    // A click that never travels 4pt stays the button's.
                     .simultaneousGesture(tileDrag(placement.tile, grid: grid),
-                                         including: onTileDrag != nil && content.draggable.contains(placement.tile) ? .all : .none)
+                                         including: onTileDrag != nil && content.draggable.contains(placement.tile) ? .all : .subviews)
                     // The tile in the air leaves its place dimmed.
                     .opacity(drag.tile == placement.tile ? 0.35 : 1)
                     .animation(.easeOut(duration: 0.15), value: drag.tile == placement.tile)
